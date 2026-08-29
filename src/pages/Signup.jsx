@@ -1,8 +1,13 @@
 import { useState } from 'react';
 import { registerUser } from '../data/auth.js';
 import AuthBackgroundVideo from '../components/ui/AuthBackgroundVideo.jsx';
+import LanguageDropdown from '../components/LanguageDropdown.jsx';
+import { useLanguage } from '../i18n/LanguageContext.jsx';
+import { getStrings } from '../i18n/strings.js';
 
 export default function Signup({ onNeedVerification, onSwitchToLogin }) {
+  const { lang } = useLanguage();
+  const t = getStrings(lang).auth;
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -14,20 +19,20 @@ export default function Signup({ onNeedVerification, onSwitchToLogin }) {
     e.preventDefault();
 
     if (!name.trim() || !email.trim() || !password) {
-      setError('សូមបំពេញព័ត៌មានទាំងអស់។');
+      setError(t.fillAllFields);
       return;
     }
     if (password.length < 6) {
-      setError('ពាក្យសម្ងាត់ត្រូវមានយ៉ាងតិច ៦ តួអក្សរ។');
+      setError(t.passwordTooShort);
       return;
     }
     if (password !== confirm) {
-      setError('ពាក្យសម្ងាត់មិនត្រូវគ្នាទេ។');
+      setError(t.passwordMismatch);
       return;
     }
 
     setLoading(true);
-    const result = await registerUser({ name: name.trim(), email: email.trim(), password });
+    const result = await registerUser({ name: name.trim(), email: email.trim(), password }, lang);
     setLoading(false);
 
     if (!result.ok) {
@@ -42,21 +47,24 @@ export default function Signup({ onNeedVerification, onSwitchToLogin }) {
   return (
     <div className="auth-wrap">
       <AuthBackgroundVideo />
+      <div className="auth-lang">
+        <LanguageDropdown />
+      </div>
       <div className="auth-card">
         <div className="auth-head">
-          <h1>ចុះឈ្មោះ</h1>
-          <p>បង្កើតគណនីថ្មីដើម្បីចាប់ផ្តើមរៀន</p>
+          <h1>{t.signupTitle}</h1>
+          <p>{t.signupSub}</p>
         </div>
 
         <form onSubmit={handleSubmit} noValidate>
           <label className="auth-label" htmlFor="signup-name">
-            ឈ្មោះ
+            {t.name}
           </label>
           <input
             id="signup-name"
             type="text"
             className="auth-input"
-            placeholder="ឈ្មោះរបស់អ្នក"
+            placeholder={t.namePlaceholder}
             value={name}
             onChange={(e) => setName(e.target.value)}
             autoComplete="name"
@@ -64,7 +72,7 @@ export default function Signup({ onNeedVerification, onSwitchToLogin }) {
           />
 
           <label className="auth-label" htmlFor="signup-email">
-            អ៊ីមែល
+            {t.email}
           </label>
           <input
             id="signup-email"
@@ -78,7 +86,7 @@ export default function Signup({ onNeedVerification, onSwitchToLogin }) {
           />
 
           <label className="auth-label" htmlFor="signup-password">
-            ពាក្យសម្ងាត់
+            {t.password}
           </label>
           <input
             id="signup-password"
@@ -92,7 +100,7 @@ export default function Signup({ onNeedVerification, onSwitchToLogin }) {
           />
 
           <label className="auth-label" htmlFor="signup-confirm">
-            បញ្ជាក់ពាក្យសម្ងាត់
+            {t.confirmPassword}
           </label>
           <input
             id="signup-confirm"
@@ -108,14 +116,14 @@ export default function Signup({ onNeedVerification, onSwitchToLogin }) {
           {error && <div className="auth-error">{error}</div>}
 
           <button type="submit" className="auth-btn" disabled={loading}>
-            {loading ? 'កំពុងបង្កើតគណនី...' : 'បង្កើតគណនី'}
+            {loading ? t.signupBtnLoading : t.signupBtn}
           </button>
         </form>
 
         <div className="auth-switch">
-          មានគណនីរួចហើយ?{' '}
+          {t.haveAccount}{' '}
           <button type="button" className="auth-link" onClick={onSwitchToLogin}>
-            ចូលគណនី
+            {t.switchToLogin}
           </button>
         </div>
       </div>

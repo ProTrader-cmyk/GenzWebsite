@@ -1,19 +1,24 @@
 import Footer from './Footer.jsx';
 import { TelegramIcon } from './ui/CategoryIcons.jsx';
+import { useLanguage } from '../i18n/LanguageContext.jsx';
+import { getStrings } from '../i18n/strings.js';
 
 const TELEGRAM_URL = 'https://t.me/Vengsopheagenz?direct';
 
 export default function ContactPage({ onBack }) {
+  const { lang } = useLanguage();
+  const t = getStrings(lang).contact;
+
   return (
     <div className="view active" id="v-contact">
       <button className="back" onClick={onBack}>
-        ← ត្រឡប់ក្រោយ
+        {t.back}
       </button>
 
       <div className="sec-hero">
-        <div className="sec-hero-ey sg">Contact Us</div>
-        <h2>ទាក់ទងមកកាន់ Mentor</h2>
-        <p>មានសំណួរអំពី Course ឬចង់ដឹងបន្ថែម? ទាក់ទងមកយើងខ្ញុំតាមរយៈ Telegram</p>
+        <div className="sec-hero-ey sg">{t.eyebrow}</div>
+        <h2>{t.title}</h2>
+        <p>{t.subtitle}</p>
       </div>
 
       <a href={TELEGRAM_URL} target="_blank" rel="noopener noreferrer" className="contact-card">
@@ -21,7 +26,7 @@ export default function ContactPage({ onBack }) {
           <TelegramIcon />
         </div>
         <div className="contact-info">
-          <div className="contact-label">Telegram</div>
+          <div className="contact-label">{t.telegramLabel}</div>
           <div className="contact-value">Veng Sophea — GenZ Trader</div>
         </div>
         <div className="contact-go">→</div>

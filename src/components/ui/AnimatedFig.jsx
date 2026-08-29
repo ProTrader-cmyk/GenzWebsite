@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useLanguage } from '../../i18n/LanguageContext.jsx';
+import { getLessonChrome } from '../../i18n/lessonStrings.js';
 
 /**
  * Mirrors the original vanilla-JS behaviour: the SVG's .ac children fade/slide
@@ -7,6 +9,8 @@ import { useEffect, useState } from 'react';
  * unmounts this component) and can be replayed on demand.
  */
 export default function AnimatedFig({ style, caption, children }) {
+  const { lang } = useLanguage();
+  const c = getLessonChrome(lang);
   const [go, setGo] = useState(false);
 
   useEffect(() => {
@@ -25,7 +29,7 @@ export default function AnimatedFig({ style, caption, children }) {
         {caption && <div className="cap">{caption}</div>}
       </div>
       <button className="replay-btn" onClick={replay}>
-        ▶ ចាក់ម្ដងទៀត
+        {c.replay}
       </button>
     </>
   );

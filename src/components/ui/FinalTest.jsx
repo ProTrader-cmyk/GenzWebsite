@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useLanguage } from '../../i18n/LanguageContext.jsx';
+import { getLessonChrome } from '../../i18n/lessonStrings.js';
 
 // Unlike Quiz (locks after the first answer), a final-test question can be
 // retried indefinitely until the learner picks the correct option.
@@ -40,11 +42,9 @@ function FinalTestQuestion({ index, question, options, feedback, onAnswer }) {
 // `lockedHint` customizes the locked-state progress line (e.g. the final
 // lesson of a course says "...to finish the Course" instead of "...to
 // unlock the next lesson").
-export default function FinalTest({
-  questions,
-  onProgressChange,
-  lockedHint = 'ត្រូវត្រូវទាំងអស់ដើម្បីដោះសោមេរៀនបន្ទាប់',
-}) {
+export default function FinalTest({ questions, onProgressChange, lockedHint }) {
+  const { lang } = useLanguage();
+  const c = getLessonChrome(lang);
   const [results, setResults] = useState({});
 
   const total = questions.length;
@@ -69,7 +69,8 @@ export default function FinalTest({
         />
       ))}
       <div className={`ftest-progress${unlocked ? ' done' : ''}`}>
-        {unlocked ? `ឆ្លើយត្រូវ ${passed} / ${total} — ដោះសោរួចរាល់ហើយ ✓` : `ឆ្លើយត្រូវ ${passed} / ${total} — ${lockedHint} 🔒`}
+        {c.finalTestAnsweredPrefix} {passed} / {total}{' '}
+        {unlocked ? c.finalTestUnlockedSuffix : `— ${lockedHint ?? c.finalTestLockedHint} 🔒`}
       </div>
     </>
   );

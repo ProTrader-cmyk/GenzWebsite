@@ -1,9 +1,14 @@
+import { useLanguage } from '../i18n/LanguageContext.jsx';
+import { getStrings } from '../i18n/strings.js';
+
 export default function Footer() {
+  const { lang } = useLanguage();
+  const t = getStrings(lang).footer;
   return (
     <footer>
-      GenZ Trader · Private Mentorship Class · សម្រាប់ការសិក្សា — មិនមែនដំបូន្មានហិរញ្ញវត្ថុ
+      {t.line1}
       <br />
-      © Veng Sophea — GenZ Trader. រក្សាសិទ្ធិគ្រប់យ៉ាង។
+      {t.line2}
     </footer>
   );
 }

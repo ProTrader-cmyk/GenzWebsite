@@ -3,8 +3,13 @@ import { lessons } from '../data/lessons.js';
 import LessonCard from './LessonCard.jsx';
 import Footer from './Footer.jsx';
 import { LockIcon } from './ui/CategoryIcons.jsx';
+import { useLanguage } from '../i18n/LanguageContext.jsx';
+import { getStrings } from '../i18n/strings.js';
 
 export default function Home({ doneMap, onSelectLesson, onBack, approved }) {
+  const { lang } = useLanguage();
+  const t = getStrings(lang).home;
+  const tp = getStrings(lang).pending;
   const [showAccessModal, setShowAccessModal] = useState(false);
   const total = lessons.length;
   const count = Object.keys(doneMap).length;
@@ -14,18 +19,18 @@ export default function Home({ doneMap, onSelectLesson, onBack, approved }) {
   return (
     <div className="view active" id="v-home">
       <button className="back" onClick={onBack}>
-        ← ផ្នែកសិក្សា
+        {t.back}
       </button>
 
       <div className="sec-hero">
-        <div className="sec-hero-ey sg">Technical for Beginner</div>
-        <h2>មូលដ្ឋាន Smart Money សម្រាប់អ្នកចាប់ផ្តើម</h2>
-        <p>Market Structure · BOS/CHoCH · Order Block · FVG · Liquidity · EMA — រៀនតាមលំដាប់ ជាជំហានៗ</p>
+        <div className="sec-hero-ey sg">{t.eyebrow}</div>
+        <h2>{t.title}</h2>
+        <p>{t.subtitle}</p>
       </div>
 
       <div id="prog-outer" style={{ display: showProgress ? 'block' : 'none' }}>
         <div className="prog-info">
-          <span>វឌ្ឍនភាព</span>
+          <span>{t.progress}</span>
           <span>
             {count} / {total}
           </span>
@@ -36,7 +41,7 @@ export default function Home({ doneMap, onSelectLesson, onBack, approved }) {
       </div>
 
       <p className="sec-label sg" style={{ marginTop: 8 }}>
-        មេរៀន
+        {t.lessonsLabel}
       </p>
 
       {lessons.map((lesson, i) => {
@@ -53,7 +58,7 @@ export default function Home({ doneMap, onSelectLesson, onBack, approved }) {
             lesson={lesson}
             done={!!doneMap[lesson.id]}
             locked={locked}
-            lockedReason={needsApproval ? 'ត្រូវការការអនុម័តពី Admin' : 'ត្រូវបញ្ចប់មេរៀនមុនសិន'}
+            lockedReason={needsApproval ? tp.lessonLockedReason : t.lessonLockedProgression}
             onClick={() => {
               if (needsApproval) {
                 setShowAccessModal(true);
@@ -74,12 +79,10 @@ export default function Home({ doneMap, onSelectLesson, onBack, approved }) {
             <div className="modal-lock">
               <LockIcon width="20" height="20" />
             </div>
-            <h3 className="modal-title">ត្រូវការសិទ្ធិចូលប្រើ</h3>
-            <p className="modal-text">
-              គណនីរបស់អ្នកកំពុងរង់ចាំការអនុម័តពី Admin។ សូមទាក់ទង Admin ដើម្បីទទួលបានសិទ្ធិចូលរៀនមេរៀននេះ។
-            </p>
+            <h3 className="modal-title">{tp.modalTitle}</h3>
+            <p className="modal-text">{tp.modalText}</p>
             <button className="modal-btn" onClick={() => setShowAccessModal(false)}>
-              យល់ព្រម
+              {tp.modalOk}
             </button>
           </div>
         </div>

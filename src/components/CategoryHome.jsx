@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import logo from '../assets/logo.jpg';
 import Footer from './Footer.jsx';
+import Trans from '../i18n/Trans.jsx';
+import { useLanguage } from '../i18n/LanguageContext.jsx';
+import { getStrings } from '../i18n/strings.js';
 import {
   CandleChartIcon,
   BrainIcon,
@@ -10,51 +13,51 @@ import {
   LockIcon,
 } from './ui/CategoryIcons.jsx';
 
-const CATEGORIES = [
-  {
-    id: 'apps',
-    Icon: AppWindowIcon,
-    title: 'App & Website for Trading',
-    subtitle: 'ស្គាល់ Platform និង Tool សម្រាប់ធ្វើការជួញដូរ',
-    tag: 'ឆាប់ៗនេះ',
-    locked: true,
-  },
-  {
-    id: 'technical',
-    Icon: CandleChartIcon,
-    title: 'Technical for Beginner',
-    subtitle: 'Market Structure · BOS/CHoCH · Order Block · FVG · Liquidity · EMA',
-    tag: '៦ មេរៀន',
-    locked: false,
-  },
-  {
-    id: 'psychology',
-    Icon: BrainIcon,
-    title: 'Psychology',
-    subtitle: 'Discipline · Emotion Control · Risk Mindset',
-    tag: 'ឆាប់ៗនេះ',
-    locked: true,
-  },
-  {
-    id: 'backtest',
-    Icon: BacktestIcon,
-    title: 'Backtest Technical Analysis for Beginner',
-    subtitle: 'អនុវត្ត Backtest ដើម្បីសាកល្បងចំណេះដឹង Technical',
-    tag: 'ឆាប់ៗនេះ',
-    locked: true,
-  },
-  {
-    id: 'advanced',
-    Icon: AdvancedChartIcon,
-    title: 'Advanced Technical Analysis',
-    subtitle: 'សិក្សា Technical Analysis ជាដំណាក់កាលខ្ពស់ — សម្រាប់អ្នកដែលបញ្ចប់ Technical for Beginner រួច',
-    tag: 'ឆាប់ៗនេះ',
-    locked: false,
-    premium: true,
-  },
-];
+function buildCategories(t) {
+  return [
+    {
+      id: 'apps',
+      Icon: AppWindowIcon,
+      title: t.appsTitle,
+      tag: t.comingSoon,
+      locked: true,
+    },
+    {
+      id: 'technical',
+      Icon: CandleChartIcon,
+      title: t.technicalTitle,
+      tag: t.lessonsCount,
+      locked: false,
+    },
+    {
+      id: 'psychology',
+      Icon: BrainIcon,
+      title: t.psychologyTitle,
+      tag: t.comingSoon,
+      locked: true,
+    },
+    {
+      id: 'backtest',
+      Icon: BacktestIcon,
+      title: t.backtestTitle,
+      tag: t.comingSoon,
+      locked: true,
+    },
+    {
+      id: 'advanced',
+      Icon: AdvancedChartIcon,
+      title: t.advancedTitle,
+      tag: t.comingSoon,
+      locked: false,
+      premium: true,
+    },
+  ];
+}
 
 export default function CategoryHome({ onSelectCategory }) {
+  const { lang } = useLanguage();
+  const t = getStrings(lang).category;
+  const CATEGORIES = buildCategories(t);
   const [unlockPrompt, setUnlockPrompt] = useState(null);
 
   function handleCardClick(cat) {
@@ -72,19 +75,20 @@ export default function CategoryHome({ onSelectCategory }) {
           <img src={logo} alt="GenZ Trader — Veng Sophea" />
         </div>
         <div className="hero-tag">
-          <span></span>Trading Class<span></span>
+          <span></span>
+          {t.heroTag}
+          <span></span>
         </div>
-        <h1>GenZ Trader</h1>
+        <h1>{t.heroTitle}</h1>
         <div className="hero-tagline">
-          LEARN. TRADE. <b>GROW.</b>
+          {t.heroTagline1} <b>{t.heroTagline2}</b>
         </div>
         <p className="hero-sub">
-          វគ្គសិក្សា Trading ដឹកនាំដោយ <strong style={{ color: 'var(--text)' }}>Veng Sophea</strong> — ងាយ ច្បាស់
-          ពេញលេញ ជាជំហានៗ
+          {t.heroSubPrefix} <strong style={{ color: 'var(--text)' }}>Veng Sophea</strong> {t.heroSubSuffix}
         </p>
       </div>
 
-      <p className="sec-label sg">ជ្រើសរើសផ្នែកសិក្សា</p>
+      <p className="sec-label sg">{t.chooseSection}</p>
 
       <div className="cat-grid">
         {CATEGORIES.map((cat) => (
@@ -102,7 +106,6 @@ export default function CategoryHome({ onSelectCategory }) {
               <cat.Icon />
             </div>
             <div className="cat-title">{cat.title}</div>
-            <div className="cat-sub">{cat.subtitle}</div>
             <div className={`cat-tag${cat.locked ? ' locked' : ''}${cat.premium ? ' premium' : ''}`}>
               {cat.premium && <LockIcon />}
               {cat.tag}
@@ -121,11 +124,10 @@ export default function CategoryHome({ onSelectCategory }) {
             </div>
             <h3 className="modal-title">{unlockPrompt.title}</h3>
             <p className="modal-text">
-              ផ្នែកនេះជា <strong>មេរៀនកម្រិតខ្ពស់ដែលត្រូវទូទាត់ប្រាក់</strong> ដើម្បីចូលរៀន។ សូមទាក់ទង Mentor
-              ដើម្បីទិញ Course និងទទួលបានលេខកូដសម្រាប់ដោះសោ។
+              <Trans text={t.premiumText} />
             </p>
             <button className="modal-btn" onClick={() => setUnlockPrompt(null)}>
-              យល់ព្រម
+              {t.premiumOk}
             </button>
           </div>
         </div>

@@ -6,37 +6,61 @@ export const lessons = [
     id: 'l1',
     title: 'Market Structure',
     subtitle: 'Bullish · Bearish · Sideways · BOS · Swing High-Low · HH HL LH LL',
-    pageTitle: 'Market Structure — រចនាសម្ព័ន្ធទីផ្សារ',
+    pageTitle: {
+      kh: 'Market Structure — រចនាសម្ព័ន្ធទីផ្សារ',
+      en: 'Market Structure',
+      zh: 'Market Structure — 市场结构',
+    },
   },
   {
     id: 'l2',
     title: 'BOS vs CHoCH',
     subtitle: 'Break of Structure · Change of Character · Continuation · Reversal',
-    pageTitle: 'BOS vs CHoCH — បន្ត Trend ឬ ផ្លាស់ប្តូរទិស?',
+    pageTitle: {
+      kh: 'BOS vs CHoCH — បន្ត Trend ឬ ផ្លាស់ប្តូរទិស?',
+      en: 'BOS vs CHoCH — Continuation or Reversal?',
+      zh: 'BOS vs CHoCH — 趋势延续还是反转？',
+    },
   },
   {
     id: 'l3',
     title: 'Order Block',
     subtitle: 'Bullish OB · Bearish OB · Validity · Retest · Entry Context',
-    pageTitle: 'Order Block — តំបន់ដែល Price អាចត្រឡប់មក React',
+    pageTitle: {
+      kh: 'Order Block — តំបន់ដែល Price អាចត្រឡប់មក React',
+      en: 'Order Block — Where Price Tends to React',
+      zh: 'Order Block — 价格可能回踩反应的区域',
+    },
   },
   {
     id: 'l4',
     title: 'FVG',
     subtitle: 'Fair Value Gap · Imbalance · Bullish FVG · Bearish FVG · Fill',
-    pageTitle: 'FVG — Fair Value Gap & Imbalance',
+    pageTitle: {
+      kh: 'FVG — Fair Value Gap & Imbalance',
+      en: 'FVG — Fair Value Gap & Imbalance',
+      zh: 'FVG — Fair Value Gap 与 Imbalance',
+    },
   },
   {
     id: 'l5',
     title: 'LQ (Liquidity)',
     subtitle: 'Buy-side · Sell-side · Equal High/Low · Liquidity Sweep · Stop Hunt',
-    pageTitle: 'LQ — Liquidity & Liquidity Sweep',
+    pageTitle: {
+      kh: 'LQ — Liquidity & Liquidity Sweep',
+      en: 'LQ — Liquidity & Liquidity Sweep',
+      zh: 'LQ — Liquidity 与 Liquidity Sweep',
+    },
   },
   {
     id: 'l6',
     title: 'EMA',
     subtitle: 'EMA 50/100/200 · SMA 50/100/200 · Momentum Crossover · Bull/Bear Structure',
-    pageTitle: 'EMA — EMA & SMA Combo (50/100/200)',
+    pageTitle: {
+      kh: 'EMA — EMA & SMA Combo (50/100/200)',
+      en: 'EMA — EMA & SMA Combo (50/100/200)',
+      zh: 'EMA — EMA 与 SMA 组合 (50/100/200)',
+    },
   },
 ];
 
@@ -57,18 +81,23 @@ export function getLessonMeta(id) {
   return lessons.find((l) => l.id === id);
 }
 
+const EYEBROW_LABEL = { kh: 'មេរៀនទី', en: 'Lesson', zh: '第' };
+const EYEBROW_SUFFIX = { kh: '', en: '', zh: '课' };
+
 // "មេរៀនទី ១ · Lesson 01" — derived from position in `lessons`, so lessons
 // never need to be renumbered by hand when inserted, reordered, or removed.
-export function getLessonEyebrow(id) {
+export function getLessonEyebrow(id, lang = 'kh') {
   const n = getLessonIndex(id) + 1;
-  return `មេរៀនទី ${toKhmerNumeral(n)} · Lesson ${String(n).padStart(2, '0')}`;
+  const num = lang === 'kh' ? toKhmerNumeral(n) : n;
+  return `${EYEBROW_LABEL[lang] ?? EYEBROW_LABEL.kh} ${num}${EYEBROW_SUFFIX[lang] ?? ''} · Lesson ${String(n).padStart(2, '0')}`;
 }
 
 // "មេរៀនទី ១" — the short form used for the prev-lesson link at the bottom
 // of a lesson page.
-export function getLessonShortLabel(id) {
+export function getLessonShortLabel(id, lang = 'kh') {
   const n = getLessonIndex(id) + 1;
-  return `មេរៀនទី ${toKhmerNumeral(n)}`;
+  const num = lang === 'kh' ? toKhmerNumeral(n) : n;
+  return `${EYEBROW_LABEL[lang] ?? EYEBROW_LABEL.kh} ${num}${EYEBROW_SUFFIX[lang] ?? ''}`;
 }
 
 // Next lesson's id, or null if `id` is the last lesson.

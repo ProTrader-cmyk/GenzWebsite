@@ -1,8 +1,13 @@
 import { useState } from 'react';
 import { verifyOtp, resendOtp, fetchUserProfile } from '../data/auth.js';
 import AuthBackgroundVideo from '../components/ui/AuthBackgroundVideo.jsx';
+import LanguageDropdown from '../components/LanguageDropdown.jsx';
+import { useLanguage } from '../i18n/LanguageContext.jsx';
+import { getStrings } from '../i18n/strings.js';
 
 export default function VerifyOtp({ pending, onVerified, onCancel }) {
+  const { lang } = useLanguage();
+  const t = getStrings(lang).otp;
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
@@ -12,12 +17,12 @@ export default function VerifyOtp({ pending, onVerified, onCancel }) {
   async function handleSubmit(e) {
     e.preventDefault();
     if (code.trim().length !== 6) {
-      setError('សូមបញ្ចូលលេខកូដ ៦ ខ្ទង់។');
+      setError(t.needSixDigits);
       return;
     }
 
     setLoading(true);
-    const result = await verifyOtp({ uid: pending.uid, code });
+    const result = await verifyOtp({ uid: pending.uid, code }, lang);
     setLoading(false);
 
     if (!result.ok) {
@@ -34,26 +39,29 @@ export default function VerifyOtp({ pending, onVerified, onCancel }) {
     setResending(true);
     setError('');
     setInfo('');
-    const result = await resendOtp(pending);
+    const result = await resendOtp(pending, lang);
     setResending(false);
-    setInfo(result.ok ? 'បានផ្ញើលេខកូដថ្មីទៅអ៊ីមែលរបស់អ្នកហើយ។' : '');
+    setInfo(result.ok ? t.resent : '');
     if (!result.ok) setError(result.error);
   }
 
   return (
     <div className="auth-wrap">
       <AuthBackgroundVideo />
+      <div className="auth-lang">
+        <LanguageDropdown />
+      </div>
       <div className="auth-card">
         <div className="auth-head">
-          <h1>បញ្ជាក់អ៊ីមែល</h1>
+          <h1>{t.title}</h1>
           <p>
-            យើងបានផ្ញើលេខកូដ ៦ ខ្ទង់ទៅកាន់ <b>{pending.email}</b>
+            {t.subPrefix} <b>{pending.email}</b>
           </p>
         </div>
 
         <form onSubmit={handleSubmit} noValidate>
           <label className="auth-label" htmlFor="otp-code">
-            លេខកូដ
+            {t.code}
           </label>
           <input
             id="otp-code"
@@ -72,18 +80,18 @@ export default function VerifyOtp({ pending, onVerified, onCancel }) {
           {info && <div className="auth-info">{info}</div>}
 
           <button type="submit" className="auth-btn" disabled={loading}>
-            {loading ? 'កំពុងផ្ទៀងផ្ទាត់...' : 'បញ្ជាក់'}
+            {loading ? t.confirming : t.confirm}
           </button>
         </form>
 
         <div className="auth-switch">
           <button type="button" className="auth-link" onClick={handleResend} disabled={resending}>
-            {resending ? 'កំពុងផ្ញើ...' : 'ផ្ញើលេខកូដម្តងទៀត'}
+            {resending ? t.resending : t.resend}
           </button>
         </div>
         <div className="auth-switch">
           <button type="button" className="auth-link" onClick={onCancel}>
-            ត្រឡប់ក្រោយ
+            {t.back}
           </button>
         </div>
       </div>

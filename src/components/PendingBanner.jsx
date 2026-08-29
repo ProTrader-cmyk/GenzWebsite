@@ -1,7 +1,8 @@
+import { useLanguage } from '../i18n/LanguageContext.jsx';
+import { getStrings } from '../i18n/strings.js';
+
 export default function PendingBanner({ name }) {
-  return (
-    <div className="pending-banner sg">
-      សួស្តី {name} — គណនីរបស់អ្នកកំពុងរង់ចាំការអនុម័តពី Admin។ សូមទាក់ទង Admin ដើម្បីទទួលបានសិទ្ធិចូលរៀន។
-    </div>
-  );
+  const { lang } = useLanguage();
+  const t = getStrings(lang).pending;
+  return <div className="pending-banner sg">{t.banner(name)}</div>;
 }

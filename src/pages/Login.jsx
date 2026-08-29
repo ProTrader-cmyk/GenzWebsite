@@ -1,8 +1,13 @@
 import { useState } from 'react';
 import { loginUser } from '../data/auth.js';
 import AuthBackgroundVideo from '../components/ui/AuthBackgroundVideo.jsx';
+import LanguageDropdown from '../components/LanguageDropdown.jsx';
+import { useLanguage } from '../i18n/LanguageContext.jsx';
+import { getStrings } from '../i18n/strings.js';
 
 export default function Login({ onLogin, onNeedVerification, onSwitchToSignup }) {
+  const { lang } = useLanguage();
+  const t = getStrings(lang).auth;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -11,7 +16,7 @@ export default function Login({ onLogin, onNeedVerification, onSwitchToSignup })
   async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);
-    const result = await loginUser({ email, password });
+    const result = await loginUser({ email, password }, lang);
     setLoading(false);
 
     if (!result.ok) {
@@ -30,15 +35,18 @@ export default function Login({ onLogin, onNeedVerification, onSwitchToSignup })
   return (
     <div className="auth-wrap">
       <AuthBackgroundVideo />
+      <div className="auth-lang">
+        <LanguageDropdown />
+      </div>
       <div className="auth-card">
         <div className="auth-head">
-          <h1>ចូលគណនី</h1>
-          <p>សូមស្វាគមន៍ត្រឡប់មកវិញកាន់ GenZ Trader</p>
+          <h1>{t.loginTitle}</h1>
+          <p>{t.loginSub}</p>
         </div>
 
         <form onSubmit={handleSubmit} noValidate>
           <label className="auth-label" htmlFor="login-email">
-            អ៊ីមែល
+            {t.email}
           </label>
           <input
             id="login-email"
@@ -52,7 +60,7 @@ export default function Login({ onLogin, onNeedVerification, onSwitchToSignup })
           />
 
           <label className="auth-label" htmlFor="login-password">
-            ពាក្យសម្ងាត់
+            {t.password}
           </label>
           <input
             id="login-password"
@@ -68,14 +76,14 @@ export default function Login({ onLogin, onNeedVerification, onSwitchToSignup })
           {error && <div className="auth-error">{error}</div>}
 
           <button type="submit" className="auth-btn" disabled={loading}>
-            {loading ? 'កំពុងចូល...' : 'ចូលគណនី'}
+            {loading ? t.loginBtnLoading : t.loginBtn}
           </button>
         </form>
 
         <div className="auth-switch">
-          មិនទាន់មានគណនីមែនទេ?{' '}
+          {t.noAccount}{' '}
           <button type="button" className="auth-link" onClick={onSwitchToSignup}>
-            ចុះឈ្មោះ
+            {t.switchToSignup}
           </button>
         </div>
       </div>
