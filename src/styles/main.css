@@ -36,12 +36,8 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 .nav-link.active{color:var(--brand2);background:var(--brandd);}
 .nav-logout{margin-left:auto;background:none;border:1px solid var(--faint);color:var(--mute);font-size:12px;font-weight:600;padding:6px 14px;border-radius:20px;cursor:pointer;transition:.2s;flex:none;}
 .nav-logout:hover{border-color:var(--gline);color:var(--text);}
-.nav-link:disabled{opacity:.4;cursor:not-allowed;}
-.nav-link:disabled:hover{color:var(--mute);background:none;}
-.nav-disabled{opacity:.4;pointer-events:none;cursor:not-allowed;}
 
 .pending-banner{position:sticky;top:68px;z-index:98;background:var(--brandd);border-bottom:1px solid var(--brandline);color:var(--brand2);font-size:13px;text-align:center;padding:10px 20px;line-height:1.5;}
-.wrap-locked{pointer-events:none;user-select:none;opacity:.45;filter:saturate(.6);}
 @media(max-width:640px){.nav-links{overflow-x:auto;-ms-overflow-style:none;scrollbar-width:none;}.nav-links::-webkit-scrollbar{display:none;}}
 @media(max-width:480px){.nav-link{padding:8px 9px;font-size:12px;}}
 

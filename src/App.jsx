@@ -144,9 +144,9 @@ export default function App() {
   }
 
   // Verified but not yet approved by an admin — logged in and can browse the
-  // site, but every click is disabled until someone flips status to
-  // 'approved' in Firestore.
-  const locked = user.status !== 'approved';
+  // whole site freely, but only the first lesson is unlocked as a trial
+  // until someone flips status to 'approved' in Firestore.
+  const approved = user.status === 'approved';
 
   const CurrentLesson = view !== 'home' ? lessonPages[view] : null;
 
@@ -159,15 +159,14 @@ export default function App() {
         onNavContact={() => setSection('contact')}
         user={user}
         onLogout={handleLogout}
-        locked={locked}
       />
-      {locked && <PendingBanner name={user.name} />}
-      <div className={`wrap${locked ? ' wrap-locked' : ''}`} inert={locked ? '' : undefined}>
+      {!approved && <PendingBanner name={user.name} />}
+      <div className="wrap">
         {section === 'categories' && <CategoryHome onSelectCategory={selectCategory} />}
         {section === 'news' && <NewsPage onBack={backToCategories} />}
         {section === 'contact' && <ContactPage onBack={backToCategories} />}
         {section === 'technical' && view === 'home' && (
-          <Home doneMap={doneMap} onSelectLesson={navigate} onBack={backToCategories} />
+          <Home doneMap={doneMap} onSelectLesson={navigate} onBack={backToCategories} approved={approved} />
         )}
         {section === 'technical' && CurrentLesson && (
           <CurrentLesson onNavigate={navigate} onDone={() => markDone(view)} />
