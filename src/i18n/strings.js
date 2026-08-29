@@ -3,7 +3,7 @@
 export const strings = {
   kh: {
     nav: {
-      mentorship: 'ការណែនាំឯកជន',
+      mentorship: 'ថ្នាក់បង្រៀនពិសេស',
       news: 'GenZ ព័ត៌មាន',
       contact: 'ទាក់ទងមកយើង',
       logout: 'ចេញពីប្រព័ន្ធ',
