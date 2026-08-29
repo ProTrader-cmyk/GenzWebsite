@@ -26,6 +26,18 @@ export const lessons = [
     subtitle: 'Fair Value Gap · Imbalance · Bullish FVG · Bearish FVG · Fill',
     pageTitle: 'FVG — Fair Value Gap & Imbalance',
   },
+  {
+    id: 'l5',
+    title: 'LQ (Liquidity)',
+    subtitle: 'Buy-side · Sell-side · Equal High/Low · Liquidity Sweep · Stop Hunt',
+    pageTitle: 'LQ — Liquidity & Liquidity Sweep',
+  },
+  {
+    id: 'l6',
+    title: 'EMA',
+    subtitle: 'EMA 50/100/200 · SMA 50/100/200 · Momentum Crossover · Bull/Bear Structure',
+    pageTitle: 'EMA — EMA & SMA Combo (50/100/200)',
+  },
 ];
 
 const KHMER_DIGITS = ['០', '១', '២', '៣', '៤', '៥', '៦', '៧', '៨', '៩'];

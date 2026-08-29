@@ -217,7 +217,7 @@ export default function Lesson1({ onNavigate, onDone }) {
             BULLISH MARKET STRUCTURE
           </text>
 
-          <line x1="40" y1="70" x2="465" y2="70" stroke="#C9A84C" strokeWidth="0.7" strokeDasharray="4 3" className="ac" style={{ animationDelay: '.2s' }} />
+          <line x1="40" y1="70" x2="465" y2="70" stroke="#2E7CF6" strokeWidth="0.7" strokeDasharray="4 3" className="ac" style={{ animationDelay: '.2s' }} />
 
           <g className="ac" style={{ animationDelay: '.1s' }}><line x1="40" y1="70" x2="40" y2="105" stroke="#E05555" strokeWidth="1.4" /><rect x="34" y="75" width="12" height="25" rx="1" fill="#E05555" /></g>
           <g className="ac" style={{ animationDelay: '.18s' }}><line x1="82.5" y1="94.75" x2="82.5" y2="116.75" stroke="#E05555" strokeWidth="1" /><rect x="78.5" y="98.75" width="8" height="14" rx="0.8" fill="#E05555" /></g>
@@ -235,10 +235,10 @@ export default function Lesson1({ onNavigate, onDone }) {
           <g className="ac" style={{ animationDelay: '1.08s' }}><line x1="585" y1="39.5" x2="585" y2="59.5" stroke="#E05555" strokeWidth="1" /><rect x="581" y="43.5" width="8" height="12" rx="0.8" fill="#E05555" /></g>
           <g className="ac" style={{ animationDelay: '1.15s' }}><line x1="620" y1="40" x2="620" y2="70" stroke="#E05555" strokeWidth="1.4" /><rect x="614" y="45" width="12" height="20" rx="1" fill="#E05555" /></g>
 
-          <g className="ac" style={{ animationDelay: '.1s' }}><circle cx="40" cy="70" r="4" fill="#C9A84C" /><text x="40" y="55" textAnchor="middle" fontSize="10" fill="#C9A84C" fontWeight="700" fontFamily="Space Grotesk,sans-serif">High 1</text></g>
-          <text x="410" y="64" textAnchor="middle" fontSize="10" fill="#C9A84C" fontFamily="Kantumruy Pro,sans-serif" className="ac" style={{ animationDelay: '1.3s' }}>Swing High</text>
+          <g className="ac" style={{ animationDelay: '.1s' }}><circle cx="40" cy="70" r="4" fill="#2E7CF6" /><text x="40" y="55" textAnchor="middle" fontSize="10" fill="#2E7CF6" fontWeight="700" fontFamily="Space Grotesk,sans-serif">High 1</text></g>
+          <text x="410" y="64" textAnchor="middle" fontSize="10" fill="#2E7CF6" fontFamily="Kantumruy Pro,sans-serif" className="ac" style={{ animationDelay: '1.3s' }}>Swing High</text>
 
-          <g className="ac" style={{ animationDelay: '.4s' }}><circle cx="210" cy="160" r="4" fill="#C9A84C" /><text x="210" y="178" textAnchor="middle" fontSize="10" fill="#C9A84C" fontWeight="700" fontFamily="Space Grotesk,sans-serif">Low 1</text></g>
+          <g className="ac" style={{ animationDelay: '.4s' }}><circle cx="210" cy="160" r="4" fill="#2E7CF6" /><text x="210" y="178" textAnchor="middle" fontSize="10" fill="#2E7CF6" fontWeight="700" fontFamily="Space Grotesk,sans-serif">Low 1</text></g>
           <text x="210" y="194" textAnchor="middle" fontSize="10" fill="#3EC97A" fontWeight="700" fontFamily="Kantumruy Pro,sans-serif" className="ac" style={{ animationDelay: '1.4s' }}>Swing Low</text>
 
           <text x="465" y="45" textAnchor="middle" fontSize="10" fill="#3EC97A" fontWeight="700" fontFamily="Space Grotesk,sans-serif" className="ac" style={{ animationDelay: '1.1s' }}>BOS ↑</text>
@@ -286,7 +286,7 @@ export default function Lesson1({ onNavigate, onDone }) {
             BEARISH MARKET STRUCTURE
           </text>
 
-          <line x1="40" y1="160" x2="465" y2="160" stroke="#C9A84C" strokeWidth="0.7" strokeDasharray="4 3" className="ac" style={{ animationDelay: '.2s' }} />
+          <line x1="40" y1="160" x2="465" y2="160" stroke="#2E7CF6" strokeWidth="0.7" strokeDasharray="4 3" className="ac" style={{ animationDelay: '.2s' }} />
 
           <g className="ac" style={{ animationDelay: '.1s' }}><line x1="40" y1="140" x2="40" y2="165" stroke="#3EC97A" strokeWidth="1.4" /><rect x="34" y="145" width="12" height="15" rx="1" fill="#3EC97A" /></g>
           <g className="ac" style={{ animationDelay: '.18s' }}><line x1="82.5" y1="127.75" x2="82.5" y2="149.75" stroke="#3EC97A" strokeWidth="1" /><rect x="78.5" y="131.75" width="8" height="14" rx="0.8" fill="#3EC97A" /></g>
@@ -304,10 +304,10 @@ export default function Lesson1({ onNavigate, onDone }) {
           <g className="ac" style={{ animationDelay: '1.08s' }}><line x1="585" y1="180.5" x2="585" y2="200.5" stroke="#3EC97A" strokeWidth="1" /><rect x="581" y="184.5" width="8" height="12" rx="0.8" fill="#3EC97A" /></g>
           <g className="ac" style={{ animationDelay: '1.15s' }}><line x1="620" y1="175" x2="620" y2="205" stroke="#3EC97A" strokeWidth="1.4" /><rect x="614" y="180" width="12" height="20" rx="1" fill="#3EC97A" /></g>
 
-          <g className="ac" style={{ animationDelay: '.1s' }}><circle cx="40" cy="160" r="4" fill="#C9A84C" /><text x="40" y="182" textAnchor="middle" fontSize="10" fill="#C9A84C" fontWeight="700" fontFamily="Space Grotesk,sans-serif">Low 1</text></g>
-          <text x="410" y="153" textAnchor="middle" fontSize="10" fill="#C9A84C" fontFamily="Kantumruy Pro,sans-serif" className="ac" style={{ animationDelay: '1.3s' }}>Swing Low</text>
+          <g className="ac" style={{ animationDelay: '.1s' }}><circle cx="40" cy="160" r="4" fill="#2E7CF6" /><text x="40" y="182" textAnchor="middle" fontSize="10" fill="#2E7CF6" fontWeight="700" fontFamily="Space Grotesk,sans-serif">Low 1</text></g>
+          <text x="410" y="153" textAnchor="middle" fontSize="10" fill="#2E7CF6" fontFamily="Kantumruy Pro,sans-serif" className="ac" style={{ animationDelay: '1.3s' }}>Swing Low</text>
 
-          <g className="ac" style={{ animationDelay: '.4s' }}><circle cx="210" cy="70" r="4" fill="#C9A84C" /><text x="210" y="58" textAnchor="middle" fontSize="10" fill="#C9A84C" fontWeight="700" fontFamily="Space Grotesk,sans-serif">High 1</text></g>
+          <g className="ac" style={{ animationDelay: '.4s' }}><circle cx="210" cy="70" r="4" fill="#2E7CF6" /><text x="210" y="58" textAnchor="middle" fontSize="10" fill="#2E7CF6" fontWeight="700" fontFamily="Space Grotesk,sans-serif">High 1</text></g>
           <text x="210" y="45" textAnchor="middle" fontSize="10" fill="#E05555" fontWeight="700" fontFamily="Kantumruy Pro,sans-serif" className="ac" style={{ animationDelay: '1.4s' }}>Swing High</text>
 
           <text x="465" y="200" textAnchor="middle" fontSize="10" fill="#E05555" fontWeight="700" fontFamily="Space Grotesk,sans-serif" className="ac" style={{ animationDelay: '1.1s' }}>BOS ↓</text>

@@ -1,9 +1,8 @@
-import logo from '../assets/logo.jpg';
 import { lessons } from '../data/lessons.js';
 import LessonCard from './LessonCard.jsx';
 import Footer from './Footer.jsx';
 
-export default function Home({ doneMap, onSelectLesson }) {
+export default function Home({ doneMap, onSelectLesson, onBack }) {
   const total = lessons.length;
   const count = Object.keys(doneMap).length;
   const pct = Math.round((count / total) * 100);
@@ -11,21 +10,14 @@ export default function Home({ doneMap, onSelectLesson }) {
 
   return (
     <div className="view active" id="v-home">
-      <div className="hero">
-        <div className="hero-logo">
-          <img src={logo} alt="GenZ Trader — Veng Sophea" />
-        </div>
-        <div className="hero-tag">
-          <span></span>Private Mentorship Class<span></span>
-        </div>
-        <h1>GenZ Trader</h1>
-        <div className="hero-tagline">
-          LEARN. TRADE. <b>GROW.</b>
-        </div>
-        <p className="hero-sub">
-          វគ្គសិក្សា Smart Money ដឹកនាំដោយ <strong style={{ color: 'var(--text)' }}>Veng Sophea</strong> — ងាយ ច្បាស់
-          ពេញលេញ ជាជំហានៗ
-        </p>
+      <button className="back" onClick={onBack}>
+        ← ផ្នែកសិក្សា
+      </button>
+
+      <div className="sec-hero">
+        <div className="sec-hero-ey sg">Technical for Beginner</div>
+        <h2>មូលដ្ឋាន Smart Money សម្រាប់អ្នកចាប់ផ្តើម</h2>
+        <p>Market Structure · BOS/CHoCH · Order Block · FVG · Liquidity · EMA — រៀនតាមលំដាប់ ជាជំហានៗ</p>
       </div>
 
       <div id="prog-outer" style={{ display: showProgress ? 'block' : 'none' }}>
@@ -44,15 +36,19 @@ export default function Home({ doneMap, onSelectLesson }) {
         មេរៀន
       </p>
 
-      {lessons.map((lesson, i) => (
-        <LessonCard
-          key={lesson.id}
-          index={i + 1}
-          lesson={lesson}
-          done={!!doneMap[lesson.id]}
-          onClick={() => onSelectLesson(lesson.id)}
-        />
-      ))}
+      {lessons.map((lesson, i) => {
+        const unlocked = i === 0 || !!doneMap[lessons[i - 1].id];
+        return (
+          <LessonCard
+            key={lesson.id}
+            index={i + 1}
+            lesson={lesson}
+            done={!!doneMap[lesson.id]}
+            locked={!unlocked}
+            onClick={() => onSelectLesson(lesson.id)}
+          />
+        );
+      })}
 
       <Footer />
     </div>
