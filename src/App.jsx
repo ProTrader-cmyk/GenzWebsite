@@ -8,6 +8,7 @@ import ContactPage from './components/ContactPage.jsx';
 import Login from './pages/Login.jsx';
 import Signup from './pages/Signup.jsx';
 import VerifyOtp from './pages/VerifyOtp.jsx';
+import AdminDashboard from './pages/AdminDashboard.jsx';
 import PendingBanner from './components/PendingBanner.jsx';
 import { getNextLessonId } from './data/lessons.js';
 import { lessonPages } from './pages/registry.js';
@@ -134,6 +135,12 @@ export default function App() {
         onSwitchToLogin={() => setAuthView('login')}
       />
     );
+  }
+
+  // Same login for everyone — an admin account goes straight to the
+  // dashboard instead of the lesson site.
+  if (user.role === 'admin') {
+    return <AdminDashboard admin={user} onLogout={handleLogout} />;
   }
 
   // Verified but not yet approved by an admin — logged in and can browse the

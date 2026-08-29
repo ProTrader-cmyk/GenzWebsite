@@ -7,6 +7,7 @@
   --dn:#E05555; --dnd:rgba(224,85,85,0.12);
   --blue:#5B9BD5; --blued:rgba(91,155,213,0.12);
   --brand:#2E7CF6; --brand2:#6FA8FF; --brandd:rgba(46,124,246,0.14); --brandline:rgba(46,124,246,0.35);
+  --warn:#E0B155; --warnd:rgba(224,177,85,0.14);
   --r:14px; --rl:20px;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -258,3 +259,51 @@ footer{text-align:center;color:var(--mute);font-size:11px;margin-top:48px;paddin
 .replay-btn:hover{border-color:var(--brandline);color:var(--text);}
 .reveal-btn{background:none;border:1px solid var(--gline);border-radius:8px;color:var(--gold2);font-size:12px;padding:7px 16px;cursor:pointer;font-family:inherit;margin:8px 0;transition:.15s;}
 .reveal-btn:hover{background:var(--glow);border-color:var(--gold);}
+
+/* ===== ADMIN DASHBOARD ===== */
+.admin-shell{max-width:1100px;margin:0 auto;padding:28px 20px 60px;}
+.admin-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:10px;}
+.admin-header h1{font-family:'Space Grotesk',sans-serif;font-size:20px;}
+.admin-header-right{display:flex;align-items:center;gap:12px;}
+.admin-whoami{color:var(--mute);font-size:12px;}
+.admin-logout{background:none;border:1px solid var(--faint);color:var(--mute);font-size:12px;font-weight:600;padding:7px 14px;border-radius:20px;cursor:pointer;font-family:inherit;}
+.admin-logout:hover{border-color:var(--brandline);color:var(--text);}
+.admin-error{background:var(--dnd);color:var(--dn);border-radius:8px;padding:8px 12px;font-size:13px;}
+.admin-error-block{margin:0 0 16px;}
+
+.admin-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:24px;}
+.stat-card{background:var(--bg1);border:1px solid var(--faint);border-radius:14px;padding:16px 18px;}
+.stat-num{font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:700;}
+.stat-label{color:var(--mute);font-size:12px;margin-top:4px;}
+.stat-pending .stat-num{color:var(--warn);}
+.stat-approved .stat-num{color:var(--up);}
+.stat-rejected .stat-num{color:var(--dn);}
+
+.admin-tabs{display:flex;align-items:center;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+.admin-tab{background:none;border:1px solid var(--faint);color:var(--mute);font-size:13px;font-weight:600;padding:7px 14px;border-radius:20px;cursor:pointer;font-family:inherit;}
+.admin-tab.active{color:var(--brand2);border-color:var(--brandline);background:var(--brandd);}
+.admin-refresh{margin-left:auto;background:none;border:1px solid var(--faint);color:var(--mute);font-size:12px;font-weight:600;padding:7px 14px;border-radius:20px;cursor:pointer;font-family:inherit;}
+.admin-refresh:disabled{opacity:.6;cursor:not-allowed;}
+
+.admin-table-wrap{overflow-x:auto;background:var(--bg1);border:1px solid var(--faint);border-radius:14px;}
+.admin-table{width:100%;border-collapse:collapse;font-size:13px;min-width:720px;}
+.admin-table th{text-align:left;color:var(--mute);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.05em;padding:12px 16px;border-bottom:1px solid var(--faint);}
+.admin-table td{padding:12px 16px;border-bottom:1px solid var(--faint);vertical-align:middle;}
+.admin-table tr:last-child td{border-bottom:none;}
+.admin-empty{text-align:center;color:var(--mute);padding:24px!important;}
+
+.status-pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:capitalize;}
+.status-pending{background:var(--warnd);color:var(--warn);}
+.status-approved{background:var(--upd);color:var(--up);}
+.status-rejected{background:var(--dnd);color:var(--dn);}
+
+.role-pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:capitalize;background:var(--bg2);color:var(--mute);}
+.role-admin{background:var(--brandd);color:var(--brand2);}
+
+.admin-actions{display:flex;gap:6px;flex-wrap:wrap;}
+.action-btn{border:none;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;}
+.action-btn:disabled{opacity:.5;cursor:not-allowed;}
+.action-btn.approve{background:var(--upd);color:var(--up);}
+.action-btn.reject{background:var(--dnd);color:var(--dn);}
+.action-btn.reset{background:var(--bg2);color:var(--mute);}
+.action-btn.admin{background:var(--brandd);color:var(--brand2);}

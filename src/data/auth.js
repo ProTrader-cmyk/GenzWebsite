@@ -171,3 +171,19 @@ export function saveSession(user) {
 export function clearSession() {
   localStorage.removeItem(SESSION_KEY);
 }
+
+// --- Admin dashboard (only reachable in the UI for role: 'admin' accounts;
+// actually enforced server-side by firestore.rules regardless) ---
+
+export async function fetchAllUsers() {
+  const snap = await getDocs(query(collection(db, 'users'), orderBy('createdAt', 'desc')));
+  return snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
+}
+
+export async function setUserStatus(uid, status) {
+  await updateDoc(doc(db, 'users', uid), { status });
+}
+
+export async function setUserRole(uid, role) {
+  await updateDoc(doc(db, 'users', uid), { role });
+}
