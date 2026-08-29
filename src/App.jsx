@@ -28,14 +28,25 @@ export default function App() {
   // Firebase is the source of truth for status/emailVerified — re-check it on
   // load instead of trusting whatever was last cached in localStorage, since
   // an admin may have approved the account while it wasn't open.
+  //
+  // createUserWithEmailAndPassword auto-signs the new account in, which
+  // fires this listener mid-signup — before the OTP has been entered. Route
+  // an unverified account straight to the OTP screen here too (not just in
+  // Login.jsx) so that race can never skip verification.
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       if (fbUser) {
         const profile = await fetchUserProfile(fbUser.uid);
-        if (profile) {
+        if (profile && profile.emailVerified) {
           setUser(profile);
           saveSession(profile);
+        } else if (profile) {
+          setUser(null);
+          clearSession();
+          setPendingVerification({ uid: profile.uid, email: profile.email, name: profile.name });
         }
+        // else: profile doc not written yet (signup still in flight) — leave
+        // state as-is, Signup.jsx's own success callback takes over shortly.
       } else {
         setUser(null);
         clearSession();

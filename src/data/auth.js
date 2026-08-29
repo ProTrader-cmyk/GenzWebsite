@@ -86,6 +86,7 @@ export async function registerUser({ name, email, password }) {
       name,
       email: normalizedEmail,
       status: 'pending', // admin flips this to 'approved' in Firestore once the user is confirmed
+      role: 'user', // admin flips this to 'admin' to grant dashboard access
       emailVerified: false,
       createdAt: serverTimestamp(),
     });
