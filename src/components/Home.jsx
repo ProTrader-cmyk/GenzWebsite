@@ -1,4 +1,4 @@
-import mentor from '../assets/mentor.jpg';
+import logo from '../assets/logo.jpg';
 import { lessons } from '../data/lessons.js';
 import LessonCard from './LessonCard.jsx';
 import Footer from './Footer.jsx';
@@ -13,7 +13,7 @@ export default function Home({ doneMap, onSelectLesson }) {
     <div className="view active" id="v-home">
       <div className="hero">
         <div className="hero-logo">
-          <img src={mentor} alt="GenZ Trader — Veng Sophea" />
+          <img src={logo} alt="GenZ Trader — Veng Sophea" />
         </div>
         <div className="hero-tag">
           <span></span>Private Mentorship Class<span></span>
