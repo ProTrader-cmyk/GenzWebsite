@@ -40,11 +40,11 @@ export default function Home({ doneMap, onSelectLesson, onBack, approved }) {
       </p>
 
       {lessons.map((lesson, i) => {
-        // First lesson is always a free trial. Beyond that, a pending
-        // (not-yet-approved) account is locked out regardless of progress —
-        // an approved account unlocks the normal way, one at a time.
+        // A pending (not-yet-approved) account is locked out of every
+        // lesson, including the first — an approved account unlocks them
+        // the normal way, one at a time as each prior lesson is finished.
         const prevDone = i === 0 || !!doneMap[lessons[i - 1].id];
-        const needsApproval = i > 0 && !approved;
+        const needsApproval = !approved;
         const locked = needsApproval || !prevDone;
         return (
           <LessonCard
@@ -74,10 +74,9 @@ export default function Home({ doneMap, onSelectLesson, onBack, approved }) {
             <div className="modal-lock">
               <LockIcon width="20" height="20" />
             </div>
-            <h3 className="modal-title">ត្រូវការសិទ្ធិចូលប្រើបន្ថែម</h3>
+            <h3 className="modal-title">ត្រូវការសិទ្ធិចូលប្រើ</h3>
             <p className="modal-text">
-              អ្នកអាចសាកល្បងមេរៀនទី ១ បានដោយឥតគិតថ្លៃ។ ដើម្បីបើកមេរៀនបន្ទាប់ សូមទាក់ទង Admin
-              ដើម្បីអនុម័តគណនីរបស់អ្នក។
+              គណនីរបស់អ្នកកំពុងរង់ចាំការអនុម័តពី Admin។ សូមទាក់ទង Admin ដើម្បីទទួលបានសិទ្ធិចូលរៀនមេរៀននេះ។
             </p>
             <button className="modal-btn" onClick={() => setShowAccessModal(false)}>
               យល់ព្រម

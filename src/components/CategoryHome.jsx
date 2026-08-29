@@ -12,6 +12,14 @@ import {
 
 const CATEGORIES = [
   {
+    id: 'apps',
+    Icon: AppWindowIcon,
+    title: 'App & Website for Trading',
+    subtitle: 'ស្គាល់ Platform និង Tool សម្រាប់ធ្វើការជួញដូរ',
+    tag: 'ឆាប់ៗនេះ',
+    locked: true,
+  },
+  {
     id: 'technical',
     Icon: CandleChartIcon,
     title: 'Technical for Beginner',
@@ -24,14 +32,6 @@ const CATEGORIES = [
     Icon: BrainIcon,
     title: 'Psychology',
     subtitle: 'Discipline · Emotion Control · Risk Mindset',
-    tag: 'ឆាប់ៗនេះ',
-    locked: true,
-  },
-  {
-    id: 'apps',
-    Icon: AppWindowIcon,
-    title: 'App & Website for Trading',
-    subtitle: 'ស្គាល់ Platform និង Tool សម្រាប់ធ្វើការជួញដូរ',
     tag: 'ឆាប់ៗនេះ',
     locked: true,
   },
