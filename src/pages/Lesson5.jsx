@@ -9,6 +9,23 @@ import Quiz from '../components/ui/Quiz.jsx';
 import FinalTest from '../components/ui/FinalTest.jsx';
 import { getLessonMeta } from '../data/lessons.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
+import bslVideo from '../assets/Lesson 5/BSL.mp4';
+import sslVideo from '../assets/Lesson 5/SSL.mp4';
+import lqRunVideo from '../assets/Lesson 5/LQ-RUN.mp4';
+import lqSweepVideo from '../assets/Lesson 5/LQ-SWEEP.mp4';
+
+function LessonVideo({ label, src }) {
+  return (
+    <div className="fig" style={{ padding: 10, margin: '14px 0 4px' }}>
+      <div className="gi-label" style={{ color: 'var(--gold)', marginBottom: 8 }}>
+        {label}
+      </div>
+      <video controls playsInline preload="metadata" style={{ width: '100%', borderRadius: 8, display: 'block', background: '#000' }}>
+        <source src={src} type="video/mp4" />
+      </video>
+    </div>
+  );
+}
 
 const meta = getLessonMeta('l5');
 
@@ -45,6 +62,10 @@ const CONTENT = {
     kw2Body: 'Swing High ឬ Swing Low ចំនួន ២ ឬច្រើន ដែលនៅកម្រិតជិតគ្នា/ដូចគ្នា — កន្លែងដែល Stop Loss ប្រមូលផ្ដុំច្រើនបំផុត ។',
     rule1Title: 'Liquidity Sweep ≠ Reversal Signal ដោយខ្លួនឯង',
     rule1Body: 'តែងតែរង់ចាំ BOS ឬ CHoCH កើតឡើងបន្ទាប់ពី Sweep សិន មុននឹងសន្និដ្ឋានទិស',
+    bslVideoLabel: '🎥 ឧទាហរណ៍ BSL',
+    sslVideoLabel: '🎥 ឧទាហរណ៍ SSL',
+    lqRunVideoLabel: '🎥 ឧទាហរណ៍ LQ Run',
+    lqSweepVideoLabel: '🎥 ឧទាហរណ៍ LQ Sweep',
     h1: '១. Buy-side Liquidity (BSL)',
     bslBox: (
       <p>
@@ -228,6 +249,10 @@ const CONTENT = {
     kw2Body: 'Two or more Swing Highs or Swing Lows sitting at nearly the same/identical level — the spot where Stop Losses cluster the most.',
     rule1Title: 'A Liquidity Sweep ≠ a Reversal Signal by Itself',
     rule1Body: 'Always wait for a BOS or CHoCH to happen after the Sweep first, before concluding a direction',
+    bslVideoLabel: '🎥 BSL example',
+    sslVideoLabel: '🎥 SSL example',
+    lqRunVideoLabel: '🎥 LQ Run example',
+    lqSweepVideoLabel: '🎥 LQ Sweep example',
     h1: '1. Buy-side Liquidity (BSL)',
     bslBox: (
       <p>
@@ -414,6 +439,10 @@ const CONTENT = {
     kw2Body: '两个或以上的 Swing High 或 Swing Low 位于相近/相同的水平——Stop Loss 聚集最多的地方。',
     rule1Title: 'Liquidity Sweep 本身 ≠ 反转信号',
     rule1Body: '务必先等待 Sweep 之后出现 BOS 或 CHoCH，再判断方向',
+    bslVideoLabel: '🎥 BSL 示例',
+    sslVideoLabel: '🎥 SSL 示例',
+    lqRunVideoLabel: '🎥 LQ Run 示例',
+    lqSweepVideoLabel: '🎥 LQ Sweep 示例',
     h1: '1. Buy-side Liquidity (BSL)',
     bslBox: (
       <p>
@@ -614,12 +643,14 @@ export default function Lesson5({ onNavigate, onDone }) {
         {t.h1}
       </h3>
       <Box variant="d">{t.bslBox}</Box>
+      <LessonVideo label={t.bslVideoLabel} src={bslVideo} />
 
       <h3>
         <span className="bar"></span>
         {t.h2}
       </h3>
       <Box variant="u">{t.sslBox}</Box>
+      <LessonVideo label={t.sslVideoLabel} src={sslVideo} />
 
       <div className="g2">
         <GridItem labelColor="var(--dn)" label={t.bslSweepLabel} valStyle={{ marginTop: 6, fontSize: 13 }}>
@@ -678,6 +709,10 @@ export default function Lesson5({ onNavigate, onDone }) {
         <GridItem labelColor="var(--gold)" label={t.sweepLabel2}>
           {t.sweepBody2}
         </GridItem>
+      </div>
+      <div className="g2">
+        <LessonVideo label={t.lqRunVideoLabel} src={lqRunVideo} />
+        <LessonVideo label={t.lqSweepVideoLabel} src={lqSweepVideo} />
       </div>
       <Rule title={t.runSweepRuleTitle}>{t.runSweepRuleBody}</Rule>
 

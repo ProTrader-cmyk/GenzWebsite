@@ -25,7 +25,7 @@ export default function Home({ doneMap, onSelectLesson, onBack, approved }) {
       <div className="sec-hero">
         <div className="sec-hero-ey sg">{t.eyebrow}</div>
         <h2>{t.title}</h2>
-        <p>{t.subtitle}</p>
+        <p className={approved ? '' : 'blur-locked'}>{t.subtitle}</p>
       </div>
 
       <div id="prog-outer" style={{ display: showProgress ? 'block' : 'none' }}>
@@ -45,10 +45,11 @@ export default function Home({ doneMap, onSelectLesson, onBack, approved }) {
       </p>
 
       {lessons.map((lesson, i) => {
-        // A pending (not-yet-approved) account is locked out of every
-        // lesson. Once approved, all lessons are open immediately — no
-        // progressive one-at-a-time unlocking.
-        const locked = !approved;
+        // A pending (not-yet-approved) account can freely take Lesson 1 as a
+        // preview, but every other lesson stays locked until an admin
+        // approves them. Once approved, all lessons are open immediately —
+        // no progressive one-at-a-time unlocking.
+        const locked = !approved && lesson.id !== 'l1';
         return (
           <LessonCard
             key={lesson.id}
@@ -56,6 +57,7 @@ export default function Home({ doneMap, onSelectLesson, onBack, approved }) {
             lesson={lesson}
             done={!!doneMap[lesson.id]}
             locked={locked}
+            lockedTitle={tp.lessonLockedTitle}
             lockedReason={tp.lessonLockedReason}
             onClick={() => {
               if (locked) {

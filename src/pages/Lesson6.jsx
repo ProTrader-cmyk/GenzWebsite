@@ -9,6 +9,22 @@ import Quiz from '../components/ui/Quiz.jsx';
 import FinalTest from '../components/ui/FinalTest.jsx';
 import { getLessonMeta } from '../data/lessons.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
+import setupVideo from '../assets/Lesson 6/EMA-SMA-Setup.mp4';
+import trendVideo from '../assets/Lesson 6/EMA-Trend.mp4';
+import crossingVideo from '../assets/Lesson 6/EMA-Crossing.mp4';
+
+function LessonVideo({ label, src }) {
+  return (
+    <div className="fig" style={{ padding: 10, margin: '14px 0 4px' }}>
+      <div className="gi-label" style={{ color: 'var(--gold)', marginBottom: 8 }}>
+        {label}
+      </div>
+      <video controls playsInline preload="metadata" style={{ width: '100%', borderRadius: 8, display: 'block', background: '#000' }}>
+        <source src={src} type="video/mp4" />
+      </video>
+    </div>
+  );
+}
 
 const meta = getLessonMeta('l6');
 
@@ -40,6 +56,9 @@ const CONTENT = {
         នោះហើយជាគោលការណ៍នៃមេរៀននេះ។
       </p>
     ),
+    setupVideoLabel: '🎥 របៀបដាក់ EMA+SMA លើ Chart',
+    trendVideoLabel: '🎥 ឧទាហរណ៍ EMA Trend',
+    crossingVideoLabel: '🎥 ឧទាហរណ៍ EMA Crossing',
     h1: 'ពាក្យគន្លឹះត្រូវចាំមុនចូលមេរៀន',
     periodLabel: 'Period (Length)',
     periodBody: 'ចំនួន Candle ដែល EMA/SMA ប្រើសម្រាប់គណនា Average — ឧ. EMA50 = 50 Candle ចុងក្រោយ (ផ្ដល់ទម្ងន់ខ្ពស់ទៅ Candle ថ្មី)។',
@@ -255,6 +274,9 @@ const CONTENT = {
         (Momentum) is changing — that's the whole idea behind this lesson.
       </p>
     ),
+    setupVideoLabel: '🎥 How to set up EMA+SMA on your chart',
+    trendVideoLabel: '🎥 EMA Trend example',
+    crossingVideoLabel: '🎥 EMA Crossing example',
     h1: 'Key Terms to Know Before This Lesson',
     periodLabel: 'Period (Length)',
     periodBody: 'The number of candles EMA/SMA uses to calculate the average — e.g. EMA50 = the last 50 candles (with more weight on the newer ones).',
@@ -474,6 +496,9 @@ const CONTENT = {
         <strong>开始走得比"远的朋友"（SMA）快</strong>，这就说明你的速度（Momentum）正在改变——这正是本课的核心概念。
       </p>
     ),
+    setupVideoLabel: '🎥 如何在图表上设置 EMA+SMA',
+    trendVideoLabel: '🎥 EMA Trend 示例',
+    crossingVideoLabel: '🎥 EMA Crossing 示例',
     h1: '进入本课前要先掌握的关键词',
     periodLabel: 'Period（周期长度）',
     periodBody: 'EMA/SMA 用来计算平均值所用的 Candle 数量——例如 EMA50 = 最近 50 根 Candle（对较新的 Candle 赋予更高权重）。',
@@ -688,6 +713,8 @@ export default function Lesson6({ onNavigate, onDone }) {
 
       <Box variant="g">{t.easyThink}</Box>
 
+      <LessonVideo label={t.setupVideoLabel} src={setupVideo} />
+
       <h3>
         <span className="bar"></span>
         {t.h1}
@@ -708,6 +735,7 @@ export default function Lesson6({ onNavigate, onDone }) {
         {t.h2}
       </h3>
       <Box variant="u">{t.trendFilterBody}</Box>
+      <LessonVideo label={t.trendVideoLabel} src={trendVideo} />
 
       <div className="g2">
         <GridItem labelColor="var(--gold)" label={t.period50Label}>
@@ -735,6 +763,7 @@ export default function Lesson6({ onNavigate, onDone }) {
           {t.emaBelowBody}
         </GridItem>
       </div>
+      <LessonVideo label={t.crossingVideoLabel} src={crossingVideo} />
 
       <Box variant="g">{t.fullStackBody}</Box>
 

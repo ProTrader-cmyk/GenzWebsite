@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import logo from '../assets/logo.jpg';
 import LanguageDropdown from './LanguageDropdown.jsx';
+import ThemeToggle from './ThemeToggle.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
 
@@ -58,6 +59,7 @@ export default function Navbar({ onLogoClick, activeSection, onNavNews, onNavCon
           <span></span>
         </button>
 
+        <ThemeToggle />
         <LanguageDropdown />
 
         {user && (

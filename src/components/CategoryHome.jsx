@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import logo from '../assets/logo.jpg';
+import { useEffect, useRef, useState } from 'react';
+import heroVideo from '../assets/Hero.mp4';
 import Footer from './Footer.jsx';
 import Trans from '../i18n/Trans.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
@@ -59,6 +59,35 @@ export default function CategoryHome({ onSelectCategory }) {
   const t = getStrings(lang).category;
   const CATEGORIES = buildCategories(t);
   const [unlockPrompt, setUnlockPrompt] = useState(null);
+  const videoRef = useRef(null);
+
+  // Set `muted` imperatively, once, via a stable ref — not as a JSX
+  // attribute. `defaultMuted` isn't a real React DOM prop (silently
+  // ignored), and a plain `muted` JSX attribute risks React reasserting it;
+  // this `useEffect` with an empty dep array runs exactly once on mount,
+  // verified to survive later re-renders without re-muting a user's unmute.
+  useEffect(() => {
+    if (videoRef.current) videoRef.current.muted = true;
+  }, []);
+
+  // Pause the hero video once it's scrolled out of view (and resume when it
+  // scrolls back in) instead of letting it keep looping off-screen.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          video.play().catch(() => {});
+        } else {
+          video.pause();
+        }
+      },
+      { threshold: 0.25 }
+    );
+    observer.observe(video);
+    return () => observer.disconnect();
+  }, []);
 
   function handleCardClick(cat) {
     if (cat.premium) {
@@ -71,9 +100,6 @@ export default function CategoryHome({ onSelectCategory }) {
   return (
     <div className="view active" id="v-categories">
       <div className="hero">
-        <div className="hero-logo">
-          <img src={logo} alt="GenZ Trader — Veng Sophea" />
-        </div>
         <div className="hero-tag">
           <span></span>
           {t.heroTag}
@@ -86,6 +112,11 @@ export default function CategoryHome({ onSelectCategory }) {
         <p className="hero-sub">
           {t.heroSubPrefix} <strong style={{ color: 'var(--text)' }}>Veng Sophea</strong> {t.heroSubSuffix}
         </p>
+        <div className="hero-video">
+          <video ref={videoRef} autoPlay loop playsInline controls>
+            <source src={heroVideo} type="video/mp4" />
+          </video>
+        </div>
       </div>
 
       <p className="sec-label sg">{t.chooseSection}</p>

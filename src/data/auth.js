@@ -141,6 +141,13 @@ export async function fetchUserProfile(uid) {
   return snap.exists() ? { uid, ...snap.data() } : null;
 }
 
+// Marks one lesson done on the user's own profile (progress.<lessonId> =
+// true), so completed lessons — and therefore which lesson is unlocked next
+// — persist across logout/login and across devices, not just this session.
+export async function markLessonDone(uid, lessonId) {
+  await updateDoc(doc(db, 'users', uid), { [`progress.${lessonId}`]: true });
+}
+
 export async function loginUser({ email, password }, lang) {
   try {
     const cred = await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fetchAllUsers, setUserStatus, setUserRole } from '../data/auth.js';
+import ThemeToggle from '../components/ThemeToggle.jsx';
 
 const TABS = [
   { key: 'all', label: 'All' },
@@ -75,6 +76,7 @@ export default function AdminDashboard({ admin, onLogout }) {
         <h1>GenZ Trader Admin</h1>
         <div className="admin-header-right">
           <span className="admin-whoami">{admin.email}</span>
+          <ThemeToggle />
           <button className="admin-logout" onClick={onLogout}>
             Sign out
           </button>

@@ -84,3 +84,27 @@ export function TelegramIcon(props) {
     </svg>
   );
 }
+
+export function FacebookIcon(props) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" {...props}>
+      <path d="M13.5 21.9v-8.4h2.8l.4-3.3h-3.2V8.1c0-.95.26-1.6 1.63-1.6h1.74V3.5c-.3-.04-1.33-.13-2.53-.13-2.5 0-4.22 1.53-4.22 4.33v2.42H7.3v3.3h2.85v8.4h3.35Z" />
+    </svg>
+  );
+}
+
+export function YoutubeIcon(props) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" {...props}>
+      <path d="M22.2 8.5a3.1 3.1 0 0 0-2.2-2.2C18.1 5.8 12 5.8 12 5.8s-6.1 0-8 .5A3.1 3.1 0 0 0 1.8 8.5 32 32 0 0 0 1.3 12a32 32 0 0 0 .5 3.5 3.1 3.1 0 0 0 2.2 2.2c1.9.5 8 .5 8 .5s6.1 0 8-.5a3.1 3.1 0 0 0 2.2-2.2 32 32 0 0 0 .5-3.5 32 32 0 0 0-.5-3.5ZM9.8 15.3V8.7l5.7 3.3-5.7 3.3Z" />
+    </svg>
+  );
+}
+
+export function TiktokIcon(props) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" {...props}>
+      <path d="M16.6 2h-3.3v13.9a2.7 2.7 0 1 1-2-2.6V9.9a5.9 5.9 0 1 0 5.3 5.9V9.1a8 8 0 0 0 4.6 1.5V7.2a4.7 4.7 0 0 1-4.6-4.7V2Z" />
+    </svg>
+  );
+}

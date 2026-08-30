@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { registerUser } from '../data/auth.js';
 import AuthBackgroundVideo from '../components/ui/AuthBackgroundVideo.jsx';
 import LanguageDropdown from '../components/LanguageDropdown.jsx';
+import ThemeToggle from '../components/ThemeToggle.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
 
@@ -48,6 +49,7 @@ export default function Signup({ onNeedVerification, onSwitchToLogin }) {
     <div className="auth-wrap">
       <AuthBackgroundVideo />
       <div className="auth-lang">
+        <ThemeToggle />
         <LanguageDropdown />
       </div>
       <div className="auth-card">

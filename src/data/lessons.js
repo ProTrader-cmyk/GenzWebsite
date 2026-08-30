@@ -44,12 +44,12 @@ export const lessons = [
   },
   {
     id: 'l5',
-    title: 'LQ (Liquidity)',
+    title: 'Liquidity (LQ)',
     subtitle: 'Buy-side · Sell-side · Equal High/Low · Liquidity Sweep · Stop Hunt',
     pageTitle: {
-      kh: 'LQ — Liquidity & Liquidity Sweep',
-      en: 'LQ — Liquidity & Liquidity Sweep',
-      zh: 'LQ — Liquidity 与 Liquidity Sweep',
+      kh: 'Liquidity (LQ)',
+      en: 'Liquidity (LQ)',
+      zh: 'Liquidity（LQ）',
     },
   },
   {
