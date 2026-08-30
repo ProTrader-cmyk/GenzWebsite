@@ -20,8 +20,8 @@ const meta = getLessonMeta('l6');
 const CONTENT = {
   kh: {
     feedbackNo: '✗ មិនត្រឹមត្រូវ សូមសាកល្បងម្ដងទៀត។',
-    finishLocked: (p, t) => `🔒 បញ្ចប់ Course (${p}/${t})`,
-    finishUnlocked: '✓ បញ្ចប់ Course',
+    finishLocked: (p, t) => `🔒 បញ្ចប់មេរៀន (${p}/${t})`,
+    finishUnlocked: '✓ បញ្ចប់មេរៀន',
     intro: (
       <p>
         <strong>EMA (Exponential Moving Average)</strong> និង <strong>SMA (Simple Moving Average)</strong> ទាំង
@@ -172,11 +172,10 @@ const CONTENT = {
     ),
     rule2Title: 'ច្បាប់ងាយចាំ',
     rule2Body: 'EMA លើ SMA (រយៈពេលដូចគ្នា) = Momentum Bullish · EMA ក្រោម SMA = Momentum Bearish · Layer ធំបញ្ជាក់ Layer តូច',
-    h7: '📝 លំហាត់អនុវត្ត — ត្រៀមខ្លួនសម្រាប់ Course បញ្ចប់',
+    h7: '📝 លំហាត់អនុវត្ត',
     practiceIntro: (
       <p>
-        នេះជាមេរៀនចុងក្រោយនៃ Course — មុននឹងធ្វើ Quiz ចុងក្រោយ សូមព្យាយាមផ្សំចំណេះដឹងទាំង ៦ មេរៀនចូលគ្នាលើ Chart
-        ពិតរបស់អ្នក ៖
+        មុននឹងធ្វើ Quiz ចុងក្រោយ សូមព្យាយាមផ្សំចំណេះដឹងទាំង ៦ មេរៀនចូលគ្នាលើ Chart ពិតរបស់អ្នក ៖
       </p>
     ),
     practiceSteps: [
@@ -190,10 +189,10 @@ const CONTENT = {
     h8: 'Quiz — សាកល្បងចំណេះដឹង',
     quizIntro: (
       <>
-        ត្រូវឆ្លើយ<strong>ត្រូវទាំង ៤ សំណួរ</strong> ដើម្បីបញ្ចប់ Course — បើឆ្លើយខុស អាចសាកល្បងម្ដងទៀតបានគ្មានកំណត់។
+        ត្រូវឆ្លើយ<strong>ត្រូវទាំង ៤ សំណួរ</strong> ដើម្បីដោះសោ ហើយបន្តទៅមេរៀនបន្ទាប់បាន — បើឆ្លើយខុស
+        អាចសាកល្បងម្ដងទៀតបានគ្មានកំណត់ ។
       </>
     ),
-    finalTestLockedHint: 'ត្រូវត្រូវទាំងអស់ដើម្បីបញ្ចប់ Course',
     finalTestQuestions: [
       {
         question: 'ហេតុអ្វី EMA ប្រតិកម្មលឿនជាង SMA (រយៈពេលដូចគ្នា)?',
@@ -235,8 +234,8 @@ const CONTENT = {
   },
   en: {
     feedbackNo: '✗ Not quite — try again.',
-    finishLocked: (p, t) => `🔒 Finish Course (${p}/${t})`,
-    finishUnlocked: '✓ Finish Course',
+    finishLocked: (p, t) => `🔒 Finish lesson (${p}/${t})`,
+    finishUnlocked: '✓ Finish lesson',
     intro: (
       <p>
         <strong>EMA (Exponential Moving Average)</strong> and <strong>SMA (Simple Moving Average)</strong> are
@@ -395,11 +394,11 @@ const CONTENT = {
     ),
     rule2Title: 'Easy rule to remember',
     rule2Body: 'EMA above SMA (same period) = Momentum Bullish · EMA below SMA = Momentum Bearish · the bigger Layer confirms the smaller Layer',
-    h7: '📝 Practice Exercise — Getting Ready to Finish the Course',
+    h7: '📝 Practice Exercise',
     practiceIntro: (
       <p>
-        This is the last lesson of the Course — before taking the final Quiz, try combining everything you've
-        learned across all 6 lessons on your own real chart:
+        Before taking the final Quiz, try combining everything you've learned across all 6 lessons on your
+        own real chart:
       </p>
     ),
     practiceSteps: [
@@ -413,11 +412,10 @@ const CONTENT = {
     h8: 'Quiz — Test Your Understanding',
     quizIntro: (
       <>
-        You must answer <strong>all 4 questions correctly</strong> to finish the Course — if you answer wrong,
-        you can try again with no limit.
+        You must answer <strong>all 4 questions correctly</strong> to unlock and move on to the next lesson —
+        if you answer wrong, you can try again with no limit.
       </>
     ),
-    finalTestLockedHint: 'Answer all of them correctly to finish the Course',
     finalTestQuestions: [
       {
         question: 'Why does EMA react faster than SMA (same period)?',
@@ -459,8 +457,8 @@ const CONTENT = {
   },
   zh: {
     feedbackNo: '✗ 不正确，请再试一次。',
-    finishLocked: (p, t) => `🔒 完成课程 (${p}/${t})`,
-    finishUnlocked: '✓ 完成课程',
+    finishLocked: (p, t) => `🔒 完成本课 (${p}/${t})`,
+    finishUnlocked: '✓ 完成本课',
     intro: (
       <p>
         <strong>EMA（指数移动平均线）</strong>和 <strong>SMA（简单移动平均线）</strong>都是描绘一段固定周期内
@@ -607,11 +605,9 @@ const CONTENT = {
     ),
     rule2Title: '简单好记的规则',
     rule2Body: 'EMA 在 SMA（同周期）上方 = Momentum Bullish · EMA 在 SMA 下方 = Momentum Bearish · 大 Layer 确认小 Layer',
-    h7: '📝 实践练习 — 为完成课程做准备',
+    h7: '📝 实践练习',
     practiceIntro: (
-      <p>
-        这是本课程的最后一课——在做最终 Quiz 之前，请尝试在你自己的真实图表上，把前面 6 课学到的内容综合运用一遍：
-      </p>
+      <p>在做最终 Quiz 之前，请尝试在你自己的真实图表上，把前面 6 课学到的内容综合运用一遍：</p>
     ),
     practiceSteps: [
       '在图表上添加 EMA50/SMA50、EMA100/SMA100、EMA200/SMA200',
@@ -624,10 +620,9 @@ const CONTENT = {
     h8: 'Quiz — 检测你的理解',
     quizIntro: (
       <>
-        必须<strong>全部 4 题答对</strong>才能完成本课程——如果答错，可以无限次重新尝试。
+        必须<strong>全部 4 题答对</strong>才能解锁并进入下一课——如果答错，可以无限次重新尝试。
       </>
     ),
-    finalTestLockedHint: '全部答对才能完成课程',
     finalTestQuestions: [
       {
         question: '为什么 EMA 的反应比 SMA（同周期）更快？',
@@ -815,7 +810,7 @@ export default function Lesson6({ onNavigate, onDone }) {
         {t.h8}
       </h3>
       <p>{t.quizIntro}</p>
-      <FinalTest questions={finalTestQuestions} onProgressChange={setGate} lockedHint={t.finalTestLockedHint} />
+      <FinalTest questions={finalTestQuestions} onProgressChange={setGate} />
     </LessonLayout>
   );
 }

@@ -3,6 +3,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import Navbar from './components/Navbar.jsx';
 import CategoryHome from './components/CategoryHome.jsx';
 import Home from './components/Home.jsx';
+import AppsHome from './components/AppsHome.jsx';
 import NewsPage from './components/NewsPage.jsx';
 import ContactPage from './components/ContactPage.jsx';
 import Login from './pages/Login.jsx';
@@ -11,6 +12,7 @@ import VerifyOtp from './pages/VerifyOtp.jsx';
 import AdminDashboard from './pages/AdminDashboard.jsx';
 import PendingBanner from './components/PendingBanner.jsx';
 import { getNextLessonId } from './data/lessons.js';
+import { getNextAppsLessonId } from './data/appsLessons.js';
 import { lessonPages } from './pages/registry.js';
 import { auth } from './firebase.js';
 import { fetchUserProfile, saveSession, loadSession, clearSession, logoutUser } from './data/auth.js';
@@ -67,18 +69,19 @@ export default function App() {
     setView(id);
   }
 
-  // Marks the current lesson complete and advances to the next one in
-  // src/data/lessons.js, or back home if it was the last lesson. Adding a
-  // new lesson to that list is all this needs to keep working.
+  // Marks the current lesson complete and advances to the next one in its
+  // track (src/data/lessons.js for 'l*' ids, src/data/appsLessons.js for
+  // 'a*' ids), or back home if it was the last lesson in that track.
   function markDone(id) {
     setDoneMap((prev) => ({ ...prev, [id]: true }));
-    setView(getNextLessonId(id) ?? 'home');
+    const next = id.startsWith('a') ? getNextAppsLessonId(id) : getNextLessonId(id);
+    setView(next ?? 'home');
   }
 
-  // Only 'technical' has content today — the other category cards are
-  // rendered locked and don't call this.
+  // 'technical' and 'apps' have content today — the other category cards
+  // are rendered locked and don't call this.
   function selectCategory(id) {
-    if (id === 'technical') setSection('technical');
+    if (id === 'technical' || id === 'apps') setSection(id);
   }
 
   function backToCategories() {
@@ -144,8 +147,8 @@ export default function App() {
   }
 
   // Verified but not yet approved by an admin — logged in and can browse the
-  // whole site freely, but only the first lesson is unlocked as a trial
-  // until someone flips status to 'approved' in Firestore.
+  // whole site freely, but Technical lessons stay locked until someone flips
+  // status to 'approved' in Firestore. The Apps track has no such gate.
   const approved = user.status === 'approved';
 
   const CurrentLesson = view !== 'home' ? lessonPages[view] : null;
@@ -160,7 +163,9 @@ export default function App() {
         user={user}
         onLogout={handleLogout}
       />
-      {!approved && <PendingBanner name={user.name} />}
+      {/* Apps track has no approval gate, so the banner (which is about
+          Technical being locked) would be misleading while browsing it. */}
+      {!approved && section !== 'apps' && <PendingBanner name={user.name} />}
       <div className="wrap">
         {section === 'categories' && <CategoryHome onSelectCategory={selectCategory} />}
         {section === 'news' && <NewsPage onBack={backToCategories} />}
@@ -168,7 +173,10 @@ export default function App() {
         {section === 'technical' && view === 'home' && (
           <Home doneMap={doneMap} onSelectLesson={navigate} onBack={backToCategories} approved={approved} />
         )}
-        {section === 'technical' && CurrentLesson && (
+        {section === 'apps' && view === 'home' && (
+          <AppsHome doneMap={doneMap} onSelectLesson={navigate} onBack={backToCategories} />
+        )}
+        {(section === 'technical' || section === 'apps') && CurrentLesson && (
           <CurrentLesson onNavigate={navigate} onDone={() => markDone(view)} />
         )}
       </div>

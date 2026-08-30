@@ -46,11 +46,9 @@ export default function Home({ doneMap, onSelectLesson, onBack, approved }) {
 
       {lessons.map((lesson, i) => {
         // A pending (not-yet-approved) account is locked out of every
-        // lesson, including the first — an approved account unlocks them
-        // the normal way, one at a time as each prior lesson is finished.
-        const prevDone = i === 0 || !!doneMap[lessons[i - 1].id];
-        const needsApproval = !approved;
-        const locked = needsApproval || !prevDone;
+        // lesson. Once approved, all lessons are open immediately — no
+        // progressive one-at-a-time unlocking.
+        const locked = !approved;
         return (
           <LessonCard
             key={lesson.id}
@@ -58,13 +56,12 @@ export default function Home({ doneMap, onSelectLesson, onBack, approved }) {
             lesson={lesson}
             done={!!doneMap[lesson.id]}
             locked={locked}
-            lockedReason={needsApproval ? tp.lessonLockedReason : t.lessonLockedProgression}
+            lockedReason={tp.lessonLockedReason}
             onClick={() => {
-              if (needsApproval) {
+              if (locked) {
                 setShowAccessModal(true);
                 return;
               }
-              if (!prevDone) return;
               onSelectLesson(lesson.id);
             }}
           />

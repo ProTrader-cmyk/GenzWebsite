@@ -19,8 +19,8 @@ function buildCategories(t) {
       id: 'apps',
       Icon: AppWindowIcon,
       title: t.appsTitle,
-      tag: t.comingSoon,
-      locked: true,
+      tag: t.appsLessonsCount,
+      locked: false,
     },
     {
       id: 'technical',

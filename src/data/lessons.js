@@ -62,6 +62,16 @@ export const lessons = [
       zh: 'EMA — EMA 与 SMA 组合 (50/100/200)',
     },
   },
+  {
+    id: 'l7',
+    title: 'Become a Trader',
+    subtitle: 'Top-Down Process · Confluence Checklist · Risk Management · Trading Plan',
+    pageTitle: {
+      kh: 'របៀបប្រើមេរៀនទាំង ៦ ដើម្បីក្លាយជា Trader',
+      en: 'How to Use These 6 Lessons and Become a Trader',
+      zh: '如何运用这 6 课成为一名交易者',
+    },
+  },
 ];
 
 const KHMER_DIGITS = ['០', '១', '២', '៣', '៤', '៥', '៦', '៧', '៨', '៩'];
