@@ -71,7 +71,8 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 .nav-burger span{display:block;width:16px;height:2px;background:var(--text);border-radius:2px;}
 .nav-mobile-menu{display:none;}
 
-.pending-banner{position:sticky;top:80px;z-index:98;background:var(--brandd);border-bottom:1px solid var(--brandline);color:var(--brand2);font-size:13px;text-align:center;padding:10px 20px;line-height:1.5;}
+.pending-banner{position:sticky;top:80px;z-index:98;background:var(--brandd);border-bottom:1px solid var(--brandline);color:var(--brand2);font-size:13px;text-align:center;padding:10px 20px;line-height:1.5;transition:transform .25s ease,opacity .25s ease;}
+.pending-banner-hidden{transform:translateY(-100%);opacity:0;}
 
 @media(max-width:640px){
   .nav-links{display:none;}
