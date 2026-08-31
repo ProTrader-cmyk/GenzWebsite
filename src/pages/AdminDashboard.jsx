@@ -15,6 +15,13 @@ function formatDate(ts) {
   return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
+function initials(name, email) {
+  const source = (name || email || '?').trim();
+  const parts = source.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return source.slice(0, 2).toUpperCase();
+}
+
 export default function AdminDashboard({ admin, onLogout }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -73,7 +80,18 @@ export default function AdminDashboard({ admin, onLogout }) {
   return (
     <div className="admin-shell">
       <header className="admin-header">
-        <h1>GenZ Trader Admin</h1>
+        <div className="admin-header-left">
+          <div className="admin-badge">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2.5 4.5 5.5v6c0 5 3.2 8.4 7.5 10 4.3-1.6 7.5-5 7.5-10v-6L12 2.5Z" />
+              <path d="M9 12.2l2 2 4-4.4" />
+            </svg>
+          </div>
+          <div>
+            <h1>GenZ Trader Admin</h1>
+            <div className="admin-header-sub">User approvals & access control</div>
+          </div>
+        </div>
         <div className="admin-header-right">
           <span className="admin-whoami">{admin.email}</span>
           <ThemeToggle />
@@ -110,6 +128,7 @@ export default function AdminDashboard({ admin, onLogout }) {
             onClick={() => setTab(t.key)}
           >
             {t.label}
+            <span className="admin-tab-count">{t.key === 'all' ? stats.total : stats[t.key]}</span>
           </button>
         ))}
         <button className="admin-refresh" onClick={load} disabled={loading}>
@@ -135,7 +154,12 @@ export default function AdminDashboard({ admin, onLogout }) {
           <tbody>
             {visibleUsers.map((u) => (
               <tr key={u.uid}>
-                <td>{u.name}</td>
+                <td>
+                  <div className="admin-user-cell">
+                    <div className="admin-avatar">{initials(u.name, u.email)}</div>
+                    {u.name}
+                  </div>
+                </td>
                 <td>{u.email}</td>
                 <td>{u.emailVerified ? 'Yes' : 'No'}</td>
                 <td>
