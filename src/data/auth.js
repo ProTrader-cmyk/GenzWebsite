@@ -207,3 +207,10 @@ export async function setUserStatus(uid, status) {
 export async function setUserRole(uid, role) {
   await updateDoc(doc(db, 'users', uid), { role });
 }
+
+// lessonIds: array of lesson ids (e.g. ['l1','l3','a2']) this user is
+// allowed to open, across both tracks — or null to clear the override and
+// fall back to the default approved/pending rule.
+export async function setUserLessonAccess(uid, lessonIds) {
+  await updateDoc(doc(db, 'users', uid), { allowedLessons: lessonIds });
+}

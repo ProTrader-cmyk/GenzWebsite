@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { fetchAllUsers, setUserStatus, setUserRole } from '../data/auth.js';
+import { fetchAllUsers, setUserStatus, setUserRole, setUserLessonAccess } from '../data/auth.js';
+import { lessons } from '../data/lessons.js';
+import { appsLessons } from '../data/appsLessons.js';
 import ThemeToggle from '../components/ThemeToggle.jsx';
 
 const TABS = [
@@ -39,6 +41,9 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
   const [error, setError] = useState('');
   const [startDate, setStartDate] = useState(() => toDateKey(new Date()));
   const [endDate, setEndDate] = useState(() => toDateKey(new Date()));
+  const [permUser, setPermUser] = useState(null);
+  const [permSelection, setPermSelection] = useState([]);
+  const [permSaving, setPermSaving] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -95,6 +100,42 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
       setError('Failed to update role. Check Firestore rules / your admin access.');
     }
     setUpdatingUid(null);
+  }
+
+  function openPermissions(u) {
+    const initial = Array.isArray(u.allowedLessons)
+      ? u.allowedLessons
+      : [...(u.status === 'approved' ? lessons.map((l) => l.id) : ['l1']), ...appsLessons.map((l) => l.id)];
+    setPermUser(u);
+    setPermSelection(initial);
+  }
+
+  function toggleLesson(id) {
+    setPermSelection((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
+  async function savePermissions() {
+    setPermSaving(true);
+    try {
+      await setUserLessonAccess(permUser.uid, permSelection);
+      setUsers((prev) => prev.map((u) => (u.uid === permUser.uid ? { ...u, allowedLessons: permSelection } : u)));
+      setPermUser(null);
+    } catch {
+      setError('Failed to update permissions. Check Firestore rules / your admin access.');
+    }
+    setPermSaving(false);
+  }
+
+  async function clearPermissions() {
+    setPermSaving(true);
+    try {
+      await setUserLessonAccess(permUser.uid, null);
+      setUsers((prev) => prev.map((u) => (u.uid === permUser.uid ? { ...u, allowedLessons: null } : u)));
+      setPermUser(null);
+    } catch {
+      setError('Failed to reset permissions. Check Firestore rules / your admin access.');
+    }
+    setPermSaving(false);
   }
 
   return (
@@ -219,6 +260,9 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
                 </td>
                 <td>{formatDate(u.createdAt)}</td>
                 <td className="admin-actions">
+                  <button className="action-btn perm" onClick={() => openPermissions(u)}>
+                    Permissions{Array.isArray(u.allowedLessons) ? ` (${u.allowedLessons.length})` : ''}
+                  </button>
                   {u.status !== 'approved' && (
                     <button
                       className="action-btn approve"
@@ -276,6 +320,58 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
           </tbody>
         </table>
       </div>
+
+      {permUser && (
+        <div className="modal-overlay" onClick={() => setPermUser(null)}>
+          <div className="perm-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="perm-modal-header">
+              <div className="admin-avatar">{initials(permUser.name, permUser.email)}</div>
+              <div>
+                <div className="perm-modal-title">Permissions</div>
+                <div className="perm-modal-sub">
+                  {permUser.name} · {permUser.email}
+                </div>
+              </div>
+            </div>
+
+            <div className="perm-section">
+              <div className="perm-section-title">Technical Analysis</div>
+              {lessons.map((l, i) => (
+                <label key={l.id} className="perm-row">
+                  <input type="checkbox" checked={permSelection.includes(l.id)} onChange={() => toggleLesson(l.id)} />
+                  <span>
+                    {i + 1}. {l.title}
+                  </span>
+                </label>
+              ))}
+            </div>
+
+            <div className="perm-section">
+              <div className="perm-section-title">App & Website for Trading</div>
+              {appsLessons.map((l, i) => (
+                <label key={l.id} className="perm-row">
+                  <input type="checkbox" checked={permSelection.includes(l.id)} onChange={() => toggleLesson(l.id)} />
+                  <span>
+                    {i + 1}. {l.title}
+                  </span>
+                </label>
+              ))}
+            </div>
+
+            <div className="perm-modal-actions">
+              <button className="action-btn reset" onClick={clearPermissions} disabled={permSaving}>
+                Use default access
+              </button>
+              <button className="action-btn reset" onClick={() => setPermUser(null)} disabled={permSaving}>
+                Cancel
+              </button>
+              <button className="admin-btn-primary" onClick={savePermissions} disabled={permSaving}>
+                {permSaving ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

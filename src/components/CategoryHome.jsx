@@ -104,7 +104,7 @@ export default function CategoryHome({ onSelectCategory, approved }) {
   }, []);
 
   function handleCardClick(cat) {
-    if (cat.premium) {
+    if (cat.premium && !approved) {
       setUnlockPrompt(cat);
     } else if (cat.pendingLocked) {
       setShowPendingModal(true);

@@ -6,7 +6,7 @@ import { LockIcon } from './ui/CategoryIcons.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
 
-export default function Home({ doneMap, onSelectLesson, onBack, approved }) {
+export default function Home({ doneMap, onSelectLesson, onBack, approved, allowedLessons }) {
   const { lang } = useLanguage();
   const t = getStrings(lang).home;
   const tp = getStrings(lang).pending;
@@ -48,8 +48,9 @@ export default function Home({ doneMap, onSelectLesson, onBack, approved }) {
         // A pending (not-yet-approved) account can freely take Lesson 1 as a
         // preview, but every other lesson stays locked until an admin
         // approves them. Once approved, all lessons are open immediately —
-        // no progressive one-at-a-time unlocking.
-        const locked = !approved && lesson.id !== 'l1';
+        // no progressive one-at-a-time unlocking. An admin-set permissions
+        // list (allowedLessons) overrides this rule entirely for the account.
+        const locked = allowedLessons ? !allowedLessons.includes(lesson.id) : !approved && lesson.id !== 'l1';
         return (
           <LessonCard
             key={lesson.id}

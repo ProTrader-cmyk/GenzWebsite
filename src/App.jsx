@@ -188,14 +188,27 @@ export default function App() {
   // admin browsing the site gets full access regardless of their own status.
   const approved = user.status === 'approved' || user.role === 'admin';
 
+  // An admin can grant a specific list of lesson ids per user (Admin
+  // Dashboard "Permissions"), overriding the default approved/pending rule
+  // entirely for that account — across both tracks. Absent (not an array)
+  // means "no override", so the default rule below applies as before.
+  const allowedLessons = Array.isArray(user.allowedLessons) ? user.allowedLessons : null;
+
+  function isLessonLocked(id) {
+    if (allowedLessons) return !allowedLessons.includes(id);
+    if (id.startsWith('l')) return !approved && id !== 'l1'; // Technical default
+    return false; // Apps default: always open
+  }
+
   // Falls back to the lesson list if the restored `view` doesn't match any
   // known lesson (e.g. an old deep-link from before a lesson was renamed),
-  // or if it's a Technical lesson the account isn't (or no longer is)
-  // approved for — e.g. an admin revoked approval while this lesson was
-  // still open in a tab. Lesson 1 stays open as a preview even when pending.
+  // or if it's a lesson the account isn't (or no longer is) allowed to open
+  // — e.g. an admin revoked access while this lesson was still open in a
+  // tab. Lesson 1 stays open as a preview even when pending (unless a
+  // permissions override says otherwise).
   const requestedLesson = view !== 'home' ? lessonPages[view] : null;
   const lessonBlocked =
-    requestedLesson && section === 'technical' && view.startsWith('l') && view !== 'l1' && !approved;
+    requestedLesson && (section === 'technical' || section === 'apps') && isLessonLocked(view);
   const CurrentLesson = lessonBlocked ? null : requestedLesson;
   const effectiveView = CurrentLesson ? view : 'home';
 
@@ -222,10 +235,21 @@ export default function App() {
         {section === 'indicator' && <IndicatorPage onBack={backToCategories} />}
         {section === 'contact' && <ContactPage onBack={backToCategories} />}
         {section === 'technical' && effectiveView === 'home' && (
-          <Home doneMap={doneMap} onSelectLesson={navigate} onBack={backToCategories} approved={approved} />
+          <Home
+            doneMap={doneMap}
+            onSelectLesson={navigate}
+            onBack={backToCategories}
+            approved={approved}
+            allowedLessons={allowedLessons}
+          />
         )}
         {section === 'apps' && effectiveView === 'home' && (
-          <AppsHome doneMap={doneMap} onSelectLesson={navigate} onBack={backToCategories} />
+          <AppsHome
+            doneMap={doneMap}
+            onSelectLesson={navigate}
+            onBack={backToCategories}
+            allowedLessons={allowedLessons}
+          />
         )}
         {(section === 'technical' || section === 'apps') && CurrentLesson && (
           <CurrentLesson onNavigate={navigate} onDone={() => markDone(view)} />
