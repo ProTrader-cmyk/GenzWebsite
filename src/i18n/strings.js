@@ -5,6 +5,7 @@ export const strings = {
     nav: {
       mentorship: 'ថ្នាក់បង្រៀនពិសេស',
       home: 'ទំព័រដើម',
+      pricing: 'តម្លៃ',
       news: 'ព័ត៌មាន',
       contact: 'ទាក់ទងមកយើង',
       logout: 'ចេញពីប្រព័ន្ធ',
@@ -64,6 +65,7 @@ export const strings = {
       errResendFailed: 'មិនអាចផ្ញើលេខកូដបានទេ។ សូមព្យាយាមម្តងទៀត។',
     },
     pending: {
+      banner: (name) => `សួស្តី ${name} — គណនីរបស់អ្នកកំពុងរង់ចាំការអនុម័តពី Admin។ សូមទាក់ទង Admin ដើម្បីទទួលបានសិទ្ធិមេរៀនផ្សេងៗ អាចចុចប៉ូតុងខាងលើបាន។`,
       modalTitle: 'ត្រូវការសិទ្ធិចូលប្រើ',
       modalText: 'គណនីរបស់អ្នកកំពុងរង់ចាំការអនុម័តពី Admin។ សូមទាក់ទង Admin ដើម្បីទទួលបានសិទ្ធិចូលរៀនមេរៀននេះ។',
       modalOk: 'យល់ព្រម',
@@ -201,6 +203,7 @@ export const strings = {
     nav: {
       mentorship: 'Private Mentorship',
       home: 'Home',
+      pricing: 'Pricing',
       news: 'News',
       contact: 'Contact Us',
       logout: 'Log out',
@@ -260,6 +263,7 @@ export const strings = {
       errResendFailed: 'Could not send code. Please try again.',
     },
     pending: {
+      banner: (name) => `Hi ${name} — your account is awaiting admin approval. Please contact the admin to unlock the other lessons — you can use the button above.`,
       modalTitle: 'Access Required',
       modalText: 'Your account is awaiting admin approval. Please contact the admin to unlock this lesson.',
       modalOk: 'OK',
@@ -397,6 +401,7 @@ export const strings = {
     nav: {
       mentorship: '私人指导',
       home: '首页',
+      pricing: '价格',
       news: '新闻',
       contact: '联系我们',
       logout: '退出登录',
@@ -456,6 +461,7 @@ export const strings = {
       errResendFailed: '无法发送验证码，请重试。',
     },
     pending: {
+      banner: (name) => `您好 ${name} — 您的账户正在等待管理员批准。请联系管理员以解锁其他课程 — 您可以点击上方的按钮。`,
       modalTitle: '需要访问权限',
       modalText: '您的账户正在等待管理员批准。请联系管理员以解锁此课程。',
       modalOk: '好的',
