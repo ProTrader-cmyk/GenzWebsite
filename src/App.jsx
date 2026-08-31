@@ -15,7 +15,15 @@ import { getNextLessonId } from './data/lessons.js';
 import { getNextAppsLessonId } from './data/appsLessons.js';
 import { lessonPages } from './pages/registry.js';
 import { auth } from './firebase.js';
-import { fetchUserProfile, saveSession, loadSession, clearSession, logoutUser, markLessonDone } from './data/auth.js';
+import {
+  fetchUserProfile,
+  saveSession,
+  loadSession,
+  clearSession,
+  logoutUser,
+  markLessonDone,
+  markPaymentClicked,
+} from './data/auth.js';
 
 const NAV_KEY = 'gzt_nav';
 
@@ -47,11 +55,6 @@ export default function App() {
   // An admin account defaults to the dashboard; this flips to true when they
   // click "Go back to website" so they can browse the site like any user.
   const [adminViewingSite, setAdminViewingSite] = useState(false);
-  // Not approved yet, so real access isn't granted — but clicking "Pay" on
-  // the Pricing page flips this so they can at least browse the site
-  // (still fully locked everywhere) instead of being stuck on Pricing.
-  // Doesn't persist across refresh; resets on logout.
-  const [browsingUnlocked, setBrowsingUnlocked] = useState(false);
 
   // Firebase is the source of truth for status/emailVerified — re-check it on
   // load instead of trusting whatever was last cached in localStorage, since
@@ -136,6 +139,16 @@ export default function App() {
     setPendingVerification(pending);
   }
 
+  // Persisted to Firestore (not just local state) so a user who's clicked
+  // Pay isn't sent back to the Pricing gate on refresh or after logging
+  // back in — see markPaymentClicked in data/auth.js.
+  function handlePaySuccess() {
+    markPaymentClicked(user.uid).catch(() => {});
+    const updated = { ...user, clickedPay: true };
+    setUser(updated);
+    saveSession(updated);
+  }
+
   async function handleLogout() {
     await logoutUser();
     setUser(null);
@@ -144,7 +157,6 @@ export default function App() {
     setSection('categories');
     setView('home');
     setAdminViewingSite(false);
-    setBrowsingUnlocked(false);
     localStorage.removeItem(NAV_KEY);
   }
 
@@ -198,10 +210,11 @@ export default function App() {
 
   // Not approved (and not admin) and hasn't clicked "Pay" yet — the Pricing
   // page is the entire experience right after login, no nav links, no
-  // category picker. Clicking Pay flips browsingUnlocked so they can see
-  // the site — everything still stays locked (isLessonLocked below), since
-  // real access is only granted once the account is actually approved.
-  if (!approved && !browsingUnlocked) {
+  // category picker. Clicking Pay persists clickedPay (see
+  // handlePaySuccess) so they can see the site from then on — everything
+  // still stays locked (isLessonLocked below), since real access is only
+  // granted once the account is actually approved.
+  if (!approved && !user.clickedPay) {
     return (
       <>
         <Navbar
@@ -213,7 +226,7 @@ export default function App() {
           showNavLinks={false}
         />
         <div className="wrap">
-          <PricingPage user={user} onPay={() => setBrowsingUnlocked(true)} />
+          <PricingPage user={user} onPay={handlePaySuccess} />
         </div>
       </>
     );
@@ -257,9 +270,7 @@ export default function App() {
       <div className="wrap">
         {section === 'categories' && <CategoryHome onSelectCategory={selectCategory} approved={approved} />}
         {section === 'news' && <NewsPage onBack={backToCategories} />}
-        {section === 'pricing' && (
-          <PricingPage onBack={backToCategories} user={user} onPay={() => setBrowsingUnlocked(true)} />
-        )}
+        {section === 'pricing' && <PricingPage onBack={backToCategories} user={user} onPay={handlePaySuccess} />}
         {section === 'contact' && <ContactPage onBack={backToCategories} />}
         {section === 'technical' && effectiveView === 'home' && (
           <Home

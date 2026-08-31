@@ -149,6 +149,13 @@ export async function markLessonDone(uid, lessonId) {
   await updateDoc(doc(db, 'users', uid), { [`progress.${lessonId}`]: true });
 }
 
+// Once a not-yet-approved account has clicked "Pay" on the Pricing page,
+// they shouldn't be forced back onto that page on every refresh/login —
+// persisted so it survives logout, not just local component state.
+export async function markPaymentClicked(uid) {
+  await updateDoc(doc(db, 'users', uid), { clickedPay: true });
+}
+
 export async function loginUser({ email, password }, lang) {
   try {
     const cred = await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
