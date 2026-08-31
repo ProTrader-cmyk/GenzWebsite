@@ -1,6 +1,7 @@
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  sendPasswordResetEmail,
   signOut,
 } from 'firebase/auth';
 import {
@@ -156,6 +157,15 @@ export async function loginUser({ email, password }, lang) {
       return { ok: false, error: getStrings(lang).auth.errNoAccount };
     }
     return { ok: true, user: profile };
+  } catch (err) {
+    return { ok: false, error: authErrorMessage(err.code, lang) };
+  }
+}
+
+export async function resetPassword(email, lang) {
+  try {
+    await sendPasswordResetEmail(auth, email.trim().toLowerCase());
+    return { ok: true };
   } catch (err) {
     return { ok: false, error: authErrorMessage(err.code, lang) };
   }

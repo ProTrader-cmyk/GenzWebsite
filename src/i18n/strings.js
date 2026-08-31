@@ -4,9 +4,12 @@ export const strings = {
   kh: {
     nav: {
       mentorship: 'ថ្នាក់បង្រៀនពិសេស',
-      news: 'GenZ ព័ត៌មាន',
+      home: 'ទំព័រដើម',
+      indicator: 'សូចនាករ',
+      news: 'ព័ត៌មាន',
       contact: 'ទាក់ទងមកយើង',
       logout: 'ចេញពីប្រព័ន្ធ',
+      admin: 'អ្នកគ្រប់គ្រង',
     },
     auth: {
       loginTitle: 'ចូលគណនី',
@@ -36,6 +39,13 @@ export const strings = {
       errTooManyRequests: 'ព្យាយាមច្រើនដងពេក។ សូមរង់ចាំមួយភ្លែត។',
       errGeneric: 'មានបញ្ហាកើតឡើង។ សូមព្យាយាមម្តងទៀត។',
       errNoAccount: 'រកមិនឃើញគណនីនេះទេ។',
+      forgotPassword: 'ភ្លេចពាក្យសម្ងាត់?',
+      resetTitle: 'កំណត់ពាក្យសម្ងាត់ឡើងវិញ',
+      resetSub: 'បញ្ចូលអ៊ីមែលរបស់អ្នក ដើម្បីទទួលបានតំណភ្ជាប់សម្រាប់កំណត់ពាក្យសម្ងាត់ថ្មី',
+      resetBtn: 'ផ្ញើតំណភ្ជាប់',
+      resetBtnLoading: 'កំពុងផ្ញើ...',
+      resetSuccess: 'យើងបានផ្ញើតំណភ្ជាប់សម្រាប់កំណត់ពាក្យសម្ងាត់ថ្មីទៅអ៊ីមែលរបស់អ្នកហើយ។ សូមពិនិត្យមើល Inbox។',
+      backToLogin: '← ត្រឡប់ទៅចូលគណនី',
     },
     otp: {
       title: 'បញ្ជាក់អ៊ីមែល',
@@ -102,6 +112,14 @@ export const strings = {
       title: 'ទាក់ទងមកកាន់ Mentor',
       subtitle: 'មានសំណួរអំពី Course ឬចង់ដឹងបន្ថែម? ទាក់ទងមកយើងខ្ញុំតាមរយៈ Telegram',
       telegramLabel: 'Telegram',
+    },
+    indicator: {
+      back: '← ត្រឡប់ក្រោយ',
+      eyebrow: 'សូចនាករ',
+      title: 'សូចនាករ Trading',
+      subtitle: 'ឧបករណ៍ និងសូចនាករសម្រាប់ជួយការវិភាគទីផ្សាររបស់អ្នក នឹងបង្ហាញនៅទីនេះ',
+      comingSoonTitle: 'ឆាប់ៗនេះ',
+      comingSoonBody: 'យើងកំពុងរៀបចំសូចនាករសម្រាប់ផ្នែកនេះ។ សូមតាមដានទំព័រនេះជាប្រចាំ។',
     },
     news: {
       back: '← ត្រឡប់ក្រោយ',
@@ -172,9 +190,12 @@ export const strings = {
   en: {
     nav: {
       mentorship: 'Private Mentorship',
-      news: 'GenZ NEWS',
+      home: 'Home',
+      indicator: 'Indicator',
+      news: 'News',
       contact: 'Contact Us',
       logout: 'Log out',
+      admin: 'Admin',
     },
     auth: {
       loginTitle: 'Log In',
@@ -204,6 +225,13 @@ export const strings = {
       errTooManyRequests: 'Too many attempts. Please wait a moment.',
       errGeneric: 'Something went wrong. Please try again.',
       errNoAccount: 'Account not found.',
+      forgotPassword: 'Forgot password?',
+      resetTitle: 'Reset Password',
+      resetSub: "Enter your email and we'll send you a link to reset your password",
+      resetBtn: 'Send Reset Link',
+      resetBtnLoading: 'Sending...',
+      resetSuccess: "We've sent a password reset link to your email. Check your inbox.",
+      backToLogin: '← Back to Login',
     },
     otp: {
       title: 'Verify Your Email',
@@ -270,6 +298,14 @@ export const strings = {
       title: 'Get in Touch with the Mentor',
       subtitle: 'Have questions about the course, or want to learn more? Reach out on Telegram',
       telegramLabel: 'Telegram',
+    },
+    indicator: {
+      back: '← Back',
+      eyebrow: 'Indicator',
+      title: 'Trading Indicators',
+      subtitle: 'Tools and indicators to help your market analysis will appear here',
+      comingSoonTitle: 'Coming Soon',
+      comingSoonBody: "We're preparing indicators for this section. Check back regularly.",
     },
     news: {
       back: '← Back',
@@ -340,9 +376,12 @@ export const strings = {
   zh: {
     nav: {
       mentorship: '私人指导',
-      news: 'GenZ 新闻',
+      home: '首页',
+      indicator: '指标',
+      news: '新闻',
       contact: '联系我们',
       logout: '退出登录',
+      admin: '管理员',
     },
     auth: {
       loginTitle: '登录',
@@ -372,6 +411,13 @@ export const strings = {
       errTooManyRequests: '尝试次数过多，请稍候再试。',
       errGeneric: '发生错误，请重试。',
       errNoAccount: '未找到该账户。',
+      forgotPassword: '忘记密码？',
+      resetTitle: '重置密码',
+      resetSub: '输入您的电子邮箱，我们将向您发送重置密码的链接',
+      resetBtn: '发送重置链接',
+      resetBtnLoading: '发送中...',
+      resetSuccess: '我们已将密码重置链接发送到您的邮箱，请查收。',
+      backToLogin: '← 返回登录',
     },
     otp: {
       title: '验证您的邮箱',
@@ -438,6 +484,14 @@ export const strings = {
       title: '联系 Mentor',
       subtitle: '对课程有疑问，或想了解更多？通过 Telegram 联系我们',
       telegramLabel: 'Telegram',
+    },
+    indicator: {
+      back: '← 返回',
+      eyebrow: '指标',
+      title: '交易指标',
+      subtitle: '帮助您进行市场分析的工具和指标将在此显示',
+      comingSoonTitle: '敬请期待',
+      comingSoonBody: '我们正在为此板块准备指标内容。请定期查看本页面。',
     },
     news: {
       back: '← 返回',

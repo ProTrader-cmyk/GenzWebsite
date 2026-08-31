@@ -22,12 +22,23 @@ function initials(name, email) {
   return source.slice(0, 2).toUpperCase();
 }
 
-export default function AdminDashboard({ admin, onLogout }) {
+// Local calendar-day key (not UTC) so it lines up with what a <input
+// type="date"> shows and returns, regardless of the viewer's timezone.
+function toDateKey(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+export default function AdminDashboard({ admin, onLogout, onViewSite }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('all');
   const [updatingUid, setUpdatingUid] = useState(null);
   const [error, setError] = useState('');
+  const [startDate, setStartDate] = useState(() => toDateKey(new Date()));
+  const [endDate, setEndDate] = useState(() => toDateKey(new Date()));
 
   async function load() {
     setLoading(true);
@@ -55,6 +66,15 @@ export default function AdminDashboard({ admin, onLogout }) {
 
   const visibleUsers = tab === 'all' ? users : users.filter((u) => u.status === tab);
 
+  const signupsInRange = useMemo(() => {
+    return users.filter((u) => {
+      if (!u.createdAt) return false;
+      const date = u.createdAt.toDate ? u.createdAt.toDate() : new Date(u.createdAt);
+      const key = toDateKey(date);
+      return key >= startDate && key <= endDate;
+    }).length;
+  }, [users, startDate, endDate]);
+
   async function handleStatusChange(uid, status) {
     setUpdatingUid(uid);
     try {
@@ -79,6 +99,10 @@ export default function AdminDashboard({ admin, onLogout }) {
 
   return (
     <div className="admin-shell">
+      <button type="button" className="admin-back" onClick={onViewSite}>
+        ← Go back to website
+      </button>
+
       <header className="admin-header">
         <div className="admin-header-left">
           <div className="admin-badge">
@@ -117,6 +141,29 @@ export default function AdminDashboard({ admin, onLogout }) {
         <div className="stat-card stat-rejected">
           <div className="stat-num">{stats.rejected}</div>
           <div className="stat-label">Rejected</div>
+        </div>
+      </div>
+
+      <div className="admin-daily">
+        <div className="admin-daily-label">From</div>
+        <input
+          type="date"
+          className="admin-date-input"
+          value={startDate}
+          max={endDate}
+          onChange={(e) => setStartDate(e.target.value)}
+        />
+        <div className="admin-daily-label">To</div>
+        <input
+          type="date"
+          className="admin-date-input"
+          value={endDate}
+          min={startDate}
+          onChange={(e) => setEndDate(e.target.value)}
+        />
+        <div className="admin-daily-count-wrap">
+          <div className="admin-daily-count">{signupsInRange}</div>
+          <div className="admin-daily-count-label">Signups</div>
         </div>
       </div>
 

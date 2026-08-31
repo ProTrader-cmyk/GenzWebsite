@@ -1,11 +1,22 @@
 import { useState } from 'react';
-import logo from '../assets/logo.jpg';
+import logo from '../assets/Fav.png';
 import LanguageDropdown from './LanguageDropdown.jsx';
 import ThemeToggle from './ThemeToggle.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
 
-export default function Navbar({ onLogoClick, activeSection, onNavNews, onNavContact, user, onLogout }) {
+export default function Navbar({
+  onLogoClick,
+  activeSection,
+  onNavHome,
+  onNavIndicator,
+  onNavNews,
+  onNavContact,
+  user,
+  onLogout,
+  isAdmin,
+  onNavAdmin,
+}) {
   const { lang } = useLanguage();
   const t = getStrings(lang).nav;
   const [menuOpen, setMenuOpen] = useState(false);
@@ -28,9 +39,20 @@ export default function Navbar({ onLogoClick, activeSection, onNavNews, onNavCon
         </div>
 
         <div className="nav-links">
-          <a href="https://t.me/veng_sophea" target="_blank" rel="noopener noreferrer" className="nav-link">
-            {t.mentorship}
-          </a>
+          <button
+            type="button"
+            className={`nav-link${activeSection === 'categories' ? ' active' : ''}`}
+            onClick={onNavHome}
+          >
+            {t.home}
+          </button>
+          <button
+            type="button"
+            className={`nav-link${activeSection === 'indicator' ? ' active' : ''}`}
+            onClick={onNavIndicator}
+          >
+            {t.indicator}
+          </button>
           <button
             type="button"
             className={`nav-link${activeSection === 'news' ? ' active' : ''}`}
@@ -62,6 +84,11 @@ export default function Navbar({ onLogoClick, activeSection, onNavNews, onNavCon
         <ThemeToggle />
         <LanguageDropdown />
 
+        {isAdmin && (
+          <button type="button" className="nav-link" onClick={onNavAdmin}>
+            {t.admin}
+          </button>
+        )}
         {user && (
           <button type="button" className="nav-logout" onClick={onLogout}>
             {t.logout}
@@ -71,15 +98,20 @@ export default function Navbar({ onLogoClick, activeSection, onNavNews, onNavCon
 
       {menuOpen && (
         <div className="nav-mobile-menu">
-          <a
-            href="https://t.me/veng_sophea"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="nav-mobile-link"
-            onClick={() => setMenuOpen(false)}
+          <button
+            type="button"
+            className={`nav-mobile-link${activeSection === 'categories' ? ' active' : ''}`}
+            onClick={() => handleNav(onNavHome)}
           >
-            {t.mentorship}
-          </a>
+            {t.home}
+          </button>
+          <button
+            type="button"
+            className={`nav-mobile-link${activeSection === 'indicator' ? ' active' : ''}`}
+            onClick={() => handleNav(onNavIndicator)}
+          >
+            {t.indicator}
+          </button>
           <button
             type="button"
             className={`nav-mobile-link${activeSection === 'news' ? ' active' : ''}`}
@@ -94,6 +126,11 @@ export default function Navbar({ onLogoClick, activeSection, onNavNews, onNavCon
           >
             {t.contact}
           </button>
+          {isAdmin && (
+            <button type="button" className="nav-mobile-link" onClick={() => handleNav(onNavAdmin)}>
+              {t.admin}
+            </button>
+          )}
           {user && (
             <button type="button" className="nav-mobile-link nav-mobile-logout" onClick={() => handleNav(onLogout)}>
               {t.logout}

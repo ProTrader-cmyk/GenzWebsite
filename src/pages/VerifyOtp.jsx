@@ -3,6 +3,7 @@ import { verifyOtp, resendOtp, fetchUserProfile } from '../data/auth.js';
 import AuthBackgroundVideo from '../components/ui/AuthBackgroundVideo.jsx';
 import LanguageDropdown from '../components/LanguageDropdown.jsx';
 import ThemeToggle from '../components/ThemeToggle.jsx';
+import favicon from '../assets/Fav.png';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
 
@@ -54,6 +55,10 @@ export default function VerifyOtp({ pending, onVerified, onCancel }) {
         <LanguageDropdown />
       </div>
       <div className="auth-card">
+        <div className="auth-logo">
+          <img src={favicon} alt="GenZ Trader" />
+        </div>
+
         <div className="auth-head">
           <h1>{t.title}</h1>
           <p>

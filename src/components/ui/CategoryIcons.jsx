@@ -86,6 +86,52 @@ export function LockIcon(props) {
   );
 }
 
+export function MailIcon(props) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="2.5" y="5" width="19" height="14" rx="2.5" />
+      <path d="M3.5 6.5 12 13l8.5-6.5" />
+    </svg>
+  );
+}
+
+export function PasswordIcon(props) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="4.5" y="10.5" width="15" height="10" rx="2.2" />
+      <path d="M7.5 10.5V7.5a4.5 4.5 0 0 1 9 0v3" />
+    </svg>
+  );
+}
+
+export function UserIcon(props) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="12" cy="8" r="3.6" />
+      <path d="M4.5 20c1.2-4 4-6 7.5-6s6.3 2 7.5 6" />
+    </svg>
+  );
+}
+
+export function EyeIcon(props) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+export function EyeOffIcon(props) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M3 3l18 18" />
+      <path d="M10.6 5.2A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.4 4.3M6.6 6.6C4 8.3 2 12 2 12s3.6 7 10 7c1.5 0 2.9-.4 4.1-1" />
+      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+    </svg>
+  );
+}
+
 export function TelegramIcon(props) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" {...props}>

@@ -6,6 +6,7 @@ import Home from './components/Home.jsx';
 import AppsHome from './components/AppsHome.jsx';
 import NewsPage from './components/NewsPage.jsx';
 import ContactPage from './components/ContactPage.jsx';
+import IndicatorPage from './components/IndicatorPage.jsx';
 import Login from './pages/Login.jsx';
 import Signup from './pages/Signup.jsx';
 import VerifyOtp from './pages/VerifyOtp.jsx';
@@ -44,6 +45,9 @@ export default function App() {
   const [section, setSection] = useState(() => loadNav().section);
   const [view, setView] = useState(() => loadNav().view);
   const [doneMap, setDoneMap] = useState({});
+  // An admin account defaults to the dashboard; this flips to true when they
+  // click "Go back to website" so they can browse the site like any user.
+  const [adminViewingSite, setAdminViewingSite] = useState(false);
 
   // Firebase is the source of truth for status/emailVerified — re-check it on
   // load instead of trusting whatever was last cached in localStorage, since
@@ -135,6 +139,7 @@ export default function App() {
     setAuthView('login');
     setSection('categories');
     setView('home');
+    setAdminViewingSite(false);
     localStorage.removeItem(NAV_KEY);
   }
 
@@ -171,15 +176,17 @@ export default function App() {
   }
 
   // Same login for everyone — an admin account goes straight to the
-  // dashboard instead of the lesson site.
-  if (user.role === 'admin') {
-    return <AdminDashboard admin={user} onLogout={handleLogout} />;
+  // dashboard instead of the lesson site, unless they've clicked through to
+  // browse the site (adminViewingSite).
+  if (user.role === 'admin' && !adminViewingSite) {
+    return <AdminDashboard admin={user} onLogout={handleLogout} onViewSite={() => setAdminViewingSite(true)} />;
   }
 
   // Verified but not yet approved by an admin — logged in and can browse the
   // whole site freely, but Technical lessons stay locked until someone flips
-  // status to 'approved' in Firestore. The Apps track has no such gate.
-  const approved = user.status === 'approved';
+  // status to 'approved' in Firestore. The Apps track has no such gate. An
+  // admin browsing the site gets full access regardless of their own status.
+  const approved = user.status === 'approved' || user.role === 'admin';
 
   // Falls back to the lesson list if the restored `view` doesn't match any
   // known lesson (e.g. an old deep-link from before a lesson was renamed),
@@ -197,10 +204,14 @@ export default function App() {
       <Navbar
         onLogoClick={backToCategories}
         activeSection={section}
+        onNavHome={backToCategories}
+        onNavIndicator={() => setSection('indicator')}
         onNavNews={() => setSection('news')}
         onNavContact={() => setSection('contact')}
         user={user}
         onLogout={handleLogout}
+        isAdmin={user.role === 'admin'}
+        onNavAdmin={() => setAdminViewingSite(false)}
       />
       {/* Apps track has no approval gate, so the banner (which is about
           Technical being locked) would be misleading while browsing it. */}
@@ -208,6 +219,7 @@ export default function App() {
       <div className="wrap">
         {section === 'categories' && <CategoryHome onSelectCategory={selectCategory} approved={approved} />}
         {section === 'news' && <NewsPage onBack={backToCategories} />}
+        {section === 'indicator' && <IndicatorPage onBack={backToCategories} />}
         {section === 'contact' && <ContactPage onBack={backToCategories} />}
         {section === 'technical' && effectiveView === 'home' && (
           <Home doneMap={doneMap} onSelectLesson={navigate} onBack={backToCategories} approved={approved} />

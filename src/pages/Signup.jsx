@@ -3,6 +3,8 @@ import { registerUser } from '../data/auth.js';
 import AuthBackgroundVideo from '../components/ui/AuthBackgroundVideo.jsx';
 import LanguageDropdown from '../components/LanguageDropdown.jsx';
 import ThemeToggle from '../components/ThemeToggle.jsx';
+import { UserIcon, MailIcon, PasswordIcon, EyeIcon, EyeOffIcon } from '../components/ui/CategoryIcons.jsx';
+import favicon from '../assets/Fav.png';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
 
@@ -13,6 +15,8 @@ export default function Signup({ onNeedVerification, onSwitchToLogin }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -53,6 +57,10 @@ export default function Signup({ onNeedVerification, onSwitchToLogin }) {
         <LanguageDropdown />
       </div>
       <div className="auth-card">
+        <div className="auth-logo">
+          <img src={favicon} alt="GenZ Trader" />
+        </div>
+
         <div className="auth-head">
           <h1>{t.signupTitle}</h1>
           <p>{t.signupSub}</p>
@@ -62,63 +70,99 @@ export default function Signup({ onNeedVerification, onSwitchToLogin }) {
           <label className="auth-label" htmlFor="signup-name">
             {t.name}
           </label>
-          <input
-            id="signup-name"
-            type="text"
-            className="auth-input"
-            placeholder={t.namePlaceholder}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            autoComplete="name"
-            required
-          />
+          <div className="auth-field">
+            <span className="auth-field-icon">
+              <UserIcon />
+            </span>
+            <input
+              id="signup-name"
+              type="text"
+              className="auth-input auth-input-icon"
+              placeholder={t.namePlaceholder}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoComplete="name"
+              required
+            />
+          </div>
 
           <label className="auth-label" htmlFor="signup-email">
             {t.email}
           </label>
-          <input
-            id="signup-email"
-            type="email"
-            className="auth-input"
-            placeholder="you@email.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-            required
-          />
+          <div className="auth-field">
+            <span className="auth-field-icon">
+              <MailIcon />
+            </span>
+            <input
+              id="signup-email"
+              type="email"
+              className="auth-input auth-input-icon"
+              placeholder="you@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              required
+            />
+          </div>
 
           <label className="auth-label" htmlFor="signup-password">
             {t.password}
           </label>
-          <input
-            id="signup-password"
-            type="password"
-            className="auth-input"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="new-password"
-            required
-          />
+          <div className="auth-field">
+            <span className="auth-field-icon">
+              <PasswordIcon />
+            </span>
+            <input
+              id="signup-password"
+              type={showPassword ? 'text' : 'password'}
+              className="auth-input auth-input-icon auth-input-eye"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+              required
+            />
+            <button
+              type="button"
+              className="auth-eye"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+            </button>
+          </div>
 
           <label className="auth-label" htmlFor="signup-confirm">
             {t.confirmPassword}
           </label>
-          <input
-            id="signup-confirm"
-            type="password"
-            className="auth-input"
-            placeholder="••••••••"
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-            autoComplete="new-password"
-            required
-          />
+          <div className="auth-field">
+            <span className="auth-field-icon">
+              <PasswordIcon />
+            </span>
+            <input
+              id="signup-confirm"
+              type={showConfirm ? 'text' : 'password'}
+              className="auth-input auth-input-icon auth-input-eye"
+              placeholder="••••••••"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              autoComplete="new-password"
+              required
+            />
+            <button
+              type="button"
+              className="auth-eye"
+              onClick={() => setShowConfirm((v) => !v)}
+              aria-label={showConfirm ? 'Hide password' : 'Show password'}
+            >
+              {showConfirm ? <EyeOffIcon /> : <EyeIcon />}
+            </button>
+          </div>
 
           {error && <div className="auth-error">{error}</div>}
 
           <button type="submit" className="auth-btn" disabled={loading}>
-            {loading ? t.signupBtnLoading : t.signupBtn}
+            {loading ? t.signupBtnLoading : <>{t.signupBtn} →</>}
           </button>
         </form>
 
