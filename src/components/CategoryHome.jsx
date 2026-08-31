@@ -22,6 +22,10 @@ function buildCategories(t, approved) {
       title: t.appsTitle,
       tag: t.appsLessonsCount,
       locked: false,
+      // Pending (not-yet-approved/paid) accounts see this card locked like a
+      // premium one — clicking asks them to contact the admin or pay
+      // instead of entering the section.
+      pendingLocked: !approved,
     },
     {
       id: 'technical',
@@ -29,9 +33,6 @@ function buildCategories(t, approved) {
       title: t.technicalTitle,
       tag: t.lessonsCount,
       locked: false,
-      // Pending (not-yet-approved) accounts see this card locked like a
-      // premium one — clicking asks them to contact the admin instead of
-      // entering the section.
       pendingLocked: !approved,
     },
     {

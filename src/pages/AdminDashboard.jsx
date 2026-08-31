@@ -235,7 +235,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
               <th>Email verified</th>
               <th>Status</th>
               <th>Role</th>
-              <th>Signed up</th>
+              <th>Paid</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -258,7 +258,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
                     {u.role ?? 'user'}
                   </span>
                 </td>
-                <td>{formatDate(u.createdAt)}</td>
+                <td>{formatDate(u.paidAt)}</td>
                 <td className="admin-actions">
                   <button className="action-btn perm" onClick={() => openPermissions(u)}>
                     Permissions{Array.isArray(u.allowedLessons) ? ` (${u.allowedLessons.length})` : ''}

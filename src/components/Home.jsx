@@ -45,12 +45,12 @@ export default function Home({ doneMap, onSelectLesson, onBack, approved, allowe
       </p>
 
       {lessons.map((lesson, i) => {
-        // A pending (not-yet-approved) account can freely take Lesson 1 as a
-        // preview, but every other lesson stays locked until an admin
-        // approves them. Once approved, all lessons are open immediately —
-        // no progressive one-at-a-time unlocking. An admin-set permissions
-        // list (allowedLessons) overrides this rule entirely for the account.
-        const locked = allowedLessons ? !allowedLessons.includes(lesson.id) : !approved && lesson.id !== 'l1';
+        // Every lesson stays locked until the account is approved (by an
+        // admin, or by paying on the Pricing page) — no free preview. Once
+        // approved, all lessons are open immediately, no progressive
+        // one-at-a-time unlocking. An admin-set permissions list
+        // (allowedLessons) overrides this rule entirely for the account.
+        const locked = allowedLessons ? !allowedLessons.includes(lesson.id) : !approved;
         return (
           <LessonCard
             key={lesson.id}

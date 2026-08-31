@@ -6,12 +6,11 @@ import Home from './components/Home.jsx';
 import AppsHome from './components/AppsHome.jsx';
 import NewsPage from './components/NewsPage.jsx';
 import ContactPage from './components/ContactPage.jsx';
-import IndicatorPage from './components/IndicatorPage.jsx';
+import PricingPage from './components/PricingPage.jsx';
 import Login from './pages/Login.jsx';
 import Signup from './pages/Signup.jsx';
 import VerifyOtp from './pages/VerifyOtp.jsx';
 import AdminDashboard from './pages/AdminDashboard.jsx';
-import PendingBanner from './components/PendingBanner.jsx';
 import { getNextLessonId } from './data/lessons.js';
 import { getNextAppsLessonId } from './data/appsLessons.js';
 import { lessonPages } from './pages/registry.js';
@@ -182,11 +181,36 @@ export default function App() {
     return <AdminDashboard admin={user} onLogout={handleLogout} onViewSite={() => setAdminViewingSite(true)} />;
   }
 
-  // Verified but not yet approved by an admin — logged in and can browse the
-  // whole site freely, but Technical lessons stay locked until someone flips
-  // status to 'approved' in Firestore. The Apps track has no such gate. An
-  // admin browsing the site gets full access regardless of their own status.
+  // Verified but not paid/approved — logged in and can see the category
+  // picker, but every lesson in every track stays locked (no free preview)
+  // until either an admin approves the account / flips status to
+  // 'approved' in Firestore, or the account pays on the Pricing page
+  // (which also sets status: 'approved', see genztrader-news-api/payment.js).
+  // An admin browsing the site gets full access regardless of their own
+  // status.
   const approved = user.status === 'approved' || user.role === 'admin';
+
+  // Not approved (and not admin) — the Pricing page IS the entire
+  // experience, no other section is reachable until the account is
+  // approved (by an admin, or by paying — see PricingPage.jsx). This is
+  // a hard gate, not just locked lesson cards, per explicit request.
+  if (!approved) {
+    return (
+      <>
+        <Navbar
+          onLogoClick={backToCategories}
+          activeSection={section}
+          user={user}
+          onLogout={handleLogout}
+          isAdmin={false}
+          showNavLinks={false}
+        />
+        <div className="wrap">
+          <PricingPage user={user} />
+        </div>
+      </>
+    );
+  }
 
   // An admin can grant a specific list of lesson ids per user (Admin
   // Dashboard "Permissions"), overriding the default approved/pending rule
@@ -196,16 +220,13 @@ export default function App() {
 
   function isLessonLocked(id) {
     if (allowedLessons) return !allowedLessons.includes(id);
-    if (id.startsWith('l')) return !approved && id !== 'l1'; // Technical default
-    return false; // Apps default: always open
+    return !approved; // both tracks: locked until approved/paid
   }
 
   // Falls back to the lesson list if the restored `view` doesn't match any
   // known lesson (e.g. an old deep-link from before a lesson was renamed),
   // or if it's a lesson the account isn't (or no longer is) allowed to open
-  // — e.g. an admin revoked access while this lesson was still open in a
-  // tab. Lesson 1 stays open as a preview even when pending (unless a
-  // permissions override says otherwise).
+  // — e.g. an admin revoked access while this lesson was still open in a tab.
   const requestedLesson = view !== 'home' ? lessonPages[view] : null;
   const lessonBlocked =
     requestedLesson && (section === 'technical' || section === 'apps') && isLessonLocked(view);
@@ -218,7 +239,6 @@ export default function App() {
         onLogoClick={backToCategories}
         activeSection={section}
         onNavHome={backToCategories}
-        onNavIndicator={() => setSection('indicator')}
         onNavNews={() => setSection('news')}
         onNavContact={() => setSection('contact')}
         user={user}
@@ -226,13 +246,9 @@ export default function App() {
         isAdmin={user.role === 'admin'}
         onNavAdmin={() => setAdminViewingSite(false)}
       />
-      {/* Apps track has no approval gate, so the banner (which is about
-          Technical being locked) would be misleading while browsing it. */}
-      {!approved && section !== 'apps' && <PendingBanner name={user.name} />}
       <div className="wrap">
         {section === 'categories' && <CategoryHome onSelectCategory={selectCategory} approved={approved} />}
         {section === 'news' && <NewsPage onBack={backToCategories} />}
-        {section === 'indicator' && <IndicatorPage onBack={backToCategories} />}
         {section === 'contact' && <ContactPage onBack={backToCategories} />}
         {section === 'technical' && effectiveView === 'home' && (
           <Home
@@ -248,6 +264,7 @@ export default function App() {
             doneMap={doneMap}
             onSelectLesson={navigate}
             onBack={backToCategories}
+            approved={approved}
             allowedLessons={allowedLessons}
           />
         )}

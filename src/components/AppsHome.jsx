@@ -6,11 +6,11 @@ import { LockIcon } from './ui/CategoryIcons.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
 
-// The Apps track has no approval gate by default — every lesson is open to
-// any logged-in user as soon as they click into this category. An
-// admin-set permissions list (allowedLessons) can still restrict specific
-// lessons for a specific account, same as the Technical track.
-export default function AppsHome({ doneMap, onSelectLesson, onBack, allowedLessons }) {
+// Every lesson stays locked until the account is approved (by an admin, or
+// by paying on the Pricing page) — same rule as the Technical track. An
+// admin-set permissions list (allowedLessons) overrides this entirely for
+// a specific account.
+export default function AppsHome({ doneMap, onSelectLesson, onBack, approved, allowedLessons }) {
   const { lang } = useLanguage();
   const t = getStrings(lang).apps;
   const tp = getStrings(lang).pending;
@@ -49,7 +49,7 @@ export default function AppsHome({ doneMap, onSelectLesson, onBack, allowedLesso
       </p>
 
       {appsLessons.map((lesson, i) => {
-        const locked = allowedLessons ? !allowedLessons.includes(lesson.id) : false;
+        const locked = allowedLessons ? !allowedLessons.includes(lesson.id) : !approved;
         return (
           <LessonCard
             key={lesson.id}
