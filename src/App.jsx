@@ -7,7 +7,6 @@ import AppsHome from './components/AppsHome.jsx';
 import NewsPage from './components/NewsPage.jsx';
 import ContactPage from './components/ContactPage.jsx';
 import PricingPage from './components/PricingPage.jsx';
-import PendingBanner from './components/PendingBanner.jsx';
 import Login from './pages/Login.jsx';
 import Signup from './pages/Signup.jsx';
 import VerifyOtp from './pages/VerifyOtp.jsx';
@@ -191,6 +190,28 @@ export default function App() {
   // status.
   const approved = user.status === 'approved' || user.role === 'admin';
 
+  // Not approved (and not admin) — the Pricing page is the entire
+  // experience right after login. No nav links, no category picker, no
+  // lesson is clickable anywhere, until the account is approved (by an
+  // admin) or the user pays (see PricingPage.jsx).
+  if (!approved) {
+    return (
+      <>
+        <Navbar
+          onLogoClick={backToCategories}
+          activeSection={section}
+          user={user}
+          onLogout={handleLogout}
+          isAdmin={false}
+          showNavLinks={false}
+        />
+        <div className="wrap">
+          <PricingPage user={user} />
+        </div>
+      </>
+    );
+  }
+
   // An admin can grant a specific list of lesson ids per user (Admin
   // Dashboard "Permissions"), overriding the default approved/pending rule
   // entirely for that account — across both tracks. Absent (not an array)
@@ -226,7 +247,6 @@ export default function App() {
         isAdmin={user.role === 'admin'}
         onNavAdmin={() => setAdminViewingSite(false)}
       />
-      {!approved && <PendingBanner name={user.name} />}
       <div className="wrap">
         {section === 'categories' && <CategoryHome onSelectCategory={selectCategory} approved={approved} />}
         {section === 'news' && <NewsPage onBack={backToCategories} />}
