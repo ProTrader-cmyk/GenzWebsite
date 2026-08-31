@@ -12,25 +12,30 @@ const NEWS_API_URL = import.meta.env.VITE_NEWS_API_URL;
 // known trade-off accepted in place of building real ABA API verification.
 const PAYWAY_LINK = 'https://link.payway.com.kh/ABAPAYD0512524C';
 
-export default function PricingPage({ onBack, user }) {
+export default function PricingPage({ onBack, onPay, user }) {
   const { lang } = useLanguage();
   const t = getStrings(lang).pricing;
   // idle | granting | granted | error
   const [status, setStatus] = useState('idle');
 
-  async function handlePayClick() {
+  // Fires the (currently unconfigured — needs FIREBASE_SERVICE_ACCOUNT_JSON
+  // on the backend) real access grant in the background, but doesn't wait
+  // on it: onPay() runs immediately so the user can browse the site right
+  // away instead of being stuck here. Everything stays locked regardless,
+  // since `approved` itself is untouched by this — see App.jsx.
+  function handlePayClick() {
     setStatus('granting');
-    try {
-      const res = await fetch(`${NEWS_API_URL}/api/payment/claim`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid: user.uid }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setStatus('granted');
-    } catch {
-      setStatus('error');
-    }
+    fetch(`${NEWS_API_URL}/api/payment/claim`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uid: user.uid }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        setStatus('granted');
+      })
+      .catch(() => setStatus('error'));
+    onPay?.();
   }
 
   return (

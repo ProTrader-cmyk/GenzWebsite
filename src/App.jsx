@@ -47,6 +47,11 @@ export default function App() {
   // An admin account defaults to the dashboard; this flips to true when they
   // click "Go back to website" so they can browse the site like any user.
   const [adminViewingSite, setAdminViewingSite] = useState(false);
+  // Not approved yet, so real access isn't granted — but clicking "Pay" on
+  // the Pricing page flips this so they can at least browse the site
+  // (still fully locked everywhere) instead of being stuck on Pricing.
+  // Doesn't persist across refresh; resets on logout.
+  const [browsingUnlocked, setBrowsingUnlocked] = useState(false);
 
   // Firebase is the source of truth for status/emailVerified — re-check it on
   // load instead of trusting whatever was last cached in localStorage, since
@@ -139,6 +144,7 @@ export default function App() {
     setSection('categories');
     setView('home');
     setAdminViewingSite(false);
+    setBrowsingUnlocked(false);
     localStorage.removeItem(NAV_KEY);
   }
 
@@ -190,11 +196,12 @@ export default function App() {
   // status.
   const approved = user.status === 'approved' || user.role === 'admin';
 
-  // Not approved (and not admin) — the Pricing page is the entire
-  // experience right after login. No nav links, no category picker, no
-  // lesson is clickable anywhere, until the account is approved (by an
-  // admin) or the user pays (see PricingPage.jsx).
-  if (!approved) {
+  // Not approved (and not admin) and hasn't clicked "Pay" yet — the Pricing
+  // page is the entire experience right after login, no nav links, no
+  // category picker. Clicking Pay flips browsingUnlocked so they can see
+  // the site — everything still stays locked (isLessonLocked below), since
+  // real access is only granted once the account is actually approved.
+  if (!approved && !browsingUnlocked) {
     return (
       <>
         <Navbar
@@ -206,7 +213,7 @@ export default function App() {
           showNavLinks={false}
         />
         <div className="wrap">
-          <PricingPage user={user} />
+          <PricingPage user={user} onPay={() => setBrowsingUnlocked(true)} />
         </div>
       </>
     );
@@ -250,7 +257,9 @@ export default function App() {
       <div className="wrap">
         {section === 'categories' && <CategoryHome onSelectCategory={selectCategory} approved={approved} />}
         {section === 'news' && <NewsPage onBack={backToCategories} />}
-        {section === 'pricing' && <PricingPage onBack={backToCategories} user={user} />}
+        {section === 'pricing' && (
+          <PricingPage onBack={backToCategories} user={user} onPay={() => setBrowsingUnlocked(true)} />
+        )}
         {section === 'contact' && <ContactPage onBack={backToCategories} />}
         {section === 'technical' && effectiveView === 'home' && (
           <Home
