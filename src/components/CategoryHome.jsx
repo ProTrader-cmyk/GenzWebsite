@@ -14,7 +14,7 @@ import {
   LockIcon,
 } from './ui/CategoryIcons.jsx';
 
-function buildCategories(t) {
+function buildCategories(t, approved) {
   return [
     {
       id: 'apps',
@@ -29,6 +29,10 @@ function buildCategories(t) {
       title: t.technicalTitle,
       tag: t.lessonsCount,
       locked: false,
+      // Pending (not-yet-approved) accounts see this card locked like a
+      // premium one — clicking asks them to contact the admin instead of
+      // entering the section.
+      pendingLocked: !approved,
     },
     {
       id: 'psychology',
@@ -62,11 +66,13 @@ function buildCategories(t) {
   ];
 }
 
-export default function CategoryHome({ onSelectCategory }) {
+export default function CategoryHome({ onSelectCategory, approved }) {
   const { lang } = useLanguage();
   const t = getStrings(lang).category;
-  const CATEGORIES = buildCategories(t);
+  const tp = getStrings(lang).pending;
+  const CATEGORIES = buildCategories(t, approved);
   const [unlockPrompt, setUnlockPrompt] = useState(null);
+  const [showPendingModal, setShowPendingModal] = useState(false);
   const videoRef = useRef(null);
 
   // Set `muted` imperatively, once, via a stable ref — not as a JSX
@@ -100,6 +106,8 @@ export default function CategoryHome({ onSelectCategory }) {
   function handleCardClick(cat) {
     if (cat.premium) {
       setUnlockPrompt(cat);
+    } else if (cat.pendingLocked) {
+      setShowPendingModal(true);
     } else if (!cat.locked) {
       onSelectCategory(cat.id);
     }
@@ -130,10 +138,10 @@ export default function CategoryHome({ onSelectCategory }) {
         {CATEGORIES.map((cat) => (
           <div
             key={cat.id}
-            className={`cat-card${cat.locked ? ' locked' : ''}${cat.premium ? ' premium' : ''}`}
+            className={`cat-card${cat.locked ? ' locked' : ''}${cat.premium || cat.pendingLocked ? ' premium' : ''}`}
             onClick={() => handleCardClick(cat)}
           >
-            {cat.premium && (
+            {(cat.premium || cat.pendingLocked) && (
               <div className="cat-lock-badge">
                 <LockIcon />
               </div>
@@ -142,8 +150,8 @@ export default function CategoryHome({ onSelectCategory }) {
               <cat.Icon />
             </div>
             <div className="cat-title">{cat.title}</div>
-            <div className={`cat-tag${cat.locked ? ' locked' : ''}${cat.premium ? ' premium' : ''}`}>
-              {cat.premium && <LockIcon />}
+            <div className={`cat-tag${cat.locked ? ' locked' : ''}${cat.premium || cat.pendingLocked ? ' premium' : ''}`}>
+              {(cat.premium || cat.pendingLocked) && <LockIcon />}
               {cat.tag}
             </div>
           </div>
@@ -164,6 +172,21 @@ export default function CategoryHome({ onSelectCategory }) {
             </p>
             <button className="modal-btn" onClick={() => setUnlockPrompt(null)}>
               {t.premiumOk}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showPendingModal && (
+        <div className="modal-overlay" onClick={() => setShowPendingModal(false)}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-lock">
+              <LockIcon width="20" height="20" />
+            </div>
+            <h3 className="modal-title">{tp.modalTitle}</h3>
+            <p className="modal-text">{tp.modalText}</p>
+            <button className="modal-btn" onClick={() => setShowPendingModal(false)}>
+              {tp.modalOk}
             </button>
           </div>
         </div>

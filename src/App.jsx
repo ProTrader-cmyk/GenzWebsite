@@ -206,7 +206,7 @@ export default function App() {
           Technical being locked) would be misleading while browsing it. */}
       {!approved && section !== 'apps' && <PendingBanner name={user.name} />}
       <div className="wrap">
-        {section === 'categories' && <CategoryHome onSelectCategory={selectCategory} />}
+        {section === 'categories' && <CategoryHome onSelectCategory={selectCategory} approved={approved} />}
         {section === 'news' && <NewsPage onBack={backToCategories} />}
         {section === 'contact' && <ContactPage onBack={backToCategories} />}
         {section === 'technical' && effectiveView === 'home' && (
