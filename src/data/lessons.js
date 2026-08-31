@@ -64,7 +64,7 @@ export const lessons = [
   },
   {
     id: 'l7',
-    title: 'Become a Trader',
+    title: 'How to Plan and Execute a Trade: Applying All 6 Lessons',
     subtitle: 'Top-Down Process · Confluence Checklist · Risk Management · Trading Plan',
     pageTitle: {
       kh: 'របៀបប្រើមេរៀនទាំ៦ ចូលជួញដូរ',
