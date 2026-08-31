@@ -88,4 +88,8 @@ list / progress bar update automatically since they just map over that array.
 Drop new images/videos into `src/assets/` and `import` them (Vite handles
 hashing/bundling) — see the top of `Lesson1.jsx` for examples.
 
-# GenzWebsite
+# GenzWebsite Re-deploy
+git add -A
+git commit -m "your message"
+git pull --rebase origin main
+git push origin main
