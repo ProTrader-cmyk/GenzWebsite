@@ -67,8 +67,6 @@ export const strings = {
       heroTitle: 'GenZ Trader',
       heroTagline1: 'LEARN. TRADE.',
       heroTagline2: 'GROW.',
-      heroSubPrefix: 'វគ្គសិក្សា Trading ដឹកនាំដោយ',
-      heroSubSuffix: '— ងាយ ច្បាស់ ពេញលេញ ជាជំហានៗ',
       chooseSection: 'ជ្រើសរើសផ្នែកសិក្សា',
       comingSoon: 'ឆាប់ៗនេះ',
       lessonsCount: '៧ មេរៀន',
@@ -167,7 +165,7 @@ export const strings = {
     },
     footer: {
       line1: 'GenZ Trader · Private Mentorship Class · សម្រាប់ការសិក្សា — មិនមែនដំបូន្មានហិរញ្ញវត្ថុ',
-      line2: '© Veng Sophea — GenZ Trader. រក្សាសិទ្ធិគ្រប់យ៉ាង។',
+      line2: '© GenZ Trader. រក្សាសិទ្ធិគ្រប់យ៉ាង។',
     },
   },
   en: {
@@ -236,8 +234,6 @@ export const strings = {
       heroTitle: 'GenZ Trader',
       heroTagline1: 'LEARN. TRADE.',
       heroTagline2: 'GROW.',
-      heroSubPrefix: 'A trading course led by',
-      heroSubSuffix: '— clear, complete, step by step',
       chooseSection: 'Choose a track',
       comingSoon: 'Coming soon',
       lessonsCount: '7 lessons',
@@ -336,7 +332,7 @@ export const strings = {
     },
     footer: {
       line1: 'GenZ Trader · Private Mentorship Class · For educational purposes — not financial advice',
-      line2: '© Veng Sophea — GenZ Trader. All rights reserved.',
+      line2: '© GenZ Trader. All rights reserved.',
     },
   },
   zh: {
@@ -405,8 +401,6 @@ export const strings = {
       heroTitle: 'GenZ Trader',
       heroTagline1: 'LEARN. TRADE.',
       heroTagline2: 'GROW.',
-      heroSubPrefix: '交易课程由',
-      heroSubSuffix: '主讲 — 清晰、完整、循序渐进',
       chooseSection: '选择学习板块',
       comingSoon: '敬请期待',
       lessonsCount: '7 节课程',
@@ -505,7 +499,7 @@ export const strings = {
     },
     footer: {
       line1: 'GenZ Trader · Private Mentorship Class · 仅供学习使用 — 非财务建议',
-      line2: '© Veng Sophea — GenZ Trader. 保留所有权利。',
+      line2: '© GenZ Trader. 保留所有权利。',
     },
   },
 };

@@ -27,7 +27,7 @@ export default function ContactPage({ onBack }) {
         </div>
         <div className="contact-info">
           <div className="contact-label">{t.telegramLabel}</div>
-          <div className="contact-value">Veng Sophea — GenZ Trader</div>
+          <div className="contact-value">GenZ Trader</div>
         </div>
         <div className="contact-go">→</div>
       </a>

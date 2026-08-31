@@ -109,9 +109,6 @@ export default function CategoryHome({ onSelectCategory }) {
         <div className="hero-tagline">
           {t.heroTagline1} <b>{t.heroTagline2}</b>
         </div>
-        <p className="hero-sub">
-          {t.heroSubPrefix} <strong style={{ color: 'var(--text)' }}>Veng Sophea</strong> {t.heroSubSuffix}
-        </p>
         <div className="hero-video">
           <video ref={videoRef} autoPlay loop playsInline controls>
             <source src={heroVideo} type="video/mp4" />
