@@ -207,6 +207,9 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 .price-pay-btn:disabled{opacity:.6;cursor:not-allowed;}
 .price-note{color:var(--mute);font-size:13px;line-height:1.8;max-width:340px;margin:10px auto 0;}
 .price-note-warn{color:var(--warn);}
+.price-waiting{display:flex;align-items:center;justify-content:center;gap:8px;color:var(--brand2);font-size:14px;font-weight:600;padding:14px 0;}
+.price-spinner{width:16px;height:16px;border-radius:50%;border:2px solid var(--brandline);border-top-color:var(--brand2);animation:price-spin .8s linear infinite;flex:none;}
+@keyframes price-spin{to{transform:rotate(360deg);}}
 
 /* GOLD DIRECTION ANALYSIS CARD (AI-generated, GenZ NEWS) */
 .gna-card{border-radius:var(--rl);padding:24px 26px;margin-bottom:22px;border:1px solid;box-shadow:0 20px 40px -26px rgba(0,0,0,0.6);}

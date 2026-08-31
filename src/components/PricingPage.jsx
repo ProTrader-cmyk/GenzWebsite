@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Footer from './Footer.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
 
 const NEWS_API_URL = import.meta.env.VITE_NEWS_API_URL;
+const WAIT_SECONDS = 20;
 
 // Static ABA PayWay checkout link — same URL for every user, since it's not
 // generated per-transaction via the PayWay API. There's no way to verify a
@@ -15,27 +16,41 @@ const PAYWAY_LINK = 'https://link.payway.com.kh/ABAPAYD0512524C';
 export default function PricingPage({ onBack, onPay, user }) {
   const { lang } = useLanguage();
   const t = getStrings(lang).pricing;
-  // idle | granting | granted | error
-  const [status, setStatus] = useState('idle');
+  const [waiting, setWaiting] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(WAIT_SECONDS);
+  const tickRef = useRef(null);
+  const timeoutRef = useRef(null);
+
+  useEffect(
+    () => () => {
+      if (tickRef.current) clearInterval(tickRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    },
+    []
+  );
 
   // Fires the (currently unconfigured — needs FIREBASE_SERVICE_ACCOUNT_JSON
-  // on the backend) real access grant in the background, but doesn't wait
-  // on it: onPay() runs immediately so the user can browse the site right
-  // away instead of being stuck here. Everything stays locked regardless,
-  // since `approved` itself is untouched by this — see App.jsx.
+  // on the backend) real access grant in the background. Regardless of
+  // that outcome, after a WAIT_SECONDS pause (giving them time to actually
+  // pay in the ABA tab that opened), onPay() takes them into the site —
+  // everything still stays locked, since `approved` itself is untouched by
+  // this — see App.jsx.
   function handlePayClick() {
-    setStatus('granting');
     fetch(`${NEWS_API_URL}/api/payment/claim`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ uid: user.uid }),
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        setStatus('granted');
-      })
-      .catch(() => setStatus('error'));
-    onPay?.();
+    }).catch(() => {});
+
+    setWaiting(true);
+    setSecondsLeft(WAIT_SECONDS);
+    tickRef.current = setInterval(() => {
+      setSecondsLeft((s) => (s > 1 ? s - 1 : 0));
+    }, 1000);
+    timeoutRef.current = setTimeout(() => {
+      clearInterval(tickRef.current);
+      onPay?.();
+    }, WAIT_SECONDS * 1000);
   }
 
   return (
@@ -70,28 +85,24 @@ export default function PricingPage({ onBack, onPay, user }) {
           </ul>
         </div>
 
-        <a
-          className="price-pay-btn"
-          href={PAYWAY_LINK}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={handlePayClick}
-        >
-          {t.payBtn}
-        </a>
-
-        {status === 'granting' && <p className="price-note">{t.granting}</p>}
-
-        {status === 'granted' && (
-          <>
-            <p className="price-note">{t.successBody}</p>
-            <button className="price-pay-btn" onClick={() => window.location.reload()}>
-              {t.refresh}
-            </button>
-          </>
+        {!waiting && (
+          <a
+            className="price-pay-btn"
+            href={PAYWAY_LINK}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={handlePayClick}
+          >
+            {t.payBtn}
+          </a>
         )}
 
-        {status === 'error' && <p className="price-note price-note-warn">{t.errorGeneric}</p>}
+        {waiting && (
+          <div className="price-waiting">
+            <span className="price-spinner"></span>
+            {t.granting} ({secondsLeft}s)
+          </div>
+        )}
       </div>
 
       <Footer />
