@@ -78,6 +78,7 @@ export const strings = {
       appsTitle: 'កម្មវិធី & គេហទំព័រសម្រាប់ Trading',
       backtestTitle: 'Backtest វិភាគបច្ចេកទេស សម្រាប់អ្នកចាប់ផ្តើម',
       advancedTitle: 'វិភាគបច្ចេកទេសកម្រិតខ្ពស់',
+      newProductTitle: 'ផលិតផលថ្មី',
     },
     home: {
       back: '← ផ្នែកសិក្សា',
@@ -245,6 +246,7 @@ export const strings = {
       appsTitle: 'App & Website for Trading',
       backtestTitle: 'Backtest Technical Analysis for Beginner',
       advancedTitle: 'Advanced Technical Analysis',
+      newProductTitle: 'New Product',
     },
     home: {
       back: '← Sections',
@@ -412,6 +414,7 @@ export const strings = {
       appsTitle: '交易应用与网站',
       backtestTitle: '初学者回测技术分析',
       advancedTitle: '进阶技术分析',
+      newProductTitle: '新产品',
     },
     home: {
       back: '← 学习板块',

@@ -10,6 +10,7 @@ import {
   AppWindowIcon,
   BacktestIcon,
   AdvancedChartIcon,
+  SparkleIcon,
   LockIcon,
 } from './ui/CategoryIcons.jsx';
 
@@ -50,6 +51,13 @@ function buildCategories(t) {
       tag: t.comingSoon,
       locked: false,
       premium: true,
+    },
+    {
+      id: 'new-product',
+      Icon: SparkleIcon,
+      title: t.newProductTitle,
+      tag: t.comingSoon,
+      locked: true,
     },
   ];
 }

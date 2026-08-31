@@ -67,6 +67,15 @@ export function AdvancedChartIcon() {
   );
 }
 
+export function SparkleIcon() {
+  return (
+    <svg {...common}>
+      <path d="M11 2.5 12.6 8l5.4 1.6-5.4 1.6L11 16.7 9.4 11.2 4 9.6l5.4-1.6L11 2.5Z" />
+      <path d="M18.5 15.5 19.3 18l2.5.8-2.5.8-.8 2.4-.8-2.4-2.5-.8 2.5-.8.8-2.5Z" />
+    </svg>
+  );
+}
+
 // Filled padlock used as a small overlay badge — kept visually distinct
 // (solid, not outline) so it reads as a status marker, not a nav icon.
 export function LockIcon(props) {
