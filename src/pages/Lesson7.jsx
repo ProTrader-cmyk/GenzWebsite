@@ -25,7 +25,6 @@ const meta = getLessonMeta('l7');
 const CONTENT = {
   kh: {
     finishUnlocked: '✓ បញ្ចប់ Course',
-    h1: 'បៀបក្នុងការវិភាគទីផ្សារដើម្បីជួញដូរប្រើប្រាស់ មេរៀនទាំង៦',
     processIntro: 'នេះជា Process ៥ ជំហាន ដែល Trader ត្រូវធ្វើរាល់ថ្ងៃមុនសម្រចចិត្តជួញដូរ For Beginner ៖',
     step1: (
       <>
@@ -58,7 +57,6 @@ const CONTENT = {
   },
   en: {
     finishUnlocked: '✓ Finish Course',
-    h1: 'How to Analyze the Market for Trading, Using All 6 Lessons',
     processIntro: 'This is the 5-step process a Trader should run through every day before deciding to trade — for beginners:',
     step1: (
       <>
@@ -92,7 +90,6 @@ const CONTENT = {
   },
   zh: {
     finishUnlocked: '✓ 完成课程',
-    h1: '如何运用这 6 节课分析市场进行交易',
     processIntro: '这是初学者交易者在每天做交易决定之前应该执行的 5 步流程：',
     step1: (
       <>
@@ -137,10 +134,6 @@ export default function Lesson7({ onNavigate, onDone }) {
       nextLabel={t.finishUnlocked}
       nextDisabled={false}
     >
-      <h3>
-        <span className="bar"></span>
-        {t.h1}
-      </h3>
       <p>{t.processIntro}</p>
       <Steps items={[t.step1, t.step2, t.step3, t.step4, t.step5]} />
 
