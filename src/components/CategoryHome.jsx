@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import heroVideo from '../assets/Hero.mp4';
 import Footer from './Footer.jsx';
-import Trans from '../i18n/Trans.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
 import {
@@ -55,7 +54,7 @@ function buildCategories(t, approved) {
       title: t.advancedTitle,
       tag: t.comingSoon,
       locked: false,
-      premium: true,
+      pendingLocked: !approved,
     },
     {
       id: 'new-product',
@@ -72,7 +71,6 @@ export default function CategoryHome({ onSelectCategory, approved }) {
   const t = getStrings(lang).category;
   const tp = getStrings(lang).pending;
   const CATEGORIES = buildCategories(t, approved);
-  const [unlockPrompt, setUnlockPrompt] = useState(null);
   const [showPendingModal, setShowPendingModal] = useState(false);
   const videoRef = useRef(null);
 
@@ -105,9 +103,7 @@ export default function CategoryHome({ onSelectCategory, approved }) {
   }, []);
 
   function handleCardClick(cat) {
-    if (cat.premium && !approved) {
-      setUnlockPrompt(cat);
-    } else if (cat.pendingLocked) {
+    if (cat.pendingLocked) {
       setShowPendingModal(true);
     } else if (!cat.locked) {
       onSelectCategory(cat.id);
@@ -139,10 +135,10 @@ export default function CategoryHome({ onSelectCategory, approved }) {
         {CATEGORIES.map((cat) => (
           <div
             key={cat.id}
-            className={`cat-card${cat.locked ? ' locked' : ''}${cat.premium || cat.pendingLocked ? ' premium' : ''}`}
+            className={`cat-card${cat.locked ? ' locked' : ''}${cat.pendingLocked ? ' premium' : ''}`}
             onClick={() => handleCardClick(cat)}
           >
-            {(cat.premium || cat.pendingLocked) && (
+            {cat.pendingLocked && (
               <div className="cat-lock-badge">
                 <LockIcon />
               </div>
@@ -151,8 +147,8 @@ export default function CategoryHome({ onSelectCategory, approved }) {
               <cat.Icon />
             </div>
             <div className="cat-title">{cat.title}</div>
-            <div className={`cat-tag${cat.locked ? ' locked' : ''}${cat.premium || cat.pendingLocked ? ' premium' : ''}`}>
-              {(cat.premium || cat.pendingLocked) && <LockIcon />}
+            <div className={`cat-tag${cat.locked ? ' locked' : ''}${cat.pendingLocked ? ' premium' : ''}`}>
+              {cat.pendingLocked && <LockIcon />}
               {cat.tag}
             </div>
           </div>
@@ -160,23 +156,6 @@ export default function CategoryHome({ onSelectCategory, approved }) {
       </div>
 
       <Footer />
-
-      {unlockPrompt && (
-        <div className="modal-overlay" onClick={() => setUnlockPrompt(null)}>
-          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-lock">
-              <LockIcon width="20" height="20" />
-            </div>
-            <h3 className="modal-title">{unlockPrompt.title}</h3>
-            <p className="modal-text">
-              <Trans text={t.premiumText} />
-            </p>
-            <button className="modal-btn" onClick={() => setUnlockPrompt(null)}>
-              {t.premiumOk}
-            </button>
-          </div>
-        </div>
-      )}
 
       {showPendingModal && (
         <div className="modal-overlay" onClick={() => setShowPendingModal(false)}>
