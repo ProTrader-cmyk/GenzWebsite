@@ -11,7 +11,7 @@ import { getStrings } from '../i18n/strings.js';
 // Once approved, lessons unlock one at a time in order. An admin-set
 // permissions list (allowedLessons) overrides both rules entirely for a
 // specific account.
-export default function PsychologyHome({ doneMap, onSelectLesson, onBack, approved, allowedLessons }) {
+export default function PsychologyHome({ doneMap, onSelectLesson, onBack, approved, allowedLessons, isAdmin }) {
   const { lang } = useLanguage();
   const t = getStrings(lang).psychology;
   const tp = getStrings(lang).pending;
@@ -52,7 +52,7 @@ export default function PsychologyHome({ doneMap, onSelectLesson, onBack, approv
       {psychologyLessons.map((lesson, i) => {
         const lockedByAccess = allowedLessons ? !allowedLessons.includes(lesson.id) : !approved;
         const prevLesson = i > 0 ? psychologyLessons[i - 1] : null;
-        const lockedBySequence = !allowedLessons && !lockedByAccess && prevLesson && !doneMap[prevLesson.id];
+        const lockedBySequence = !isAdmin && !allowedLessons && !lockedByAccess && prevLesson && !doneMap[prevLesson.id];
         const locked = lockedByAccess || lockedBySequence;
         return (
           <LessonCard

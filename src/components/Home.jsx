@@ -6,7 +6,7 @@ import { LockIcon } from './ui/CategoryIcons.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
 
-export default function Home({ doneMap, onSelectLesson, onBack, approved, allowedLessons }) {
+export default function Home({ doneMap, onSelectLesson, onBack, approved, allowedLessons, isAdmin }) {
   const { lang } = useLanguage();
   const t = getStrings(lang).home;
   const tp = getStrings(lang).pending;
@@ -48,12 +48,13 @@ export default function Home({ doneMap, onSelectLesson, onBack, approved, allowe
         // Every lesson stays locked until the account is approved (by an
         // admin, or by paying on the Pricing page) — no free preview. Once
         // approved, lessons unlock one at a time in order — lesson N+1 stays
-        // locked until lesson N is marked done. An admin-set permissions
-        // list (allowedLessons) overrides both rules entirely for the
-        // account — it's an explicit, order-independent grant.
+        // locked until lesson N is marked done. An admin always sees every
+        // lesson unlocked, and an admin-set permissions list
+        // (allowedLessons) overrides both rules entirely for the account —
+        // it's an explicit, order-independent grant.
         const lockedByAccess = allowedLessons ? !allowedLessons.includes(lesson.id) : !approved;
         const prevLesson = i > 0 ? lessons[i - 1] : null;
-        const lockedBySequence = !allowedLessons && !lockedByAccess && prevLesson && !doneMap[prevLesson.id];
+        const lockedBySequence = !isAdmin && !allowedLessons && !lockedByAccess && prevLesson && !doneMap[prevLesson.id];
         const locked = lockedByAccess || lockedBySequence;
         return (
           <LessonCard

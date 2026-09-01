@@ -13,10 +13,10 @@ import Login from './pages/Login.jsx';
 import Signup from './pages/Signup.jsx';
 import VerifyOtp from './pages/VerifyOtp.jsx';
 import AdminDashboard from './pages/AdminDashboard.jsx';
-import { getNextLessonId } from './data/lessons.js';
-import { getNextAppsLessonId } from './data/appsLessons.js';
-import { getNextBacktestLessonId } from './data/backtestLessons.js';
-import { getNextPsychologyLessonId } from './data/psychologyLessons.js';
+import { lessons, getNextLessonId } from './data/lessons.js';
+import { appsLessons, getNextAppsLessonId } from './data/appsLessons.js';
+import { backtestLessons, getNextBacktestLessonId } from './data/backtestLessons.js';
+import { psychologyLessons, getNextPsychologyLessonId } from './data/psychologyLessons.js';
 import { lessonPages } from './pages/registry.js';
 import { auth } from './firebase.js';
 import {
@@ -249,10 +249,22 @@ export default function App() {
   // entirely for that account — across both tracks. Absent (not an array)
   // means "no override", so the default rule below applies as before.
   const allowedLessons = Array.isArray(user.allowedLessons) ? user.allowedLessons : null;
+  const isAdmin = user.role === 'admin';
+
+  // Lessons within a track unlock one at a time in order (lesson N+1 needs
+  // lesson N done) — except for an admin, who always sees every lesson in
+  // every track unlocked, and an account with an explicit allowedLessons
+  // override, which is order-independent by design.
+  const TRACK_LESSONS = { technical: lessons, apps: appsLessons, backtest: backtestLessons, psychology: psychologyLessons };
 
   function isLessonLocked(id) {
     if (allowedLessons) return !allowedLessons.includes(id);
-    return !approved; // both tracks: locked until approved/paid
+    if (!approved) return true;
+    if (isAdmin) return false;
+    const trackLessons = TRACK_LESSONS[section];
+    const idx = trackLessons ? trackLessons.findIndex((l) => l.id === id) : -1;
+    if (idx <= 0) return false; // first lesson in the track, or an unrecognized id
+    return !doneMap[trackLessons[idx - 1].id];
   }
 
   // Falls back to the lesson list if the restored `view` doesn't match any
@@ -293,6 +305,7 @@ export default function App() {
             onBack={backToCategories}
             approved={approved}
             allowedLessons={allowedLessons}
+            isAdmin={isAdmin}
           />
         )}
         {section === 'apps' && effectiveView === 'home' && (
@@ -302,6 +315,7 @@ export default function App() {
             onBack={backToCategories}
             approved={approved}
             allowedLessons={allowedLessons}
+            isAdmin={isAdmin}
           />
         )}
         {section === 'backtest' && effectiveView === 'home' && (
@@ -311,6 +325,7 @@ export default function App() {
             onBack={backToCategories}
             approved={approved}
             allowedLessons={allowedLessons}
+            isAdmin={isAdmin}
           />
         )}
         {section === 'psychology' && effectiveView === 'home' && (
@@ -320,6 +335,7 @@ export default function App() {
             onBack={backToCategories}
             approved={approved}
             allowedLessons={allowedLessons}
+            isAdmin={isAdmin}
           />
         )}
         {(section === 'technical' || section === 'apps' || section === 'backtest' || section === 'psychology') &&
