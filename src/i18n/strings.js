@@ -142,6 +142,13 @@ export const strings = {
       error: 'មិនអាចទាញយកទិន្នន័យបានទេ សូមព្យាយាមម្តងទៀត។',
       disclosure:
         'ក្រាហ្វិចនេះប្រើតម្លៃ PAXG (Token មាសពិត ១:១) ជាតំណាងសម្រាប់តម្លៃមាសផ្ទាល់ ព្រោះមិនមានប្រភពទិន្នន័យ XAUUSD ឥតគិតថ្លៃណាមួយផ្តល់ទាំងប្រវត្តិ និង Streaming ផ្ទាល់បានទេ។ តម្លៃនេះនៅជិតនឹងតម្លៃមាសពិត ប៉ុន្តែអាចខុសគ្នាបន្តិច និងធ្វើការជួញដូរ ២៤/៧។ សម្រាប់ការសិក្សា មិនមែនជាដំបូន្មានវិនិយោគទេ។',
+      customLegend: 'សូចនាករផ្ទាល់ខ្លួន',
+      adminEditorTitle: 'សូចនាករផ្ទាល់ខ្លួន (សម្រាប់ Admin ប៉ុណ្ណោះ)',
+      adminEditorWarning: 'ដំណើរការដោយផ្ទាល់ក្នុង Browser របស់អ្នក — មានសិទ្ធិចូលប្រើទំព័រពេញលេញ ដូចការបើក Devtools។ សរសេរតែ Code ដែលអ្នកទុកចិត្តប៉ុណ្ណោះ។',
+      applyBtn: 'អនុវត្ត',
+      saveBtn: 'រក្សាទុក',
+      saving: 'កំពុងរក្សាទុក...',
+      saved: '✓ បានរក្សាទុក',
     },
     contact: {
       back: '← ត្រឡប់ក្រោយ',
@@ -376,6 +383,13 @@ export const strings = {
       error: 'Could not load chart data. Please try again.',
       disclosure:
         'This chart uses PAXG (a token backed 1:1 by real gold) as a stand-in for spot gold price, since no free XAUUSD data source offers both history and live streaming. It tracks gold closely but can differ slightly and trades 24/7. For learning purposes only — not financial advice.',
+      customLegend: 'Custom Indicator',
+      adminEditorTitle: 'Custom Indicator (Admin Only)',
+      adminEditorWarning: 'Runs directly in your browser — has full page access, same as opening devtools. Only paste code you trust.',
+      applyBtn: 'Apply',
+      saveBtn: 'Save',
+      saving: 'Saving...',
+      saved: '✓ Saved',
     },
     contact: {
       back: '← Back',
@@ -610,6 +624,13 @@ export const strings = {
       error: '无法加载图表数据，请重试。',
       disclosure:
         '由于没有免费的 XAUUSD 数据源同时提供历史数据和实时流数据，本图表使用 PAXG（1:1 实物黄金支持的代币）作为现货金价的替代。它与黄金价格高度接近，但可能略有差异，且 24/7 交易。仅供学习使用，非投资建议。',
+      customLegend: '自定义指标',
+      adminEditorTitle: '自定义指标（仅限管理员）',
+      adminEditorWarning: '直接在您的浏览器中运行 — 拥有完整的页面访问权限，与打开开发者工具相同。只粘贴您信任的代码。',
+      applyBtn: '应用',
+      saveBtn: '保存',
+      saving: '正在保存...',
+      saved: '✓ 已保存',
     },
     contact: {
       back: '← 返回',

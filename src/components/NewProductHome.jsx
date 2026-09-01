@@ -4,7 +4,7 @@ import Box from './ui/Box.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
 
-export default function NewProductHome({ onBack }) {
+export default function NewProductHome({ onBack, isAdmin }) {
   const { lang } = useLanguage();
   const t = getStrings(lang).newProduct;
 
@@ -22,7 +22,7 @@ export default function NewProductHome({ onBack }) {
 
       <Box variant="b">{t.intro}</Box>
 
-      <GoldChart />
+      <GoldChart isAdmin={isAdmin} />
 
       <Footer />
     </div>

@@ -471,6 +471,19 @@ h3 .bar{width:3px;height:18px;border-radius:2px;background:var(--gold);flex:none
 .gold-chart-disclosure{font-size:11px;color:var(--mute);line-height:1.6;margin-top:12px;padding-top:12px;border-top:1px solid var(--faint);}
 @media(max-width:540px){.gold-chart-canvas{height:320px;}}
 
+/* GOLD CHART — ADMIN-ONLY CUSTOM INDICATOR EDITOR */
+.gc-admin-editor{margin-top:16px;padding:14px;background:var(--warnd);border:1px solid var(--warn);border-radius:var(--r);}
+.gc-admin-editor-head{font-family:'Noto Sans Khmer',sans-serif;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.gc-admin-editor-warning{font-size:11px;color:var(--mute);line-height:1.5;margin-bottom:10px;}
+.gc-admin-textarea{width:100%;min-height:140px;background:var(--bg1);color:var(--text);border:1px solid var(--faint);border-radius:8px;padding:10px 12px;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12.5px;line-height:1.6;resize:vertical;}
+.gc-admin-textarea:focus{outline:none;border-color:var(--brandline);}
+.gc-admin-error{margin-top:8px;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;color:var(--dn);background:var(--dnd);border-radius:6px;padding:8px 10px;white-space:pre-wrap;word-break:break-word;}
+.gc-admin-actions{display:flex;gap:8px;margin-top:10px;}
+.gc-admin-btn{font-family:'Noto Sans Khmer',sans-serif;font-size:13px;font-weight:600;color:var(--text);background:var(--bg1);border:1px solid var(--faint);border-radius:8px;padding:7px 16px;cursor:pointer;transition:border-color .15s;}
+.gc-admin-btn:hover{border-color:var(--brandline);}
+.gc-admin-btn-primary{color:#0C0C0F;background:var(--gold);border-color:var(--gold);}
+.gc-admin-btn:disabled{opacity:.6;cursor:default;}
+
 /* BADGE */
 .badge{display:inline-block;font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px;font-family:'Noto Sans Khmer',sans-serif;}
 .bu{background:var(--upd);color:var(--up);}

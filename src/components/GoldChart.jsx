@@ -3,6 +3,13 @@ import { createChart, CandlestickSeries, LineSeries, createSeriesMarkers } from 
 import { useTheme } from '../theme/ThemeContext.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
+import { fetchCustomIndicatorCode, saveCustomIndicatorCode } from '../data/customIndicator.js';
+
+// Starter template shown the first time an admin opens the editor with
+// nothing saved yet.
+const CUSTOM_CODE_TEMPLATE = `// bars: array of { time, open, high, low, close }, oldest -> newest
+// return: array of { time, value } points to plot as a line
+return bars.map((b) => ({ time: b.time, value: (b.high + b.low) / 2 }));`;
 
 // PAXG (Paxos Gold) — a token backed 1:1 by physical gold — via Kraken's
 // public market-data API. Used as a stand-in for spot XAUUSD because it
@@ -81,7 +88,7 @@ function wsBarFromOhlc(d) {
   };
 }
 
-export default function GoldChart() {
+export default function GoldChart({ isAdmin }) {
   const { theme } = useTheme();
   const { lang } = useLanguage();
   const t = getStrings(lang).newProduct;
@@ -101,6 +108,45 @@ export default function GoldChart() {
   const [price, setPrice] = useState(null);
   const [priceDir, setPriceDir] = useState(null); // 'up' | 'down' | null
   const [status, setStatus] = useState('loading'); // 'loading' | 'live' | 'error'
+
+  // --- Admin-only custom indicator (private — see the AskUserQuestion
+  // decision recorded in the commit: only admin ever sees the editor OR
+  // its plotted result; the code only ever executes in the admin's own
+  // browser, never anyone else's). ---
+  const customSeriesRef = useRef(null); // null unless isAdmin
+  const barsRef = useRef([]); // full bar history incl. the forming candle
+  const customCodeRef = useRef(''); // mirrors customCode, read inside the chart effect
+  const applyCustomIndicatorRef = useRef(() => {}); // set inside the chart effect, called by the Apply button
+  const [customCode, setCustomCode] = useState('');
+  const [customError, setCustomError] = useState(null);
+  const [customSaving, setCustomSaving] = useState(false);
+  const [customSaved, setCustomSaved] = useState(false);
+
+  // Load the admin's saved script once, and pre-fill a starter template if
+  // nothing's been saved yet.
+  useEffect(() => {
+    if (!isAdmin) return;
+    let cancelled = false;
+    fetchCustomIndicatorCode()
+      .then((code) => {
+        if (cancelled) return;
+        const initial = code || CUSTOM_CODE_TEMPLATE;
+        setCustomCode(initial);
+        customCodeRef.current = initial;
+        applyCustomIndicatorRef.current();
+      })
+      .catch(() => {
+        // Nothing saved yet, or a transient read error — fall back to the
+        // template so the editor still has something usable.
+        if (cancelled) return;
+        setCustomCode(CUSTOM_CODE_TEMPLATE);
+        customCodeRef.current = CUSTOM_CODE_TEMPLATE;
+        applyCustomIndicatorRef.current();
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdmin]);
 
   // Chart + data lifecycle — re-created whenever the timeframe changes
   // (torn down via the cleanup function, then rebuilt fresh below).
@@ -160,7 +206,48 @@ export default function GoldChart() {
     // `.update()` on it alongside emaFastSeries/emaSlowSeries in
     // loadHistory() and applyTick() below.
 
+    // Custom indicator series only exists at all for an admin — a regular
+    // user's chart never has this series object, so there's nothing to
+    // leak even if `customCodeRef` somehow had content.
+    let customSeries = null;
+    if (isAdmin) {
+      customSeries = chart.addSeries(LineSeries, {
+        color: cssVar('--dn'),
+        lineWidth: 2,
+        priceLineVisible: false,
+        lastValueVisible: false,
+        crosshairMarkerVisible: false,
+      });
+      customSeriesRef.current = customSeries;
+    }
+
     markersApiRef.current = createSeriesMarkers(candleSeries, []);
+
+    // Runs the admin's saved JS against the current bar history. `new
+    // Function` executes with full page access (same as pasting into
+    // devtools) — that's acceptable ONLY because this never runs outside
+    // the admin's own browser; see the isAdmin guard above and the
+    // AskUserQuestion decision this feature was built against.
+    function runCustomCode(code, bars) {
+      if (!code || !code.trim()) return { data: [], error: null };
+      try {
+        // eslint-disable-next-line no-new-func
+        const fn = new Function('bars', code);
+        const result = fn(bars);
+        if (!Array.isArray(result)) throw new Error('Code must return an array of { time, value } points.');
+        return { data: result, error: null };
+      } catch (err) {
+        return { data: [], error: err.message || String(err) };
+      }
+    }
+
+    function applyCustomIndicator() {
+      if (!customSeries) return;
+      const { data, error } = runCustomCode(customCodeRef.current, barsRef.current);
+      customSeries.setData(data);
+      setCustomError(error);
+    }
+    applyCustomIndicatorRef.current = applyCustomIndicator;
 
     // Pushes one bar's OHLC onto the chart, updates the price ticker, and
     // returns a "trial" EMA computed off the last FINALIZED EMA — safe to
@@ -168,6 +255,17 @@ export default function GoldChart() {
     // never reads its own previous trial output).
     function applyTick(bar) {
       candleSeries.update({ time: bar.time, open: bar.open, high: bar.high, low: bar.low, close: bar.close });
+
+      // Keep barsRef in sync the same way candleSeries.update() behaves:
+      // replace the last entry if it's the same time (still-forming
+      // candle), otherwise append a new one.
+      const bars = barsRef.current;
+      if (bars.length && bars[bars.length - 1].time === bar.time) {
+        bars[bars.length - 1] = bar;
+      } else {
+        barsRef.current = [...bars, bar];
+      }
+
       setPrice((prevPrice) => {
         if (prevPrice != null) setPriceDir(bar.close >= prevPrice ? 'up' : 'down');
         return bar.close;
@@ -178,6 +276,7 @@ export default function GoldChart() {
       const trialSlow = emaSlowRef.current != null ? bar.close * kSlow + emaSlowRef.current * (1 - kSlow) : null;
       if (trialFast != null) emaFastSeries.update({ time: bar.time, value: trialFast });
       if (trialSlow != null) emaSlowSeries.update({ time: bar.time, value: trialSlow });
+      if (customSeries) applyCustomIndicator();
       return { trialFast, trialSlow };
     }
 
@@ -253,6 +352,7 @@ export default function GoldChart() {
         closesRef.current = closes;
         emaFastRef.current = emaFast[emaFast.length - 1];
         emaSlowRef.current = emaSlow[emaSlow.length - 1];
+        barsRef.current = bars;
 
         const formingBar = restBarFromOhlc(raw[raw.length - 1]);
         formingTimeRef.current = formingBar.time;
@@ -392,8 +492,31 @@ export default function GoldChart() {
     });
     emaFastSeriesRef.current?.applyOptions({ color: cssVar('--gold2') });
     emaSlowSeriesRef.current?.applyOptions({ color: cssVar('--warn') });
+    customSeriesRef.current?.applyOptions({ color: cssVar('--dn') });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [theme]);
+
+  function handleCustomCodeChange(e) {
+    setCustomCode(e.target.value);
+    setCustomSaved(false);
+  }
+
+  function handleApplyCustomCode() {
+    customCodeRef.current = customCode;
+    applyCustomIndicatorRef.current();
+  }
+
+  async function handleSaveCustomCode() {
+    setCustomSaving(true);
+    try {
+      await saveCustomIndicatorCode(customCode);
+      setCustomSaved(true);
+    } catch (err) {
+      setCustomError(`Save failed: ${err.message || err}`);
+    } finally {
+      setCustomSaving(false);
+    }
+  }
 
   return (
     <div className="gold-chart-card">
@@ -421,11 +544,42 @@ export default function GoldChart() {
         {t.emaFastLabel}
         <span className="gc-dot" style={{ background: 'var(--warn)', marginLeft: 14 }} />
         {t.emaSlowLabel}
+        {isAdmin && (
+          <>
+            <span className="gc-dot" style={{ background: 'var(--dn)', marginLeft: 14 }} />
+            {t.customLegend}
+          </>
+        )}
       </div>
       <div ref={containerRef} className="gold-chart-canvas" />
       {status === 'loading' && <div className="gold-chart-status">{t.loading}</div>}
       {status === 'error' && <div className="gold-chart-status">{t.error}</div>}
       <p className="gold-chart-disclosure">{t.disclosure}</p>
+
+      {isAdmin && (
+        <div className="gc-admin-editor">
+          <div className="gc-admin-editor-head">
+            <span>🔒 {t.adminEditorTitle}</span>
+          </div>
+          <p className="gc-admin-editor-warning">{t.adminEditorWarning}</p>
+          <textarea
+            className="gc-admin-textarea"
+            value={customCode}
+            onChange={handleCustomCodeChange}
+            spellCheck={false}
+            rows={8}
+          />
+          {customError && <div className="gc-admin-error">{customError}</div>}
+          <div className="gc-admin-actions">
+            <button type="button" className="gc-admin-btn" onClick={handleApplyCustomCode}>
+              {t.applyBtn}
+            </button>
+            <button type="button" className="gc-admin-btn gc-admin-btn-primary" onClick={handleSaveCustomCode} disabled={customSaving}>
+              {customSaving ? t.saving : customSaved ? t.saved : t.saveBtn}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

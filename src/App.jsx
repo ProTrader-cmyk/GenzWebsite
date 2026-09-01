@@ -327,7 +327,7 @@ export default function App() {
         {section === 'news' && <NewsPage onBack={backToCategories} />}
         {section === 'pricing' && <PricingPage onBack={backToCategories} onPay={handlePaySuccess} />}
         {section === 'contact' && <ContactPage onBack={backToCategories} />}
-        {section === 'new-product' && <NewProductHome onBack={backToCategories} />}
+        {section === 'new-product' && <NewProductHome onBack={backToCategories} isAdmin={isAdmin} />}
         {section === 'technical' && effectiveView === 'home' && (
           <Home
             doneMap={doneMap}
