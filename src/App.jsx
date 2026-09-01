@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import Navbar from './components/Navbar.jsx';
 import CategoryHome from './components/CategoryHome.jsx';
@@ -59,6 +59,11 @@ export default function App() {
   // An admin account defaults to the dashboard; this flips to true when they
   // click "Go back to website" so they can browse the site like any user.
   const [adminViewingSite, setAdminViewingSite] = useState(false);
+  // While a Login/VerifyOtp page owns its own zoom-then-handoff transition
+  // (see handleAuthSuccess), this stops the listener below from swapping
+  // `user` out from under it the instant Firebase's sign-in resolves —
+  // which used to unmount the page before its animation ever got to play.
+  const manualAuthRef = useRef(false);
 
   // Firebase is the source of truth for status/emailVerified — re-check it on
   // load instead of trusting whatever was last cached in localStorage, since
@@ -70,6 +75,7 @@ export default function App() {
   // Login.jsx) so that race can never skip verification.
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+      if (manualAuthRef.current) return;
       if (fbUser) {
         const profile = await fetchUserProfile(fbUser.uid);
         if (profile && profile.emailVerified) {
@@ -139,12 +145,27 @@ export default function App() {
   }
 
   function handleAuthSuccess(loggedInUser) {
+    manualAuthRef.current = false;
     saveSession(loggedInUser);
     setUser(loggedInUser);
     setDoneMap(loggedInUser.progress || {});
     setPendingVerification(null);
     setSection('categories');
     setView('home');
+  }
+
+  // Called synchronously right before Login calls signInWithEmailAndPassword
+  // (which is what actually fires the listener above) — see manualAuthRef.
+  function beginManualAuth() {
+    manualAuthRef.current = true;
+  }
+
+  // Releases the guard when a login attempt doesn't end in
+  // handleAuthSuccess after all (wrong password, or routed to the OTP
+  // screen instead) — otherwise the listener above would stay disabled for
+  // the rest of the session.
+  function cancelManualAuth() {
+    manualAuthRef.current = false;
   }
 
   function handleNeedVerification(pending) {
@@ -180,6 +201,7 @@ export default function App() {
     return (
       <VerifyOtp
         pending={pendingVerification}
+        onAuthStart={beginManualAuth}
         onVerified={handleAuthSuccess}
         onCancel={async () => {
           await logoutUser();
@@ -193,6 +215,8 @@ export default function App() {
     return authView === 'login' ? (
       <Login
         onLogin={handleAuthSuccess}
+        onAuthStart={beginManualAuth}
+        onAuthCancel={cancelManualAuth}
         onNeedVerification={handleNeedVerification}
         onSwitchToSignup={() => setAuthView('signup')}
       />

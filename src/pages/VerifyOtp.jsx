@@ -7,7 +7,7 @@ import favicon from '../assets/Fav.png';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
 
-export default function VerifyOtp({ pending, onVerified, onCancel }) {
+export default function VerifyOtp({ pending, onAuthStart, onVerified, onCancel }) {
   const { lang } = useLanguage();
   const t = getStrings(lang).otp;
   const [code, setCode] = useState('');
@@ -38,6 +38,7 @@ export default function VerifyOtp({ pending, onVerified, onCancel }) {
 
     setError('');
     const profile = await fetchUserProfile(pending.uid);
+    onAuthStart?.();
     setZooming(true);
     setTimeout(() => onVerified(profile), 600);
   }

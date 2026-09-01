@@ -8,7 +8,7 @@ import favicon from '../assets/Fav.png';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
 
-export default function Login({ onLogin, onNeedVerification, onSwitchToSignup }) {
+export default function Login({ onLogin, onAuthStart, onAuthCancel, onNeedVerification, onSwitchToSignup }) {
   const { lang } = useLanguage();
   const t = getStrings(lang).auth;
   const [mode, setMode] = useState('login'); // 'login' | 'reset'
@@ -26,16 +26,22 @@ export default function Login({ onLogin, onNeedVerification, onSwitchToSignup })
   async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);
+    // Must be set before loginUser() — it's the signInWithEmailAndPassword
+    // call inside it that fires App.jsx's onAuthStateChanged listener,
+    // which otherwise swaps the page out before the zoom below ever runs.
+    onAuthStart?.();
     const result = await loginUser({ email, password }, lang);
     setLoading(false);
 
     if (!result.ok) {
+      onAuthCancel?.();
       setError(result.error);
       return;
     }
 
     setError('');
     if (!result.user.emailVerified) {
+      onAuthCancel?.();
       onNeedVerification({ uid: result.user.uid, email: result.user.email, name: result.user.name });
       return;
     }
