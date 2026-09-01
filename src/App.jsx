@@ -54,6 +54,26 @@ export default function App() {
   const [user, setUser] = useState(() => loadSession());
   const [authView, setAuthView] = useState('login'); // 'login' | 'signup'
   const [pendingVerification, setPendingVerification] = useState(null); // { uid, email, name }
+  // { email, token } when the URL is a password-reset email link
+  // (?mode=resetPassword&token=&email=) — checked once on first mount,
+  // since genztrader-news-api builds the link with exactly these params
+  // (see passwordReset.js there). Login.jsx uses this to jump straight to
+  // its "set new password" screen instead of the normal login form.
+  const [resetLink] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('mode') !== 'resetPassword') return null;
+    const token = params.get('token');
+    const email = params.get('email');
+    return token && email ? { token, email } : null;
+  });
+  // Scrubs the token out of the address bar immediately — it's already
+  // captured in `resetLink` above, so it doesn't need to keep sitting in
+  // the URL where it could be re-shared/bookmarked or reused after a
+  // refresh (the server-side token is single-use anyway, but no reason to
+  // leave a sensitive value visible there).
+  useEffect(() => {
+    if (resetLink) window.history.replaceState({}, '', window.location.pathname);
+  }, [resetLink]);
   const [checkingSession, setCheckingSession] = useState(true);
   // 'categories' (top-level track picker), 'technical' (lesson list + lesson
   // pages), 'news', or 'contact'.
@@ -254,6 +274,22 @@ export default function App() {
     setAdminViewingSite(false);
     setAccessAlert(null);
     localStorage.removeItem(NAV_KEY);
+  }
+
+  // Takes priority over everything else below, logged in or not — clicking
+  // a password-reset link should always be able to set a new password,
+  // regardless of whatever session state this browser happens to be in.
+  if (resetLink) {
+    return (
+      <Login
+        resetLink={resetLink}
+        onLogin={handleAuthSuccess}
+        onAuthStart={beginManualAuth}
+        onAuthCancel={cancelManualAuth}
+        onNeedVerification={handleNeedVerification}
+        onSwitchToSignup={() => setAuthView('signup')}
+      />
+    );
   }
 
   if (checkingSession) {

@@ -232,12 +232,14 @@ export async function loginUser({ email, password }, lang) {
   }
 }
 
-// In-app "forgot password" — a 6-digit code, not an email link. Both calls
-// go through genztrader-news-api (see passwordReset.js there): changing
-// another account's password can only ever happen via Firebase's Admin SDK
-// (server-side), never directly from the browser, so this can't be done as
-// a pure client-side Firestore call the way the signup OTP is.
-export async function requestPasswordResetCode(email, lang) {
+// In-app "forgot password" — an emailed link (own domain + own EmailJS
+// template, not Firebase's hosted page), carrying a random token instead of
+// a code to type. Both calls go through genztrader-news-api (see
+// passwordReset.js there): changing another account's password can only
+// ever happen via Firebase's Admin SDK (server-side), never directly from
+// the browser, so this can't be done as a pure client-side Firestore call
+// the way the signup OTP is.
+export async function requestPasswordResetLink(email, lang) {
   const t = getStrings(lang).resetPassword;
   try {
     const res = await fetch(`${NEWS_API_URL}/api/auth/password-reset/request`, {
@@ -252,7 +254,7 @@ export async function requestPasswordResetCode(email, lang) {
   }
 }
 
-function resetCodeErrorMessage(code, t) {
+function resetLinkErrorMessage(code, t) {
   switch (code) {
     case 'invalid_or_expired':
       return t.errInvalidOrExpired;
@@ -260,8 +262,6 @@ function resetCodeErrorMessage(code, t) {
       return t.errExpired;
     case 'too_many_attempts':
       return t.errTooManyAttempts;
-    case 'wrong_code':
-      return t.errWrongCode;
     case 'weak_password':
       return t.errWeakPassword;
     default:
@@ -269,16 +269,16 @@ function resetCodeErrorMessage(code, t) {
   }
 }
 
-export async function confirmPasswordResetCode({ email, code, newPassword }, lang) {
+export async function confirmPasswordReset({ email, token, newPassword }, lang) {
   const t = getStrings(lang).resetPassword;
   try {
     const res = await fetch(`${NEWS_API_URL}/api/auth/password-reset/confirm`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email.trim().toLowerCase(), code: code.trim(), newPassword }),
+      body: JSON.stringify({ email: email.trim().toLowerCase(), token: token.trim(), newPassword }),
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) return { ok: false, error: resetCodeErrorMessage(data.code, t) };
+    if (!res.ok) return { ok: false, error: resetLinkErrorMessage(data.code, t) };
     return { ok: true };
   } catch {
     return { ok: false, error: t.errRequestFailed };

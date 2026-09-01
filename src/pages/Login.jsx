@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { loginUser, requestPasswordResetCode, confirmPasswordResetCode } from '../data/auth.js';
+import { useState } from 'react';
+import { loginUser, requestPasswordResetLink, confirmPasswordReset } from '../data/auth.js';
 import AuthBackgroundVideo from '../components/ui/AuthBackgroundVideo.jsx';
 import LanguageDropdown from '../components/LanguageDropdown.jsx';
 import ThemeToggle from '../components/ThemeToggle.jsx';
@@ -8,34 +8,28 @@ import favicon from '../assets/Fav.png';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
 
-export default function Login({ onLogin, onAuthStart, onAuthCancel, onNeedVerification, onSwitchToSignup }) {
+// resetLink: { email, token } when this page was reached by clicking the
+// emailed reset link (App.jsx parses ?mode=resetPassword&token=&email=
+// from the URL) — jumps straight to the New Password screen instead of the
+// normal login form.
+export default function Login({ onLogin, onAuthStart, onAuthCancel, onNeedVerification, onSwitchToSignup, resetLink }) {
   const { lang } = useLanguage();
   const t = getStrings(lang).auth;
   const tr = getStrings(lang).resetPassword;
-  const [mode, setMode] = useState('login'); // 'login' | 'reset'
+  const [mode, setMode] = useState(resetLink ? 'reset' : 'login'); // 'login' | 'reset'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Forgot-password flow — entirely in-app, no email link to click:
-  // 'email' (enter address, request a code) -> 'verify' (code + new
-  // password + confirm, all on one screen) -> 'done'.
-  const [resetStep, setResetStep] = useState('email');
-  const [resetCode, setResetCode] = useState('');
+  // Forgot-password flow — an emailed link, not a code to type:
+  // 'email' (enter address, request a link) -> 'sent' (check your inbox)
+  // ...separately, clicking the emailed link reloads the app with
+  // resetLink set, which jumps straight to 'setPassword' -> 'done'.
+  const [resetStep, setResetStep] = useState(resetLink ? 'setPassword' : 'email');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
-  const resetCodeRef = useRef(null);
-  const newPasswordRef = useRef(null);
-
-  // Auto-focus the code field the moment the verify screen appears, so
-  // typing can start immediately without an extra click.
-  useEffect(() => {
-    if (resetStep === 'verify') resetCodeRef.current?.focus();
-  }, [resetStep]);
-  const [resending, setResending] = useState(false);
-  const [resendInfo, setResendInfo] = useState('');
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -62,10 +56,10 @@ export default function Login({ onLogin, onAuthStart, onAuthCancel, onNeedVerifi
     onLogin(result.user);
   }
 
-  async function handleRequestCode(e) {
+  async function handleRequestLink(e) {
     e.preventDefault();
     setLoading(true);
-    const result = await requestPasswordResetCode(email, lang);
+    const result = await requestPasswordResetLink(email, lang);
     setLoading(false);
 
     if (!result.ok) {
@@ -73,28 +67,11 @@ export default function Login({ onLogin, onAuthStart, onAuthCancel, onNeedVerifi
       return;
     }
     setError('');
-    setResetStep('verify');
+    setResetStep('sent');
   }
 
-  async function handleResendCode() {
-    setResending(true);
-    setError('');
-    setResendInfo('');
-    const result = await requestPasswordResetCode(email, lang);
-    setResending(false);
-    if (!result.ok) {
-      setError(result.error);
-      return;
-    }
-    setResendInfo(tr.resent);
-  }
-
-  async function handleConfirmReset(e) {
+  async function handleSetPassword(e) {
     e.preventDefault();
-    if (resetCode.trim().length !== 6) {
-      setError(tr.codeSixDigits);
-      return;
-    }
     if (newPassword.length < 6) {
       setError(tr.errWeakPassword);
       return;
@@ -105,7 +82,10 @@ export default function Login({ onLogin, onAuthStart, onAuthCancel, onNeedVerifi
     }
 
     setLoading(true);
-    const result = await confirmPasswordResetCode({ email, code: resetCode, newPassword }, lang);
+    const result = await confirmPasswordReset(
+      { email: resetLink.email, token: resetLink.token, newPassword },
+      lang
+    );
     setLoading(false);
 
     if (!result.ok) {
@@ -119,10 +99,9 @@ export default function Login({ onLogin, onAuthStart, onAuthCancel, onNeedVerifi
   function backToLogin() {
     setMode('login');
     setResetStep('email');
-    setResetCode('');
+    setEmail('');
     setNewPassword('');
     setConfirmNewPassword('');
-    setResendInfo('');
     setError('');
   }
 
@@ -218,7 +197,7 @@ export default function Login({ onLogin, onAuthStart, onAuthCancel, onNeedVerifi
               <p>{t.resetSub}</p>
             </div>
 
-            <form onSubmit={handleRequestCode} noValidate>
+            <form onSubmit={handleRequestLink} noValidate>
               <label className="auth-label" htmlFor="reset-email">
                 {t.email}
               </label>
@@ -251,37 +230,26 @@ export default function Login({ onLogin, onAuthStart, onAuthCancel, onNeedVerifi
               </button>
             </div>
           </>
-        ) : resetStep === 'verify' ? (
+        ) : resetStep === 'sent' ? (
+          <>
+            <div className="auth-head">
+              <h1>{t.resetTitle}</h1>
+            </div>
+            <div className="auth-info">{t.resetSuccess}</div>
+            <button type="button" className="auth-btn" onClick={backToLogin}>
+              {t.backToLogin}
+            </button>
+          </>
+        ) : resetStep === 'setPassword' ? (
           <>
             <div className="auth-head">
               <h1>{tr.title}</h1>
               <p>
-                {tr.codeSubPrefix} <b>{email}</b>
+                {tr.codeSubPrefix} <b>{resetLink.email}</b>
               </p>
             </div>
 
-            <form onSubmit={handleConfirmReset} noValidate>
-              <label className="auth-label" htmlFor="reset-code">
-                {tr.codeLabel}
-              </label>
-              <input
-                id="reset-code"
-                ref={resetCodeRef}
-                type="text"
-                inputMode="numeric"
-                maxLength={6}
-                className="auth-input"
-                placeholder="123456"
-                value={resetCode}
-                onChange={(e) => {
-                  const digits = e.target.value.replace(/\D/g, '').slice(0, 6);
-                  setResetCode(digits);
-                  if (digits.length === 6) newPasswordRef.current?.focus();
-                }}
-                autoComplete="one-time-code"
-                required
-              />
-
+            <form onSubmit={handleSetPassword} noValidate>
               <label className="auth-label" htmlFor="reset-new-password">
                 {tr.newPassword}
               </label>
@@ -291,13 +259,13 @@ export default function Login({ onLogin, onAuthStart, onAuthCancel, onNeedVerifi
                 </span>
                 <input
                   id="reset-new-password"
-                  ref={newPasswordRef}
                   type={showPassword ? 'text' : 'password'}
                   className="auth-input auth-input-icon auth-input-eye"
                   placeholder="********"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   autoComplete="new-password"
+                  autoFocus
                   required
                 />
                 <button
@@ -330,32 +298,11 @@ export default function Login({ onLogin, onAuthStart, onAuthCancel, onNeedVerifi
               </div>
 
               {error && <div className="auth-error">{error}</div>}
-              {resendInfo && <div className="auth-info">{resendInfo}</div>}
 
               <button type="submit" className="auth-btn" disabled={loading}>
                 {loading ? tr.submitting : tr.submit}
               </button>
             </form>
-
-            <div className="auth-switch">
-              <button type="button" className="auth-link" onClick={handleResendCode} disabled={resending}>
-                {resending ? tr.resending : tr.resend}
-              </button>
-            </div>
-            <div className="auth-switch">
-              <button
-                type="button"
-                className="auth-link"
-                onClick={() => {
-                  setResetStep('email');
-                  setResetCode('');
-                  setError('');
-                  setResendInfo('');
-                }}
-              >
-                {tr.changeEmail}
-              </button>
-            </div>
           </>
         ) : (
           <>
