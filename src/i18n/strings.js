@@ -149,6 +149,8 @@ export const strings = {
       feature4: 'សិទ្ធិចូលប្រើពេញលេញរយៈពេល ៣ ខែ',
       payBtn: 'បង់ប្រាក់តាម ABA PayWay',
       granting: 'កំពុងដំណើរការការទូទាត់...',
+      contactNote: 'មិនអាចបង់ប្រាក់ឥឡូវនេះទេ? ទាក់ទង Admin តាម Telegram ដើម្បីទទួលបានសិទ្ធិចូលរៀន។',
+      contactLink: 'ទាក់ទង Admin',
     },
     news: {
       back: '← ត្រឡប់ក្រោយ',
@@ -364,6 +366,8 @@ export const strings = {
       feature4: 'Full access for 3 months',
       payBtn: 'Pay with ABA PayWay',
       granting: 'Processing your payment...',
+      contactNote: "Can't pay right now? Contact the admin on Telegram to get access.",
+      contactLink: 'Contact Admin',
     },
     news: {
       back: '← Back',
@@ -579,6 +583,8 @@ export const strings = {
       feature4: '3 个月完整访问权限',
       payBtn: '通过 ABA PayWay 支付',
       granting: '正在处理您的付款...',
+      contactNote: '暂时无法付款？通过 Telegram 联系管理员以获取访问权限。',
+      contactLink: '联系管理员',
     },
     news: {
       back: '← 返回',

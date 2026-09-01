@@ -13,6 +13,10 @@ const WAIT_SECONDS = 20;
 // immediately (honor system) via POST /api/payment/claim — a deliberate,
 // known trade-off accepted in place of building real ABA API verification.
 const PAYWAY_LINK = 'https://link.payway.com.kh/ABAPAYD0512524C';
+// Same Telegram contact as ContactPage.jsx — repeated here (not reachable
+// via nav on this locked-down gate) so an account that can't/won't pay
+// still has a way to reach an admin for manual access.
+const TELEGRAM_URL = 'https://t.me/Vengsopheagenz?direct';
 
 export default function PricingPage({ onBack, onPay }) {
   const { lang } = useLanguage();
@@ -113,6 +117,18 @@ export default function PricingPage({ onBack, onPay }) {
           </div>
         )}
       </div>
+
+      <p className="price-note" style={{ textAlign: 'center', marginTop: 16 }}>
+        {t.contactNote}{' '}
+        <a
+          href={TELEGRAM_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: 'var(--gold2)', fontWeight: 600 }}
+        >
+          {t.contactLink} →
+        </a>
+      </p>
 
       <Footer />
     </div>
