@@ -16,7 +16,6 @@ import PricingPage from './components/PricingPage.jsx';
 import Login from './pages/Login.jsx';
 import Signup from './pages/Signup.jsx';
 import VerifyOtp from './pages/VerifyOtp.jsx';
-import ResetPassword from './pages/ResetPassword.jsx';
 import AdminDashboard from './pages/AdminDashboard.jsx';
 import { lessons, getNextLessonId } from './data/lessons.js';
 import { appsLessons, getNextAppsLessonId } from './data/appsLessons.js';
@@ -55,14 +54,6 @@ export default function App() {
   const [user, setUser] = useState(() => loadSession());
   const [authView, setAuthView] = useState('login'); // 'login' | 'signup'
   const [pendingVerification, setPendingVerification] = useState(null); // { uid, email, name }
-  // Set when the URL is a password-reset email link (?mode=resetPassword&
-  // oobCode=...) — checked once on first mount, since Firebase appends these
-  // params itself (see resetPassword() in data/auth.js). Takes priority over
-  // every other screen below, logged in or not.
-  const [resetOobCode, setResetOobCode] = useState(() => {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('mode') === 'resetPassword' ? params.get('oobCode') : null;
-  });
   const [checkingSession, setCheckingSession] = useState(true);
   // 'categories' (top-level track picker), 'technical' (lesson list + lesson
   // pages), 'news', or 'contact'.
@@ -263,18 +254,6 @@ export default function App() {
     setAdminViewingSite(false);
     setAccessAlert(null);
     localStorage.removeItem(NAV_KEY);
-  }
-
-  if (resetOobCode) {
-    return (
-      <ResetPassword
-        oobCode={resetOobCode}
-        onDone={() => {
-          setResetOobCode(null);
-          window.history.replaceState({}, '', window.location.pathname);
-        }}
-      />
-    );
   }
 
   if (checkingSession) {

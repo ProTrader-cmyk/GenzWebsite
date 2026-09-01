@@ -1,9 +1,6 @@
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  sendPasswordResetEmail,
-  verifyPasswordResetCode,
-  confirmPasswordReset,
   signOut,
 } from 'firebase/auth';
 import {
@@ -22,6 +19,7 @@ import emailjs from '@emailjs/browser';
 import { auth, db } from '../firebase.js';
 import { getStrings } from '../i18n/strings.js';
 
+const NEWS_API_URL = import.meta.env.VITE_NEWS_API_URL;
 const SESSION_KEY = 'gzt_session';
 const OTP_TTL_MS = 10 * 60 * 1000; // 6-digit code is valid for 10 minutes
 const LOGIN_ATTEMPTS_KEY = 'gzt_login_attempts';
@@ -95,9 +93,6 @@ function authErrorMessage(code, lang) {
       return t.errBadCredential;
     case 'auth/too-many-requests':
       return t.errTooManyRequests;
-    case 'auth/expired-action-code':
-    case 'auth/invalid-action-code':
-      return t.errExpiredLink;
     default:
       return t.errGeneric;
   }
@@ -237,41 +232,56 @@ export async function loginUser({ email, password }, lang) {
   }
 }
 
-// handleCodeInApp + url: the emailed link opens back on this site (with
-// ?mode=resetPassword&oobCode=... appended) instead of Firebase's own
-// generic hosted reset page — App.jsx reads those params and renders
-// ResetPassword.jsx so the whole flow stays in the app's own UI.
-export async function resetPassword(email, lang) {
+// In-app "forgot password" — a 6-digit code, not an email link. Both calls
+// go through genztrader-news-api (see passwordReset.js there): changing
+// another account's password can only ever happen via Firebase's Admin SDK
+// (server-side), never directly from the browser, so this can't be done as
+// a pure client-side Firestore call the way the signup OTP is.
+export async function requestPasswordResetCode(email, lang) {
+  const t = getStrings(lang).resetPassword;
   try {
-    await sendPasswordResetEmail(auth, email.trim().toLowerCase(), {
-      url: window.location.origin,
-      handleCodeInApp: true,
+    const res = await fetch(`${NEWS_API_URL}/api/auth/password-reset/request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim().toLowerCase() }),
     });
+    if (!res.ok) throw new Error();
     return { ok: true };
-  } catch (err) {
-    return { ok: false, error: authErrorMessage(err.code, lang) };
+  } catch {
+    return { ok: false, error: t.errRequestFailed };
   }
 }
 
-// Confirms the oobCode from the emailed link is still valid and returns the
-// email it belongs to (shown on the reset form so the user knows whose
-// password they're about to change) — called before showing the new
-// password fields.
-export async function verifyResetCode(oobCode, lang) {
-  try {
-    const email = await verifyPasswordResetCode(auth, oobCode);
-    return { ok: true, email };
-  } catch (err) {
-    return { ok: false, error: authErrorMessage(err.code, lang) };
+function resetCodeErrorMessage(code, t) {
+  switch (code) {
+    case 'invalid_or_expired':
+      return t.errInvalidOrExpired;
+    case 'expired':
+      return t.errExpired;
+    case 'too_many_attempts':
+      return t.errTooManyAttempts;
+    case 'wrong_code':
+      return t.errWrongCode;
+    case 'weak_password':
+      return t.errWeakPassword;
+    default:
+      return t.errRequestFailed;
   }
 }
 
-export async function confirmReset(oobCode, newPassword, lang) {
+export async function confirmPasswordResetCode({ email, code, newPassword }, lang) {
+  const t = getStrings(lang).resetPassword;
   try {
-    await confirmPasswordReset(auth, oobCode, newPassword);
+    const res = await fetch(`${NEWS_API_URL}/api/auth/password-reset/confirm`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim().toLowerCase(), code: code.trim(), newPassword }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, error: resetCodeErrorMessage(data.code, t) };
     return { ok: true };
-  } catch (err) {
-    return { ok: false, error: authErrorMessage(err.code, lang) };
+  } catch {
+    return { ok: false, error: t.errRequestFailed };
   }
 }
 
