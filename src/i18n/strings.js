@@ -181,6 +181,14 @@ export const strings = {
       comingSoonTitle: 'ឆាប់ៗនេះ',
       comingSoonBody: 'យើងកំពុងរៀបចំមេរៀនកម្រិតខ្ពស់សម្រាប់សមាជិក VIP។ សូមតាមដានទំព័រនេះជាប្រចាំ។',
     },
+    accessGranted: {
+      approvedTitle: 'គណនីរបស់អ្នកត្រូវបានអនុម័ត! 🎉',
+      approvedText: 'ឥឡូវនេះអ្នកមានសិទ្ធិចូលប្រើគ្រប់មេរៀនដែលបានដោះសោសម្រាប់អ្នករួចហើយ។',
+      vipTitle: 'សូមស្វាគមន៍មកកាន់ VIP! 🎉',
+      vipText: 'អ្នកត្រូវបានដំឡើងទៅ VIP — ឥឡូវនេះអ្នកអាចចូលមើលវិភាគបច្ចេកទេសកម្រិតខ្ពស់ និងផលិតផលថ្មីបានហើយ។',
+      cta: 'ចាប់ផ្តើម',
+      close: 'បិទ',
+    },
     contact: {
       back: '← ត្រឡប់ក្រោយ',
       eyebrow: 'Contact Us',
@@ -453,6 +461,14 @@ export const strings = {
       comingSoonTitle: 'Coming Soon',
       comingSoonBody: "We're preparing advanced lessons for VIP members. Check back regularly.",
     },
+    accessGranted: {
+      approvedTitle: "You're approved! 🎉",
+      approvedText: 'Your account has been approved — all your unlocked tracks are ready to go.',
+      vipTitle: 'Welcome to VIP! 🎉',
+      vipText: "You've been upgraded to VIP — Advanced and New Product are now unlocked.",
+      cta: 'Get started',
+      close: 'Close',
+    },
     contact: {
       back: '← Back',
       eyebrow: 'Contact Us',
@@ -724,6 +740,14 @@ export const strings = {
       subtitle: 'VIP 会员专属内容',
       comingSoonTitle: '敬请期待',
       comingSoonBody: '我们正在为 VIP 会员准备进阶课程，请定期查看本页面。',
+    },
+    accessGranted: {
+      approvedTitle: '您的账户已获批准！🎉',
+      approvedText: '您的账户已通过批准 — 所有已解锁的课程现已可用。',
+      vipTitle: '欢迎成为 VIP！🎉',
+      vipText: '您已升级为 VIP — 进阶技术分析与新产品现已解锁。',
+      cta: '开始使用',
+      close: '关闭',
     },
     contact: {
       back: '← 返回',

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
+import { doc, onSnapshot } from 'firebase/firestore';
 import Navbar from './components/Navbar.jsx';
 import CategoryHome from './components/CategoryHome.jsx';
 import Home from './components/Home.jsx';
@@ -8,6 +9,7 @@ import BacktestHome from './components/BacktestHome.jsx';
 import PsychologyHome from './components/PsychologyHome.jsx';
 import NewProductHome from './components/NewProductHome.jsx';
 import AdvancedHome from './components/AdvancedHome.jsx';
+import AccessGrantedModal from './components/AccessGrantedModal.jsx';
 import NewsPage from './components/NewsPage.jsx';
 import ContactPage from './components/ContactPage.jsx';
 import PricingPage from './components/PricingPage.jsx';
@@ -20,7 +22,7 @@ import { appsLessons, getNextAppsLessonId } from './data/appsLessons.js';
 import { backtestLessons, getNextBacktestLessonId } from './data/backtestLessons.js';
 import { psychologyLessons, getNextPsychologyLessonId } from './data/psychologyLessons.js';
 import { lessonPages } from './pages/registry.js';
-import { auth } from './firebase.js';
+import { auth, db } from './firebase.js';
 import {
   fetchUserProfile,
   saveSession,
@@ -64,6 +66,10 @@ export default function App() {
   // category picker (where switching `section` to 'categories' again is a
   // no-op and wouldn't otherwise remount/re-trigger it).
   const [pendingNoticeTick, setPendingNoticeTick] = useState(0);
+  // 'approved' | 'vip' | null — set by the live listener below the instant
+  // an admin grants access while this tab is open (or on next visit if it
+  // wasn't); AccessGrantedModal renders it.
+  const [accessAlert, setAccessAlert] = useState(null);
   // An admin account defaults to the dashboard; this flips to true when they
   // click "Go back to website" so they can browse the site like any user.
   const [adminViewingSite, setAdminViewingSite] = useState(false);
@@ -105,6 +111,43 @@ export default function App() {
     });
     return unsubscribe;
   }, []);
+
+  // Live-watches this account's own Firestore doc so an admin approving them
+  // (or upgrading to VIP) takes effect immediately — no logout/login or
+  // refresh needed — and fires the celebratory AccessGrantedModal the moment
+  // it happens. The auth-state-changed effect above only re-checks Firestore
+  // once, at login/refresh, so without this a tab left open through an
+  // approval would stay stuck showing the old locked state.
+  const prevAccessRef = useRef({ status: null, tier: null });
+  useEffect(() => {
+    if (!user?.uid) return;
+    // Seed the baseline from what's already loaded — we only ever want to
+    // alert on a change detected *after* this listener attaches, never on
+    // its first snapshot (which just reflects what they already had).
+    prevAccessRef.current = { status: user.status, tier: user.tier };
+
+    const unsubscribe = onSnapshot(doc(db, 'users', user.uid), (snap) => {
+      if (!snap.exists()) return;
+      const data = snap.data();
+      const prev = prevAccessRef.current;
+
+      const gotApproved = prev.status !== 'approved' && data.status === 'approved';
+      const gotVip = prev.status === 'approved' && prev.tier !== 'vip' && data.tier === 'vip';
+      if (gotApproved) setAccessAlert('approved');
+      else if (gotVip) setAccessAlert('vip');
+
+      prevAccessRef.current = { status: data.status, tier: data.tier };
+
+      setUser((current) => {
+        if (!current) return current;
+        const updated = { ...current, ...data };
+        saveSession(updated);
+        return updated;
+      });
+      setDoneMap(data.progress || {});
+    });
+    return unsubscribe;
+  }, [user?.uid]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -209,6 +252,7 @@ export default function App() {
     setSection('categories');
     setView('home');
     setAdminViewingSite(false);
+    setAccessAlert(null);
     localStorage.removeItem(NAV_KEY);
   }
 
@@ -387,6 +431,8 @@ export default function App() {
         {(section === 'technical' || section === 'apps' || section === 'backtest' || section === 'psychology') &&
           CurrentLesson && <CurrentLesson onNavigate={navigate} onDone={() => markDone(view)} />}
       </div>
+
+      <AccessGrantedModal kind={accessAlert} onClose={() => setAccessAlert(null)} />
     </>
   );
 }
