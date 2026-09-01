@@ -262,7 +262,7 @@ export default function App() {
           showNavLinks={false}
         />
         <div className="wrap">
-          <PricingPage user={user} onPay={handlePaySuccess} />
+          <PricingPage onPay={handlePaySuccess} />
         </div>
       </>
     );
@@ -320,7 +320,7 @@ export default function App() {
       <div className="wrap">
         {section === 'categories' && <CategoryHome onSelectCategory={selectCategory} approved={approved} />}
         {section === 'news' && <NewsPage onBack={backToCategories} />}
-        {section === 'pricing' && <PricingPage onBack={backToCategories} user={user} onPay={handlePaySuccess} />}
+        {section === 'pricing' && <PricingPage onBack={backToCategories} onPay={handlePaySuccess} />}
         {section === 'contact' && <ContactPage onBack={backToCategories} />}
         {section === 'technical' && effectiveView === 'home' && (
           <Home

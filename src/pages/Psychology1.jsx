@@ -12,7 +12,15 @@ function LessonVideo({ src, caption }) {
   if (!src) return null;
   return (
     <div className="fig" style={{ padding: 10, margin: '14px 0 4px' }}>
-      <video controls playsInline preload="metadata" style={{ width: '100%', borderRadius: 8, display: 'block', background: '#000' }}>
+      <video
+        controls
+        controlsList="nodownload noremoteplayback"
+        disablePictureInPicture
+        onContextMenu={(e) => e.preventDefault()}
+        playsInline
+        preload="metadata"
+        style={{ width: '100%', borderRadius: 8, display: 'block', background: '#000' }}
+      >
         <source src={src} type="video/mp4" />
       </video>
       {caption && <div className="cap">{caption}</div>}

@@ -1,10 +1,10 @@
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
 
-// Static placeholder for now — no backend call at all. The real data-fetching
-// version (date navigator, filters, event cards) is on hold; EconomicEventCard,
-// EconomicFilters, and MarketImpactBadge are kept around unused for whenever
-// that gets wired back up.
+// Static placeholder for now — no backend call at all, even though
+// GET /api/calendar (genztrader-news-api/server.js) already returns real
+// Finnhub-backed data. The date-navigator/filters/event-card UI to consume
+// it just hasn't been built yet.
 export default function EconomicCalendar() {
   const { lang } = useLanguage();
   const t = getStrings(lang).calendar;

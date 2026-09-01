@@ -130,7 +130,16 @@ export default function CategoryHome({ onSelectCategory, approved }) {
         </div>
         {heroVideo && (
           <div className="hero-video">
-            <video ref={videoRef} autoPlay loop playsInline controls>
+            <video
+              ref={videoRef}
+              autoPlay
+              loop
+              playsInline
+              controls
+              controlsList="nodownload noremoteplayback"
+              disablePictureInPicture
+              onContextMenu={(e) => e.preventDefault()}
+            >
               <source src={heroVideo} type="video/mp4" />
             </video>
           </div>

@@ -10,7 +10,15 @@ export default function AuthBackgroundVideo() {
   return (
     <>
       {bgVideo && (
-        <video className="auth-bg-video" autoPlay loop muted playsInline>
+        <video
+          className="auth-bg-video"
+          autoPlay
+          loop
+          muted
+          playsInline
+          disablePictureInPicture
+          onContextMenu={(e) => e.preventDefault()}
+        >
           <source src={bgVideo} type="video/mp4" />
         </video>
       )}

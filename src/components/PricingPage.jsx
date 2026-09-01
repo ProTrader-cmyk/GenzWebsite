@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Footer from './Footer.jsx';
+import { auth } from '../firebase.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
 
@@ -13,7 +14,7 @@ const WAIT_SECONDS = 20;
 // known trade-off accepted in place of building real ABA API verification.
 const PAYWAY_LINK = 'https://link.payway.com.kh/ABAPAYD0512524C';
 
-export default function PricingPage({ onBack, onPay, user }) {
+export default function PricingPage({ onBack, onPay }) {
   const { lang } = useLanguage();
   const t = getStrings(lang).pricing;
   const [waiting, setWaiting] = useState(false);
@@ -34,13 +35,21 @@ export default function PricingPage({ onBack, onPay, user }) {
   // that outcome, after a WAIT_SECONDS pause (giving them time to actually
   // pay in the ABA tab that opened), onPay() takes them into the site —
   // everything still stays locked, since `approved` itself is untouched by
-  // this — see App.jsx.
-  function handlePayClick() {
-    fetch(`${NEWS_API_URL}/api/payment/claim`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ uid: user.uid }),
-    }).catch(() => {});
+  // this — see App.jsx. Sends the caller's own Firebase ID token rather
+  // than a plain uid — the backend verifies it server-side so this can
+  // only ever grant access to the signed-in account making the request.
+  async function handlePayClick() {
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      if (idToken) {
+        fetch(`${NEWS_API_URL}/api/payment/claim`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+        }).catch(() => {});
+      }
+    } catch {
+      // fire-and-forget either way — the wait below still proceeds
+    }
 
     setWaiting(true);
     setSecondsLeft(WAIT_SECONDS);

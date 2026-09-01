@@ -1004,6 +1004,9 @@ export default function Lesson1({ onNavigate, onDone }) {
         </div>
         <video
           controls
+          controlsList="nodownload noremoteplayback"
+          disablePictureInPicture
+          onContextMenu={(e) => e.preventDefault()}
           playsInline
           preload="metadata"
           style={{ width: '100%', borderRadius: 8, display: 'block', background: '#000' }}
@@ -1060,6 +1063,9 @@ export default function Lesson1({ onNavigate, onDone }) {
         </div>
         <video
           controls
+          controlsList="nodownload noremoteplayback"
+          disablePictureInPicture
+          onContextMenu={(e) => e.preventDefault()}
           playsInline
           preload="metadata"
           style={{ width: '100%', borderRadius: 8, display: 'block', background: '#000' }}

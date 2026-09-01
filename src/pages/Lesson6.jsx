@@ -17,7 +17,15 @@ function LessonVideo({ label, src }) {
       <div className="gi-label" style={{ color: 'var(--gold)', marginBottom: 8 }}>
         {label}
       </div>
-      <video controls playsInline preload="metadata" style={{ width: '100%', borderRadius: 8, display: 'block', background: '#000' }}>
+      <video
+        controls
+        controlsList="nodownload noremoteplayback"
+        disablePictureInPicture
+        onContextMenu={(e) => e.preventDefault()}
+        playsInline
+        preload="metadata"
+        style={{ width: '100%', borderRadius: 8, display: 'block', background: '#000' }}
+      >
         <source src={src} type="video/mp4" />
       </video>
     </div>
