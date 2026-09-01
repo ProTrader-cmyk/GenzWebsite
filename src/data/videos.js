@@ -1,13 +1,17 @@
 import { collection, doc, getDocs, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
-import { db, storage } from '../firebase.js';
+import { db } from '../firebase.js';
 
 // One Firestore doc per video, keyed by a stable `key` (e.g. 'hero',
 // 'l7-walkthrough') that lesson/category components look up by. The doc ID
 // IS the key, so it's unique by construction and directly fetchable.
+//
+// The video FILES themselves live outside Firebase entirely — as GitHub
+// Release assets (upload via github.com, paste the resulting direct-
+// download link here). This collection only ever stores that URL, never
+// the file, so there's no storage-tier billing concern at all.
 const VIDEOS_COLLECTION = 'videos';
 
-// Every known key, so the admin upload UI can offer a picklist instead of
+// Every known key, so the admin panel can offer a fixed list instead of
 // free-typing (a typo'd key just silently fails to match in a lesson).
 // Add a new entry here whenever a new spot in the site needs a video.
 export const VIDEO_KEYS = [
@@ -27,7 +31,7 @@ export const VIDEO_KEYS = [
   { key: 'l7-walkthrough', label: 'Lesson 7 — Full walkthrough' },
 ];
 
-// { key: { url, storagePath, label, updatedAt } }, all videos in one read.
+// { key: { url, label, updatedAt } }, all videos in one read.
 export async function fetchAllVideos() {
   const snap = await getDocs(collection(db, VIDEOS_COLLECTION));
   const videos = {};
@@ -37,42 +41,19 @@ export async function fetchAllVideos() {
   return videos;
 }
 
-// Uploads the file to Storage at videos/<key>-<original filename>, then
-// writes {url, storagePath, label} to videos/<key> in Firestore. Overwrites
-// whatever was previously at that key (both the Firestore doc and, since
-// the storagePath is content-addressed by key, effectively the video too —
-// the old Storage object is left behind rather than deleted here, since a
-// failed/retried upload shouldn't risk deleting a still-referenced file).
-export async function uploadVideo(key, file, label, onProgress) {
-  const storagePath = `videos/${key}-${Date.now()}-${file.name}`;
-  const storageRef = ref(storage, storagePath);
-  const task = uploadBytesResumable(storageRef, file);
-
-  await new Promise((resolve, reject) => {
-    task.on(
-      'state_changed',
-      (snap) => onProgress?.(snap.bytesTransferred / snap.totalBytes),
-      reject,
-      resolve
-    );
-  });
-
-  const url = await getDownloadURL(storageRef);
+// Just records the URL — the actual upload happens on github.com (Releases
+// tab of any repo -> attach the file to a release -> copy the asset's
+// direct-download link) before calling this.
+export async function saveVideoUrl(key, url, label) {
   await setDoc(doc(db, VIDEOS_COLLECTION, key), {
     url,
-    storagePath,
     label: label || key,
     updatedAt: serverTimestamp(),
   });
-  return url;
 }
 
-export async function deleteVideo(key, storagePath) {
+// Removes the Firestore entry only — the file itself stays on GitHub
+// (delete/replace it there separately if you want it gone for good).
+export async function deleteVideo(key) {
   await deleteDoc(doc(db, VIDEOS_COLLECTION, key));
-  if (storagePath) {
-    await deleteObject(ref(storage, storagePath)).catch(() => {
-      // Storage object already gone / never existed — the Firestore doc
-      // deletion above is what actually matters for "this video is gone".
-    });
-  }
 }

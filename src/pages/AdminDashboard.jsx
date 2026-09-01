@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { fetchAllUsers, setUserStatus, setUserRole, setUserLessonAccess } from '../data/auth.js';
 import { lessons } from '../data/lessons.js';
 import { appsLessons } from '../data/appsLessons.js';
-import { VIDEO_KEYS, fetchAllVideos, uploadVideo, deleteVideo } from '../data/videos.js';
+import { VIDEO_KEYS, fetchAllVideos, saveVideoUrl, deleteVideo } from '../data/videos.js';
 import { invalidateVideoCache } from '../data/useVideos.js';
 import ThemeToggle from '../components/ThemeToggle.jsx';
 
@@ -48,11 +48,10 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
   const [permSaving, setPermSaving] = useState(false);
   const [videos, setVideos] = useState({});
   const [videosLoading, setVideosLoading] = useState(true);
-  const [uploadingKey, setUploadingKey] = useState(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [editingKey, setEditingKey] = useState(null);
+  const [urlDraft, setUrlDraft] = useState('');
+  const [savingKey, setSavingKey] = useState(null);
   const [videoError, setVideoError] = useState('');
-  const fileInputRef = useRef(null);
-  const pendingUploadKey = useRef(null);
 
   async function load() {
     setLoading(true);
@@ -72,7 +71,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
       const all = await fetchAllVideos();
       setVideos(all);
     } catch {
-      setVideoError('Could not load videos. Check that storage.rules and firestore.rules are published.');
+      setVideoError('Could not load videos. Check that firestore.rules is published.');
     }
     setVideosLoading(false);
   }
@@ -82,36 +81,33 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
     loadVideos();
   }, []);
 
-  function triggerUpload(key) {
-    pendingUploadKey.current = key;
-    fileInputRef.current?.click();
+  function startEditing(key) {
+    setEditingKey(key);
+    setUrlDraft(videos[key]?.url ?? '');
+    setVideoError('');
   }
 
-  async function handleFileSelected(e) {
-    const file = e.target.files?.[0];
-    const key = pendingUploadKey.current;
-    e.target.value = ''; // allow re-selecting the same file later
-    if (!file || !key) return;
-
+  async function handleSaveUrl(key) {
+    const url = urlDraft.trim();
+    if (!url) return;
     const meta = VIDEO_KEYS.find((v) => v.key === key);
-    setUploadingKey(key);
-    setUploadProgress(0);
+    setSavingKey(key);
     setVideoError('');
     try {
-      const url = await uploadVideo(key, file, meta?.label, setUploadProgress);
-      setVideos((prev) => ({ ...prev, [key]: { ...prev[key], url, label: meta?.label } }));
+      await saveVideoUrl(key, url, meta?.label);
+      setVideos((prev) => ({ ...prev, [key]: { url, label: meta?.label } }));
       invalidateVideoCache();
+      setEditingKey(null);
     } catch {
-      setVideoError(`Failed to upload "${meta?.label ?? key}". Check storage.rules are published and you're an admin.`);
+      setVideoError(`Failed to save "${meta?.label ?? key}". Check firestore.rules are published and you're an admin.`);
     }
-    setUploadingKey(null);
+    setSavingKey(null);
   }
 
   async function handleDeleteVideo(key) {
-    const existing = videos[key];
     setVideoError('');
     try {
-      await deleteVideo(key, existing?.storagePath);
+      await deleteVideo(key);
       setVideos((prev) => {
         const next = { ...prev };
         delete next[key];
@@ -119,7 +115,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
       });
       invalidateVideoCache();
     } catch {
-      setVideoError('Failed to delete video. Check storage.rules / firestore.rules are published.');
+      setVideoError('Failed to delete video. Check firestore.rules are published.');
     }
   }
 
@@ -386,62 +382,63 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
       <div className="admin-videos-section">
         <div className="admin-section-title">Videos</div>
         <p className="admin-section-sub">
-          Upload the video for each spot on the site. Files go to Firebase Storage; the site reads the URL from
-          Firestore, so nothing needs redeploying after an upload.
+          For each spot below: upload the file to a GitHub Release (any repo → Releases → attach the file to a
+          release), copy the resulting direct-download link, then paste it here. The site reads the URL from
+          Firestore, so nothing needs redeploying after saving.
         </p>
 
         {videoError && <div className="admin-error admin-error-block">{videoError}</div>}
 
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="video/mp4,video/*"
-          style={{ display: 'none' }}
-          onChange={handleFileSelected}
-        />
-
         <div className="video-list">
           {VIDEO_KEYS.map(({ key, label }) => {
             const existing = videos[key];
-            const isUploading = uploadingKey === key;
+            const isEditing = editingKey === key;
+            const isSaving = savingKey === key;
             return (
               <div key={key} className="video-row">
                 <div className="video-row-info">
                   <div className={`video-status-dot${existing ? ' uploaded' : ''}`}></div>
-                  <div>
+                  <div style={{ flex: 1 }}>
                     <div className="video-row-label">{label}</div>
-                    {existing ? (
+                    {isEditing ? (
+                      <input
+                        type="url"
+                        className="admin-date-input video-url-input"
+                        placeholder="https://github.com/.../releases/download/.../file.mp4"
+                        value={urlDraft}
+                        onChange={(e) => setUrlDraft(e.target.value)}
+                        autoFocus
+                      />
+                    ) : existing ? (
                       <a className="video-row-link" href={existing.url} target="_blank" rel="noopener noreferrer">
                         View current video
                       </a>
                     ) : (
-                      <div className="video-row-empty">Not uploaded yet</div>
+                      <div className="video-row-empty">Not set yet</div>
                     )}
                   </div>
                 </div>
                 <div className="video-row-actions">
-                  {isUploading ? (
-                    <div className="video-progress">
-                      <div className="video-progress-track">
-                        <div className="video-progress-bar" style={{ width: `${Math.round(uploadProgress * 100)}%` }} />
-                      </div>
-                      <span>{Math.round(uploadProgress * 100)}%</span>
-                    </div>
-                  ) : (
+                  {isEditing ? (
                     <>
                       <button
-                        className="action-btn perm"
-                        onClick={() => triggerUpload(key)}
-                        disabled={videosLoading || uploadingKey !== null}
+                        className="admin-btn-primary"
+                        onClick={() => handleSaveUrl(key)}
+                        disabled={isSaving || !urlDraft.trim()}
                       >
-                        {existing ? 'Replace' : 'Upload'}
+                        {isSaving ? 'Saving...' : 'Save'}
+                      </button>
+                      <button className="action-btn reset" onClick={() => setEditingKey(null)} disabled={isSaving}>
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button className="action-btn perm" onClick={() => startEditing(key)} disabled={videosLoading}>
+                        {existing ? 'Replace' : 'Set URL'}
                       </button>
                       {existing && (
-                        <button
-                          className="action-btn reject"
-                          onClick={() => handleDeleteVideo(key)}
-                          disabled={uploadingKey !== null}
-                        >
+                        <button className="action-btn reject" onClick={() => handleDeleteVideo(key)}>
                           Delete
                         </button>
                       )}
