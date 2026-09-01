@@ -18,6 +18,10 @@ export default function Login({ onLogin, onNeedVerification, onSwitchToSignup })
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  // On success, the logo above zooms in to fill the screen (CSS on
+  // .auth-logo.zoom-in) before we actually hand off to the home page, so
+  // it feels like passing through the logo rather than an instant swap.
+  const [zooming, setZooming] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -35,7 +39,8 @@ export default function Login({ onLogin, onNeedVerification, onSwitchToSignup })
       onNeedVerification({ uid: result.user.uid, email: result.user.email, name: result.user.name });
       return;
     }
-    onLogin(result.user);
+    setZooming(true);
+    setTimeout(() => onLogin(result.user), 600);
   }
 
   async function handleReset(e) {
@@ -65,8 +70,8 @@ export default function Login({ onLogin, onNeedVerification, onSwitchToSignup })
         <ThemeToggle />
         <LanguageDropdown />
       </div>
-      <div className="auth-card">
-        <div className="auth-logo">
+      <div className={`auth-card${zooming ? ' zoom-out' : ''}`}>
+        <div className={`auth-logo${zooming ? ' zoom-in' : ''}`}>
           <img src={favicon} alt="GenZ Trader" />
         </div>
 
@@ -131,7 +136,7 @@ export default function Login({ onLogin, onNeedVerification, onSwitchToSignup })
 
               {error && <div className="auth-error">{error}</div>}
 
-              <button type="submit" className="auth-btn" disabled={loading}>
+              <button type="submit" className="auth-btn" disabled={loading || zooming}>
                 {loading ? t.loginBtnLoading : <>{t.loginBtn} →</>}
               </button>
             </form>

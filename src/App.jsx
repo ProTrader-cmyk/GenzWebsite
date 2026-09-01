@@ -6,7 +6,6 @@ import Home from './components/Home.jsx';
 import AppsHome from './components/AppsHome.jsx';
 import BacktestHome from './components/BacktestHome.jsx';
 import PsychologyHome from './components/PsychologyHome.jsx';
-import IntroTransition from './components/IntroTransition.jsx';
 import NewsPage from './components/NewsPage.jsx';
 import ContactPage from './components/ContactPage.jsx';
 import PricingPage from './components/PricingPage.jsx';
@@ -60,9 +59,6 @@ export default function App() {
   // An admin account defaults to the dashboard; this flips to true when they
   // click "Go back to website" so they can browse the site like any user.
   const [adminViewingSite, setAdminViewingSite] = useState(false);
-  // Plays once right after a successful login/signup, over the home page —
-  // see handleAuthSuccess and IntroTransition.jsx.
-  const [showIntro, setShowIntro] = useState(false);
 
   // Firebase is the source of truth for status/emailVerified — re-check it on
   // load instead of trusting whatever was last cached in localStorage, since
@@ -149,7 +145,6 @@ export default function App() {
     setPendingVerification(null);
     setSection('categories');
     setView('home');
-    setShowIntro(true);
   }
 
   function handleNeedVerification(pending) {
@@ -286,7 +281,6 @@ export default function App() {
 
   return (
     <>
-      {showIntro && <IntroTransition onDone={() => setShowIntro(false)} />}
       <Navbar
         onLogoClick={backToCategories}
         activeSection={section}
