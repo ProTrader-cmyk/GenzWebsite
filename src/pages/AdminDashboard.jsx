@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { fetchAllUsers, setUserStatus, setUserRole, setUserLessonAccess } from '../data/auth.js';
 import { lessons } from '../data/lessons.js';
 import { appsLessons } from '../data/appsLessons.js';
+import { backtestLessons } from '../data/backtestLessons.js';
 import { VIDEO_KEYS, fetchAllVideos, saveVideoUrl, deleteVideo } from '../data/videos.js';
 import { invalidateVideoCache } from '../data/useVideos.js';
 import ThemeToggle from '../components/ThemeToggle.jsx';
@@ -163,7 +164,11 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
   function openPermissions(u) {
     const initial = Array.isArray(u.allowedLessons)
       ? u.allowedLessons
-      : [...(u.status === 'approved' ? lessons.map((l) => l.id) : ['l1']), ...appsLessons.map((l) => l.id)];
+      : [
+          ...(u.status === 'approved' ? lessons.map((l) => l.id) : ['l1']),
+          ...appsLessons.map((l) => l.id),
+          ...backtestLessons.map((l) => l.id),
+        ];
     setPermUser(u);
     setPermSelection(initial);
   }
@@ -479,6 +484,18 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
             <div className="perm-section">
               <div className="perm-section-title">App & Website for Trading</div>
               {appsLessons.map((l, i) => (
+                <label key={l.id} className="perm-row">
+                  <input type="checkbox" checked={permSelection.includes(l.id)} onChange={() => toggleLesson(l.id)} />
+                  <span>
+                    {i + 1}. {l.title}
+                  </span>
+                </label>
+              ))}
+            </div>
+
+            <div className="perm-section">
+              <div className="perm-section-title">Backtest</div>
+              {backtestLessons.map((l, i) => (
                 <label key={l.id} className="perm-row">
                   <input type="checkbox" checked={permSelection.includes(l.id)} onChange={() => toggleLesson(l.id)} />
                   <span>

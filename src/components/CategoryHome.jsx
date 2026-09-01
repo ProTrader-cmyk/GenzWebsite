@@ -45,8 +45,9 @@ function buildCategories(t, approved) {
       id: 'backtest',
       Icon: BacktestIcon,
       title: t.backtestTitle,
-      tag: t.comingSoon,
-      locked: true,
+      tag: t.backtestLessonsCount,
+      locked: false,
+      pendingLocked: !approved,
     },
     {
       id: 'advanced',

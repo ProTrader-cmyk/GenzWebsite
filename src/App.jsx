@@ -4,6 +4,7 @@ import Navbar from './components/Navbar.jsx';
 import CategoryHome from './components/CategoryHome.jsx';
 import Home from './components/Home.jsx';
 import AppsHome from './components/AppsHome.jsx';
+import BacktestHome from './components/BacktestHome.jsx';
 import NewsPage from './components/NewsPage.jsx';
 import ContactPage from './components/ContactPage.jsx';
 import PricingPage from './components/PricingPage.jsx';
@@ -13,6 +14,7 @@ import VerifyOtp from './pages/VerifyOtp.jsx';
 import AdminDashboard from './pages/AdminDashboard.jsx';
 import { getNextLessonId } from './data/lessons.js';
 import { getNextAppsLessonId } from './data/appsLessons.js';
+import { getNextBacktestLessonId } from './data/backtestLessons.js';
 import { lessonPages } from './pages/registry.js';
 import { auth } from './firebase.js';
 import {
@@ -104,21 +106,26 @@ export default function App() {
 
   // Marks the current lesson complete and advances to the next one in its
   // track (src/data/lessons.js for 'l*' ids, src/data/appsLessons.js for
-  // 'a*' ids), or back home if it was the last lesson in that track. Also
-  // persisted to the user's Firestore profile, so completed lessons (and
-  // therefore what's unlocked) survive logout/login and follow the account
-  // across devices, not just this browser session.
+  // 'a*' ids, src/data/backtestLessons.js for 'bt*' ids), or back home if it
+  // was the last lesson in that track. Also persisted to the user's
+  // Firestore profile, so completed lessons (and therefore what's
+  // unlocked) survive logout/login and follow the account across devices,
+  // not just this browser session.
   function markDone(id) {
     setDoneMap((prev) => ({ ...prev, [id]: true }));
     markLessonDone(user.uid, id).catch(() => {});
-    const next = id.startsWith('a') ? getNextAppsLessonId(id) : getNextLessonId(id);
+    const next = id.startsWith('bt')
+      ? getNextBacktestLessonId(id)
+      : id.startsWith('a')
+        ? getNextAppsLessonId(id)
+        : getNextLessonId(id);
     setView(next ?? 'home');
   }
 
-  // 'technical' and 'apps' have content today — the other category cards
-  // are rendered locked and don't call this.
+  // 'technical', 'apps', and 'backtest' have content today — the other
+  // category cards are rendered locked and don't call this.
   function selectCategory(id) {
-    if (id === 'technical' || id === 'apps') setSection(id);
+    if (id === 'technical' || id === 'apps' || id === 'backtest') setSection(id);
   }
 
   function backToCategories() {
@@ -249,7 +256,9 @@ export default function App() {
   // — e.g. an admin revoked access while this lesson was still open in a tab.
   const requestedLesson = view !== 'home' ? lessonPages[view] : null;
   const lessonBlocked =
-    requestedLesson && (section === 'technical' || section === 'apps') && isLessonLocked(view);
+    requestedLesson &&
+    (section === 'technical' || section === 'apps' || section === 'backtest') &&
+    isLessonLocked(view);
   const CurrentLesson = lessonBlocked ? null : requestedLesson;
   const effectiveView = CurrentLesson ? view : 'home';
 
@@ -290,7 +299,16 @@ export default function App() {
             allowedLessons={allowedLessons}
           />
         )}
-        {(section === 'technical' || section === 'apps') && CurrentLesson && (
+        {section === 'backtest' && effectiveView === 'home' && (
+          <BacktestHome
+            doneMap={doneMap}
+            onSelectLesson={navigate}
+            onBack={backToCategories}
+            approved={approved}
+            allowedLessons={allowedLessons}
+          />
+        )}
+        {(section === 'technical' || section === 'apps' || section === 'backtest') && CurrentLesson && (
           <CurrentLesson onNavigate={navigate} onDone={() => markDone(view)} />
         )}
       </div>

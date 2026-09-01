@@ -29,6 +29,10 @@ export const VIDEO_KEYS = [
   { key: 'l6-trend', label: 'Lesson 6 — EMA trend demo' },
   { key: 'l6-crossing', label: 'Lesson 6 — EMA crossing demo' },
   { key: 'l7-walkthrough', label: 'Lesson 7 — Full walkthrough' },
+  { key: 'bt-scenario-1', label: 'Backtest — Scenario 1' },
+  { key: 'bt-scenario-2', label: 'Backtest — Scenario 2' },
+  { key: 'bt-scenario-3', label: 'Backtest — Scenario 3' },
+  { key: 'bt-scenario-4', label: 'Backtest — Scenario 4' },
 ];
 
 // { key: { url, label, updatedAt } }, all videos in one read.
