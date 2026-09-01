@@ -141,21 +141,12 @@ export default function CategoryHome({ onSelectCategory, approved, isVip, notice
   }
 
   // While pending, only the section label and track cards are blurred —
-  // the branding header, video, and footer all stay visible as normal.
+  // the hero video and footer stay visible as normal.
   const blurPending = !approved ? ' pending-blur' : '';
 
   return (
     <div className="view active" id="v-categories">
       <div className="hero">
-        <div className="hero-tag">
-          <span></span>
-          {t.heroTag}
-          <span></span>
-        </div>
-        <h1>{t.heroTitle}</h1>
-        <div className="hero-tagline">
-          {t.heroTagline1} <b>{t.heroTagline2}</b>
-        </div>
         {heroVideo && (
           <div className="hero-video">
             <video
