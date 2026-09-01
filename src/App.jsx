@@ -58,6 +58,12 @@ export default function App() {
   const [section, setSection] = useState(() => loadNav().section);
   const [view, setView] = useState(() => loadNav().view);
   const [doneMap, setDoneMap] = useState({});
+  // Bumped every time a pending (not-approved) user clicks a nav item that's
+  // blocked for them (e.g. News) — passed to CategoryHome so it re-opens its
+  // "contact admin" modal even when the user was already sitting on the
+  // category picker (where switching `section` to 'categories' again is a
+  // no-op and wouldn't otherwise remount/re-trigger it).
+  const [pendingNoticeTick, setPendingNoticeTick] = useState(0);
   // An admin account defaults to the dashboard; this flips to true when they
   // click "Go back to website" so they can browse the site like any user.
   const [adminViewingSite, setAdminViewingSite] = useState(false);
@@ -309,7 +315,14 @@ export default function App() {
         onLogoClick={backToCategories}
         activeSection={section}
         onNavHome={backToCategories}
-        onNavNews={() => setSection('news')}
+        onNavNews={
+          approved
+            ? () => setSection('news')
+            : () => {
+                backToCategories();
+                setPendingNoticeTick((n) => n + 1);
+              }
+        }
         onNavContact={() => setSection('contact')}
         user={user}
         onLogout={handleLogout}
@@ -319,7 +332,12 @@ export default function App() {
       />
       <div className="wrap">
         {section === 'categories' && (
-          <CategoryHome onSelectCategory={selectCategory} approved={approved} isVip={isVip} />
+          <CategoryHome
+            onSelectCategory={selectCategory}
+            approved={approved}
+            isVip={isVip}
+            noticeTick={pendingNoticeTick}
+          />
         )}
         {section === 'news' && <NewsPage onBack={backToCategories} />}
         {section === 'pricing' && <PricingPage onBack={backToCategories} onPay={handlePaySuccess} />}

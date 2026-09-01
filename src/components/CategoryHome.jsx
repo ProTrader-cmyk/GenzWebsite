@@ -78,7 +78,7 @@ function buildCategories(t, approved, isVip) {
   ];
 }
 
-export default function CategoryHome({ onSelectCategory, approved, isVip }) {
+export default function CategoryHome({ onSelectCategory, approved, isVip, noticeTick }) {
   const { lang } = useLanguage();
   const t = getStrings(lang).category;
   const tp = getStrings(lang).pending;
@@ -123,9 +123,12 @@ export default function CategoryHome({ onSelectCategory, approved, isVip }) {
   // away, every time they land on the category picker — not just when they
   // click a locked card — since there's no other automatic gate anymore
   // (the old forced Pricing-page redirect on first sign-up was removed).
+  // `noticeTick` also re-opens it when a blocked nav item (e.g. News) is
+  // clicked while already sitting on this screen, where switching `section`
+  // back to 'categories' is otherwise a no-op that wouldn't re-trigger this.
   useEffect(() => {
     if (!approved) setShowPendingModal(true);
-  }, [approved]);
+  }, [approved, noticeTick]);
 
   function handleCardClick(cat) {
     if (cat.pendingLocked) {
