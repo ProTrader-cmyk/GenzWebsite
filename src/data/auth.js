@@ -2,6 +2,8 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
+  verifyPasswordResetCode,
+  confirmPasswordReset,
   signOut,
 } from 'firebase/auth';
 import {
@@ -22,6 +24,57 @@ import { getStrings } from '../i18n/strings.js';
 
 const SESSION_KEY = 'gzt_session';
 const OTP_TTL_MS = 10 * 60 * 1000; // 6-digit code is valid for 10 minutes
+const LOGIN_ATTEMPTS_KEY = 'gzt_login_attempts';
+const MAX_LOGIN_ATTEMPTS = 3;
+const LOGIN_LOCKOUT_MS = 60 * 1000; // 1 minute
+
+// Client-side only (keyed by email in localStorage) — a UX layer that shows
+// a friendly "try again shortly" message after repeated wrong passwords.
+// Firebase's own server-side throttling (auth/too-many-requests, handled
+// below) is the real brute-force protection and isn't affected by
+// clearing this.
+function loadLoginAttempts() {
+  try {
+    return JSON.parse(localStorage.getItem(LOGIN_ATTEMPTS_KEY)) || {};
+  } catch {
+    return {};
+  }
+}
+
+function saveLoginAttempts(all) {
+  localStorage.setItem(LOGIN_ATTEMPTS_KEY, JSON.stringify(all));
+}
+
+function checkLoginLockout(email) {
+  const all = loadLoginAttempts();
+  const entry = all[email];
+  if (!entry?.lockedUntil) return { locked: false };
+  const remainingMs = entry.lockedUntil - Date.now();
+  if (remainingMs <= 0) {
+    delete all[email];
+    saveLoginAttempts(all);
+    return { locked: false };
+  }
+  return { locked: true, remainingMs };
+}
+
+function recordFailedLogin(email) {
+  const all = loadLoginAttempts();
+  const entry = all[email] || { count: 0 };
+  entry.count += 1;
+  if (entry.count >= MAX_LOGIN_ATTEMPTS) {
+    all[email] = { count: 0, lockedUntil: Date.now() + LOGIN_LOCKOUT_MS };
+  } else {
+    all[email] = entry;
+  }
+  saveLoginAttempts(all);
+}
+
+function clearLoginAttempts(email) {
+  const all = loadLoginAttempts();
+  delete all[email];
+  saveLoginAttempts(all);
+}
 
 const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID;
 const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
@@ -42,6 +95,9 @@ function authErrorMessage(code, lang) {
       return t.errBadCredential;
     case 'auth/too-many-requests':
       return t.errTooManyRequests;
+    case 'auth/expired-action-code':
+    case 'auth/invalid-action-code':
+      return t.errExpiredLink;
     default:
       return t.errGeneric;
   }
@@ -158,21 +214,61 @@ export async function markPaymentClicked(uid) {
 }
 
 export async function loginUser({ email, password }, lang) {
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const lockout = checkLoginLockout(normalizedEmail);
+  if (lockout.locked) {
+    return { ok: false, error: getStrings(lang).auth.errLoginLocked };
+  }
+
   try {
-    const cred = await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
+    const cred = await signInWithEmailAndPassword(auth, normalizedEmail, password);
     const profile = await fetchUserProfile(cred.user.uid);
     if (!profile) {
       return { ok: false, error: getStrings(lang).auth.errNoAccount };
     }
+    clearLoginAttempts(normalizedEmail);
     return { ok: true, user: profile };
+  } catch (err) {
+    if (['auth/invalid-credential', 'auth/wrong-password', 'auth/user-not-found'].includes(err.code)) {
+      recordFailedLogin(normalizedEmail);
+    }
+    return { ok: false, error: authErrorMessage(err.code, lang) };
+  }
+}
+
+// handleCodeInApp + url: the emailed link opens back on this site (with
+// ?mode=resetPassword&oobCode=... appended) instead of Firebase's own
+// generic hosted reset page — App.jsx reads those params and renders
+// ResetPassword.jsx so the whole flow stays in the app's own UI.
+export async function resetPassword(email, lang) {
+  try {
+    await sendPasswordResetEmail(auth, email.trim().toLowerCase(), {
+      url: window.location.origin,
+      handleCodeInApp: true,
+    });
+    return { ok: true };
   } catch (err) {
     return { ok: false, error: authErrorMessage(err.code, lang) };
   }
 }
 
-export async function resetPassword(email, lang) {
+// Confirms the oobCode from the emailed link is still valid and returns the
+// email it belongs to (shown on the reset form so the user knows whose
+// password they're about to change) — called before showing the new
+// password fields.
+export async function verifyResetCode(oobCode, lang) {
   try {
-    await sendPasswordResetEmail(auth, email.trim().toLowerCase());
+    const email = await verifyPasswordResetCode(auth, oobCode);
+    return { ok: true, email };
+  } catch (err) {
+    return { ok: false, error: authErrorMessage(err.code, lang) };
+  }
+}
+
+export async function confirmReset(oobCode, newPassword, lang) {
+  try {
+    await confirmPasswordReset(auth, oobCode, newPassword);
     return { ok: true };
   } catch (err) {
     return { ok: false, error: authErrorMessage(err.code, lang) };

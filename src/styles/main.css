@@ -97,6 +97,7 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;ba
   .theme-toggle{order:1;margin-left:auto;}
   .lang-select{order:2;}
   .nav-logout{display:none;}
+  .nav-admin-link{display:none;}
   .profile-menu-wrap{display:none;}
   .nav-mobile-menu{display:flex;flex-direction:column;padding:6px 20px 14px;border-top:1px solid var(--gline);background:rgba(12,12,15,0.96);}
   :root[data-theme='light'] .nav-mobile-menu{background:rgba(255,255,255,0.94);}
@@ -119,16 +120,6 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 :root[data-theme='light'] .auth-card{background:#FFFFFF;box-shadow:0 0 0 1px rgba(15,155,142,0.08),0 30px 60px -20px rgba(23,23,26,0.16);}
 .auth-logo{display:flex;justify-content:center;margin-bottom:16px;}
 .auth-logo img{width:60px;height:60px;border-radius:16px;object-fit:cover;box-shadow:0 0 0 1px var(--brandline),0 0 24px var(--brandd);}
-
-/* ===== LOGIN/SIGNUP SUCCESS: ZOOM INTO LOGO ===== */
-/* On success, the page's own logo scales up until it fills the screen,
-   then the parent swaps to the home page underneath — see the `zooming`
-   state in Login.jsx / VerifyOtp.jsx. */
-.auth-logo.zoom-in{position:relative;z-index:50;}
-.auth-logo.zoom-in img{animation:authLogoZoom .6s cubic-bezier(.5,0,.15,1) forwards;}
-.auth-card.zoom-out>*:not(.auth-logo){animation:authFadeOut .25s ease forwards;}
-@keyframes authLogoZoom{0%{transform:scale(1);}100%{transform:scale(32);}}
-@keyframes authFadeOut{to{opacity:0;}}
 .auth-head{text-align:center;margin-bottom:24px;}
 .auth-head h1{font-size:24px;font-weight:700;background:linear-gradient(135deg,#FFFFFF 0%,var(--brand2) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px;}
 :root[data-theme='light'] .auth-head h1{background:linear-gradient(135deg,#17171A 0%,var(--brand2) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
@@ -487,6 +478,7 @@ h3 .bar{width:3px;height:18px;border-radius:2px;background:var(--gold);flex:none
 
 /* GOLD CHART */
 .gold-chart-card{background:var(--bg2);border:1px solid var(--faint);border-radius:var(--rl);padding:16px;margin:16px 0;box-shadow:0 20px 40px -26px rgba(0,0,0,0.6);}
+.gold-chart-symbols{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;}
 .gold-chart-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px;}
 .gold-chart-tf{display:flex;gap:4px;flex-wrap:wrap;}
 .gc-tf-btn{font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:600;color:var(--mute);background:var(--bg1);border:1px solid var(--faint);border-radius:8px;padding:5px 10px;cursor:pointer;transition:color .15s,border-color .15s,background .15s;}

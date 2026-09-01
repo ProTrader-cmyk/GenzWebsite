@@ -94,20 +94,31 @@ class BoxPrimitive {
   }
 }
 
-// PAXG (Paxos Gold) — a token backed 1:1 by physical gold — via Kraken's
-// public market-data API. Used as a stand-in for spot XAUUSD because it
-// needs no key/signup, allows direct browser calls (CORS-open), and offers
-// full historical candles + real-time WebSocket streaming together — no
-// free real XAUUSD provider offers that combination without a paid plan.
-// It tracks spot gold closely but isn't identical (small basis, and it
-// trades 24/7 including when the real gold market is closed) — disclosed to
-// the user via t.disclosure below, not presented as literal broker XAUUSD.
+// All via Kraken's public market-data API — no key/signup, CORS-open direct
+// browser calls, and full historical candles + real-time WebSocket
+// streaming together (no free real forex/XAUUSD provider offers that
+// combination without a paid plan; Binance offers similar data but
+// geo-blocks entire regions from api.binance.com with an HTTP 451, unrelated
+// to anything in this code — Kraken is US-licensed and doesn't do that).
 //
-// Binance offers the same data but geo-blocks entire regions from
-// api.binance.com with an HTTP 451 (unrelated to anything in this code) —
-// Kraken is US-licensed and doesn't do that, so it's used instead.
-const REST_PAIR = 'PAXGUSD';
-const WS_SYMBOL = 'PAXG/USD';
+// Gold uses PAXG (Paxos Gold, a token backed 1:1 by physical gold) as a
+// stand-in for spot XAUUSD — disclosed to the user via t.disclosure below,
+// not presented as literal broker XAUUSD. It tracks spot gold closely but
+// isn't identical (small basis, trades 24/7 including when the real gold
+// market is closed). The others (BTC/ETH/SOL) are the literal real assets,
+// no proxy involved, so no disclosure needed for those.
+//
+// restPair is the Kraken REST `pair` query value (their historical
+// "altname", e.g. Bitcoin is XBT not BTC); wsSymbol is the WS v2 API's
+// symbol name — the two don't always match (loadHistory() below finds the
+// REST response's data key generically, so a legacy X/Z-prefixed result key
+// like XXBTZUSD for Bitcoin doesn't need special-casing here).
+const SYMBOLS = [
+  { id: 'gold', restPair: 'PAXGUSD', wsSymbol: 'PAXG/USD', label: 'Gold' },
+  { id: 'btc', restPair: 'XBTUSD', wsSymbol: 'XBT/USD', label: 'BTC/USD' },
+  { id: 'eth', restPair: 'ETHUSD', wsSymbol: 'ETH/USD', label: 'ETH/USD' },
+  { id: 'sol', restPair: 'SOLUSD', wsSymbol: 'SOL/USD', label: 'SOL/USD' },
+];
 const EMA_FAST = 9;
 const EMA_SLOW = 21;
 
@@ -180,6 +191,8 @@ export default function GoldChart({ isAdmin }) {
   const { lang } = useLanguage();
   const t = getStrings(lang).newProduct;
   const [intervalMinutes, setIntervalMinutes] = useState(15); // see TIMEFRAMES
+  const [symbolId, setSymbolId] = useState('gold'); // see SYMBOLS
+  const symbol = SYMBOLS.find((s) => s.id === symbolId) ?? SYMBOLS[0];
   const containerRef = useRef(null);
   const chartRef = useRef(null);
   const candleSeriesRef = useRef(null);
@@ -247,10 +260,15 @@ export default function GoldChart({ isAdmin }) {
     applyCustomIndicatorRef.current?.();
   }, [customIndicators]);
 
-  // Chart + data lifecycle — re-created whenever the timeframe changes
-  // (torn down via the cleanup function, then rebuilt fresh below).
+  // Chart + data lifecycle — re-created whenever the timeframe or symbol
+  // changes (torn down via the cleanup function, then rebuilt fresh below).
   useEffect(() => {
     if (!containerRef.current) return undefined;
+    // Clear the previous symbol's last price immediately so it can't
+    // linger on screen while the new one loads.
+    setPrice(null);
+    setPriceDir(null);
+    setStatus('loading');
     let cancelled = false;
     let ohlcWs = null;
     let tickerWs = null;
@@ -523,7 +541,7 @@ export default function GoldChart({ isAdmin }) {
 
     async function loadHistory() {
       try {
-        const res = await fetch(`https://api.kraken.com/0/public/OHLC?pair=${REST_PAIR}&interval=${intervalMinutes}`);
+        const res = await fetch(`https://api.kraken.com/0/public/OHLC?pair=${symbol.restPair}&interval=${intervalMinutes}`);
         if (!res.ok) throw new Error(`Kraken ${res.status}`);
         const json = await res.json();
         if (json.error?.length) throw new Error(json.error.join(', '));
@@ -570,7 +588,7 @@ export default function GoldChart({ isAdmin }) {
       ohlcWs = new WebSocket('wss://ws.kraken.com/v2');
       ohlcWs.onopen = () => {
         ohlcWs.send(
-          JSON.stringify({ method: 'subscribe', params: { channel: 'ohlc', symbol: [WS_SYMBOL], interval: intervalMinutes } })
+          JSON.stringify({ method: 'subscribe', params: { channel: 'ohlc', symbol: [symbol.wsSymbol], interval: intervalMinutes } })
         );
       };
       ohlcWs.onmessage = (event) => {
@@ -621,7 +639,7 @@ export default function GoldChart({ isAdmin }) {
         tickerWs.send(
           JSON.stringify({
             method: 'subscribe',
-            params: { channel: 'ticker', symbol: [WS_SYMBOL], event_trigger: 'bbo' },
+            params: { channel: 'ticker', symbol: [symbol.wsSymbol], event_trigger: 'bbo' },
           })
         );
       };
@@ -666,7 +684,7 @@ export default function GoldChart({ isAdmin }) {
       chart.remove();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [intervalMinutes]);
+  }, [intervalMinutes, symbolId]);
 
   // Re-theme the chart in place (no reload/reconnect) when the site's
   // light/dark toggle changes.
@@ -782,6 +800,18 @@ export default function GoldChart({ isAdmin }) {
 
   return (
     <div className="gold-chart-card">
+      <div className="gold-chart-symbols">
+        {SYMBOLS.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            className={`gc-tf-btn${s.id === symbolId ? ' active' : ''}`}
+            onClick={() => setSymbolId(s.id)}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
       <div className="gold-chart-head">
         <div className="gold-chart-tf">
           {TIMEFRAMES.map((tf) => (
@@ -857,7 +887,7 @@ export default function GoldChart({ isAdmin }) {
       <div ref={containerRef} className="gold-chart-canvas" />
       {status === 'loading' && <div className="gold-chart-status">{t.loading}</div>}
       {status === 'error' && <div className="gold-chart-status">{t.error}</div>}
-      <p className="gold-chart-disclosure">{t.disclosure}</p>
+      {symbolId === 'gold' && <p className="gold-chart-disclosure">{t.disclosure}</p>}
 
       {isAdmin && (
         <div className="gc-admin-editor">

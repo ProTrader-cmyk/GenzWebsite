@@ -15,10 +15,6 @@ export default function VerifyOtp({ pending, onAuthStart, onVerified, onCancel }
   const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
-  // On success, the logo above zooms in to fill the screen (CSS on
-  // .auth-logo.zoom-in) before we actually hand off to the home page, so
-  // it feels like passing through the logo rather than an instant swap.
-  const [zooming, setZooming] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -39,8 +35,7 @@ export default function VerifyOtp({ pending, onAuthStart, onVerified, onCancel }
     setError('');
     const profile = await fetchUserProfile(pending.uid);
     onAuthStart?.();
-    setZooming(true);
-    setTimeout(() => onVerified(profile), 600);
+    onVerified(profile);
   }
 
   async function handleResend() {
@@ -60,8 +55,8 @@ export default function VerifyOtp({ pending, onAuthStart, onVerified, onCancel }
         <ThemeToggle />
         <LanguageDropdown />
       </div>
-      <div className={`auth-card${zooming ? ' zoom-out' : ''}`}>
-        <div className={`auth-logo${zooming ? ' zoom-in' : ''}`}>
+      <div className="auth-card">
+        <div className="auth-logo">
           <img src={favicon} alt="GenZ Trader" />
         </div>
 
@@ -92,7 +87,7 @@ export default function VerifyOtp({ pending, onAuthStart, onVerified, onCancel }
           {error && <div className="auth-error">{error}</div>}
           {info && <div className="auth-info">{info}</div>}
 
-          <button type="submit" className="auth-btn" disabled={loading || zooming}>
+          <button type="submit" className="auth-btn" disabled={loading}>
             {loading ? t.confirming : t.confirm}
           </button>
         </form>

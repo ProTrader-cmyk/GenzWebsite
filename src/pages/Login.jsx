@@ -18,17 +18,13 @@ export default function Login({ onLogin, onAuthStart, onAuthCancel, onNeedVerifi
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [resetSent, setResetSent] = useState(false);
-  // On success, the logo above zooms in to fill the screen (CSS on
-  // .auth-logo.zoom-in) before we actually hand off to the home page, so
-  // it feels like passing through the logo rather than an instant swap.
-  const [zooming, setZooming] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);
     // Must be set before loginUser() — it's the signInWithEmailAndPassword
     // call inside it that fires App.jsx's onAuthStateChanged listener,
-    // which otherwise swaps the page out before the zoom below ever runs.
+    // which would otherwise race this handler to set `user` first.
     onAuthStart?.();
     const result = await loginUser({ email, password }, lang);
     setLoading(false);
@@ -45,8 +41,7 @@ export default function Login({ onLogin, onAuthStart, onAuthCancel, onNeedVerifi
       onNeedVerification({ uid: result.user.uid, email: result.user.email, name: result.user.name });
       return;
     }
-    setZooming(true);
-    setTimeout(() => onLogin(result.user), 600);
+    onLogin(result.user);
   }
 
   async function handleReset(e) {
@@ -76,8 +71,8 @@ export default function Login({ onLogin, onAuthStart, onAuthCancel, onNeedVerifi
         <ThemeToggle />
         <LanguageDropdown />
       </div>
-      <div className={`auth-card${zooming ? ' zoom-out' : ''}`}>
-        <div className={`auth-logo${zooming ? ' zoom-in' : ''}`}>
+      <div className="auth-card">
+        <div className="auth-logo">
           <img src={favicon} alt="GenZ Trader" />
         </div>
 
@@ -142,7 +137,7 @@ export default function Login({ onLogin, onAuthStart, onAuthCancel, onNeedVerifi
 
               {error && <div className="auth-error">{error}</div>}
 
-              <button type="submit" className="auth-btn" disabled={loading || zooming}>
+              <button type="submit" className="auth-btn" disabled={loading}>
                 {loading ? t.loginBtnLoading : <>{t.loginBtn} →</>}
               </button>
             </form>

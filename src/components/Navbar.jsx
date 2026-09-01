@@ -85,7 +85,7 @@ export default function Navbar({
         <LanguageDropdown />
 
         {isAdmin && (
-          <button type="button" className="nav-link" onClick={onNavAdmin}>
+          <button type="button" className="nav-link nav-admin-link" onClick={onNavAdmin}>
             {t.admin}
           </button>
         )}
