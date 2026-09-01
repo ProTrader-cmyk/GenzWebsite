@@ -3,10 +3,14 @@ import { createChart, CandlestickSeries, LineSeries, createSeriesMarkers } from 
 import { useTheme } from '../theme/ThemeContext.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
-import { fetchCustomIndicatorCode, saveCustomIndicatorCode } from '../data/customIndicator.js';
+import {
+  fetchCustomIndicators,
+  saveCustomIndicator,
+  deleteCustomIndicatorDoc,
+  newCustomIndicatorId,
+} from '../data/customIndicator.js';
 
-// Starter template shown the first time an admin opens the editor with
-// nothing saved yet.
+// Starter template shown when the admin starts a fresh (unsaved) indicator.
 const CUSTOM_CODE_TEMPLATE = `// bars: array of { time, open, high, low, close }, oldest -> newest
 //
 // Return an object describing what to draw:
@@ -118,12 +122,16 @@ const TIMEFRAMES = [
   { value: 1440, label: '1D' },
 ];
 
+// Cycled by position for default line/legend colors when an indicator's
+// code doesn't specify its own.
+const PALETTE = ['--dn', '--gold2', '--warn', '--up'];
+
 function cssVar(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 
 // ---------------------------------------------------------------------------
-// INDICATORS. computeEma is the one indicator currently plotted (see
+// INDICATORS. computeEma is the one built-in indicator (see
 // "ADD MORE INDICATORS HERE" below for where a new one plugs in). Add a
 // sibling function here for anything else you want computed from the closes
 // array — e.g. RSI, SMA, Bollinger Bands.
@@ -196,48 +204,48 @@ export default function GoldChart({ isAdmin }) {
   const [emaEnabled, setEmaEnabled] = useState(false);
   const [showIndicatorMenu, setShowIndicatorMenu] = useState(false);
 
-  // --- Admin-only custom indicator (private — see the AskUserQuestion
-  // decision recorded in the commit: only admin ever sees the editor OR
-  // its plotted result; the code only ever executes in the admin's own
-  // browser, never anyone else's). ---
+  // --- Admin-only custom indicators (private — only admin ever sees the
+  // editor, the Indicators menu entries for these, OR their plotted result;
+  // the code only ever executes in the admin's own browser, never anyone
+  // else's). Each is a named, independently saved + independently
+  // toggleable indicator, like a personal script library. ---
   const barsRef = useRef([]); // full bar history incl. the forming candle
-  const customCodeRef = useRef(''); // mirrors customCode, read inside the chart effect
-  const applyCustomIndicatorRef = useRef(() => {}); // set inside the chart effect, called by the Apply button
-  // Off by default (matches emaEnabled below) — Apply/Save both turn it on,
-  // and it also shows as a toggle in the Indicators menu so it can be
-  // switched off again without touching the editor.
-  const customEnabledRef = useRef(false);
-  const [customEnabled, setCustomEnabled] = useState(false);
-  const [customCode, setCustomCode] = useState('');
+  const customIndicatorsRef = useRef([]); // mirrors customIndicators, read inside the chart effect
+  const applyCustomIndicatorRef = useRef(() => {}); // set inside the chart effect
+  const [customIndicators, setCustomIndicators] = useState([]); // [{ id, name, code, enabled }]
+  const [editingId, setEditingId] = useState(null); // null = unsaved new draft
+  const [editingName, setEditingName] = useState('');
+  const [editingCode, setEditingCode] = useState(CUSTOM_CODE_TEMPLATE);
   const [customError, setCustomError] = useState(null);
   const [customSaving, setCustomSaving] = useState(false);
   const [customSaved, setCustomSaved] = useState(false);
+  const [contextMenu, setContextMenu] = useState(null); // { id, x, y }
 
-  // Load the admin's saved script once, and pre-fill a starter template if
-  // nothing's been saved yet.
+  // Load every saved indicator once — each starts disabled; the admin turns
+  // on whichever ones they want to see via the Indicators menu.
   useEffect(() => {
     if (!isAdmin) return;
     let cancelled = false;
-    fetchCustomIndicatorCode()
-      .then((code) => {
+    fetchCustomIndicators()
+      .then((list) => {
         if (cancelled) return;
-        const initial = code || CUSTOM_CODE_TEMPLATE;
-        setCustomCode(initial);
-        customCodeRef.current = initial;
-        applyCustomIndicatorRef.current();
+        setCustomIndicators(list.map((ind) => ({ ...ind, enabled: false })));
       })
       .catch(() => {
-        // Nothing saved yet, or a transient read error — fall back to the
-        // template so the editor still has something usable.
-        if (cancelled) return;
-        setCustomCode(CUSTOM_CODE_TEMPLATE);
-        customCodeRef.current = CUSTOM_CODE_TEMPLATE;
-        applyCustomIndicatorRef.current();
+        // Nothing saved yet, or a transient read error — start with an
+        // empty list; the editor's own "+ New" draft still works fine.
       });
     return () => {
       cancelled = true;
     };
   }, [isAdmin]);
+
+  // Keeps the chart effect's ref in sync and re-applies whenever any
+  // indicator's code/name/enabled state changes (add, edit, delete, toggle).
+  useEffect(() => {
+    customIndicatorsRef.current = customIndicators;
+    applyCustomIndicatorRef.current?.();
+  }, [customIndicators]);
 
   // Chart + data lifecycle — re-created whenever the timeframe changes
   // (torn down via the cleanup function, then rebuilt fresh below).
@@ -299,8 +307,8 @@ export default function GoldChart({ isAdmin }) {
 
     // Custom indicator plumbing only exists at all for an admin — a
     // regular user's chart never has any of these objects, so there's
-    // nothing to leak even if `customCodeRef` somehow had content.
-    const customLineSeries = new Map(); // name -> LineSeries, reconciled on every apply
+    // nothing to leak even if `customIndicatorsRef` somehow had content.
+    const customLineSeries = new Map(); // "indicatorId::lineName" -> LineSeries
     let customMarkersApi = null;
     let customBoxPrimitive = null;
     if (isAdmin) {
@@ -309,11 +317,10 @@ export default function GoldChart({ isAdmin }) {
       candleSeries.attachPrimitive(customBoxPrimitive);
     }
 
-    // Runs the admin's saved JS against the current bar history. `new
+    // Runs one indicator's saved JS against the current bar history. `new
     // Function` executes with full page access (same as pasting into
     // devtools) — that's acceptable ONLY because this never runs outside
-    // the admin's own browser; see the isAdmin guard above and the
-    // AskUserQuestion decision this feature was built against.
+    // the admin's own browser; see the isAdmin guard above.
     //
     // Contract: return { lines?: {name: {points, color?, lineWidth?}},
     // markers?: [...], boxes?: [...] } — see CUSTOM_CODE_TEMPLATE above
@@ -334,61 +341,69 @@ export default function GoldChart({ isAdmin }) {
       }
     }
 
+    // Aggregates every ENABLED indicator's output onto the chart. Line
+    // series are namespaced per indicator ("id::name") so two indicators
+    // can't collide; markers/boxes are combined into one list per type
+    // (each plugin instance only ever holds one set at a time).
     function applyCustomIndicator() {
       if (!isAdmin) return;
+      const enabled = customIndicatorsRef.current.filter((ind) => ind.enabled);
 
-      // Off (the default, and whenever toggled off in the Indicators menu)
-      // — clear anything currently drawn and skip running the code at all.
-      if (!customEnabledRef.current) {
-        for (const [, series] of customLineSeries) chart.removeSeries(series);
-        customLineSeries.clear();
-        customMarkersApi?.setMarkers([]);
-        customBoxPrimitive?.setBoxes([]);
-        setCustomError(null);
-        return;
+      const seenLineNames = new Set();
+      const allMarkers = [];
+      const allBoxes = [];
+      const errors = [];
+
+      for (const ind of enabled) {
+        const { result, error } = runCustomCode(ind.code, barsRef.current);
+        if (error) errors.push(`${ind.name || 'Untitled'}: ${error}`);
+
+        const lines = result.lines && typeof result.lines === 'object' ? result.lines : {};
+        Object.keys(lines).forEach((name, i) => {
+          const spec = lines[name] || {};
+          const points = Array.isArray(spec.points) ? spec.points : Array.isArray(spec) ? spec : [];
+          const color = spec.color || cssVar(PALETTE[i % PALETTE.length]);
+          const qualifiedName = `${ind.id}::${name}`;
+          seenLineNames.add(qualifiedName);
+          let series = customLineSeries.get(qualifiedName);
+          if (!series) {
+            series = chart.addSeries(LineSeries, {
+              color,
+              lineWidth: spec.lineWidth || 2,
+              priceLineVisible: false,
+              lastValueVisible: false,
+              crosshairMarkerVisible: false,
+            });
+            customLineSeries.set(qualifiedName, series);
+          } else {
+            series.applyOptions({ color, lineWidth: spec.lineWidth || 2 });
+          }
+          series.setData(points);
+        });
+
+        if (Array.isArray(result.markers)) allMarkers.push(...result.markers);
+        if (Array.isArray(result.boxes)) {
+          allBoxes.push(
+            ...result.boxes.map((b) => ({
+              ...b,
+              color: b.color || 'rgba(224,177,85,0.18)',
+              borderColor: b.borderColor || cssVar('--warn'),
+            }))
+          );
+        }
       }
 
-      const { result, error } = runCustomCode(customCodeRef.current, barsRef.current);
-      setCustomError(error);
-
-      const lines = result.lines && typeof result.lines === 'object' ? result.lines : {};
-      const names = Object.keys(lines);
-      const palette = [cssVar('--dn'), cssVar('--gold2'), cssVar('--warn'), cssVar('--up')];
-      names.forEach((name, i) => {
-        const spec = lines[name] || {};
-        const points = Array.isArray(spec.points) ? spec.points : Array.isArray(spec) ? spec : [];
-        const color = spec.color || palette[i % palette.length];
-        let series = customLineSeries.get(name);
-        if (!series) {
-          series = chart.addSeries(LineSeries, {
-            color,
-            lineWidth: spec.lineWidth || 2,
-            priceLineVisible: false,
-            lastValueVisible: false,
-            crosshairMarkerVisible: false,
-          });
-          customLineSeries.set(name, series);
-        } else {
-          series.applyOptions({ color, lineWidth: spec.lineWidth || 2 });
-        }
-        series.setData(points);
-      });
-      // Drop series for line names no longer returned by the code.
+      // Drop series for lines no longer produced by any enabled indicator.
       for (const [name, series] of customLineSeries) {
-        if (!names.includes(name)) {
+        if (!seenLineNames.has(name)) {
           chart.removeSeries(series);
           customLineSeries.delete(name);
         }
       }
 
-      customMarkersApi?.setMarkers(Array.isArray(result.markers) ? result.markers : []);
-
-      const boxes = (Array.isArray(result.boxes) ? result.boxes : []).map((b) => ({
-        ...b,
-        color: b.color || 'rgba(224,177,85,0.18)',
-        borderColor: b.borderColor || cssVar('--warn'),
-      }));
-      customBoxPrimitive?.setBoxes(boxes);
+      customMarkersApi?.setMarkers(allMarkers);
+      customBoxPrimitive?.setBoxes(allBoxes);
+      setCustomError(errors.length ? errors.join(' | ') : null);
     }
     applyCustomIndicatorRef.current = applyCustomIndicator;
 
@@ -684,44 +699,86 @@ export default function GoldChart({ isAdmin }) {
     setShowIndicatorMenu(false);
   }
 
-  function toggleCustomIndicator() {
-    const next = !customEnabled;
-    setCustomEnabled(next);
-    customEnabledRef.current = next;
-    applyCustomIndicatorRef.current?.();
+  function toggleCustomIndicator(id) {
+    setCustomIndicators((prev) => prev.map((ind) => (ind.id === id ? { ...ind, enabled: !ind.enabled } : ind)));
     setShowIndicatorMenu(false);
   }
 
-  function handleCustomCodeChange(e) {
-    setCustomCode(e.target.value);
+  function handleNewIndicator() {
+    setEditingId(null);
+    setEditingName('');
+    setEditingCode(CUSTOM_CODE_TEMPLATE);
     setCustomSaved(false);
+    setCustomError(null);
   }
 
-  // Both Apply and Save turn the indicator on — the admin clicked one of
-  // them specifically to see the result, so it should show immediately
-  // (and then appear checked under "Indicators" without a separate step).
+  function handleEditIndicator(ind) {
+    setEditingId(ind.id);
+    setEditingName(ind.name || '');
+    setEditingCode(ind.code || '');
+    setCustomSaved(false);
+    setCustomError(null);
+    setContextMenu(null);
+    setShowIndicatorMenu(false);
+  }
+
+  async function handleDeleteIndicator(ind) {
+    setContextMenu(null);
+    setShowIndicatorMenu(false);
+    const confirmMsg = t.deleteConfirm.replace('{name}', ind.name || t.untitledIndicator);
+    // eslint-disable-next-line no-alert
+    if (!window.confirm(confirmMsg)) return;
+    try {
+      await deleteCustomIndicatorDoc(ind.id);
+    } catch (err) {
+      setCustomError(`Delete failed: ${err.message || err}`);
+      return;
+    }
+    setCustomIndicators((prev) => prev.filter((x) => x.id !== ind.id));
+    if (editingId === ind.id) handleNewIndicator();
+  }
+
+  function handleContextMenu(e, ind) {
+    e.preventDefault();
+    setContextMenu({ id: ind.id, x: e.clientX, y: e.clientY });
+  }
+
+  // Adds/updates this draft in the live indicator list (enabled) without
+  // touching Firestore — lets the admin preview before deciding to Save.
+  function upsertDraft(id, name, code) {
+    setCustomIndicators((prev) => {
+      const idx = prev.findIndex((x) => x.id === id);
+      const entry = { id, name, code, enabled: true };
+      if (idx === -1) return [...prev, entry];
+      const next = [...prev];
+      next[idx] = entry;
+      return next;
+    });
+  }
+
   function handleApplyCustomCode() {
-    customCodeRef.current = customCode;
-    customEnabledRef.current = true;
-    setCustomEnabled(true);
-    applyCustomIndicatorRef.current();
+    const id = editingId || newCustomIndicatorId();
+    if (!editingId) setEditingId(id);
+    upsertDraft(id, editingName.trim() || t.untitledIndicator, editingCode);
   }
 
   async function handleSaveCustomCode() {
+    const id = editingId || newCustomIndicatorId();
+    if (!editingId) setEditingId(id);
+    const name = editingName.trim() || t.untitledIndicator;
     setCustomSaving(true);
     try {
-      await saveCustomIndicatorCode(customCode);
+      await saveCustomIndicator(id, name, editingCode);
       setCustomSaved(true);
-      customCodeRef.current = customCode;
-      customEnabledRef.current = true;
-      setCustomEnabled(true);
-      applyCustomIndicatorRef.current?.();
+      upsertDraft(id, name, editingCode);
     } catch (err) {
       setCustomError(`Save failed: ${err.message || err}`);
     } finally {
       setCustomSaving(false);
     }
   }
+
+  const enabledCustomIndicators = customIndicators.filter((ind) => ind.enabled);
 
   return (
     <div className="gold-chart-card">
@@ -740,7 +797,7 @@ export default function GoldChart({ isAdmin }) {
           <div className="gc-indicators">
             <button
               type="button"
-              className={`gc-tf-btn${emaEnabled ? ' active' : ''}`}
+              className={`gc-tf-btn${emaEnabled || enabledCustomIndicators.length ? ' active' : ''}`}
               onClick={() => setShowIndicatorMenu((v) => !v)}
             >
               {t.indicatorsBtn} ▾
@@ -755,16 +812,20 @@ export default function GoldChart({ isAdmin }) {
                   {emaEnabled ? '✓ ' : ''}
                   {t.emaIndicatorName}
                 </button>
-                {isAdmin && (
-                  <button
-                    type="button"
-                    className={`gc-indicator-item${customEnabled ? ' active' : ''}`}
-                    onClick={toggleCustomIndicator}
-                  >
-                    {customEnabled ? '✓ ' : ''}
-                    {t.customLegend}
-                  </button>
-                )}
+                {isAdmin &&
+                  customIndicators.map((ind) => (
+                    <button
+                      key={ind.id}
+                      type="button"
+                      className={`gc-indicator-item${ind.enabled ? ' active' : ''}`}
+                      onClick={() => toggleCustomIndicator(ind.id)}
+                      onContextMenu={(e) => handleContextMenu(e, ind)}
+                      title={t.rightClickHint}
+                    >
+                      {ind.enabled ? '✓ ' : ''}
+                      {ind.name || t.untitledIndicator}
+                    </button>
+                  ))}
               </div>
             )}
           </div>
@@ -775,7 +836,7 @@ export default function GoldChart({ isAdmin }) {
           </div>
         )}
       </div>
-      {(emaEnabled || customEnabled) && (
+      {(emaEnabled || enabledCustomIndicators.length > 0) && (
         <div className="gold-chart-legend">
           {emaEnabled && (
             <>
@@ -785,12 +846,12 @@ export default function GoldChart({ isAdmin }) {
               {t.emaSlowLabel}
             </>
           )}
-          {customEnabled && (
-            <>
-              <span className="gc-dot" style={{ background: 'var(--dn)', marginLeft: emaEnabled ? 14 : 0 }} />
-              {t.customLegend}
-            </>
-          )}
+          {enabledCustomIndicators.map((ind, i) => (
+            <span key={ind.id} style={{ marginLeft: emaEnabled || i > 0 ? 14 : 0 }}>
+              <span className="gc-dot" style={{ background: `var(${PALETTE[i % PALETTE.length]})` }} />
+              {ind.name || t.untitledIndicator}
+            </span>
+          ))}
         </div>
       )}
       <div ref={containerRef} className="gold-chart-canvas" />
@@ -802,12 +863,28 @@ export default function GoldChart({ isAdmin }) {
         <div className="gc-admin-editor">
           <div className="gc-admin-editor-head">
             <span>🔒 {t.adminEditorTitle}</span>
+            <button type="button" className="gc-admin-new-btn" onClick={handleNewIndicator}>
+              {t.newBtn}
+            </button>
           </div>
           <p className="gc-admin-editor-warning">{t.adminEditorWarning}</p>
+          <input
+            type="text"
+            className="gc-admin-name-input"
+            placeholder={t.indicatorNamePlaceholder}
+            value={editingName}
+            onChange={(e) => {
+              setEditingName(e.target.value);
+              setCustomSaved(false);
+            }}
+          />
           <textarea
             className="gc-admin-textarea"
-            value={customCode}
-            onChange={handleCustomCodeChange}
+            value={editingCode}
+            onChange={(e) => {
+              setEditingCode(e.target.value);
+              setCustomSaved(false);
+            }}
             spellCheck={false}
             rows={8}
           />
@@ -821,6 +898,35 @@ export default function GoldChart({ isAdmin }) {
             </button>
           </div>
         </div>
+      )}
+
+      {contextMenu && (
+        <>
+          <div
+            className="gc-context-overlay"
+            onClick={() => setContextMenu(null)}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              setContextMenu(null);
+            }}
+          />
+          <div className="gc-context-menu" style={{ left: contextMenu.x, top: contextMenu.y }}>
+            <button
+              type="button"
+              className="gc-context-item"
+              onClick={() => handleEditIndicator(customIndicators.find((x) => x.id === contextMenu.id))}
+            >
+              {t.editBtn}
+            </button>
+            <button
+              type="button"
+              className="gc-context-item gc-context-danger"
+              onClick={() => handleDeleteIndicator(customIndicators.find((x) => x.id === contextMenu.id))}
+            >
+              {t.deleteBtn}
+            </button>
+          </div>
+        </>
       )}
     </div>
   );

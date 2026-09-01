@@ -478,8 +478,12 @@ h3 .bar{width:3px;height:18px;border-radius:2px;background:var(--gold);flex:none
 
 /* GOLD CHART — ADMIN-ONLY CUSTOM INDICATOR EDITOR */
 .gc-admin-editor{margin-top:16px;padding:14px;background:var(--warnd);border:1px solid var(--warn);border-radius:var(--r);}
-.gc-admin-editor-head{font-family:'Noto Sans Khmer',sans-serif;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.gc-admin-editor-head{display:flex;align-items:center;justify-content:space-between;gap:10px;font-family:'Noto Sans Khmer',sans-serif;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.gc-admin-new-btn{font-family:'Noto Sans Khmer',sans-serif;font-size:12px;font-weight:600;color:var(--mute);background:var(--bg1);border:1px solid var(--faint);border-radius:8px;padding:4px 10px;cursor:pointer;transition:color .15s,border-color .15s;}
+.gc-admin-new-btn:hover{color:var(--text);border-color:var(--brandline);}
 .gc-admin-editor-warning{font-size:11px;color:var(--mute);line-height:1.5;margin-bottom:10px;}
+.gc-admin-name-input{width:100%;background:var(--bg1);color:var(--text);border:1px solid var(--faint);border-radius:8px;padding:8px 12px;font-family:'Noto Sans Khmer',sans-serif;font-size:13px;margin-bottom:8px;}
+.gc-admin-name-input:focus{outline:none;border-color:var(--brandline);}
 .gc-admin-textarea{width:100%;min-height:140px;background:var(--bg1);color:var(--text);border:1px solid var(--faint);border-radius:8px;padding:10px 12px;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12.5px;line-height:1.6;resize:vertical;}
 .gc-admin-textarea:focus{outline:none;border-color:var(--brandline);}
 .gc-admin-error{margin-top:8px;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;color:var(--dn);background:var(--dnd);border-radius:6px;padding:8px 10px;white-space:pre-wrap;word-break:break-word;}
@@ -488,6 +492,13 @@ h3 .bar{width:3px;height:18px;border-radius:2px;background:var(--gold);flex:none
 .gc-admin-btn:hover{border-color:var(--brandline);}
 .gc-admin-btn-primary{color:#0C0C0F;background:var(--gold);border-color:var(--gold);}
 .gc-admin-btn:disabled{opacity:.6;cursor:default;}
+
+/* GOLD CHART — INDICATOR RIGHT-CLICK CONTEXT MENU */
+.gc-context-overlay{position:fixed;inset:0;z-index:20;background:transparent;}
+.gc-context-menu{position:fixed;z-index:21;min-width:130px;background:var(--bg1);border:1px solid var(--faint);border-radius:10px;box-shadow:0 16px 32px -14px rgba(0,0,0,0.6);padding:4px;}
+.gc-context-item{display:block;width:100%;text-align:left;font-family:'Noto Sans Khmer',sans-serif;font-size:13px;color:var(--text);background:none;border:none;border-radius:6px;padding:8px 10px;cursor:pointer;transition:background .15s;}
+.gc-context-item:hover{background:var(--bg2);}
+.gc-context-danger{color:var(--dn);}
 
 /* BADGE */
 .badge{display:inline-block;font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px;font-family:'Noto Sans Khmer',sans-serif;}
