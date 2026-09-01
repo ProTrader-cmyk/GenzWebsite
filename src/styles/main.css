@@ -55,6 +55,12 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 .logo-name{font-family:'Noto Sans Khmer',sans-serif;font-weight:700;font-size:16px;color:var(--text);}
 .logo-name b{color:var(--brand2);}
 
+/* ===== LOGIN/SIGNUP INTRO TRANSITION ===== */
+.intro-overlay{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;background:var(--bg);pointer-events:none;animation:introBgFade 1.1s ease forwards;}
+.intro-overlay-logo{width:84px;height:84px;border-radius:50%;background:var(--bg2);border:1px solid var(--brandline);box-shadow:0 0 30px var(--brandd);object-fit:cover;animation:introZoom 1.1s cubic-bezier(.5,0,.2,1) forwards;}
+@keyframes introZoom{0%{transform:scale(1);opacity:1;}55%{transform:scale(2.4);opacity:1;}100%{transform:scale(16);opacity:0;}}
+@keyframes introBgFade{0%{opacity:1;}65%{opacity:1;}100%{opacity:0;}}
+
 .nav-links{display:flex;align-items:center;justify-content:center;gap:4px;min-width:0;flex:1;}
 .nav-link{display:inline-block;background:none;border:none;color:var(--mute);font-size:13px;font-weight:600;padding:8px 12px;border-radius:10px;cursor:pointer;text-decoration:none;transition:.2s;white-space:nowrap;font-family:inherit;}
 .nav-link:hover{color:var(--text);background:var(--bg2);}
