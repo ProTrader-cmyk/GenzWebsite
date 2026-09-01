@@ -203,6 +203,11 @@ export default function GoldChart({ isAdmin }) {
   const barsRef = useRef([]); // full bar history incl. the forming candle
   const customCodeRef = useRef(''); // mirrors customCode, read inside the chart effect
   const applyCustomIndicatorRef = useRef(() => {}); // set inside the chart effect, called by the Apply button
+  // Off by default (matches emaEnabled below) — Apply/Save both turn it on,
+  // and it also shows as a toggle in the Indicators menu so it can be
+  // switched off again without touching the editor.
+  const customEnabledRef = useRef(false);
+  const [customEnabled, setCustomEnabled] = useState(false);
   const [customCode, setCustomCode] = useState('');
   const [customError, setCustomError] = useState(null);
   const [customSaving, setCustomSaving] = useState(false);
@@ -331,6 +336,18 @@ export default function GoldChart({ isAdmin }) {
 
     function applyCustomIndicator() {
       if (!isAdmin) return;
+
+      // Off (the default, and whenever toggled off in the Indicators menu)
+      // — clear anything currently drawn and skip running the code at all.
+      if (!customEnabledRef.current) {
+        for (const [, series] of customLineSeries) chart.removeSeries(series);
+        customLineSeries.clear();
+        customMarkersApi?.setMarkers([]);
+        customBoxPrimitive?.setBoxes([]);
+        setCustomError(null);
+        return;
+      }
+
       const { result, error } = runCustomCode(customCodeRef.current, barsRef.current);
       setCustomError(error);
 
@@ -667,13 +684,26 @@ export default function GoldChart({ isAdmin }) {
     setShowIndicatorMenu(false);
   }
 
+  function toggleCustomIndicator() {
+    const next = !customEnabled;
+    setCustomEnabled(next);
+    customEnabledRef.current = next;
+    applyCustomIndicatorRef.current?.();
+    setShowIndicatorMenu(false);
+  }
+
   function handleCustomCodeChange(e) {
     setCustomCode(e.target.value);
     setCustomSaved(false);
   }
 
+  // Both Apply and Save turn the indicator on — the admin clicked one of
+  // them specifically to see the result, so it should show immediately
+  // (and then appear checked under "Indicators" without a separate step).
   function handleApplyCustomCode() {
     customCodeRef.current = customCode;
+    customEnabledRef.current = true;
+    setCustomEnabled(true);
     applyCustomIndicatorRef.current();
   }
 
@@ -682,6 +712,10 @@ export default function GoldChart({ isAdmin }) {
     try {
       await saveCustomIndicatorCode(customCode);
       setCustomSaved(true);
+      customCodeRef.current = customCode;
+      customEnabledRef.current = true;
+      setCustomEnabled(true);
+      applyCustomIndicatorRef.current?.();
     } catch (err) {
       setCustomError(`Save failed: ${err.message || err}`);
     } finally {
@@ -721,6 +755,16 @@ export default function GoldChart({ isAdmin }) {
                   {emaEnabled ? '✓ ' : ''}
                   {t.emaIndicatorName}
                 </button>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    className={`gc-indicator-item${customEnabled ? ' active' : ''}`}
+                    onClick={toggleCustomIndicator}
+                  >
+                    {customEnabled ? '✓ ' : ''}
+                    {t.customLegend}
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -731,7 +775,7 @@ export default function GoldChart({ isAdmin }) {
           </div>
         )}
       </div>
-      {(emaEnabled || isAdmin) && (
+      {(emaEnabled || customEnabled) && (
         <div className="gold-chart-legend">
           {emaEnabled && (
             <>
@@ -741,7 +785,7 @@ export default function GoldChart({ isAdmin }) {
               {t.emaSlowLabel}
             </>
           )}
-          {isAdmin && (
+          {customEnabled && (
             <>
               <span className="gc-dot" style={{ background: 'var(--dn)', marginLeft: emaEnabled ? 14 : 0 }} />
               {t.customLegend}
