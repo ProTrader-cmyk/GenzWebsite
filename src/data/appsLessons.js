@@ -58,7 +58,8 @@ function toKhmerNumeral(n) {
 export function getAppsLessonEyebrow(id, lang = 'kh') {
   const n = getAppsLessonIndex(id) + 1;
   const num = lang === 'kh' ? toKhmerNumeral(n) : n;
-  return `${EYEBROW_LABEL[lang] ?? EYEBROW_LABEL.kh} ${num}${EYEBROW_SUFFIX[lang] ?? ''} · Lesson ${String(n).padStart(2, '0')}`;
+  const base = `${EYEBROW_LABEL[lang] ?? EYEBROW_LABEL.kh} ${num}${EYEBROW_SUFFIX[lang] ?? ''}`;
+  return lang === 'en' ? base : `${base} · Lesson ${String(n).padStart(2, '0')}`;
 }
 
 export function getAppsLessonShortLabel(id, lang = 'kh') {

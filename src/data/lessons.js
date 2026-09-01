@@ -99,7 +99,10 @@ const EYEBROW_SUFFIX = { kh: '', en: '', zh: '课' };
 export function getLessonEyebrow(id, lang = 'kh') {
   const n = getLessonIndex(id) + 1;
   const num = lang === 'kh' ? toKhmerNumeral(n) : n;
-  return `${EYEBROW_LABEL[lang] ?? EYEBROW_LABEL.kh} ${num}${EYEBROW_SUFFIX[lang] ?? ''} · Lesson ${String(n).padStart(2, '0')}`;
+  const base = `${EYEBROW_LABEL[lang] ?? EYEBROW_LABEL.kh} ${num}${EYEBROW_SUFFIX[lang] ?? ''}`;
+  // English already reads "Lesson N" — the " · Lesson NN" suffix only adds
+  // information for kh/zh, where the label itself isn't in English.
+  return lang === 'en' ? base : `${base} · Lesson ${String(n).padStart(2, '0')}`;
 }
 
 // "មេរៀនទី ១" — the short form used for the prev-lesson link at the bottom

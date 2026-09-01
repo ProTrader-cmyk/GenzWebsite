@@ -40,7 +40,8 @@ function toKhmerNumeral(n) {
 export function getPsychologyLessonEyebrow(id, lang = 'kh') {
   const n = getPsychologyLessonIndex(id) + 1;
   const num = lang === 'kh' ? toKhmerNumeral(n) : n;
-  return `${EYEBROW_LABEL[lang] ?? EYEBROW_LABEL.kh} ${num}${EYEBROW_SUFFIX[lang] ?? ''} · Lesson ${String(n).padStart(2, '0')}`;
+  const base = `${EYEBROW_LABEL[lang] ?? EYEBROW_LABEL.kh} ${num}${EYEBROW_SUFFIX[lang] ?? ''}`;
+  return lang === 'en' ? base : `${base} · Lesson ${String(n).padStart(2, '0')}`;
 }
 
 export function getPsychologyLessonShortLabel(id, lang = 'kh') {
