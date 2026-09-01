@@ -57,6 +57,15 @@ export function BacktestIcon() {
   );
 }
 
+export function BookIcon(props) {
+  return (
+    <svg {...common} {...props}>
+      <path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H11a1 1 0 0 1 1 1v16.5a1 1 0 0 0-1-1H5.5A1.5 1.5 0 0 0 4 21V4.5Z" />
+      <path d="M20 4.5A1.5 1.5 0 0 0 18.5 3H13a1 1 0 0 0-1 1v16.5a1 1 0 0 1 1-1h5.5a1.5 1.5 0 0 1 1.5 1.5V4.5Z" />
+    </svg>
+  );
+}
+
 export function AdvancedChartIcon() {
   return (
     <svg {...common}>
