@@ -109,6 +109,14 @@ export default function GoldChart({ isAdmin }) {
   const [priceDir, setPriceDir] = useState(null); // 'up' | 'down' | null
   const [status, setStatus] = useState('loading'); // 'loading' | 'live' | 'error'
 
+  // Built-in EMA 9/21 crossover indicator — off by default (plain candles),
+  // toggled on via the Indicators menu. emaEnabledRef is read inside the
+  // chart effect's closures; the state is just for the menu's UI.
+  const emaEnabledRef = useRef(false);
+  const setEmaVisibilityRef = useRef(() => {}); // set inside the chart effect
+  const [emaEnabled, setEmaEnabled] = useState(false);
+  const [showIndicatorMenu, setShowIndicatorMenu] = useState(false);
+
   // --- Admin-only custom indicator (private — see the AskUserQuestion
   // decision recorded in the commit: only admin ever sees the editor OR
   // its plotted result; the code only ever executes in the admin's own
@@ -249,6 +257,54 @@ export default function GoldChart({ isAdmin }) {
     }
     applyCustomIndicatorRef.current = applyCustomIndicator;
 
+    // Full recompute of the built-in EMA 9/21 crossover indicator from the
+    // whole bar history — cheap enough (a few hundred bars) to just redo
+    // from scratch whenever it's turned on or the timeframe changes,
+    // rather than maintaining hidden incremental state while it's off.
+    function applyBuiltinEma() {
+      const bars = barsRef.current;
+      const closes = bars.map((b) => b.close);
+      const emaFast = computeEma(closes, EMA_FAST);
+      const emaSlow = computeEma(closes, EMA_SLOW);
+
+      emaFastSeries.setData(
+        bars.map((b, i) => ({ time: b.time, value: emaFast[i] })).filter((d) => d.value != null)
+      );
+      emaSlowSeries.setData(
+        bars.map((b, i) => ({ time: b.time, value: emaSlow[i] })).filter((d) => d.value != null)
+      );
+
+      const markers = [];
+      for (let i = 1; i < bars.length; i++) {
+        const prevDiff = emaFast[i - 1] != null && emaSlow[i - 1] != null ? emaFast[i - 1] - emaSlow[i - 1] : null;
+        const diff = emaFast[i] != null && emaSlow[i] != null ? emaFast[i] - emaSlow[i] : null;
+        if (prevDiff == null || diff == null) continue;
+        if (prevDiff <= 0 && diff > 0) {
+          markers.push({ time: bars[i].time, position: 'belowBar', color: cssVar('--up'), shape: 'arrowUp', text: t.bullishMark });
+        } else if (prevDiff >= 0 && diff < 0) {
+          markers.push({ time: bars[i].time, position: 'aboveBar', color: cssVar('--dn'), shape: 'arrowDown', text: t.bearishMark });
+        }
+      }
+      markersRef.current = markers;
+      markersApiRef.current.setMarkers(markers);
+
+      emaFastRef.current = emaFast[emaFast.length - 1];
+      emaSlowRef.current = emaSlow[emaSlow.length - 1];
+    }
+
+    function clearBuiltinEma() {
+      emaFastSeries.setData([]);
+      emaSlowSeries.setData([]);
+      markersRef.current = [];
+      markersApiRef.current.setMarkers([]);
+    }
+
+    setEmaVisibilityRef.current = (enabled) => {
+      emaEnabledRef.current = enabled;
+      if (enabled) applyBuiltinEma();
+      else clearBuiltinEma();
+    };
+
     // Pushes one bar's OHLC onto the chart, updates the price ticker, and
     // returns a "trial" EMA computed off the last FINALIZED EMA — safe to
     // call repeatedly for the same still-open candle (idempotent, since it
@@ -270,22 +326,30 @@ export default function GoldChart({ isAdmin }) {
         if (prevPrice != null) setPriceDir(bar.close >= prevPrice ? 'up' : 'down');
         return bar.close;
       });
-      const kFast = 2 / (EMA_FAST + 1);
-      const kSlow = 2 / (EMA_SLOW + 1);
-      const trialFast = emaFastRef.current != null ? bar.close * kFast + emaFastRef.current * (1 - kFast) : null;
-      const trialSlow = emaSlowRef.current != null ? bar.close * kSlow + emaSlowRef.current * (1 - kSlow) : null;
-      if (trialFast != null) emaFastSeries.update({ time: bar.time, value: trialFast });
-      if (trialSlow != null) emaSlowSeries.update({ time: bar.time, value: trialSlow });
+
+      let trialFast = null;
+      let trialSlow = null;
+      if (emaEnabledRef.current) {
+        const kFast = 2 / (EMA_FAST + 1);
+        const kSlow = 2 / (EMA_SLOW + 1);
+        trialFast = emaFastRef.current != null ? bar.close * kFast + emaFastRef.current * (1 - kFast) : null;
+        trialSlow = emaSlowRef.current != null ? bar.close * kSlow + emaSlowRef.current * (1 - kSlow) : null;
+        if (trialFast != null) emaFastSeries.update({ time: bar.time, value: trialFast });
+        if (trialSlow != null) emaSlowSeries.update({ time: bar.time, value: trialSlow });
+      }
       if (customSeries) applyCustomIndicator();
       return { trialFast, trialSlow };
     }
 
     // Commits a closed candle's trial EMA as the new finalized baseline and
-    // adds a crossover marker if one just happened.
+    // adds a crossover marker if one just happened — a no-op beyond
+    // tracking closes while the indicator is off.
     function finalizeBar(bar, trialFast, trialSlow) {
+      closesRef.current = [...closesRef.current, bar.close];
+      if (!emaEnabledRef.current) return;
+
       const prevFast = emaFastRef.current;
       const prevSlow = emaSlowRef.current;
-      closesRef.current = [...closesRef.current, bar.close];
       emaFastRef.current = trialFast;
       emaSlowRef.current = trialSlow;
 
@@ -323,41 +387,19 @@ export default function GoldChart({ isAdmin }) {
         // waiting for the first WebSocket tick).
         const closedRows = raw.slice(0, -1);
         const bars = closedRows.map(restBarFromOhlc);
-        const closes = bars.map((b) => b.close);
-        const emaFast = computeEma(closes, EMA_FAST);
-        const emaSlow = computeEma(closes, EMA_SLOW);
 
         candleSeries.setData(bars);
-        emaFastSeries.setData(
-          bars.map((b, i) => ({ time: b.time, value: emaFast[i] })).filter((d) => d.value != null)
-        );
-        emaSlowSeries.setData(
-          bars.map((b, i) => ({ time: b.time, value: emaSlow[i] })).filter((d) => d.value != null)
-        );
-
-        const markers = [];
-        for (let i = 1; i < bars.length; i++) {
-          const prevDiff = emaFast[i - 1] != null && emaSlow[i - 1] != null ? emaFast[i - 1] - emaSlow[i - 1] : null;
-          const diff = emaFast[i] != null && emaSlow[i] != null ? emaFast[i] - emaSlow[i] : null;
-          if (prevDiff == null || diff == null) continue;
-          if (prevDiff <= 0 && diff > 0) {
-            markers.push({ time: bars[i].time, position: 'belowBar', color: cssVar('--up'), shape: 'arrowUp', text: t.bullishMark });
-          } else if (prevDiff >= 0 && diff < 0) {
-            markers.push({ time: bars[i].time, position: 'aboveBar', color: cssVar('--dn'), shape: 'arrowDown', text: t.bearishMark });
-          }
-        }
-        markersRef.current = markers;
-        markersApiRef.current.setMarkers(markers);
-
-        closesRef.current = closes;
-        emaFastRef.current = emaFast[emaFast.length - 1];
-        emaSlowRef.current = emaSlow[emaSlow.length - 1];
+        closesRef.current = bars.map((b) => b.close);
         barsRef.current = bars;
 
         const formingBar = restBarFromOhlc(raw[raw.length - 1]);
         formingTimeRef.current = formingBar.time;
         const { trialFast, trialSlow } = applyTick(formingBar);
         formingRef.current = { bar: formingBar, trialFast, trialSlow };
+
+        // Restores the indicator's display after a timeframe switch if it
+        // was already turned on — plain candles otherwise (default).
+        if (emaEnabledRef.current) applyBuiltinEma();
 
         chart.timeScale().fitContent();
         setStatus('live');
@@ -496,6 +538,13 @@ export default function GoldChart({ isAdmin }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [theme]);
 
+  function toggleEmaIndicator() {
+    const next = !emaEnabled;
+    setEmaEnabled(next);
+    setEmaVisibilityRef.current?.(next);
+    setShowIndicatorMenu(false);
+  }
+
   function handleCustomCodeChange(e) {
     setCustomCode(e.target.value);
     setCustomSaved(false);
@@ -532,6 +581,27 @@ export default function GoldChart({ isAdmin }) {
               {tf.label}
             </button>
           ))}
+          <div className="gc-indicators">
+            <button
+              type="button"
+              className={`gc-tf-btn${emaEnabled ? ' active' : ''}`}
+              onClick={() => setShowIndicatorMenu((v) => !v)}
+            >
+              {t.indicatorsBtn} ▾
+            </button>
+            {showIndicatorMenu && (
+              <div className="gc-indicator-menu">
+                <button
+                  type="button"
+                  className={`gc-indicator-item${emaEnabled ? ' active' : ''}`}
+                  onClick={toggleEmaIndicator}
+                >
+                  {emaEnabled ? '✓ ' : ''}
+                  {t.emaIndicatorName}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
         {price != null && (
           <div className={`gold-chart-price${priceDir ? ` is-${priceDir}` : ''}`}>
@@ -539,18 +609,24 @@ export default function GoldChart({ isAdmin }) {
           </div>
         )}
       </div>
-      <div className="gold-chart-legend">
-        <span className="gc-dot" style={{ background: 'var(--gold2)' }} />
-        {t.emaFastLabel}
-        <span className="gc-dot" style={{ background: 'var(--warn)', marginLeft: 14 }} />
-        {t.emaSlowLabel}
-        {isAdmin && (
-          <>
-            <span className="gc-dot" style={{ background: 'var(--dn)', marginLeft: 14 }} />
-            {t.customLegend}
-          </>
-        )}
-      </div>
+      {(emaEnabled || isAdmin) && (
+        <div className="gold-chart-legend">
+          {emaEnabled && (
+            <>
+              <span className="gc-dot" style={{ background: 'var(--gold2)' }} />
+              {t.emaFastLabel}
+              <span className="gc-dot" style={{ background: 'var(--warn)', marginLeft: 14 }} />
+              {t.emaSlowLabel}
+            </>
+          )}
+          {isAdmin && (
+            <>
+              <span className="gc-dot" style={{ background: 'var(--dn)', marginLeft: emaEnabled ? 14 : 0 }} />
+              {t.customLegend}
+            </>
+          )}
+        </div>
+      )}
       <div ref={containerRef} className="gold-chart-canvas" />
       {status === 'loading' && <div className="gold-chart-status">{t.loading}</div>}
       {status === 'error' && <div className="gold-chart-status">{t.error}</div>}

@@ -130,10 +130,10 @@ export const strings = {
     newProduct: {
       back: '← ផ្នែកសិក្សា',
       eyebrow: 'ផលិតផលថ្មី',
-      title: 'ក្រាហ្វមាសផ្ទាល់ + សូចនាករ EMA Crossover',
-      subtitle: 'តាមដានតម្លៃមាសផ្ទាល់ ជាមួយសញ្ញា EMA ៩/២១ Crossover',
-      intro:
-        '📊 សូចនាករនេះគូរបន្ទាត់ EMA ពីរ (៩ និង ២១) លើក្រាហ្វិចតម្លៃមាសផ្ទាល់ ហើយសម្គាល់ចំណុចដែលបន្ទាត់ទាំងពីរឆ្លងគ្នា — សញ្ញា "Golden Cross" (EMA9 ឡើងលើ EMA21) ជាទូទៅចាត់ទុកជាសញ្ញាទំនោរឡើង ចំណែក "Death Cross" (EMA9 ចុះក្រោម EMA21) ជាសញ្ញាទំនោរចុះ។',
+      title: 'ក្រាហ្វមាសផ្ទាល់',
+      subtitle: 'តាមដានតម្លៃមាសតាមពេលវេលាជាក់ស្តែង — បន្ថែមសូចនាករតាមចង់បាន',
+      indicatorsBtn: 'សូចនាករ',
+      emaIndicatorName: 'EMA ៩/២១ Crossover',
       emaFastLabel: 'EMA ៩',
       emaSlowLabel: 'EMA ២១',
       bullishMark: 'Golden Cross',
@@ -371,10 +371,10 @@ export const strings = {
     newProduct: {
       back: '← Sections',
       eyebrow: 'New Product',
-      title: 'Live Gold Chart + EMA Crossover Indicator',
-      subtitle: 'Track gold price live with a 9/21 EMA crossover signal',
-      intro:
-        '📊 This indicator plots two EMAs (9 and 21) on the live gold price chart and marks where they cross — a "Golden Cross" (EMA9 crosses above EMA21) is generally read as a bullish signal, and a "Death Cross" (EMA9 crosses below EMA21) as bearish.',
+      title: 'Live Gold Chart',
+      subtitle: 'Track gold price in real time — add indicators as you like',
+      indicatorsBtn: 'Indicators',
+      emaIndicatorName: 'EMA 9/21 Crossover',
       emaFastLabel: 'EMA 9',
       emaSlowLabel: 'EMA 21',
       bullishMark: 'Golden Cross',
@@ -612,10 +612,10 @@ export const strings = {
     newProduct: {
       back: '← 学习板块',
       eyebrow: '新产品',
-      title: '实时黄金图表 + EMA 交叉指标',
-      subtitle: '通过 9/21 EMA 交叉信号实时追踪金价',
-      intro:
-        '📊 此指标在实时金价图表上绘制两条 EMA 线（9 和 21），并标记它们的交叉点——"黄金交叉"（EMA9 上穿 EMA21）通常被视为看涨信号，"死亡交叉"（EMA9 下穿 EMA21）则被视为看跌信号。',
+      title: '实时黄金图表',
+      subtitle: '实时追踪金价 — 可按需添加指标',
+      indicatorsBtn: '指标',
+      emaIndicatorName: 'EMA 9/21 交叉',
       emaFastLabel: 'EMA 9',
       emaSlowLabel: 'EMA 21',
       bullishMark: '黄金交叉',
