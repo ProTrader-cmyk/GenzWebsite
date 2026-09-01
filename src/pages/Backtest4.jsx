@@ -16,7 +16,7 @@ function LessonVideo({ src }) {
   );
 }
 
-const meta = getBacktestLessonMeta('bt1');
+const meta = getBacktestLessonMeta('bt4');
 
 const CONTENT = {
   kh: {
@@ -33,14 +33,14 @@ const CONTENT = {
   },
 };
 
-export default function Backtest1({ onNavigate, onDone }) {
+export default function Backtest4({ onNavigate, onDone }) {
   const { lang } = useLanguage();
   const t = CONTENT[lang];
   const { videos } = useVideos();
 
   return (
     <LessonLayout
-      id="bt1"
+      id="bt4"
       track="backtest"
       title={meta.pageTitle[lang]}
       onNavigate={onNavigate}
@@ -49,7 +49,7 @@ export default function Backtest1({ onNavigate, onDone }) {
       nextDisabled={false}
     >
       <p>{t.intro}</p>
-      <LessonVideo src={videos['bt-scenario-1']?.url} />
+      <LessonVideo src={videos['bt-scenario-4']?.url} />
     </LessonLayout>
   );
 }

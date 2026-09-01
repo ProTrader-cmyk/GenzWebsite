@@ -1,19 +1,48 @@
 // Lesson order/metadata for the "Backtest Technical Analysis for Beginner"
 // track — a separate course from Technical (lessons.js, 'l1'..'l7') and
-// Apps (appsLessons.js, 'a1'..'a3'), ids 'bt1'.. so all three can share the
-// same doneMap/registry without collisions. Mirrors the shape of
-// appsLessons.js; see that file for the original pattern this was copied
-// from. Currently just one lesson (4 practice scenarios within it) — add
-// more entries here the same way if this grows into a multi-lesson track.
+// Apps (appsLessons.js, 'a1'..'a3'), ids 'bt1'..'bt4', one per practice
+// scenario, so all tracks can share the same doneMap/registry without
+// collisions. Mirrors the shape of appsLessons.js; see that file for the
+// original pattern this was copied from.
 export const backtestLessons = [
   {
     id: 'bt1',
-    title: 'Backtest Practice',
-    subtitle: 'Scenario 1 · Scenario 2 · Scenario 3 · Scenario 4',
+    title: 'Scenario 1',
+    subtitle: 'Backtest Practice',
     pageTitle: {
-      kh: 'អនុវត្តន៍ Backtest សម្រាប់អ្នកចាប់ផ្តើម',
-      en: 'Backtest Practice for Beginners',
-      zh: '初学者回测练习',
+      kh: 'អនុវត្តន៍ Backtest — សេណារីយ៉ូទី ១',
+      en: 'Backtest Practice — Scenario 1',
+      zh: '回测练习 — 场景 1',
+    },
+  },
+  {
+    id: 'bt2',
+    title: 'Scenario 2',
+    subtitle: 'Backtest Practice',
+    pageTitle: {
+      kh: 'អនុវត្តន៍ Backtest — សេណារីយ៉ូទី ២',
+      en: 'Backtest Practice — Scenario 2',
+      zh: '回测练习 — 场景 2',
+    },
+  },
+  {
+    id: 'bt3',
+    title: 'Scenario 3',
+    subtitle: 'Backtest Practice',
+    pageTitle: {
+      kh: 'អនុវត្តន៍ Backtest — សេណារីយ៉ូទី ៣',
+      en: 'Backtest Practice — Scenario 3',
+      zh: '回测练习 — 场景 3',
+    },
+  },
+  {
+    id: 'bt4',
+    title: 'Scenario 4',
+    subtitle: 'Backtest Practice',
+    pageTitle: {
+      kh: 'អនុវត្តន៍ Backtest — សេណារីយ៉ូទី ៤',
+      en: 'Backtest Practice — Scenario 4',
+      zh: '回测练习 — 场景 4',
     },
   },
 ];

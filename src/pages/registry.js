@@ -9,6 +9,9 @@ import AppsLesson1 from './AppsLesson1.jsx';
 import AppsLesson2 from './AppsLesson2.jsx';
 import AppsLesson3 from './AppsLesson3.jsx';
 import Backtest1 from './Backtest1.jsx';
+import Backtest2 from './Backtest2.jsx';
+import Backtest3 from './Backtest3.jsx';
+import Backtest4 from './Backtest4.jsx';
 import Psychology1 from './Psychology1.jsx';
 
 // Maps a lesson id to the component that renders its content — 'l1'..'l7'
@@ -31,5 +34,8 @@ export const lessonPages = {
   a2: AppsLesson2,
   a3: AppsLesson3,
   bt1: Backtest1,
+  bt2: Backtest2,
+  bt3: Backtest3,
+  bt4: Backtest4,
   psy1: Psychology1,
 };
