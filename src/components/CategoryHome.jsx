@@ -38,8 +38,9 @@ function buildCategories(t, approved) {
       id: 'psychology',
       Icon: BrainIcon,
       title: t.psychologyTitle,
-      tag: t.comingSoon,
-      locked: true,
+      tag: t.psychologyLessonsCount,
+      locked: false,
+      pendingLocked: !approved,
     },
     {
       id: 'backtest',

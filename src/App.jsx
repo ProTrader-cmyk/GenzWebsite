@@ -5,6 +5,7 @@ import CategoryHome from './components/CategoryHome.jsx';
 import Home from './components/Home.jsx';
 import AppsHome from './components/AppsHome.jsx';
 import BacktestHome from './components/BacktestHome.jsx';
+import PsychologyHome from './components/PsychologyHome.jsx';
 import NewsPage from './components/NewsPage.jsx';
 import ContactPage from './components/ContactPage.jsx';
 import PricingPage from './components/PricingPage.jsx';
@@ -15,6 +16,7 @@ import AdminDashboard from './pages/AdminDashboard.jsx';
 import { getNextLessonId } from './data/lessons.js';
 import { getNextAppsLessonId } from './data/appsLessons.js';
 import { getNextBacktestLessonId } from './data/backtestLessons.js';
+import { getNextPsychologyLessonId } from './data/psychologyLessons.js';
 import { lessonPages } from './pages/registry.js';
 import { auth } from './firebase.js';
 import {
@@ -106,26 +108,29 @@ export default function App() {
 
   // Marks the current lesson complete and advances to the next one in its
   // track (src/data/lessons.js for 'l*' ids, src/data/appsLessons.js for
-  // 'a*' ids, src/data/backtestLessons.js for 'bt*' ids), or back home if it
-  // was the last lesson in that track. Also persisted to the user's
-  // Firestore profile, so completed lessons (and therefore what's
-  // unlocked) survive logout/login and follow the account across devices,
-  // not just this browser session.
+  // 'a*' ids, src/data/backtestLessons.js for 'bt*' ids,
+  // src/data/psychologyLessons.js for 'psy*' ids), or back home if it was
+  // the last lesson in that track. Also persisted to the user's Firestore
+  // profile, so completed lessons (and therefore what's unlocked) survive
+  // logout/login and follow the account across devices, not just this
+  // browser session.
   function markDone(id) {
     setDoneMap((prev) => ({ ...prev, [id]: true }));
     markLessonDone(user.uid, id).catch(() => {});
     const next = id.startsWith('bt')
       ? getNextBacktestLessonId(id)
-      : id.startsWith('a')
-        ? getNextAppsLessonId(id)
-        : getNextLessonId(id);
+      : id.startsWith('psy')
+        ? getNextPsychologyLessonId(id)
+        : id.startsWith('a')
+          ? getNextAppsLessonId(id)
+          : getNextLessonId(id);
     setView(next ?? 'home');
   }
 
-  // 'technical', 'apps', and 'backtest' have content today — the other
-  // category cards are rendered locked and don't call this.
+  // 'technical', 'apps', 'backtest', and 'psychology' have content today —
+  // the other category cards are rendered locked and don't call this.
   function selectCategory(id) {
-    if (id === 'technical' || id === 'apps' || id === 'backtest') setSection(id);
+    if (id === 'technical' || id === 'apps' || id === 'backtest' || id === 'psychology') setSection(id);
   }
 
   function backToCategories() {
@@ -257,7 +262,7 @@ export default function App() {
   const requestedLesson = view !== 'home' ? lessonPages[view] : null;
   const lessonBlocked =
     requestedLesson &&
-    (section === 'technical' || section === 'apps' || section === 'backtest') &&
+    (section === 'technical' || section === 'apps' || section === 'backtest' || section === 'psychology') &&
     isLessonLocked(view);
   const CurrentLesson = lessonBlocked ? null : requestedLesson;
   const effectiveView = CurrentLesson ? view : 'home';
@@ -308,9 +313,17 @@ export default function App() {
             allowedLessons={allowedLessons}
           />
         )}
-        {(section === 'technical' || section === 'apps' || section === 'backtest') && CurrentLesson && (
-          <CurrentLesson onNavigate={navigate} onDone={() => markDone(view)} />
+        {section === 'psychology' && effectiveView === 'home' && (
+          <PsychologyHome
+            doneMap={doneMap}
+            onSelectLesson={navigate}
+            onBack={backToCategories}
+            approved={approved}
+            allowedLessons={allowedLessons}
+          />
         )}
+        {(section === 'technical' || section === 'apps' || section === 'backtest' || section === 'psychology') &&
+          CurrentLesson && <CurrentLesson onNavigate={navigate} onDone={() => markDone(view)} />}
       </div>
     </>
   );

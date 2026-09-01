@@ -5,6 +5,11 @@ import {
   getPrevBacktestLessonId,
   getBacktestLessonShortLabel,
 } from '../data/backtestLessons.js';
+import {
+  getPsychologyLessonEyebrow,
+  getPrevPsychologyLessonId,
+  getPsychologyLessonShortLabel,
+} from '../data/psychologyLessons.js';
 import LessonNav from './ui/LessonNav.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getLessonChrome } from '../i18n/lessonStrings.js';
@@ -13,9 +18,10 @@ import { getLessonChrome } from '../i18n/lessonStrings.js';
 // eyebrow + title), body container, and the bottom prev/next nav. The prev
 // link and its label are derived automatically from lesson order in
 // src/data/lessons.js (`track="technical"`, the default),
-// src/data/appsLessons.js (`track="apps"`), or src/data/backtestLessons.js
-// (`track="backtest"`) — individual lesson files only supply their content
-// via `children`. See src/pages/Lesson1.jsx.
+// src/data/appsLessons.js (`track="apps"`), src/data/backtestLessons.js
+// (`track="backtest"`), or src/data/psychologyLessons.js
+// (`track="psychology"`) — individual lesson files only supply their
+// content via `children`. See src/pages/Lesson1.jsx.
 export default function LessonLayout({
   id,
   track = 'technical',
@@ -38,6 +44,10 @@ export default function LessonLayout({
     prevId = getPrevBacktestLessonId(id);
     eyebrow = getBacktestLessonEyebrow(id, lang);
     prevShortLabel = getBacktestLessonShortLabel;
+  } else if (track === 'psychology') {
+    prevId = getPrevPsychologyLessonId(id);
+    eyebrow = getPsychologyLessonEyebrow(id, lang);
+    prevShortLabel = getPsychologyLessonShortLabel;
   } else {
     prevId = getPrevLessonId(id);
     eyebrow = getLessonEyebrow(id, lang);

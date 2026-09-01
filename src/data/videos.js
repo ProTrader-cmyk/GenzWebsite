@@ -33,6 +33,7 @@ export const VIDEO_KEYS = [
   { key: 'bt-scenario-2', label: 'Backtest — Scenario 2' },
   { key: 'bt-scenario-3', label: 'Backtest — Scenario 3' },
   { key: 'bt-scenario-4', label: 'Backtest — Scenario 4' },
+  { key: 'psy-ch1', label: 'Psychology — Chapter 1: Road to Success' },
 ];
 
 // { key: { url, label, updatedAt } }, all videos in one read.

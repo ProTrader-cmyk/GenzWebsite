@@ -9,14 +9,16 @@ import AppsLesson1 from './AppsLesson1.jsx';
 import AppsLesson2 from './AppsLesson2.jsx';
 import AppsLesson3 from './AppsLesson3.jsx';
 import Backtest1 from './Backtest1.jsx';
+import Psychology1 from './Psychology1.jsx';
 
 // Maps a lesson id to the component that renders its content — 'l1'..'l7'
 // from src/data/lessons.js (Technical track), 'a1'..'a3' from
 // src/data/appsLessons.js (App & Website track), 'bt1'.. from
-// src/data/backtestLessons.js (Backtest track). The id namespaces never
-// collide, so all three tracks share one registry and one doneMap in
-// App.jsx. Add one line here for every new LessonN.jsx / AppsLessonN.jsx /
-// BacktestN.jsx you create.
+// src/data/backtestLessons.js (Backtest track), 'psy1'.. from
+// src/data/psychologyLessons.js (Psychology track). The id namespaces never
+// collide, so all tracks share one registry and one doneMap in App.jsx. Add
+// one line here for every new LessonN.jsx / AppsLessonN.jsx / BacktestN.jsx
+// / PsychologyN.jsx you create.
 export const lessonPages = {
   l1: Lesson1,
   l2: Lesson2,
@@ -29,4 +31,5 @@ export const lessonPages = {
   a2: AppsLesson2,
   a3: AppsLesson3,
   bt1: Backtest1,
+  psy1: Psychology1,
 };

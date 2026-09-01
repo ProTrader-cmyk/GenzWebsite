@@ -3,6 +3,7 @@ import { fetchAllUsers, setUserStatus, setUserRole, setUserLessonAccess } from '
 import { lessons } from '../data/lessons.js';
 import { appsLessons } from '../data/appsLessons.js';
 import { backtestLessons } from '../data/backtestLessons.js';
+import { psychologyLessons } from '../data/psychologyLessons.js';
 import { VIDEO_KEYS, fetchAllVideos, saveVideoUrl, deleteVideo } from '../data/videos.js';
 import { invalidateVideoCache } from '../data/useVideos.js';
 import ThemeToggle from '../components/ThemeToggle.jsx';
@@ -168,6 +169,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
           ...(u.status === 'approved' ? lessons.map((l) => l.id) : ['l1']),
           ...appsLessons.map((l) => l.id),
           ...backtestLessons.map((l) => l.id),
+          ...psychologyLessons.map((l) => l.id),
         ];
     setPermUser(u);
     setPermSelection(initial);
@@ -496,6 +498,18 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
             <div className="perm-section">
               <div className="perm-section-title">Backtest</div>
               {backtestLessons.map((l, i) => (
+                <label key={l.id} className="perm-row">
+                  <input type="checkbox" checked={permSelection.includes(l.id)} onChange={() => toggleLesson(l.id)} />
+                  <span>
+                    {i + 1}. {l.title}
+                  </span>
+                </label>
+              ))}
+            </div>
+
+            <div className="perm-section">
+              <div className="perm-section-title">Psychology</div>
+              {psychologyLessons.map((l, i) => (
                 <label key={l.id} className="perm-row">
                   <input type="checkbox" checked={permSelection.includes(l.id)} onChange={() => toggleLesson(l.id)} />
                   <span>
