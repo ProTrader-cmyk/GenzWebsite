@@ -1,6 +1,10 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 
 const THEME_KEY = 'gzt_theme';
+// Matches --bg in main.css for each theme — mobile browsers color their own
+// chrome (status bar / address bar) from this meta tag, not from CSS, so it
+// has to be kept in sync by hand whenever the palette's --bg values change.
+const BG_BY_THEME = { dark: '#0C0C0F', light: '#FAF9F7' };
 
 function loadTheme() {
   const saved = typeof window !== 'undefined' ? localStorage.getItem(THEME_KEY) : null;
@@ -15,6 +19,7 @@ export function ThemeProvider({ children }) {
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     localStorage.setItem(THEME_KEY, theme);
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', BG_BY_THEME[theme]);
   }, [theme]);
 
   function toggleTheme() {
