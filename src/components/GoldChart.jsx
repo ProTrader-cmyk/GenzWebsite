@@ -18,13 +18,30 @@ import { getStrings } from '../i18n/strings.js';
 // Kraken is US-licensed and doesn't do that, so it's used instead.
 const REST_PAIR = 'PAXGUSD';
 const WS_SYMBOL = 'PAXG/USD';
-const INTERVAL_MINUTES = 15;
 const EMA_FAST = 9;
 const EMA_SLOW = 21;
+
+// Kraken's valid OHLC interval values, in minutes.
+const TIMEFRAMES = [
+  { value: 1, label: '1m' },
+  { value: 5, label: '5m' },
+  { value: 15, label: '15m' },
+  { value: 30, label: '30m' },
+  { value: 60, label: '1H' },
+  { value: 240, label: '4H' },
+  { value: 1440, label: '1D' },
+];
 
 function cssVar(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
+
+// ---------------------------------------------------------------------------
+// INDICATORS. computeEma is the one indicator currently plotted (see
+// "ADD MORE INDICATORS HERE" below for where a new one plugs in). Add a
+// sibling function here for anything else you want computed from the closes
+// array — e.g. RSI, SMA, Bollinger Bands.
+// ---------------------------------------------------------------------------
 
 // Seeds with a simple moving average at the first full period (standard EMA
 // warm-up), then applies the EMA recurrence forward. Returns one entry per
@@ -68,6 +85,7 @@ export default function GoldChart() {
   const { theme } = useTheme();
   const { lang } = useLanguage();
   const t = getStrings(lang).newProduct;
+  const [intervalMinutes, setIntervalMinutes] = useState(15); // see TIMEFRAMES
   const containerRef = useRef(null);
   const chartRef = useRef(null);
   const candleSeriesRef = useRef(null);
@@ -84,11 +102,13 @@ export default function GoldChart() {
   const [priceDir, setPriceDir] = useState(null); // 'up' | 'down' | null
   const [status, setStatus] = useState('loading'); // 'loading' | 'live' | 'error'
 
-  // Chart + data lifecycle — created once per mount, torn down on unmount.
+  // Chart + data lifecycle — re-created whenever the timeframe changes
+  // (torn down via the cleanup function, then rebuilt fresh below).
   useEffect(() => {
     if (!containerRef.current) return undefined;
     let cancelled = false;
-    let ws = null;
+    let ohlcWs = null;
+    let tickerWs = null;
 
     const chart = createChart(containerRef.current, {
       autoSize: true,
@@ -132,6 +152,13 @@ export default function GoldChart() {
       crosshairMarkerVisible: false,
     });
     emaSlowSeriesRef.current = emaSlowSeries;
+
+    // ADD MORE INDICATORS HERE: create another series the same way (e.g.
+    // `chart.addSeries(LineSeries, {...})` for an overlay, or a separate
+    // pane for something like RSI), compute its values from `closesRef` /
+    // the same computeEma-style helper above, and call `.setData()` /
+    // `.update()` on it alongside emaFastSeries/emaSlowSeries in
+    // loadHistory() and applyTick() below.
 
     markersApiRef.current = createSeriesMarkers(candleSeries, []);
 
@@ -181,7 +208,7 @@ export default function GoldChart() {
 
     async function loadHistory() {
       try {
-        const res = await fetch(`https://api.kraken.com/0/public/OHLC?pair=${REST_PAIR}&interval=${INTERVAL_MINUTES}`);
+        const res = await fetch(`https://api.kraken.com/0/public/OHLC?pair=${REST_PAIR}&interval=${intervalMinutes}`);
         if (!res.ok) throw new Error(`Kraken ${res.status}`);
         const json = await res.json();
         if (json.error?.length) throw new Error(json.error.join(', '));
@@ -234,23 +261,25 @@ export default function GoldChart() {
 
         chart.timeScale().fitContent();
         setStatus('live');
-        connectStream();
+        connectOhlcStream();
+        connectTickerStream();
       } catch {
         if (!cancelled) setStatus('error');
       }
     }
 
-    function connectStream() {
-      ws = new WebSocket('wss://ws.kraken.com/v2');
-      ws.onopen = () => {
-        ws.send(
-          JSON.stringify({
-            method: 'subscribe',
-            params: { channel: 'ohlc', symbol: [WS_SYMBOL], interval: INTERVAL_MINUTES },
-          })
+    // Authoritative candle formation — trade-gated (Kraken only emits an
+    // OHLC update when a trade actually happens), so on a quiet pair like
+    // PAXG/USD this alone can sit still for long stretches. Drives
+    // finalizing candles and the EMA/marker logic.
+    function connectOhlcStream() {
+      ohlcWs = new WebSocket('wss://ws.kraken.com/v2');
+      ohlcWs.onopen = () => {
+        ohlcWs.send(
+          JSON.stringify({ method: 'subscribe', params: { channel: 'ohlc', symbol: [WS_SYMBOL], interval: intervalMinutes } })
         );
       };
-      ws.onmessage = (event) => {
+      ohlcWs.onmessage = (event) => {
         if (cancelled) return;
         let msg;
         try {
@@ -279,20 +308,71 @@ export default function GoldChart() {
           formingRef.current = { bar, trialFast, trialSlow };
         }
       };
-      ws.onerror = () => {
+      ohlcWs.onerror = () => {
         if (!cancelled) setStatus('error');
       };
+    }
+
+    // Cosmetic liveliness layer: Kraken's ticker channel with
+    // event_trigger "bbo" fires on every best-bid/ask change, which is far
+    // more frequent than actual trades — this is what makes the chart
+    // visibly move between trades instead of sitting still. It nudges the
+    // CURRENT forming candle's high/low/close toward the live mid-price
+    // and re-runs the EMA trial off it, but never finalizes a candle or
+    // adds a marker — connectOhlcStream()'s real trade data still owns
+    // that, so this can never drift the actual OHLC record.
+    function connectTickerStream() {
+      tickerWs = new WebSocket('wss://ws.kraken.com/v2');
+      tickerWs.onopen = () => {
+        tickerWs.send(
+          JSON.stringify({
+            method: 'subscribe',
+            params: { channel: 'ticker', symbol: [WS_SYMBOL], event_trigger: 'bbo' },
+          })
+        );
+      };
+      tickerWs.onmessage = (event) => {
+        if (cancelled) return;
+        let msg;
+        try {
+          msg = JSON.parse(event.data);
+        } catch {
+          return;
+        }
+        if (msg.channel !== 'ticker' || !Array.isArray(msg.data) || !formingRef.current) return;
+
+        for (const d of msg.data) {
+          const bid = +d.bid;
+          const ask = +d.ask;
+          if (!Number.isFinite(bid) || !Number.isFinite(ask)) continue;
+          const mid = (bid + ask) / 2;
+
+          const prevBar = formingRef.current.bar;
+          const bar = {
+            time: prevBar.time,
+            open: prevBar.open,
+            high: Math.max(prevBar.high, mid),
+            low: Math.min(prevBar.low, mid),
+            close: mid,
+          };
+          const { trialFast, trialSlow } = applyTick(bar);
+          formingRef.current = { bar, trialFast, trialSlow };
+        }
+      };
+      // No onerror handling here — this stream is a cosmetic bonus, the
+      // OHLC stream above is what status/error tracks.
     }
 
     loadHistory();
 
     return () => {
       cancelled = true;
-      if (ws) ws.close();
+      if (ohlcWs) ohlcWs.close();
+      if (tickerWs) tickerWs.close();
       chart.remove();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [intervalMinutes]);
 
   // Re-theme the chart in place (no reload/reconnect) when the site's
   // light/dark toggle changes.
@@ -318,17 +398,29 @@ export default function GoldChart() {
   return (
     <div className="gold-chart-card">
       <div className="gold-chart-head">
-        <div className="gold-chart-legend">
-          <span className="gc-dot" style={{ background: 'var(--gold2)' }} />
-          {t.emaFastLabel}
-          <span className="gc-dot" style={{ background: 'var(--warn)', marginLeft: 14 }} />
-          {t.emaSlowLabel}
+        <div className="gold-chart-tf">
+          {TIMEFRAMES.map((tf) => (
+            <button
+              key={tf.value}
+              type="button"
+              className={`gc-tf-btn${tf.value === intervalMinutes ? ' active' : ''}`}
+              onClick={() => setIntervalMinutes(tf.value)}
+            >
+              {tf.label}
+            </button>
+          ))}
         </div>
         {price != null && (
           <div className={`gold-chart-price${priceDir ? ` is-${priceDir}` : ''}`}>
             ${price.toFixed(2)}
           </div>
         )}
+      </div>
+      <div className="gold-chart-legend">
+        <span className="gc-dot" style={{ background: 'var(--gold2)' }} />
+        {t.emaFastLabel}
+        <span className="gc-dot" style={{ background: 'var(--warn)', marginLeft: 14 }} />
+        {t.emaSlowLabel}
       </div>
       <div ref={containerRef} className="gold-chart-canvas" />
       {status === 'loading' && <div className="gold-chart-status">{t.loading}</div>}
