@@ -137,22 +137,20 @@ export default function CategoryHome({ onSelectCategory, approved, isVip }) {
     }
   }
 
-  // While pending, everything except the hero video is blurred — the video
-  // stays as the one visible "free preview" so a not-yet-approved visitor
-  // still sees something, while every other section (headline, cards,
-  // footer) is unmistakably locked-off rather than just click-blocked.
+  // While pending, only the section label and track cards are blurred —
+  // the branding header, video, and footer all stay visible as normal.
   const blurPending = !approved ? ' pending-blur' : '';
 
   return (
     <div className="view active" id="v-categories">
       <div className="hero">
-        <div className={`hero-tag${blurPending}`}>
+        <div className="hero-tag">
           <span></span>
           {t.heroTag}
           <span></span>
         </div>
-        <h1 className={blurPending.trim()}>{t.heroTitle}</h1>
-        <div className={`hero-tagline${blurPending}`}>
+        <h1>{t.heroTitle}</h1>
+        <div className="hero-tagline">
           {t.heroTagline1} <b>{t.heroTagline2}</b>
         </div>
         {heroVideo && (
@@ -202,13 +200,19 @@ export default function CategoryHome({ onSelectCategory, approved, isVip }) {
         })}
       </div>
 
-      <div className={blurPending.trim()}>
-        <Footer />
-      </div>
+      <Footer />
 
       {showPendingModal && (
         <div className="modal-overlay" onClick={() => setShowPendingModal(false)}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="modal-close-btn"
+              aria-label={tp.close}
+              onClick={() => setShowPendingModal(false)}
+            >
+              ×
+            </button>
             <div className="modal-lock">
               <LockIcon width="20" height="20" />
             </div>
@@ -218,9 +222,6 @@ export default function CategoryHome({ onSelectCategory, approved, isVip }) {
               <TelegramIcon width="16" height="16" />
               {tp.telegramLinkLabel}
             </a>
-            <button className="modal-btn" onClick={() => setShowPendingModal(false)}>
-              {tp.modalOk}
-            </button>
           </div>
         </div>
       )}
@@ -228,6 +229,14 @@ export default function CategoryHome({ onSelectCategory, approved, isVip }) {
       {showVipModal && (
         <div className="modal-overlay" onClick={() => setShowVipModal(false)}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="modal-close-btn"
+              aria-label={tp.close}
+              onClick={() => setShowVipModal(false)}
+            >
+              ×
+            </button>
             <div className="modal-lock">
               <LockIcon width="20" height="20" />
             </div>
@@ -237,9 +246,6 @@ export default function CategoryHome({ onSelectCategory, approved, isVip }) {
               <TelegramIcon width="16" height="16" />
               {tp.telegramLinkLabel}
             </a>
-            <button className="modal-btn" onClick={() => setShowVipModal(false)}>
-              {tp.modalOk}
-            </button>
           </div>
         </div>
       )}

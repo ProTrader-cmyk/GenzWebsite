@@ -309,13 +309,13 @@ export default function App() {
         onLogoClick={backToCategories}
         activeSection={section}
         onNavHome={backToCategories}
-        onNavPricing={() => setSection('pricing')}
         onNavNews={() => setSection('news')}
         onNavContact={() => setSection('contact')}
         user={user}
         onLogout={handleLogout}
         isAdmin={user.role === 'admin'}
         onNavAdmin={() => setAdminViewingSite(false)}
+        approved={approved}
       />
       <div className="wrap">
         {section === 'categories' && (

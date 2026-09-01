@@ -2,6 +2,8 @@ import { useState } from 'react';
 import logo from '../assets/Fav.png';
 import LanguageDropdown from './LanguageDropdown.jsx';
 import ThemeToggle from './ThemeToggle.jsx';
+import ProfileMenu, { ProfileDetails } from './ProfileMenu.jsx';
+import { LockIcon } from './ui/CategoryIcons.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
 
@@ -9,7 +11,6 @@ export default function Navbar({
   onLogoClick,
   activeSection,
   onNavHome,
-  onNavPricing,
   onNavNews,
   onNavContact,
   user,
@@ -17,6 +18,7 @@ export default function Navbar({
   isAdmin,
   onNavAdmin,
   showNavLinks = true,
+  approved = true,
 }) {
   const { lang } = useLanguage();
   const t = getStrings(lang).nav;
@@ -50,16 +52,10 @@ export default function Navbar({
             </button>
             <button
               type="button"
-              className={`nav-link${activeSection === 'pricing' ? ' active' : ''}`}
-              onClick={onNavPricing}
-            >
-              {t.pricing}
-            </button>
-            <button
-              type="button"
               className={`nav-link${activeSection === 'news' ? ' active' : ''}`}
               onClick={onNavNews}
             >
+              {!approved && <LockIcon />}
               {t.news}
             </button>
             <button
@@ -85,6 +81,7 @@ export default function Navbar({
         </button>
 
         <ThemeToggle />
+        {user && <ProfileMenu user={user} />}
         <LanguageDropdown />
 
         {isAdmin && (
@@ -101,6 +98,11 @@ export default function Navbar({
 
       {menuOpen && (
         <div className="nav-mobile-menu">
+          {user && (
+            <div className="profile-menu-mobile-details">
+              <ProfileDetails user={user} />
+            </div>
+          )}
           {showNavLinks && (
             <>
               <button
@@ -112,16 +114,10 @@ export default function Navbar({
               </button>
               <button
                 type="button"
-                className={`nav-mobile-link${activeSection === 'pricing' ? ' active' : ''}`}
-                onClick={() => handleNav(onNavPricing)}
-              >
-                {t.pricing}
-              </button>
-              <button
-                type="button"
                 className={`nav-mobile-link${activeSection === 'news' ? ' active' : ''}`}
                 onClick={() => handleNav(onNavNews)}
               >
+                {!approved && <LockIcon />}
                 {t.news}
               </button>
               <button
