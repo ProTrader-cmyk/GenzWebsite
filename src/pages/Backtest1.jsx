@@ -4,6 +4,9 @@ import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { useVideos } from '../data/useVideos.js';
 
 function LessonVideo({ label, src }) {
+  // Not every scenario video is uploaded yet — skip the block entirely
+  // instead of showing an empty/broken player until its URL is set.
+  if (!src) return null;
   return (
     <div className="fig" style={{ padding: 10, margin: '14px 0 4px' }}>
       <div className="gi-label" style={{ color: 'var(--gold)', marginBottom: 8 }}>
