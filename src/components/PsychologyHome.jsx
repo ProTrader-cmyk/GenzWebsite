@@ -7,14 +7,15 @@ import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
 
 // Every lesson stays locked until the account is approved (by an admin, or
-// by paying on the Pricing page) — same rule as Technical/Apps/Backtest. An
-// admin-set permissions list (allowedLessons) overrides this entirely for
-// a specific account.
+// by paying on the Pricing page) — same rule as Technical/Apps/Backtest.
+// Once approved, lessons unlock one at a time in order. An admin-set
+// permissions list (allowedLessons) overrides both rules entirely for a
+// specific account.
 export default function PsychologyHome({ doneMap, onSelectLesson, onBack, approved, allowedLessons }) {
   const { lang } = useLanguage();
   const t = getStrings(lang).psychology;
   const tp = getStrings(lang).pending;
-  const [showAccessModal, setShowAccessModal] = useState(false);
+  const [modalReason, setModalReason] = useState(null); // 'access' | 'sequence'
   const total = psychologyLessons.length;
   const count = Object.keys(doneMap).filter((id) => id.startsWith('psy')).length;
   const pct = Math.round((count / total) * 100);
@@ -49,7 +50,10 @@ export default function PsychologyHome({ doneMap, onSelectLesson, onBack, approv
       </p>
 
       {psychologyLessons.map((lesson, i) => {
-        const locked = allowedLessons ? !allowedLessons.includes(lesson.id) : !approved;
+        const lockedByAccess = allowedLessons ? !allowedLessons.includes(lesson.id) : !approved;
+        const prevLesson = i > 0 ? psychologyLessons[i - 1] : null;
+        const lockedBySequence = !allowedLessons && !lockedByAccess && prevLesson && !doneMap[prevLesson.id];
+        const locked = lockedByAccess || lockedBySequence;
         return (
           <LessonCard
             key={lesson.id}
@@ -58,10 +62,10 @@ export default function PsychologyHome({ doneMap, onSelectLesson, onBack, approv
             done={!!doneMap[lesson.id]}
             locked={locked}
             lockedTitle={tp.lessonLockedTitle}
-            lockedReason={tp.lessonLockedReason}
+            lockedReason={lockedBySequence ? tp.sequentialLockedReason : tp.lessonLockedReason}
             onClick={() => {
               if (locked) {
-                setShowAccessModal(true);
+                setModalReason(lockedBySequence ? 'sequence' : 'access');
                 return;
               }
               onSelectLesson(lesson.id);
@@ -72,15 +76,15 @@ export default function PsychologyHome({ doneMap, onSelectLesson, onBack, approv
 
       <Footer />
 
-      {showAccessModal && (
-        <div className="modal-overlay" onClick={() => setShowAccessModal(false)}>
+      {modalReason && (
+        <div className="modal-overlay" onClick={() => setModalReason(null)}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
             <div className="modal-lock">
               <LockIcon width="20" height="20" />
             </div>
             <h3 className="modal-title">{tp.modalTitle}</h3>
-            <p className="modal-text">{tp.modalText}</p>
-            <button className="modal-btn" onClick={() => setShowAccessModal(false)}>
+            <p className="modal-text">{modalReason === 'sequence' ? tp.sequentialModalText : tp.modalText}</p>
+            <button className="modal-btn" onClick={() => setModalReason(null)}>
               {tp.modalOk}
             </button>
           </div>

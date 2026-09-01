@@ -10,7 +10,7 @@ export default function Home({ doneMap, onSelectLesson, onBack, approved, allowe
   const { lang } = useLanguage();
   const t = getStrings(lang).home;
   const tp = getStrings(lang).pending;
-  const [showAccessModal, setShowAccessModal] = useState(false);
+  const [modalReason, setModalReason] = useState(null); // 'access' | 'sequence'
   const total = lessons.length;
   const count = Object.keys(doneMap).length;
   const pct = Math.round((count / total) * 100);
@@ -47,10 +47,14 @@ export default function Home({ doneMap, onSelectLesson, onBack, approved, allowe
       {lessons.map((lesson, i) => {
         // Every lesson stays locked until the account is approved (by an
         // admin, or by paying on the Pricing page) — no free preview. Once
-        // approved, all lessons are open immediately, no progressive
-        // one-at-a-time unlocking. An admin-set permissions list
-        // (allowedLessons) overrides this rule entirely for the account.
-        const locked = allowedLessons ? !allowedLessons.includes(lesson.id) : !approved;
+        // approved, lessons unlock one at a time in order — lesson N+1 stays
+        // locked until lesson N is marked done. An admin-set permissions
+        // list (allowedLessons) overrides both rules entirely for the
+        // account — it's an explicit, order-independent grant.
+        const lockedByAccess = allowedLessons ? !allowedLessons.includes(lesson.id) : !approved;
+        const prevLesson = i > 0 ? lessons[i - 1] : null;
+        const lockedBySequence = !allowedLessons && !lockedByAccess && prevLesson && !doneMap[prevLesson.id];
+        const locked = lockedByAccess || lockedBySequence;
         return (
           <LessonCard
             key={lesson.id}
@@ -59,10 +63,10 @@ export default function Home({ doneMap, onSelectLesson, onBack, approved, allowe
             done={!!doneMap[lesson.id]}
             locked={locked}
             lockedTitle={tp.lessonLockedTitle}
-            lockedReason={tp.lessonLockedReason}
+            lockedReason={lockedBySequence ? tp.sequentialLockedReason : tp.lessonLockedReason}
             onClick={() => {
               if (locked) {
-                setShowAccessModal(true);
+                setModalReason(lockedBySequence ? 'sequence' : 'access');
                 return;
               }
               onSelectLesson(lesson.id);
@@ -73,15 +77,15 @@ export default function Home({ doneMap, onSelectLesson, onBack, approved, allowe
 
       <Footer />
 
-      {showAccessModal && (
-        <div className="modal-overlay" onClick={() => setShowAccessModal(false)}>
+      {modalReason && (
+        <div className="modal-overlay" onClick={() => setModalReason(null)}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
             <div className="modal-lock">
               <LockIcon width="20" height="20" />
             </div>
             <h3 className="modal-title">{tp.modalTitle}</h3>
-            <p className="modal-text">{tp.modalText}</p>
-            <button className="modal-btn" onClick={() => setShowAccessModal(false)}>
+            <p className="modal-text">{modalReason === 'sequence' ? tp.sequentialModalText : tp.modalText}</p>
+            <button className="modal-btn" onClick={() => setModalReason(null)}>
               {tp.modalOk}
             </button>
           </div>
