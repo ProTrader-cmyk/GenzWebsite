@@ -62,8 +62,9 @@ function buildCategories(t, approved) {
       id: 'new-product',
       Icon: SparkleIcon,
       title: t.newProductTitle,
-      tag: t.comingSoon,
-      locked: true,
+      tag: t.newProductTag,
+      locked: false,
+      pendingLocked: !approved,
     },
   ];
 }

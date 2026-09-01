@@ -91,6 +91,7 @@ export const strings = {
       backtestLessonsCount: '៤ មេរៀន',
       advancedTitle: 'វិភាគបច្ចេកទេសកម្រិតខ្ពស់',
       newProductTitle: 'ផលិតផលថ្មី',
+      newProductTag: 'ក្រាហ្វិចផ្ទាល់',
     },
     home: {
       back: '← ផ្នែកសិក្សា',
@@ -125,6 +126,22 @@ export const strings = {
       lessonsLabel: 'មេរៀន',
       bookTitle: 'Trading in the Zone',
       bookAuthor: 'និពន្ធដោយ Mark Douglas',
+    },
+    newProduct: {
+      back: '← ផ្នែកសិក្សា',
+      eyebrow: 'ផលិតផលថ្មី',
+      title: 'ក្រាហ្វមាសផ្ទាល់ + សូចនាករ EMA Crossover',
+      subtitle: 'តាមដានតម្លៃមាសផ្ទាល់ ជាមួយសញ្ញា EMA ៩/២១ Crossover',
+      intro:
+        '📊 សូចនាករនេះគូរបន្ទាត់ EMA ពីរ (៩ និង ២១) លើក្រាហ្វិចតម្លៃមាសផ្ទាល់ ហើយសម្គាល់ចំណុចដែលបន្ទាត់ទាំងពីរឆ្លងគ្នា — សញ្ញា "Golden Cross" (EMA9 ឡើងលើ EMA21) ជាទូទៅចាត់ទុកជាសញ្ញាទំនោរឡើង ចំណែក "Death Cross" (EMA9 ចុះក្រោម EMA21) ជាសញ្ញាទំនោរចុះ។',
+      emaFastLabel: 'EMA ៩',
+      emaSlowLabel: 'EMA ២១',
+      bullishMark: 'Golden Cross',
+      bearishMark: 'Death Cross',
+      loading: 'កំពុងទាញយកទិន្នន័យក្រាហ្វិច...',
+      error: 'មិនអាចទាញយកទិន្នន័យបានទេ សូមព្យាយាមម្តងទៀត។',
+      disclosure:
+        'ក្រាហ្វិចនេះប្រើតម្លៃ PAXG (Token មាសពិត ១:១) ជាតំណាងសម្រាប់តម្លៃមាសផ្ទាល់ ព្រោះមិនមានប្រភពទិន្នន័យ XAUUSD ឥតគិតថ្លៃណាមួយផ្តល់ទាំងប្រវត្តិ និង Streaming ផ្ទាល់បានទេ។ តម្លៃនេះនៅជិតនឹងតម្លៃមាសពិត ប៉ុន្តែអាចខុសគ្នាបន្តិច និងធ្វើការជួញដូរ ២៤/៧។ សម្រាប់ការសិក្សា មិនមែនជាដំបូន្មានវិនិយោគទេ។',
     },
     contact: {
       back: '← ត្រឡប់ក្រោយ',
@@ -308,6 +325,7 @@ export const strings = {
       backtestLessonsCount: '4 lessons',
       advancedTitle: 'Advanced Technical Analysis',
       newProductTitle: 'New Product',
+      newProductTag: 'Live Chart',
     },
     home: {
       back: '← Sections',
@@ -342,6 +360,22 @@ export const strings = {
       lessonsLabel: 'Lessons',
       bookTitle: 'Trading in the Zone',
       bookAuthor: 'by Mark Douglas',
+    },
+    newProduct: {
+      back: '← Sections',
+      eyebrow: 'New Product',
+      title: 'Live Gold Chart + EMA Crossover Indicator',
+      subtitle: 'Track gold price live with a 9/21 EMA crossover signal',
+      intro:
+        '📊 This indicator plots two EMAs (9 and 21) on the live gold price chart and marks where they cross — a "Golden Cross" (EMA9 crosses above EMA21) is generally read as a bullish signal, and a "Death Cross" (EMA9 crosses below EMA21) as bearish.',
+      emaFastLabel: 'EMA 9',
+      emaSlowLabel: 'EMA 21',
+      bullishMark: 'Golden Cross',
+      bearishMark: 'Death Cross',
+      loading: 'Loading chart data...',
+      error: 'Could not load chart data. Please try again.',
+      disclosure:
+        'This chart uses PAXG (a token backed 1:1 by real gold) as a stand-in for spot gold price, since no free XAUUSD data source offers both history and live streaming. It tracks gold closely but can differ slightly and trades 24/7. For learning purposes only — not financial advice.',
     },
     contact: {
       back: '← Back',
@@ -525,6 +559,7 @@ export const strings = {
       backtestLessonsCount: '4 节课程',
       advancedTitle: '进阶技术分析',
       newProductTitle: '新产品',
+      newProductTag: '实时图表',
     },
     home: {
       back: '← 学习板块',
@@ -559,6 +594,22 @@ export const strings = {
       lessonsLabel: '课程',
       bookTitle: 'Trading in the Zone',
       bookAuthor: 'Mark Douglas 著',
+    },
+    newProduct: {
+      back: '← 学习板块',
+      eyebrow: '新产品',
+      title: '实时黄金图表 + EMA 交叉指标',
+      subtitle: '通过 9/21 EMA 交叉信号实时追踪金价',
+      intro:
+        '📊 此指标在实时金价图表上绘制两条 EMA 线（9 和 21），并标记它们的交叉点——"黄金交叉"（EMA9 上穿 EMA21）通常被视为看涨信号，"死亡交叉"（EMA9 下穿 EMA21）则被视为看跌信号。',
+      emaFastLabel: 'EMA 9',
+      emaSlowLabel: 'EMA 21',
+      bullishMark: '黄金交叉',
+      bearishMark: '死亡交叉',
+      loading: '正在加载图表数据...',
+      error: '无法加载图表数据，请重试。',
+      disclosure:
+        '由于没有免费的 XAUUSD 数据源同时提供历史数据和实时流数据，本图表使用 PAXG（1:1 实物黄金支持的代币）作为现货金价的替代。它与黄金价格高度接近，但可能略有差异，且 24/7 交易。仅供学习使用，非投资建议。',
     },
     contact: {
       back: '← 返回',

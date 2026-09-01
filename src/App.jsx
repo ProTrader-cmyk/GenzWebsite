@@ -6,6 +6,7 @@ import Home from './components/Home.jsx';
 import AppsHome from './components/AppsHome.jsx';
 import BacktestHome from './components/BacktestHome.jsx';
 import PsychologyHome from './components/PsychologyHome.jsx';
+import NewProductHome from './components/NewProductHome.jsx';
 import NewsPage from './components/NewsPage.jsx';
 import ContactPage from './components/ContactPage.jsx';
 import PricingPage from './components/PricingPage.jsx';
@@ -133,10 +134,14 @@ export default function App() {
     setView(next ?? 'home');
   }
 
-  // 'technical', 'apps', 'backtest', and 'psychology' have content today —
-  // the other category cards are rendered locked and don't call this.
+  // 'technical', 'apps', 'backtest', and 'psychology' are lesson tracks;
+  // 'new-product' is a single approved-gated page (no lessons/doneMap,
+  // same shape as 'news'/'contact'). The other category cards are
+  // rendered locked and don't call this.
   function selectCategory(id) {
-    if (id === 'technical' || id === 'apps' || id === 'backtest' || id === 'psychology') setSection(id);
+    if (id === 'technical' || id === 'apps' || id === 'backtest' || id === 'psychology' || id === 'new-product') {
+      setSection(id);
+    }
   }
 
   function backToCategories() {
@@ -322,6 +327,7 @@ export default function App() {
         {section === 'news' && <NewsPage onBack={backToCategories} />}
         {section === 'pricing' && <PricingPage onBack={backToCategories} onPay={handlePaySuccess} />}
         {section === 'contact' && <ContactPage onBack={backToCategories} />}
+        {section === 'new-product' && <NewProductHome onBack={backToCategories} />}
         {section === 'technical' && effectiveView === 'home' && (
           <Home
             doneMap={doneMap}
