@@ -3,6 +3,7 @@ import { psychologyLessons } from '../data/psychologyLessons.js';
 import LessonCard from './LessonCard.jsx';
 import Footer from './Footer.jsx';
 import { LockIcon } from './ui/CategoryIcons.jsx';
+import BookCard from './ui/BookCard.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
 
@@ -32,6 +33,8 @@ export default function PsychologyHome({ doneMap, onSelectLesson, onBack, approv
         <h2>{t.title}</h2>
         <p>{t.subtitle}</p>
       </div>
+
+      <BookCard title={t.bookTitle} author={t.bookAuthor} style={{ margin: '14px 0' }} />
 
       <div id="prog-outer" style={{ display: showProgress ? 'block' : 'none' }}>
         <div className="prog-info">

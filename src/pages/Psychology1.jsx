@@ -1,40 +1,10 @@
 import LessonLayout from '../components/LessonLayout.jsx';
 import Box from '../components/ui/Box.jsx';
 import Rule from '../components/ui/Rule.jsx';
+import BookCard from '../components/ui/BookCard.jsx';
 import { getPsychologyLessonMeta } from '../data/psychologyLessons.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { useVideos } from '../data/useVideos.js';
-import { BookIcon } from '../components/ui/CategoryIcons.jsx';
-
-function BookCard({ title, author, chapterTag }) {
-  return (
-    <div className="box box-g" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-      <div
-        style={{
-          width: 46,
-          height: 46,
-          borderRadius: 10,
-          background: 'var(--bg2)',
-          border: '1px solid var(--gline)',
-          color: 'var(--gold)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flex: 'none',
-        }}
-      >
-        <BookIcon width="22" height="22" />
-      </div>
-      <div style={{ minWidth: 0 }}>
-        <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{title}</div>
-        <div style={{ fontSize: 12.5, color: 'var(--mute)', marginTop: 2 }}>{author}</div>
-      </div>
-      <span className="badge bg" style={{ marginLeft: 'auto', flex: 'none' }}>
-        {chapterTag}
-      </span>
-    </div>
-  );
-}
 
 function LessonVideo({ src, caption }) {
   // Skip the block entirely until its URL is set, instead of showing an

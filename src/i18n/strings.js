@@ -123,6 +123,8 @@ export const strings = {
       subtitle: 'Trading in the Zone ដោយ Mark Douglas',
       progress: 'វឌ្ឍនភាព',
       lessonsLabel: 'មេរៀន',
+      bookTitle: 'Trading in the Zone',
+      bookAuthor: 'និពន្ធដោយ Mark Douglas',
     },
     contact: {
       back: '← ត្រឡប់ក្រោយ',
@@ -336,6 +338,8 @@ export const strings = {
       subtitle: 'Trading in the Zone by Mark Douglas',
       progress: 'Progress',
       lessonsLabel: 'Lessons',
+      bookTitle: 'Trading in the Zone',
+      bookAuthor: 'by Mark Douglas',
     },
     contact: {
       back: '← Back',
@@ -549,6 +553,8 @@ export const strings = {
       subtitle: '《交易心理分析》— Mark Douglas 著',
       progress: '学习进度',
       lessonsLabel: '课程',
+      bookTitle: 'Trading in the Zone',
+      bookAuthor: 'Mark Douglas 著',
     },
     contact: {
       back: '← 返回',
