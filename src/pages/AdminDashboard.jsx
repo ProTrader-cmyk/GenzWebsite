@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { fetchAllUsers, setUserStatus, setUserRole, setUserLessonAccess } from '../data/auth.js';
+import { fetchAllUsers, setUserStatus, setUserRole, setUserTier, setUserLessonAccess } from '../data/auth.js';
 import { lessons } from '../data/lessons.js';
 import { appsLessons } from '../data/appsLessons.js';
 import { backtestLessons } from '../data/backtestLessons.js';
@@ -45,6 +45,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
   const [error, setError] = useState('');
   const [startDate, setStartDate] = useState(() => toDateKey(new Date()));
   const [endDate, setEndDate] = useState(() => toDateKey(new Date()));
+  const [actionsMenu, setActionsMenu] = useState(null); // { uid, top, right }
   const [permUser, setPermUser] = useState(null);
   const [permSelection, setPermSelection] = useState([]);
   const [permSaving, setPermSaving] = useState(false);
@@ -160,6 +161,24 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
       setError('Failed to update role. Check Firestore rules / your admin access.');
     }
     setUpdatingUid(null);
+  }
+
+  async function handleTierChange(uid, tier) {
+    setUpdatingUid(uid);
+    try {
+      await setUserTier(uid, tier);
+      setUsers((prev) => prev.map((u) => (u.uid === uid ? { ...u, tier } : u)));
+    } catch {
+      setError('Failed to update tier. Check Firestore rules / your admin access.');
+    }
+    setUpdatingUid(null);
+  }
+
+  function openActionsMenu(e, uid) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setActionsMenu((prev) =>
+      prev?.uid === uid ? null : { uid, top: rect.bottom + 6, right: window.innerWidth - rect.right }
+    );
   }
 
   function openPermissions(u) {
@@ -300,6 +319,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
               <th>Email verified</th>
               <th>Status</th>
               <th>Role</th>
+              <th>Tier</th>
               <th>Paid</th>
               <th>Action</th>
             </tr>
@@ -323,61 +343,33 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
                     {u.role ?? 'user'}
                   </span>
                 </td>
+                <td>
+                  <select
+                    className={`tier-select${u.tier === 'vip' ? ' tier-vip' : ''}`}
+                    value={u.tier === 'vip' ? 'vip' : 'member'}
+                    disabled={updatingUid === u.uid || u.status !== 'approved'}
+                    title={u.status !== 'approved' ? 'Approve this user first to set their tier' : undefined}
+                    onChange={(e) => handleTierChange(u.uid, e.target.value)}
+                  >
+                    <option value="member">Member</option>
+                    <option value="vip">VIP</option>
+                  </select>
+                </td>
                 <td>{formatDate(u.paidAt)}</td>
                 <td className="admin-actions">
-                  <button className="action-btn perm" onClick={() => openPermissions(u)}>
-                    Permissions{Array.isArray(u.allowedLessons) ? ` (${u.allowedLessons.length})` : ''}
+                  <button
+                    className="row-menu-trigger"
+                    disabled={updatingUid === u.uid}
+                    onClick={(e) => openActionsMenu(e, u.uid)}
+                  >
+                    ⋯
                   </button>
-                  {u.status !== 'approved' && (
-                    <button
-                      className="action-btn approve"
-                      disabled={updatingUid === u.uid}
-                      onClick={() => handleStatusChange(u.uid, 'approved')}
-                    >
-                      Approve
-                    </button>
-                  )}
-                  {u.status !== 'rejected' && (
-                    <button
-                      className="action-btn reject"
-                      disabled={updatingUid === u.uid}
-                      onClick={() => handleStatusChange(u.uid, 'rejected')}
-                    >
-                      Reject
-                    </button>
-                  )}
-                  {u.status !== 'pending' && (
-                    <button
-                      className="action-btn reset"
-                      disabled={updatingUid === u.uid}
-                      onClick={() => handleStatusChange(u.uid, 'pending')}
-                    >
-                      Set pending
-                    </button>
-                  )}
-                  {u.role === 'admin' ? (
-                    <button
-                      className="action-btn reset"
-                      disabled={updatingUid === u.uid}
-                      onClick={() => handleRoleChange(u.uid, 'user')}
-                    >
-                      Remove admin
-                    </button>
-                  ) : (
-                    <button
-                      className="action-btn admin"
-                      disabled={updatingUid === u.uid}
-                      onClick={() => handleRoleChange(u.uid, 'admin')}
-                    >
-                      Make admin
-                    </button>
-                  )}
                 </td>
               </tr>
             ))}
             {!loading && visibleUsers.length === 0 && (
               <tr>
-                <td colSpan={7} className="admin-empty">
+                <td colSpan={8} className="admin-empty">
                   No users in this view.
                 </td>
               </tr>
@@ -457,6 +449,81 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
           })}
         </div>
       </div>
+
+      {actionsMenu && (() => {
+        const u = users.find((x) => x.uid === actionsMenu.uid);
+        if (!u) return null;
+        return (
+          <>
+            <div className="row-menu-overlay" onClick={() => setActionsMenu(null)} />
+            <div className="row-menu" style={{ top: actionsMenu.top, right: actionsMenu.right }}>
+              <button
+                className="row-menu-item"
+                onClick={() => {
+                  openPermissions(u);
+                  setActionsMenu(null);
+                }}
+              >
+                Permissions{Array.isArray(u.allowedLessons) ? ` (${u.allowedLessons.length})` : ''}
+              </button>
+              {u.status !== 'approved' && (
+                <button
+                  className="row-menu-item row-menu-approve"
+                  onClick={() => {
+                    handleStatusChange(u.uid, 'approved');
+                    setActionsMenu(null);
+                  }}
+                >
+                  Approve
+                </button>
+              )}
+              {u.status !== 'rejected' && (
+                <button
+                  className="row-menu-item row-menu-danger"
+                  onClick={() => {
+                    handleStatusChange(u.uid, 'rejected');
+                    setActionsMenu(null);
+                  }}
+                >
+                  Reject
+                </button>
+              )}
+              {u.status !== 'pending' && (
+                <button
+                  className="row-menu-item"
+                  onClick={() => {
+                    handleStatusChange(u.uid, 'pending');
+                    setActionsMenu(null);
+                  }}
+                >
+                  Set pending
+                </button>
+              )}
+              {u.role === 'admin' ? (
+                <button
+                  className="row-menu-item"
+                  onClick={() => {
+                    handleRoleChange(u.uid, 'user');
+                    setActionsMenu(null);
+                  }}
+                >
+                  Remove admin
+                </button>
+              ) : (
+                <button
+                  className="row-menu-item"
+                  onClick={() => {
+                    handleRoleChange(u.uid, 'admin');
+                    setActionsMenu(null);
+                  }}
+                >
+                  Make admin
+                </button>
+              )}
+            </div>
+          </>
+        );
+      })()}
 
       {permUser && (
         <div className="modal-overlay" onClick={() => setPermUser(null)}>

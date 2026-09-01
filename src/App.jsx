@@ -7,6 +7,7 @@ import AppsHome from './components/AppsHome.jsx';
 import BacktestHome from './components/BacktestHome.jsx';
 import PsychologyHome from './components/PsychologyHome.jsx';
 import NewProductHome from './components/NewProductHome.jsx';
+import AdvancedHome from './components/AdvancedHome.jsx';
 import NewsPage from './components/NewsPage.jsx';
 import ContactPage from './components/ContactPage.jsx';
 import PricingPage from './components/PricingPage.jsx';
@@ -139,7 +140,14 @@ export default function App() {
   // same shape as 'news'/'contact'). The other category cards are
   // rendered locked and don't call this.
   function selectCategory(id) {
-    if (id === 'technical' || id === 'apps' || id === 'backtest' || id === 'psychology' || id === 'new-product') {
+    if (
+      id === 'technical' ||
+      id === 'apps' ||
+      id === 'backtest' ||
+      id === 'psychology' ||
+      id === 'new-product' ||
+      id === 'advanced'
+    ) {
       setSection(id);
     }
   }
@@ -249,29 +257,16 @@ export default function App() {
   // status.
   const approved = user.status === 'approved' || user.role === 'admin';
 
-  // Not approved (and not admin) and hasn't clicked "Pay" yet — the Pricing
-  // page is the entire experience right after login, no nav links, no
-  // category picker. Clicking Pay persists clickedPay (see
-  // handlePaySuccess) so they can see the site from then on — everything
-  // still stays locked (isLessonLocked below), since real access is only
-  // granted once the account is actually approved.
-  if (!approved && !user.clickedPay) {
-    return (
-      <>
-        <Navbar
-          onLogoClick={backToCategories}
-          activeSection={section}
-          user={user}
-          onLogout={handleLogout}
-          isAdmin={false}
-          showNavLinks={false}
-        />
-        <div className="wrap">
-          <PricingPage onPay={handlePaySuccess} />
-        </div>
-      </>
-    );
-  }
+  // VIP is a separate tier from approved/admin — it only gates VIP-only
+  // tracks (e.g. Advanced), set via Admin Dashboard's per-user Tier
+  // dropdown (data/auth.js: setUserTier). An admin always counts as VIP too.
+  const isVip = user.tier === 'vip' || user.role === 'admin';
+
+  // Not-yet-approved accounts go straight into the category picker like
+  // everyone else — every track stays locked (isLessonLocked below) and
+  // CategoryHome shows its own "contact admin" modal automatically. The
+  // Pricing page is no longer forced on first sign-up; it's still reachable
+  // from the nav for anyone who wants to pay directly.
 
   // An admin can grant a specific list of lesson ids per user (Admin
   // Dashboard "Permissions"), overriding the default approved/pending rule
@@ -323,11 +318,14 @@ export default function App() {
         onNavAdmin={() => setAdminViewingSite(false)}
       />
       <div className="wrap">
-        {section === 'categories' && <CategoryHome onSelectCategory={selectCategory} approved={approved} />}
+        {section === 'categories' && (
+          <CategoryHome onSelectCategory={selectCategory} approved={approved} isVip={isVip} />
+        )}
         {section === 'news' && <NewsPage onBack={backToCategories} />}
         {section === 'pricing' && <PricingPage onBack={backToCategories} onPay={handlePaySuccess} />}
         {section === 'contact' && <ContactPage onBack={backToCategories} />}
         {section === 'new-product' && <NewProductHome onBack={backToCategories} isAdmin={isAdmin} />}
+        {section === 'advanced' && <AdvancedHome onBack={backToCategories} />}
         {section === 'technical' && effectiveView === 'home' && (
           <Home
             doneMap={doneMap}

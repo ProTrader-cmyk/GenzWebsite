@@ -11,9 +11,14 @@ import {
   AdvancedChartIcon,
   SparkleIcon,
   LockIcon,
+  TelegramIcon,
 } from './ui/CategoryIcons.jsx';
 
-function buildCategories(t, approved) {
+// Same Telegram contact as ContactPage.jsx/PricingPage.jsx — repeated here
+// so a pending user can reach an admin straight from the lock modals below.
+const TELEGRAM_URL = 'https://t.me/Vengsopheagenz?direct';
+
+function buildCategories(t, approved, isVip) {
   return [
     {
       id: 'apps',
@@ -54,27 +59,32 @@ function buildCategories(t, approved) {
       id: 'advanced',
       Icon: AdvancedChartIcon,
       title: t.advancedTitle,
-      tag: t.comingSoon,
+      tag: t.vipTag,
       locked: false,
       pendingLocked: !approved,
+      // On top of the normal approved-gate, this track also needs VIP tier —
+      // only relevant once the account is already approved.
+      vipLocked: approved && !isVip,
     },
     {
       id: 'new-product',
       Icon: SparkleIcon,
       title: t.newProductTitle,
-      tag: t.newProductTag,
+      tag: t.vipTag,
       locked: false,
       pendingLocked: !approved,
+      vipLocked: approved && !isVip,
     },
   ];
 }
 
-export default function CategoryHome({ onSelectCategory, approved }) {
+export default function CategoryHome({ onSelectCategory, approved, isVip }) {
   const { lang } = useLanguage();
   const t = getStrings(lang).category;
   const tp = getStrings(lang).pending;
-  const CATEGORIES = buildCategories(t, approved);
+  const CATEGORIES = buildCategories(t, approved, isVip);
   const [showPendingModal, setShowPendingModal] = useState(false);
+  const [showVipModal, setShowVipModal] = useState(false);
   const videoRef = useRef(null);
   const { videos } = useVideos();
   const heroVideo = videos.hero?.url;
@@ -109,24 +119,40 @@ export default function CategoryHome({ onSelectCategory, approved }) {
     return () => observer.disconnect();
   }, [heroVideo]);
 
+  // Pending (not-yet-approved) accounts see the "contact admin" modal right
+  // away, every time they land on the category picker — not just when they
+  // click a locked card — since there's no other automatic gate anymore
+  // (the old forced Pricing-page redirect on first sign-up was removed).
+  useEffect(() => {
+    if (!approved) setShowPendingModal(true);
+  }, [approved]);
+
   function handleCardClick(cat) {
     if (cat.pendingLocked) {
       setShowPendingModal(true);
+    } else if (cat.vipLocked) {
+      setShowVipModal(true);
     } else if (!cat.locked) {
       onSelectCategory(cat.id);
     }
   }
 
+  // While pending, everything except the hero video is blurred — the video
+  // stays as the one visible "free preview" so a not-yet-approved visitor
+  // still sees something, while every other section (headline, cards,
+  // footer) is unmistakably locked-off rather than just click-blocked.
+  const blurPending = !approved ? ' pending-blur' : '';
+
   return (
     <div className="view active" id="v-categories">
       <div className="hero">
-        <div className="hero-tag">
+        <div className={`hero-tag${blurPending}`}>
           <span></span>
           {t.heroTag}
           <span></span>
         </div>
-        <h1>{t.heroTitle}</h1>
-        <div className="hero-tagline">
+        <h1 className={blurPending.trim()}>{t.heroTitle}</h1>
+        <div className={`hero-tagline${blurPending}`}>
           {t.heroTagline1} <b>{t.heroTagline2}</b>
         </div>
         {heroVideo && (
@@ -147,33 +173,38 @@ export default function CategoryHome({ onSelectCategory, approved }) {
         )}
       </div>
 
-      <p className="sec-label sg">{t.chooseSection}</p>
+      <p className={`sec-label sg${blurPending}`}>{t.chooseSection}</p>
 
-      <div className="cat-grid">
-        {CATEGORIES.map((cat) => (
-          <div
-            key={cat.id}
-            className={`cat-card${cat.locked ? ' locked' : ''}${cat.pendingLocked ? ' premium' : ''}`}
-            onClick={() => handleCardClick(cat)}
-          >
-            {cat.pendingLocked && (
-              <div className="cat-lock-badge">
-                <LockIcon />
+      <div className={`cat-grid${blurPending}`}>
+        {CATEGORIES.map((cat) => {
+          const showLock = cat.pendingLocked || cat.vipLocked;
+          return (
+            <div
+              key={cat.id}
+              className={`cat-card${cat.locked ? ' locked' : ''}${showLock ? ' premium' : ''}`}
+              onClick={() => handleCardClick(cat)}
+            >
+              {showLock && (
+                <div className="cat-lock-badge">
+                  <LockIcon />
+                </div>
+              )}
+              <div className="cat-icon">
+                <cat.Icon />
               </div>
-            )}
-            <div className="cat-icon">
-              <cat.Icon />
+              <div className="cat-title">{cat.title}</div>
+              <div className={`cat-tag${cat.locked ? ' locked' : ''}${showLock ? ' premium' : ''}`}>
+                {showLock && <LockIcon />}
+                {cat.tag}
+              </div>
             </div>
-            <div className="cat-title">{cat.title}</div>
-            <div className={`cat-tag${cat.locked ? ' locked' : ''}${cat.pendingLocked ? ' premium' : ''}`}>
-              {cat.pendingLocked && <LockIcon />}
-              {cat.tag}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      <Footer />
+      <div className={blurPending.trim()}>
+        <Footer />
+      </div>
 
       {showPendingModal && (
         <div className="modal-overlay" onClick={() => setShowPendingModal(false)}>
@@ -183,7 +214,30 @@ export default function CategoryHome({ onSelectCategory, approved }) {
             </div>
             <h3 className="modal-title">{tp.modalTitle}</h3>
             <p className="modal-text">{tp.modalText}</p>
+            <a href={TELEGRAM_URL} target="_blank" rel="noopener noreferrer" className="modal-telegram-link">
+              <TelegramIcon width="16" height="16" />
+              {tp.telegramLinkLabel}
+            </a>
             <button className="modal-btn" onClick={() => setShowPendingModal(false)}>
+              {tp.modalOk}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showVipModal && (
+        <div className="modal-overlay" onClick={() => setShowVipModal(false)}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-lock">
+              <LockIcon width="20" height="20" />
+            </div>
+            <h3 className="modal-title">{tp.vipModalTitle}</h3>
+            <p className="modal-text">{tp.vipModalText}</p>
+            <a href={TELEGRAM_URL} target="_blank" rel="noopener noreferrer" className="modal-telegram-link">
+              <TelegramIcon width="16" height="16" />
+              {tp.telegramLinkLabel}
+            </a>
+            <button className="modal-btn" onClick={() => setShowVipModal(false)}>
               {tp.modalOk}
             </button>
           </div>

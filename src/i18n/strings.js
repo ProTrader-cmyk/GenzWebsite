@@ -67,12 +67,15 @@ export const strings = {
     pending: {
       banner: (name) => `សួស្តី ${name} — គណនីរបស់អ្នកកំពុងរង់ចាំការអនុម័តពី Admin។ សូមទាក់ទង Admin ដើម្បីទទួលបានសិទ្ធិមេរៀនផ្សេងៗ អាចចុចប៉ូតុងខាងលើបាន។`,
       modalTitle: 'ត្រូវការសិទ្ធិចូលប្រើ',
-      modalText: 'គណនីរបស់អ្នកកំពុងរង់ចាំការអនុម័តពី Admin។ សូមទាក់ទង Admin ដើម្បីទទួលបានសិទ្ធិចូលរៀនមេរៀននេះ។',
+      modalText: 'គណនីរបស់អ្នកកំពុងរង់ចាំការអនុម័តពី Admin។ សូមទាក់ទង Admin ខាងក្រោម ដើម្បីទទួលបានសិទ្ធិចូលប្រើ។',
       modalOk: 'យល់ព្រម',
+      telegramLinkLabel: 'ទាក់ទងតាម Telegram',
       lessonLockedReason: 'ត្រូវការការអនុម័តពី Admin',
       lessonLockedTitle: 'មេរៀនចាក់សោ',
       sequentialModalText: 'សូមបញ្ចប់មេរៀនមុន ដើម្បីដោះសោមេរៀននេះ។',
       sequentialLockedReason: 'បញ្ចប់មេរៀនមុន ដើម្បីដោះសោ',
+      vipModalTitle: 'ត្រូវការសមាជិកភាព VIP',
+      vipModalText: 'ផ្នែកនេះសម្រាប់តែសមាជិក VIP ប៉ុណ្ណោះ។ សូមទាក់ទង Admin ដើម្បីដំឡើងគណនីរបស់អ្នកទៅ VIP។',
     },
     category: {
       heroTag: 'Trading Class',
@@ -92,6 +95,7 @@ export const strings = {
       advancedTitle: 'វិភាគបច្ចេកទេសកម្រិតខ្ពស់',
       newProductTitle: 'ផលិតផលថ្មី',
       newProductTag: 'ក្រាហ្វិចផ្ទាល់',
+      vipTag: 'VIP',
     },
     home: {
       back: '← ផ្នែកសិក្សា',
@@ -155,6 +159,14 @@ export const strings = {
       saveBtn: 'រក្សាទុក',
       saving: 'កំពុងរក្សាទុក...',
       saved: '✓ បានរក្សាទុក',
+    },
+    advanced: {
+      back: '← ផ្នែកសិក្សា',
+      eyebrow: 'VIP',
+      title: 'វិភាគបច្ចេកទេសកម្រិតខ្ពស់',
+      subtitle: 'មាតិកាផ្តាច់មុខសម្រាប់សមាជិក VIP',
+      comingSoonTitle: 'ឆាប់ៗនេះ',
+      comingSoonBody: 'យើងកំពុងរៀបចំមេរៀនកម្រិតខ្ពស់សម្រាប់សមាជិក VIP។ សូមតាមដានទំព័រនេះជាប្រចាំ។',
     },
     contact: {
       back: '← ត្រឡប់ក្រោយ',
@@ -314,12 +326,15 @@ export const strings = {
     pending: {
       banner: (name) => `Hi ${name} — your account is awaiting admin approval. Please contact the admin to unlock the other lessons — you can use the button above.`,
       modalTitle: 'Access Required',
-      modalText: 'Your account is awaiting admin approval. Please contact the admin to unlock this lesson.',
+      modalText: 'Your account is awaiting admin approval. Contact the admin below to get access.',
       modalOk: 'OK',
+      telegramLinkLabel: 'Contact on Telegram',
       lessonLockedReason: 'Needs admin approval',
       lessonLockedTitle: 'Locked Lesson',
       sequentialModalText: 'Finish the previous lesson first to unlock this one.',
       sequentialLockedReason: 'Finish the previous lesson to unlock',
+      vipModalTitle: 'VIP Membership Required',
+      vipModalText: 'This section is for VIP members only. Please contact the admin to upgrade your account to VIP.',
     },
     category: {
       heroTag: 'Trading Class',
@@ -339,6 +354,7 @@ export const strings = {
       advancedTitle: 'Advanced Technical Analysis',
       newProductTitle: 'New Product',
       newProductTag: 'Live Chart',
+      vipTag: 'VIP',
     },
     home: {
       back: '← Sections',
@@ -402,6 +418,14 @@ export const strings = {
       saveBtn: 'Save',
       saving: 'Saving...',
       saved: '✓ Saved',
+    },
+    advanced: {
+      back: '← Sections',
+      eyebrow: 'VIP',
+      title: 'Advanced Technical Analysis',
+      subtitle: 'Exclusive content for VIP members',
+      comingSoonTitle: 'Coming Soon',
+      comingSoonBody: "We're preparing advanced lessons for VIP members. Check back regularly.",
     },
     contact: {
       back: '← Back',
@@ -561,12 +585,15 @@ export const strings = {
     pending: {
       banner: (name) => `您好 ${name} — 您的账户正在等待管理员批准。请联系管理员以解锁其他课程 — 您可以点击上方的按钮。`,
       modalTitle: '需要访问权限',
-      modalText: '您的账户正在等待管理员批准。请联系管理员以解锁此课程。',
+      modalText: '您的账户正在等待管理员批准。请通过下方联系管理员以获取访问权限。',
       modalOk: '好的',
+      telegramLinkLabel: '通过 Telegram 联系',
       lessonLockedReason: '需要管理员批准',
       lessonLockedTitle: '已锁定课程',
       sequentialModalText: '请先完成上一课，才能解锁此课程。',
       sequentialLockedReason: '完成上一课以解锁',
+      vipModalTitle: '需要 VIP 会员资格',
+      vipModalText: '此板块仅限 VIP 会员使用。请联系管理员将您的账户升级为 VIP。',
     },
     category: {
       heroTag: 'Trading Class',
@@ -586,6 +613,7 @@ export const strings = {
       advancedTitle: '进阶技术分析',
       newProductTitle: '新产品',
       newProductTag: '实时图表',
+      vipTag: 'VIP',
     },
     home: {
       back: '← 学习板块',
@@ -649,6 +677,14 @@ export const strings = {
       saveBtn: '保存',
       saving: '正在保存...',
       saved: '✓ 已保存',
+    },
+    advanced: {
+      back: '← 学习板块',
+      eyebrow: 'VIP',
+      title: '进阶技术分析',
+      subtitle: 'VIP 会员专属内容',
+      comingSoonTitle: '敬请期待',
+      comingSoonBody: '我们正在为 VIP 会员准备进阶课程，请定期查看本页面。',
     },
     contact: {
       back: '← 返回',

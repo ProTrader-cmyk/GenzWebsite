@@ -90,6 +90,7 @@ export async function registerUser({ name, email, password }, lang) {
       email: normalizedEmail,
       status: 'pending', // admin flips this to 'approved' in Firestore once the user is confirmed
       role: 'user', // admin flips this to 'admin' to grant dashboard access
+      tier: 'member', // admin flips this to 'vip' to unlock VIP-only tracks
       emailVerified: false,
       createdAt: serverTimestamp(),
     });
@@ -213,6 +214,12 @@ export async function setUserStatus(uid, status) {
 
 export async function setUserRole(uid, role) {
   await updateDoc(doc(db, 'users', uid), { role });
+}
+
+// tier: 'member' | 'vip' — separate from role, which only ever gates
+// admin-dashboard access. VIP unlocks VIP-only tracks (e.g. Advanced).
+export async function setUserTier(uid, tier) {
+  await updateDoc(doc(db, 'users', uid), { tier });
 }
 
 // lessonIds: array of lesson ids (e.g. ['l1','l3','a2']) this user is

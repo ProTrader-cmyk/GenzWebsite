@@ -155,6 +155,13 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 .hero-tagline{font-family:'Noto Sans Khmer',sans-serif;font-size:12px;letter-spacing:.28em;text-transform:uppercase;font-weight:600;color:var(--text);margin:2px auto 22px;}
 .hero-tagline b{color:var(--brand2);font-weight:700;}
 
+/* Pending (not-yet-approved) accounts: everything except the hero video
+   gets blurred out and unclickable — the video is the one thing that still
+   plays normally, everything else just signals "locked" at a glance. The
+   !important beats .hero h1's own drop-shadow filter, which would otherwise
+   win on specificity and silently cancel the blur. */
+.pending-blur{filter:blur(6px) !important;pointer-events:none;user-select:none;transition:filter .3s ease;}
+
 /* CATEGORY GRID */
 .cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:0 0 8px;}
 .cat-card{display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-height:190px;background:linear-gradient(160deg,var(--bg1),var(--bg2));border:1px solid var(--faint);border-radius:var(--rl);padding:22px 20px;cursor:pointer;box-shadow:0 16px 34px -22px rgba(0,0,0,0.7);transition:border-color .2s,transform .18s ease,box-shadow .2s;}
@@ -187,6 +194,8 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 .modal-text{font-size:13px;color:var(--mute);line-height:1.8;margin-bottom:20px;}
 .modal-btn{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;font-weight:700;font-size:14px;padding:10px 28px;border-radius:10px;border:none;cursor:pointer;font-family:inherit;transition:filter .18s;}
 .modal-btn:hover{filter:brightness(1.1);}
+.modal-telegram-link{display:inline-flex;align-items:center;gap:6px;margin-bottom:18px;color:var(--gold2);font-weight:600;font-size:13px;text-decoration:none;}
+.modal-telegram-link:hover{text-decoration:underline;}
 
 /* SECTION HERO (used by non-hero sub-pages like the lesson list) */
 .sec-hero{padding:20px 0 24px;}
@@ -618,6 +627,9 @@ h3 .bar{width:3px;height:18px;border-radius:2px;background:var(--gold);flex:none
 .role-pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:capitalize;background:var(--bg2);color:var(--mute);}
 .role-admin{background:var(--brandd);color:var(--brand2);}
 
+.tier-select{padding:3px 8px;border-radius:20px;font-size:11px;font-weight:700;background:var(--bg2);color:var(--mute);border:1px solid var(--faint);cursor:pointer;}
+.tier-select.tier-vip{background:var(--warnd);color:var(--warn);border-color:transparent;}
+
 .admin-actions{display:flex;gap:6px;flex-wrap:wrap;}
 .action-btn{border:none;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:filter .15s;}
 .action-btn:hover:not(:disabled){filter:brightness(1.15);}
@@ -627,6 +639,17 @@ h3 .bar{width:3px;height:18px;border-radius:2px;background:var(--gold);flex:none
 .action-btn.reset{background:var(--bg2);color:var(--mute);}
 .action-btn.admin{background:var(--brandd);color:var(--brand2);}
 .action-btn.perm{background:var(--brandd);color:var(--brand2);}
+
+.row-menu-trigger{width:32px;height:32px;border-radius:8px;border:1px solid var(--faint);background:var(--bg2);color:var(--mute);font-size:16px;line-height:1;font-weight:700;cursor:pointer;transition:background .15s,color .15s;}
+.row-menu-trigger:hover:not(:disabled){background:var(--bg3);color:var(--text);}
+.row-menu-trigger:disabled{opacity:.5;cursor:not-allowed;}
+
+.row-menu-overlay{position:fixed;inset:0;z-index:20;background:transparent;}
+.row-menu{position:fixed;z-index:21;min-width:170px;background:var(--bg1);border:1px solid var(--faint);border-radius:10px;box-shadow:0 16px 32px -14px rgba(0,0,0,0.5);padding:4px;display:flex;flex-direction:column;}
+.row-menu-item{display:block;width:100%;text-align:left;font-family:inherit;font-size:13px;font-weight:600;color:var(--text);background:none;border:none;border-radius:6px;padding:9px 10px;cursor:pointer;transition:background .15s;}
+.row-menu-item:hover{background:var(--bg2);}
+.row-menu-approve{color:var(--up);}
+.row-menu-danger{color:var(--dn);}
 
 .perm-modal{width:100%;max-width:480px;max-height:85vh;overflow-y:auto;background:var(--bg1);border:1px solid var(--brandline);border-radius:var(--rl);padding:24px;box-shadow:0 30px 60px -20px rgba(46,124,246,0.35);}
 .perm-modal-header{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--faint);}
