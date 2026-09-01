@@ -90,6 +90,6 @@ hashing/bundling) — see the top of `Lesson1.jsx` for examples.
 
 # GenzWebsite Re-deploy
 git add -A
-git commit -m "your message"
+git commit -m "Change Icon"
 git pull --rebase origin main
 git push origin main

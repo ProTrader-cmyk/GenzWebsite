@@ -1,14 +1,19 @@
-import bgVideo from '../../assets/Background-Login.mp4';
+import { useVideos } from '../../data/useVideos.js';
 
 // Full-bleed looping video behind the login/signup card, with a dark +
 // blue-tinted overlay on top so the form stays readable regardless of what's
 // playing underneath.
 export default function AuthBackgroundVideo() {
+  const { videos } = useVideos();
+  const bgVideo = videos['auth-bg']?.url;
+
   return (
     <>
-      <video className="auth-bg-video" autoPlay loop muted playsInline>
-        <source src={bgVideo} type="video/mp4" />
-      </video>
+      {bgVideo && (
+        <video className="auth-bg-video" autoPlay loop muted playsInline>
+          <source src={bgVideo} type="video/mp4" />
+        </video>
+      )}
       <div className="auth-bg-overlay" />
     </>
   );

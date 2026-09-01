@@ -9,9 +9,7 @@ import Quiz from '../components/ui/Quiz.jsx';
 import FinalTest from '../components/ui/FinalTest.jsx';
 import { getLessonMeta } from '../data/lessons.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
-import setupVideo from '../assets/Lesson 6/EMA-SMA-Setup.mp4';
-import trendVideo from '../assets/Lesson 6/EMA-Trend.mp4';
-import crossingVideo from '../assets/Lesson 6/EMA-Crossing.mp4';
+import { useVideos } from '../data/useVideos.js';
 
 function LessonVideo({ label, src }) {
   return (
@@ -692,6 +690,10 @@ const CONTENT = {
 export default function Lesson6({ onNavigate, onDone }) {
   const { lang } = useLanguage();
   const t = CONTENT[lang];
+  const { videos } = useVideos();
+  const setupVideo = videos['l6-setup']?.url;
+  const trendVideo = videos['l6-trend']?.url;
+  const crossingVideo = videos['l6-crossing']?.url;
   const [gate, setGate] = useState({ passed: 0, total: t.finalTestQuestions.length, unlocked: false });
 
   const finalTestQuestions = t.finalTestQuestions.map((q) => ({

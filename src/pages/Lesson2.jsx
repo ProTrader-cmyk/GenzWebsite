@@ -9,8 +9,7 @@ import Quiz from '../components/ui/Quiz.jsx';
 import FinalTest from '../components/ui/FinalTest.jsx';
 import { getLessonMeta } from '../data/lessons.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
-import bosVideo from '../assets/bos-demo.mp4';
-import chochVideo from '../assets/choch-demo.mp4';
+import { useVideos } from '../data/useVideos.js';
 
 const meta = getLessonMeta('l2');
 
@@ -781,6 +780,9 @@ const CONTENT = {
 export default function Lesson2({ onNavigate, onDone }) {
   const { lang } = useLanguage();
   const t = CONTENT[lang];
+  const { videos } = useVideos();
+  const bosVideo = videos['l2-bos']?.url;
+  const chochVideo = videos['l2-choch']?.url;
   const [gate, setGate] = useState({ passed: 0, total: t.finalTestQuestions.length, unlocked: false });
 
   const finalTestQuestions = t.finalTestQuestions.map(({ okFeedback, ...q }) => ({

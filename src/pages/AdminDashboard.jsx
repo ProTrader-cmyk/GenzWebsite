@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { fetchAllUsers, setUserStatus, setUserRole, setUserLessonAccess } from '../data/auth.js';
 import { lessons } from '../data/lessons.js';
 import { appsLessons } from '../data/appsLessons.js';
+import { VIDEO_KEYS, fetchAllVideos, uploadVideo, deleteVideo } from '../data/videos.js';
+import { invalidateVideoCache } from '../data/useVideos.js';
 import ThemeToggle from '../components/ThemeToggle.jsx';
 
 const TABS = [
@@ -44,6 +46,13 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
   const [permUser, setPermUser] = useState(null);
   const [permSelection, setPermSelection] = useState([]);
   const [permSaving, setPermSaving] = useState(false);
+  const [videos, setVideos] = useState({});
+  const [videosLoading, setVideosLoading] = useState(true);
+  const [uploadingKey, setUploadingKey] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [videoError, setVideoError] = useState('');
+  const fileInputRef = useRef(null);
+  const pendingUploadKey = useRef(null);
 
   async function load() {
     setLoading(true);
@@ -57,9 +66,62 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
     setLoading(false);
   }
 
+  async function loadVideos() {
+    setVideosLoading(true);
+    try {
+      const all = await fetchAllVideos();
+      setVideos(all);
+    } catch {
+      setVideoError('Could not load videos. Check that storage.rules and firestore.rules are published.');
+    }
+    setVideosLoading(false);
+  }
+
   useEffect(() => {
     load();
+    loadVideos();
   }, []);
+
+  function triggerUpload(key) {
+    pendingUploadKey.current = key;
+    fileInputRef.current?.click();
+  }
+
+  async function handleFileSelected(e) {
+    const file = e.target.files?.[0];
+    const key = pendingUploadKey.current;
+    e.target.value = ''; // allow re-selecting the same file later
+    if (!file || !key) return;
+
+    const meta = VIDEO_KEYS.find((v) => v.key === key);
+    setUploadingKey(key);
+    setUploadProgress(0);
+    setVideoError('');
+    try {
+      const url = await uploadVideo(key, file, meta?.label, setUploadProgress);
+      setVideos((prev) => ({ ...prev, [key]: { ...prev[key], url, label: meta?.label } }));
+      invalidateVideoCache();
+    } catch {
+      setVideoError(`Failed to upload "${meta?.label ?? key}". Check storage.rules are published and you're an admin.`);
+    }
+    setUploadingKey(null);
+  }
+
+  async function handleDeleteVideo(key) {
+    const existing = videos[key];
+    setVideoError('');
+    try {
+      await deleteVideo(key, existing?.storagePath);
+      setVideos((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+      invalidateVideoCache();
+    } catch {
+      setVideoError('Failed to delete video. Check storage.rules / firestore.rules are published.');
+    }
+  }
 
   const stats = useMemo(() => {
     const total = users.length;
@@ -319,6 +381,77 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
             )}
           </tbody>
         </table>
+      </div>
+
+      <div className="admin-videos-section">
+        <div className="admin-section-title">Videos</div>
+        <p className="admin-section-sub">
+          Upload the video for each spot on the site. Files go to Firebase Storage; the site reads the URL from
+          Firestore, so nothing needs redeploying after an upload.
+        </p>
+
+        {videoError && <div className="admin-error admin-error-block">{videoError}</div>}
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="video/mp4,video/*"
+          style={{ display: 'none' }}
+          onChange={handleFileSelected}
+        />
+
+        <div className="video-list">
+          {VIDEO_KEYS.map(({ key, label }) => {
+            const existing = videos[key];
+            const isUploading = uploadingKey === key;
+            return (
+              <div key={key} className="video-row">
+                <div className="video-row-info">
+                  <div className={`video-status-dot${existing ? ' uploaded' : ''}`}></div>
+                  <div>
+                    <div className="video-row-label">{label}</div>
+                    {existing ? (
+                      <a className="video-row-link" href={existing.url} target="_blank" rel="noopener noreferrer">
+                        View current video
+                      </a>
+                    ) : (
+                      <div className="video-row-empty">Not uploaded yet</div>
+                    )}
+                  </div>
+                </div>
+                <div className="video-row-actions">
+                  {isUploading ? (
+                    <div className="video-progress">
+                      <div className="video-progress-track">
+                        <div className="video-progress-bar" style={{ width: `${Math.round(uploadProgress * 100)}%` }} />
+                      </div>
+                      <span>{Math.round(uploadProgress * 100)}%</span>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        className="action-btn perm"
+                        onClick={() => triggerUpload(key)}
+                        disabled={videosLoading || uploadingKey !== null}
+                      >
+                        {existing ? 'Replace' : 'Upload'}
+                      </button>
+                      {existing && (
+                        <button
+                          className="action-btn reject"
+                          onClick={() => handleDeleteVideo(key)}
+                          disabled={uploadingKey !== null}
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {permUser && (

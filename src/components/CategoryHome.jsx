@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import heroVideo from '../assets/Hero.mp4';
+import { useVideos } from '../data/useVideos.js';
 import Footer from './Footer.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
@@ -73,15 +73,19 @@ export default function CategoryHome({ onSelectCategory, approved }) {
   const CATEGORIES = buildCategories(t, approved);
   const [showPendingModal, setShowPendingModal] = useState(false);
   const videoRef = useRef(null);
+  const { videos } = useVideos();
+  const heroVideo = videos.hero?.url;
 
-  // Set `muted` imperatively, once, via a stable ref — not as a JSX
-  // attribute. `defaultMuted` isn't a real React DOM prop (silently
-  // ignored), and a plain `muted` JSX attribute risks React reasserting it;
-  // this `useEffect` with an empty dep array runs exactly once on mount,
-  // verified to survive later re-renders without re-muting a user's unmute.
+  // Set `muted` imperatively, once per video element, via a stable ref —
+  // not as a JSX attribute. `defaultMuted` isn't a real React DOM prop
+  // (silently ignored), and a plain `muted` JSX attribute risks React
+  // reasserting it. Depends on `heroVideo` because the <video> only mounts
+  // once the URL has loaded from Firestore — without that, this effect (an
+  // empty-deps version, verified to survive later re-renders without
+  // re-muting a user's unmute) would run before the element exists.
   useEffect(() => {
     if (videoRef.current) videoRef.current.muted = true;
-  }, []);
+  }, [heroVideo]);
 
   // Pause the hero video once it's scrolled out of view (and resume when it
   // scrolls back in) instead of letting it keep looping off-screen.
@@ -100,7 +104,7 @@ export default function CategoryHome({ onSelectCategory, approved }) {
     );
     observer.observe(video);
     return () => observer.disconnect();
-  }, []);
+  }, [heroVideo]);
 
   function handleCardClick(cat) {
     if (cat.pendingLocked) {
@@ -122,11 +126,13 @@ export default function CategoryHome({ onSelectCategory, approved }) {
         <div className="hero-tagline">
           {t.heroTagline1} <b>{t.heroTagline2}</b>
         </div>
-        <div className="hero-video">
-          <video ref={videoRef} autoPlay loop playsInline controls>
-            <source src={heroVideo} type="video/mp4" />
-          </video>
-        </div>
+        {heroVideo && (
+          <div className="hero-video">
+            <video ref={videoRef} autoPlay loop playsInline controls>
+              <source src={heroVideo} type="video/mp4" />
+            </video>
+          </div>
+        )}
       </div>
 
       <p className="sec-label sg">{t.chooseSection}</p>

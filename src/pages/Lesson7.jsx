@@ -2,7 +2,7 @@ import LessonLayout from '../components/LessonLayout.jsx';
 import Steps from '../components/ui/Steps.jsx';
 import { getLessonMeta } from '../data/lessons.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
-import walkthroughVideo from '../assets/Lesson7.mp4';
+import { useVideos } from '../data/useVideos.js';
 
 function LessonVideo({ label, src }) {
   return (
@@ -124,6 +124,8 @@ const CONTENT = {
 export default function Lesson7({ onNavigate, onDone }) {
   const { lang } = useLanguage();
   const t = CONTENT[lang];
+  const { videos } = useVideos();
+  const walkthroughVideo = videos['l7-walkthrough']?.url;
 
   return (
     <LessonLayout

@@ -10,8 +10,7 @@ import AnswerReveal from '../components/ui/AnswerReveal.jsx';
 import FinalTest from '../components/ui/FinalTest.jsx';
 import { getLessonMeta } from '../data/lessons.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
-import bullishVideo from '../assets/bullish-demo.mp4';
-import bearishVideo from '../assets/bearish-demo.mp4';
+import { useVideos } from '../data/useVideos.js';
 import swingExample from '../assets/swing-example.jpg';
 import chartA from '../assets/chart-a.jpg';
 import chartB from '../assets/chart-b.jpg';
@@ -918,6 +917,9 @@ const CONTENT = {
 export default function Lesson1({ onNavigate, onDone }) {
   const { lang } = useLanguage();
   const t = CONTENT[lang];
+  const { videos } = useVideos();
+  const bullishVideo = videos['l1-bullish']?.url;
+  const bearishVideo = videos['l1-bearish']?.url;
   const [gate, setGate] = useState({ passed: 0, total: t.finalTestQuestions.length, unlocked: false });
 
   const finalTestQuestions = t.finalTestQuestions.map((q, i) => ({

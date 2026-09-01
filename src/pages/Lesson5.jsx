@@ -9,10 +9,7 @@ import Quiz from '../components/ui/Quiz.jsx';
 import FinalTest from '../components/ui/FinalTest.jsx';
 import { getLessonMeta } from '../data/lessons.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
-import bslVideo from '../assets/Lesson 5/BSL.mp4';
-import sslVideo from '../assets/Lesson 5/SSL.mp4';
-import lqRunVideo from '../assets/Lesson 5/LQ-RUN.mp4';
-import lqSweepVideo from '../assets/Lesson 5/LQ-SWEEP.mp4';
+import { useVideos } from '../data/useVideos.js';
 
 function LessonVideo({ label, src }) {
   return (
@@ -602,6 +599,11 @@ const CONTENT = {
 export default function Lesson5({ onNavigate, onDone }) {
   const { lang } = useLanguage();
   const t = CONTENT[lang];
+  const { videos } = useVideos();
+  const bslVideo = videos['l5-bsl']?.url;
+  const sslVideo = videos['l5-ssl']?.url;
+  const lqRunVideo = videos['l5-lq-run']?.url;
+  const lqSweepVideo = videos['l5-lq-sweep']?.url;
   const [gate, setGate] = useState({ passed: 0, total: t.finalTestQuestions.length, unlocked: false });
 
   const finalTestQuestions = t.finalTestQuestions.map((q) => ({
