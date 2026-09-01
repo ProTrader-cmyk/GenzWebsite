@@ -8,8 +8,87 @@ import { fetchCustomIndicatorCode, saveCustomIndicatorCode } from '../data/custo
 // Starter template shown the first time an admin opens the editor with
 // nothing saved yet.
 const CUSTOM_CODE_TEMPLATE = `// bars: array of { time, open, high, low, close }, oldest -> newest
-// return: array of { time, value } points to plot as a line
-return bars.map((b) => ({ time: b.time, value: (b.high + b.low) / 2 }));`;
+//
+// Return an object describing what to draw:
+//   lines:   { name: { points: [{ time, value }], color?, lineWidth? }, ... }
+//   markers: [{ time, position: 'aboveBar'|'belowBar', color, shape: 'arrowUp'|'arrowDown'|'circle'|'square', text }]
+//   boxes:   [{ time1, time2, price1, price2, color?, borderColor? }]  — rectangular zones (e.g. FVGs)
+//
+// (A plain array of { time, value } still works too, as a single line —
+// the older, simpler contract this editor started with.)
+
+return {
+  lines: {
+    midline: { points: bars.map((b) => ({ time: b.time, value: (b.high + b.low) / 2 })) },
+  },
+  markers: [],
+  boxes: [],
+};`;
+
+// Minimal custom primitive for drawing rectangular zones (FVGs, order
+// blocks, etc.) on the chart — lightweight-charts has no built-in "box"
+// series, so this uses its documented Primitives API to paint directly on
+// the canvas. Time/price -> pixel conversion goes through the chart's own
+// timeScale and the series' priceToCoordinate, so boxes stay correctly
+// positioned through panning/zooming without any extra work here.
+class BoxPrimitive {
+  constructor() {
+    this._boxes = [];
+    this._chart = null;
+    this._series = null;
+    this._requestUpdate = null;
+  }
+  attached({ chart, series, requestUpdate }) {
+    this._chart = chart;
+    this._series = series;
+    this._requestUpdate = requestUpdate;
+  }
+  detached() {
+    this._chart = null;
+    this._series = null;
+    this._requestUpdate = null;
+  }
+  setBoxes(boxes) {
+    this._boxes = Array.isArray(boxes) ? boxes : [];
+    this._requestUpdate?.();
+  }
+  updateAllViews() {}
+  paneViews() {
+    const chart = this._chart;
+    const series = this._series;
+    const boxes = this._boxes;
+    return [
+      {
+        renderer: () => ({
+          draw: (target) => {
+            if (!chart || !series || !boxes.length) return;
+            target.useMediaCoordinateSpace(({ context }) => {
+              const timeScale = chart.timeScale();
+              for (const box of boxes) {
+                const x1 = timeScale.timeToCoordinate(box.time1);
+                const x2 = timeScale.timeToCoordinate(box.time2);
+                const y1 = series.priceToCoordinate(box.price1);
+                const y2 = series.priceToCoordinate(box.price2);
+                if (x1 == null || x2 == null || y1 == null || y2 == null) continue;
+                const left = Math.min(x1, x2);
+                const width = Math.max(x1, x2) - left;
+                const top = Math.min(y1, y2);
+                const height = Math.max(y1, y2) - top;
+                context.fillStyle = box.color;
+                context.fillRect(left, top, width, height);
+                if (box.borderColor) {
+                  context.strokeStyle = box.borderColor;
+                  context.lineWidth = 1;
+                  context.strokeRect(left, top, width, height);
+                }
+              }
+            });
+          },
+        }),
+      },
+    ];
+  }
+}
 
 // PAXG (Paxos Gold) — a token backed 1:1 by physical gold — via Kraken's
 // public market-data API. Used as a stand-in for spot XAUUSD because it
@@ -121,7 +200,6 @@ export default function GoldChart({ isAdmin }) {
   // decision recorded in the commit: only admin ever sees the editor OR
   // its plotted result; the code only ever executes in the admin's own
   // browser, never anyone else's). ---
-  const customSeriesRef = useRef(null); // null unless isAdmin
   const barsRef = useRef([]); // full bar history incl. the forming candle
   const customCodeRef = useRef(''); // mirrors customCode, read inside the chart effect
   const applyCustomIndicatorRef = useRef(() => {}); // set inside the chart effect, called by the Apply button
@@ -214,48 +292,90 @@ export default function GoldChart({ isAdmin }) {
     // `.update()` on it alongside emaFastSeries/emaSlowSeries in
     // loadHistory() and applyTick() below.
 
-    // Custom indicator series only exists at all for an admin — a regular
-    // user's chart never has this series object, so there's nothing to
-    // leak even if `customCodeRef` somehow had content.
-    let customSeries = null;
+    // Custom indicator plumbing only exists at all for an admin — a
+    // regular user's chart never has any of these objects, so there's
+    // nothing to leak even if `customCodeRef` somehow had content.
+    const customLineSeries = new Map(); // name -> LineSeries, reconciled on every apply
+    let customMarkersApi = null;
+    let customBoxPrimitive = null;
     if (isAdmin) {
-      customSeries = chart.addSeries(LineSeries, {
-        color: cssVar('--dn'),
-        lineWidth: 2,
-        priceLineVisible: false,
-        lastValueVisible: false,
-        crosshairMarkerVisible: false,
-      });
-      customSeriesRef.current = customSeries;
+      customMarkersApi = createSeriesMarkers(candleSeries, []);
+      customBoxPrimitive = new BoxPrimitive();
+      candleSeries.attachPrimitive(customBoxPrimitive);
     }
-
-    markersApiRef.current = createSeriesMarkers(candleSeries, []);
 
     // Runs the admin's saved JS against the current bar history. `new
     // Function` executes with full page access (same as pasting into
     // devtools) — that's acceptable ONLY because this never runs outside
     // the admin's own browser; see the isAdmin guard above and the
     // AskUserQuestion decision this feature was built against.
+    //
+    // Contract: return { lines?: {name: {points, color?, lineWidth?}},
+    // markers?: [...], boxes?: [...] } — see CUSTOM_CODE_TEMPLATE above
+    // for the exact shape. A bare array of {time,value} still works too,
+    // treated as one line named "custom" (the original, simpler contract
+    // this editor started with).
     function runCustomCode(code, bars) {
-      if (!code || !code.trim()) return { data: [], error: null };
+      if (!code || !code.trim()) return { result: {}, error: null };
       try {
         // eslint-disable-next-line no-new-func
         const fn = new Function('bars', code);
-        const result = fn(bars);
-        if (!Array.isArray(result)) throw new Error('Code must return an array of { time, value } points.');
-        return { data: result, error: null };
+        const raw = fn(bars);
+        if (Array.isArray(raw)) return { result: { lines: { custom: { points: raw } } }, error: null };
+        if (raw && typeof raw === 'object') return { result: raw, error: null };
+        throw new Error('Code must return an object like { lines, markers, boxes } (or a plain array of points for a single line).');
       } catch (err) {
-        return { data: [], error: err.message || String(err) };
+        return { result: {}, error: err.message || String(err) };
       }
     }
 
     function applyCustomIndicator() {
-      if (!customSeries) return;
-      const { data, error } = runCustomCode(customCodeRef.current, barsRef.current);
-      customSeries.setData(data);
+      if (!isAdmin) return;
+      const { result, error } = runCustomCode(customCodeRef.current, barsRef.current);
       setCustomError(error);
+
+      const lines = result.lines && typeof result.lines === 'object' ? result.lines : {};
+      const names = Object.keys(lines);
+      const palette = [cssVar('--dn'), cssVar('--gold2'), cssVar('--warn'), cssVar('--up')];
+      names.forEach((name, i) => {
+        const spec = lines[name] || {};
+        const points = Array.isArray(spec.points) ? spec.points : Array.isArray(spec) ? spec : [];
+        const color = spec.color || palette[i % palette.length];
+        let series = customLineSeries.get(name);
+        if (!series) {
+          series = chart.addSeries(LineSeries, {
+            color,
+            lineWidth: spec.lineWidth || 2,
+            priceLineVisible: false,
+            lastValueVisible: false,
+            crosshairMarkerVisible: false,
+          });
+          customLineSeries.set(name, series);
+        } else {
+          series.applyOptions({ color, lineWidth: spec.lineWidth || 2 });
+        }
+        series.setData(points);
+      });
+      // Drop series for line names no longer returned by the code.
+      for (const [name, series] of customLineSeries) {
+        if (!names.includes(name)) {
+          chart.removeSeries(series);
+          customLineSeries.delete(name);
+        }
+      }
+
+      customMarkersApi?.setMarkers(Array.isArray(result.markers) ? result.markers : []);
+
+      const boxes = (Array.isArray(result.boxes) ? result.boxes : []).map((b) => ({
+        ...b,
+        color: b.color || 'rgba(224,177,85,0.18)',
+        borderColor: b.borderColor || cssVar('--warn'),
+      }));
+      customBoxPrimitive?.setBoxes(boxes);
     }
     applyCustomIndicatorRef.current = applyCustomIndicator;
+
+    markersApiRef.current = createSeriesMarkers(candleSeries, []);
 
     // Full recompute of the built-in EMA 9/21 crossover indicator from the
     // whole bar history — cheap enough (a few hundred bars) to just redo
@@ -337,7 +457,7 @@ export default function GoldChart({ isAdmin }) {
         if (trialFast != null) emaFastSeries.update({ time: bar.time, value: trialFast });
         if (trialSlow != null) emaSlowSeries.update({ time: bar.time, value: trialSlow });
       }
-      if (customSeries) applyCustomIndicator();
+      applyCustomIndicator();
       return { trialFast, trialSlow };
     }
 
@@ -534,7 +654,9 @@ export default function GoldChart({ isAdmin }) {
     });
     emaFastSeriesRef.current?.applyOptions({ color: cssVar('--gold2') });
     emaSlowSeriesRef.current?.applyOptions({ color: cssVar('--warn') });
-    customSeriesRef.current?.applyOptions({ color: cssVar('--dn') });
+    // Custom lines/boxes with no explicit color pick a theme-aware default
+    // at apply time — re-run so they pick up the new theme's colors too.
+    applyCustomIndicatorRef.current?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [theme]);
 
