@@ -22,6 +22,7 @@ import { appsLessons, getNextAppsLessonId } from './data/appsLessons.js';
 import { backtestLessons, getNextBacktestLessonId } from './data/backtestLessons.js';
 import { psychologyLessons, getNextPsychologyLessonId } from './data/psychologyLessons.js';
 import { lessonPages } from './pages/registry.js';
+import favicon from './assets/Fav.png';
 import { auth, db } from './firebase.js';
 import {
   fetchUserProfile,
@@ -58,8 +59,15 @@ export default function App() {
   // (?mode=resetPassword&token=&email=) — checked once on first mount,
   // since genztrader-news-api builds the link with exactly these params
   // (see passwordReset.js there). Login.jsx uses this to jump straight to
-  // its "set new password" screen instead of the normal login form.
-  const [resetLink] = useState(() => {
+  // its "set new password" screen instead of the normal login form. Must
+  // be cleared once that flow is done (Login.jsx's "Back to Login" calls
+  // setResetLink(null)) — otherwise this stays truthy for the rest of the
+  // page session and the branch below keeps taking priority over the
+  // normal logged-in app, even after a real successful login, since it
+  // doesn't check `user` at all. That was the actual bug: login would
+  // silently "succeed" (Firebase auth + `user` state both fine) but the
+  // screen never advanced past Login until a refresh cleared this.
+  const [resetLink, setResetLink] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('mode') !== 'resetPassword') return null;
     const token = params.get('token');
@@ -74,7 +82,17 @@ export default function App() {
   useEffect(() => {
     if (resetLink) window.history.replaceState({}, '', window.location.pathname);
   }, [resetLink]);
-  const [checkingSession, setCheckingSession] = useState(true);
+  // Only block on the network round-trip to Firebase when there's no
+  // cached session to show in the meantime — a returning user (the common
+  // case) sees the app immediately with their last-known data, while
+  // onAuthStateChanged below still re-confirms it in the background and
+  // corrects state if it turns out stale (e.g. logged out elsewhere).
+  // Without this, switching networks (WiFi <-> mobile data) mid-check could
+  // hang that request for the better part of a minute — Firebase's SDK
+  // waiting to notice the network change and reconnect — during which the
+  // whole app sat behind a blank screen for no real reason, since the
+  // cached `user` above was sitting right there the whole time.
+  const [checkingSession, setCheckingSession] = useState(() => !loadSession());
   // 'categories' (top-level track picker), 'technical' (lesson list + lesson
   // pages), 'news', or 'contact'.
   const [section, setSection] = useState(() => loadNav().section);
@@ -283,6 +301,7 @@ export default function App() {
     return (
       <Login
         resetLink={resetLink}
+        onExitResetFlow={() => setResetLink(null)}
         onLogin={handleAuthSuccess}
         onAuthStart={beginManualAuth}
         onAuthCancel={cancelManualAuth}
@@ -293,7 +312,12 @@ export default function App() {
   }
 
   if (checkingSession) {
-    return <div style={{ minHeight: '100vh', background: 'var(--bg)' }} />;
+    return (
+      <div className="app-boot-screen">
+        <img src={favicon} alt="GenZ Trader" className="app-boot-logo" />
+        <span className="app-boot-spinner" />
+      </div>
+    );
   }
 
   if (pendingVerification) {

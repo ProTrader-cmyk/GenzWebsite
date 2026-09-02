@@ -12,7 +12,15 @@ import { getStrings } from '../i18n/strings.js';
 // emailed reset link (App.jsx parses ?mode=resetPassword&token=&email=
 // from the URL) — jumps straight to the New Password screen instead of the
 // normal login form.
-export default function Login({ onLogin, onAuthStart, onAuthCancel, onNeedVerification, onSwitchToSignup, resetLink }) {
+export default function Login({
+  onLogin,
+  onAuthStart,
+  onAuthCancel,
+  onNeedVerification,
+  onSwitchToSignup,
+  resetLink,
+  onExitResetFlow,
+}) {
   const { lang } = useLanguage();
   const t = getStrings(lang).auth;
   const tr = getStrings(lang).resetPassword;
@@ -97,6 +105,11 @@ export default function Login({ onLogin, onAuthStart, onAuthCancel, onNeedVerifi
   }
 
   function backToLogin() {
+    // Must clear App.jsx's resetLink state (not just local state here) —
+    // otherwise it stays truthy for the rest of the page session and
+    // App.jsx keeps rendering this reset-flow branch on every render,
+    // regardless of `user` state, even after a real successful login.
+    onExitResetFlow?.();
     setMode('login');
     setResetStep('email');
     setEmail('');

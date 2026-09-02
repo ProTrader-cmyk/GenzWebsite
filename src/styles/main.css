@@ -243,6 +243,12 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 .price-spinner{width:16px;height:16px;border-radius:50%;border:2px solid var(--brandline);border-top-color:var(--brand2);animation:price-spin .8s linear infinite;flex:none;}
 @keyframes price-spin{to{transform:rotate(360deg);}}
 
+/* First-visit-only loading screen (App.jsx's checkingSession) — a
+   returning user with a cached session skips this entirely. */
+.app-boot-screen{min-height:100vh;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;}
+.app-boot-logo{width:56px;height:56px;border-radius:16px;object-fit:cover;box-shadow:0 0 0 1px var(--brandline),0 0 24px var(--brandd);}
+.app-boot-spinner{width:22px;height:22px;border-radius:50%;border:2px solid var(--brandline);border-top-color:var(--brand2);animation:price-spin .8s linear infinite;}
+
 /* GOLD DIRECTION ANALYSIS CARD (AI-generated, GenZ NEWS) */
 .gna-card{border-radius:var(--rl);padding:24px 26px;margin-bottom:22px;border:1px solid;box-shadow:0 20px 40px -26px rgba(0,0,0,0.6);}
 .gna-card.gna-up{background:linear-gradient(135deg,var(--upd),transparent 65%);border-color:var(--up);}
