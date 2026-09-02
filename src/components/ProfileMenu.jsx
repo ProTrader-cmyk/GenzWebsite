@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
+import { PersonIcon } from './ui/CategoryIcons.jsx';
 
 function initials(name, email) {
   const source = (name || email || '?').trim();
@@ -9,11 +10,16 @@ function initials(name, email) {
   return source.slice(0, 2).toUpperCase();
 }
 
+function AvatarContent({ user }) {
+  if (user.photoURL) return <img src={user.photoURL} alt="" className="avatar-img" />;
+  return initials(user.name, user.email);
+}
+
 // The actual profile content — shared between the desktop dropdown panel
 // below and the always-open mobile burger menu (Navbar.jsx), since a
 // click-to-toggle dropdown doesn't make sense nested inside an already-open
 // mobile menu.
-export function ProfileDetails({ user }) {
+export function ProfileDetails({ user, onViewProfile }) {
   const { lang } = useLanguage();
   const t = getStrings(lang).profile;
   const status = user.status === 'approved' || user.status === 'rejected' ? user.status : 'pending';
@@ -23,7 +29,9 @@ export function ProfileDetails({ user }) {
   return (
     <>
       <div className="profile-menu-header">
-        <div className="profile-menu-avatar">{initials(user.name, user.email)}</div>
+        <div className="profile-menu-avatar">
+          <AvatarContent user={user} />
+        </div>
         <div>
           <div className="profile-menu-name">{user.name || '—'}</div>
           <div className="profile-menu-email">{user.email}</div>
@@ -44,6 +52,12 @@ export function ProfileDetails({ user }) {
           <span className="profile-menu-row-value">{user.emailVerified ? t.yes : t.no}</span>
         </div>
       </div>
+
+      {onViewProfile && (
+        <button type="button" className="profile-menu-view-btn" onClick={onViewProfile}>
+          {t.viewProfile}
+        </button>
+      )}
     </>
   );
 }
@@ -51,7 +65,7 @@ export function ProfileDetails({ user }) {
 // Desktop/tablet: an avatar button in the top bar that toggles a dropdown
 // panel. Hidden below 640px (see main.css) — ProfileDetails is shown inline
 // in the mobile burger menu instead, same as nav-logout/nav-mobile-logout.
-export default function ProfileMenu({ user }) {
+export default function ProfileMenu({ user, onViewProfile }) {
   const { lang } = useLanguage();
   const t = getStrings(lang).profile;
   const [open, setOpen] = useState(false);
@@ -75,12 +89,21 @@ export default function ProfileMenu({ user }) {
         aria-label={t.ariaLabel}
         aria-expanded={open}
       >
-        {initials(user.name, user.email)}
+        <PersonIcon width="60%" height="60%" />
       </button>
 
       {open && (
         <div className="profile-menu-panel">
-          <ProfileDetails user={user} />
+          <ProfileDetails
+            user={user}
+            onViewProfile={
+              onViewProfile &&
+              (() => {
+                setOpen(false);
+                onViewProfile();
+              })
+            }
+          />
         </div>
       )}
     </div>

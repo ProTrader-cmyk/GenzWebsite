@@ -314,6 +314,26 @@ export async function fetchAllUsers() {
   return snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
 }
 
+// Admin-only: creates a brand-new account with a chosen role/status/tier.
+// Goes through the backend (Admin SDK) instead of createUserWithEmailAndPassword
+// here in the browser, because that client-side call would sign this admin
+// browser tab in AS the new user, ending the admin's own session.
+export async function createUserAsAdmin({ name, email, password, role, status, tier }) {
+  try {
+    const idToken = await auth.currentUser.getIdToken();
+    const res = await fetch(`${NEWS_API_URL}/api/admin/create-user`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+      body: JSON.stringify({ name, email, password, role, status, tier }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, error: data.error || 'Failed to create user.' };
+    return { ok: true, uid: data.uid };
+  } catch {
+    return { ok: false, error: 'Failed to create user.' };
+  }
+}
+
 export async function setUserStatus(uid, status) {
   await updateDoc(doc(db, 'users', uid), { status });
 }

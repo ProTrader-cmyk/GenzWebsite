@@ -9,6 +9,7 @@ import BacktestHome from './components/BacktestHome.jsx';
 import PsychologyHome from './components/PsychologyHome.jsx';
 import NewProductHome from './components/NewProductHome.jsx';
 import AdvancedHome from './components/AdvancedHome.jsx';
+import Profile from './components/Profile.jsx';
 import AccessGrantedModal from './components/AccessGrantedModal.jsx';
 import NewsPage from './components/NewsPage.jsx';
 import ContactPage from './components/ContactPage.jsx';
@@ -428,6 +429,7 @@ export default function App() {
               }
         }
         onNavContact={() => setSection('contact')}
+        onNavProfile={() => setSection('profile')}
         user={user}
         onLogout={handleLogout}
         isAdmin={user.role === 'admin'}
@@ -446,8 +448,9 @@ export default function App() {
         {section === 'news' && <NewsPage onBack={backToCategories} />}
         {section === 'pricing' && <PricingPage onBack={backToCategories} onPay={handlePaySuccess} />}
         {section === 'contact' && <ContactPage onBack={backToCategories} />}
-        {section === 'new-product' && <NewProductHome onBack={backToCategories} isAdmin={isAdmin} />}
+        {section === 'new-product' && <NewProductHome onBack={backToCategories} />}
         {section === 'advanced' && <AdvancedHome onBack={backToCategories} />}
+        {section === 'profile' && <Profile onBack={backToCategories} uid={user.uid} user={user} />}
         {section === 'technical' && effectiveView === 'home' && (
           <Home
             doneMap={doneMap}

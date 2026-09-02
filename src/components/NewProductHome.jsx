@@ -1,9 +1,8 @@
 import Footer from './Footer.jsx';
-import GoldChart from './GoldChart.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
 
-export default function NewProductHome({ onBack, isAdmin }) {
+export default function NewProductHome({ onBack }) {
   const { lang } = useLanguage();
   const t = getStrings(lang).newProduct;
 
@@ -19,7 +18,11 @@ export default function NewProductHome({ onBack, isAdmin }) {
         <p>{t.subtitle}</p>
       </div>
 
-      <GoldChart isAdmin={isAdmin} />
+      <div className="empty-state">
+        <div className="empty-icon">✨</div>
+        <div className="empty-title">{t.comingSoonTitle}</div>
+        <p className="empty-sub">{t.comingSoonBody}</p>
+      </div>
 
       <Footer />
     </div>

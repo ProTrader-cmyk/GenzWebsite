@@ -13,6 +13,7 @@ export default function Navbar({
   onNavHome,
   onNavNews,
   onNavContact,
+  onNavProfile,
   user,
   onLogout,
   isAdmin,
@@ -81,7 +82,7 @@ export default function Navbar({
         </button>
 
         <ThemeToggle />
-        {user && <ProfileMenu user={user} />}
+        {user && <ProfileMenu user={user} onViewProfile={onNavProfile} />}
         <LanguageDropdown />
 
         {isAdmin && (
@@ -100,7 +101,7 @@ export default function Navbar({
         <div className="nav-mobile-menu">
           {user && (
             <div className="profile-menu-mobile-details">
-              <ProfileDetails user={user} />
+              <ProfileDetails user={user} onViewProfile={onNavProfile && (() => handleNav(onNavProfile))} />
             </div>
           )}
           {showNavLinks && (

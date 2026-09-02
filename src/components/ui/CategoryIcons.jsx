@@ -57,6 +57,69 @@ export function BacktestIcon() {
   );
 }
 
+export function CalendarIcon() {
+  return (
+    <svg {...common}>
+      <rect x="3.5" y="5" width="17" height="16" rx="2.2" />
+      <path d="M3.5 9.5h17" />
+      <path d="M8 3v4M16 3v4" />
+      <path d="M7.5 13.2h2M11.5 13.2h2M15.5 13.2h2M7.5 17h2M11.5 17h2" />
+    </svg>
+  );
+}
+
+export function DollarIcon(props) {
+  return (
+    <svg {...common} {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 6.5v11M15 9c0-1.4-1.3-2.2-3-2.2s-3 .8-3 2.2c0 1.4 1.3 2 3 2.4 1.7.4 3 1 3 2.4 0 1.4-1.3 2.2-3 2.2s-3-.8-3-2.2" />
+    </svg>
+  );
+}
+
+export function TrendUpIcon(props) {
+  return (
+    <svg {...common} {...props}>
+      <path d="M3.5 16.5 9.5 10l4 4 6.5-7.5" />
+      <path d="M15.5 6h4.5v4.5" />
+    </svg>
+  );
+}
+
+export function BoltIcon(props) {
+  return (
+    <svg {...common} {...props}>
+      <path d="M13 2.5 4.5 13.5H11L10.5 21.5 19.5 10H13.5L13 2.5Z" />
+    </svg>
+  );
+}
+
+export function CameraIcon(props) {
+  return (
+    <svg {...common} {...props}>
+      <path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1-2h7l1 2h2A1.5 1.5 0 0 1 20 8.5v9A1.5 1.5 0 0 1 18.5 19h-13A1.5 1.5 0 0 1 4 17.5v-9Z" />
+      <circle cx="12" cy="13" r="3.3" />
+    </svg>
+  );
+}
+
+export function PersonIcon(props) {
+  return (
+    <svg {...common} {...props}>
+      <circle cx="12" cy="8.2" r="3.6" />
+      <path d="M4.5 20c1-4 4-6 7.5-6s6.5 2 7.5 6" />
+    </svg>
+  );
+}
+
+export function StarIcon(props) {
+  return (
+    <svg {...common} {...props}>
+      <path d="M12 3.2 14.6 9 20.8 9.8 16.3 14 17.5 20.2 12 17.1 6.5 20.2 7.7 14 3.2 9.8 9.4 9 12 3.2Z" />
+    </svg>
+  );
+}
+
 export function BookIcon(props) {
   return (
     <svg {...common} {...props}>

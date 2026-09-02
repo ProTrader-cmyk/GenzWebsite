@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { fetchAllUsers, setUserStatus, setUserRole, setUserTier, setUserLessonAccess } from '../data/auth.js';
+import {
+  fetchAllUsers,
+  setUserStatus,
+  setUserRole,
+  setUserTier,
+  setUserLessonAccess,
+  createUserAsAdmin,
+} from '../data/auth.js';
 import { lessons } from '../data/lessons.js';
 import { appsLessons } from '../data/appsLessons.js';
 import { backtestLessons } from '../data/backtestLessons.js';
@@ -41,6 +48,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [updatingUid, setUpdatingUid] = useState(null);
   const [error, setError] = useState('');
   const [startDate, setStartDate] = useState(() => toDateKey(new Date()));
@@ -55,6 +63,10 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
   const [urlDraft, setUrlDraft] = useState('');
   const [savingKey, setSavingKey] = useState(null);
   const [videoError, setVideoError] = useState('');
+  const [showAddUser, setShowAddUser] = useState(false);
+  const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'user', status: 'pending', tier: 'member' });
+  const [addUserSaving, setAddUserSaving] = useState(false);
+  const [addUserError, setAddUserError] = useState('');
 
   async function load() {
     setLoading(true);
@@ -130,7 +142,11 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
     return { total, pending, approved, rejected };
   }, [users]);
 
-  const visibleUsers = tab === 'all' ? users : users.filter((u) => u.status === tab);
+  const tabUsers = tab === 'all' ? users : users.filter((u) => u.status === tab);
+  const q = searchQuery.trim().toLowerCase();
+  const visibleUsers = q
+    ? tabUsers.filter((u) => (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q))
+    : tabUsers;
 
   const signupsInRange = useMemo(() => {
     return users.filter((u) => {
@@ -222,6 +238,30 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
     setPermSaving(false);
   }
 
+  function openAddUser() {
+    setNewUser({ name: '', email: '', password: '', role: 'user', status: 'pending', tier: 'member' });
+    setAddUserError('');
+    setShowAddUser(true);
+  }
+
+  async function handleCreateUser(e) {
+    e.preventDefault();
+    if (!newUser.name.trim() || !newUser.email.trim() || newUser.password.length < 6) {
+      setAddUserError('Name, email, and a password of at least 6 characters are required.');
+      return;
+    }
+    setAddUserSaving(true);
+    setAddUserError('');
+    const result = await createUserAsAdmin(newUser);
+    if (result.ok) {
+      setShowAddUser(false);
+      load();
+    } else {
+      setAddUserError(result.error);
+    }
+    setAddUserSaving(false);
+  }
+
   return (
     <div className="admin-shell">
       <button type="button" className="admin-back" onClick={onViewSite}>
@@ -292,6 +332,25 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
         </div>
       </div>
 
+      <div className="admin-search-row">
+        <svg className="admin-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="11" cy="11" r="7" />
+          <path d="M20 20l-4.35-4.35" />
+        </svg>
+        <input
+          type="text"
+          className="admin-search-input"
+          placeholder="Search by name or email..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+        {searchQuery && (
+          <button type="button" className="admin-search-clear" onClick={() => setSearchQuery('')} aria-label="Clear search">
+            ×
+          </button>
+        )}
+      </div>
+
       <div className="admin-tabs">
         {TABS.map((t) => (
           <button
@@ -305,6 +364,9 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
         ))}
         <button className="admin-refresh" onClick={load} disabled={loading}>
           {loading ? 'Loading...' : 'Refresh'}
+        </button>
+        <button className="admin-btn-primary admin-add-user-btn" onClick={openAddUser}>
+          + Add User
         </button>
       </div>
 
@@ -597,6 +659,121 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
                 {permSaving ? 'Saving...' : 'Save'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showAddUser && (
+        <div className="modal-overlay" onClick={() => !addUserSaving && setShowAddUser(false)}>
+          <div className="perm-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="perm-modal-header">
+              <div>
+                <div className="perm-modal-title">Add User</div>
+                <div className="perm-modal-sub">Creates the account directly (email pre-verified).</div>
+              </div>
+            </div>
+
+            <form onSubmit={handleCreateUser}>
+              <label className="auth-label" htmlFor="au-name" style={{ textAlign: 'left' }}>
+                Name
+              </label>
+              <input
+                id="au-name"
+                type="text"
+                className="auth-input"
+                value={newUser.name}
+                onChange={(e) => setNewUser((p) => ({ ...p, name: e.target.value }))}
+                required
+              />
+
+              <label className="auth-label" htmlFor="au-email" style={{ textAlign: 'left' }}>
+                Email
+              </label>
+              <input
+                id="au-email"
+                type="email"
+                className="auth-input"
+                value={newUser.email}
+                onChange={(e) => setNewUser((p) => ({ ...p, email: e.target.value }))}
+                required
+              />
+
+              <label className="auth-label" htmlFor="au-password" style={{ textAlign: 'left' }}>
+                Password
+              </label>
+              <input
+                id="au-password"
+                type="text"
+                className="auth-input"
+                placeholder="At least 6 characters"
+                value={newUser.password}
+                onChange={(e) => setNewUser((p) => ({ ...p, password: e.target.value }))}
+                required
+              />
+
+              <div className="admin-add-user-row">
+                <div>
+                  <label className="auth-label" htmlFor="au-role" style={{ textAlign: 'left' }}>
+                    Role
+                  </label>
+                  <select
+                    id="au-role"
+                    className="tier-select"
+                    value={newUser.role}
+                    onChange={(e) => setNewUser((p) => ({ ...p, role: e.target.value }))}
+                  >
+                    <option value="user">User</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="auth-label" htmlFor="au-status" style={{ textAlign: 'left' }}>
+                    Status
+                  </label>
+                  <select
+                    id="au-status"
+                    className="tier-select"
+                    value={newUser.status}
+                    onChange={(e) => setNewUser((p) => ({ ...p, status: e.target.value }))}
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="auth-label" htmlFor="au-tier" style={{ textAlign: 'left' }}>
+                    Tier
+                  </label>
+                  <select
+                    id="au-tier"
+                    className={`tier-select${newUser.tier === 'vip' ? ' tier-vip' : ''}`}
+                    value={newUser.tier}
+                    disabled={newUser.status !== 'approved'}
+                    title={newUser.status !== 'approved' ? 'Approve this user first to set their tier' : undefined}
+                    onChange={(e) => setNewUser((p) => ({ ...p, tier: e.target.value }))}
+                  >
+                    <option value="member">Member</option>
+                    <option value="vip">VIP</option>
+                  </select>
+                </div>
+              </div>
+
+              {addUserError && <div className="auth-error">{addUserError}</div>}
+
+              <div className="perm-modal-actions">
+                <button
+                  type="button"
+                  className="action-btn reset"
+                  onClick={() => setShowAddUser(false)}
+                  disabled={addUserSaving}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="admin-btn-primary" disabled={addUserSaving}>
+                  {addUserSaving ? 'Creating...' : 'Create User'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
