@@ -504,17 +504,6 @@ h3 .bar{width:3px;height:18px;border-radius:2px;background:var(--gold);flex:none
 .gold-chart-status{text-align:center;font-size:13px;color:var(--mute);padding:10px 0 2px;}
 .gold-chart-disclosure{font-size:11px;color:var(--mute);line-height:1.6;margin-top:12px;padding-top:12px;border-top:1px solid var(--faint);}
 
-/* CUSTOM INDICATOR — write-your-own-code chart (all users) */
-.gc-custom-head{font-family:'Space Grotesk','Noto Sans Khmer',sans-serif;font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px;}
-.gc-custom-sub{font-size:12px;color:var(--mute);line-height:1.5;margin-bottom:12px;}
-.gc-admin-textarea{width:100%;min-height:140px;background:var(--bg1);color:var(--text);border:1px solid var(--faint);border-radius:8px;padding:10px 12px;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12.5px;line-height:1.6;resize:vertical;margin-top:14px;}
-.gc-admin-textarea:focus{outline:none;border-color:var(--brandline);}
-.gc-admin-error{margin-top:8px;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;color:var(--dn);background:var(--dnd);border-radius:6px;padding:8px 10px;white-space:pre-wrap;word-break:break-word;}
-.gc-admin-actions{display:flex;gap:8px;margin-top:10px;}
-.gc-admin-btn{font-family:'Noto Sans Khmer',sans-serif;font-size:13px;font-weight:600;color:var(--text);background:var(--bg1);border:1px solid var(--faint);border-radius:8px;padding:7px 16px;cursor:pointer;transition:border-color .15s;}
-.gc-admin-btn:hover{border-color:var(--brandline);}
-.gc-admin-btn-primary{color:#0C0C0F;background:var(--gold);border-color:var(--gold);}
-
 /* TRADING CALENDAR (calendar grid — embedded in the Profile page) */
 .tc-card{background:var(--bg2);border:1px solid var(--faint);border-radius:var(--rl);padding:18px;margin:16px 0;box-shadow:0 20px 40px -26px rgba(0,0,0,0.6);}
 .tc-head{display:flex;align-items:center;justify-content:center;gap:18px;margin-bottom:16px;}

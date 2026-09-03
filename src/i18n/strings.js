@@ -191,15 +191,6 @@ export const strings = {
       comingSoonBody: 'យើងកំពុងរៀបចំផលិតផលថ្មីនេះ។ សូមតាមដានទំព័រនេះជាប្រចាំ។',
       fullscreenBtn: 'អេក្រង់ពេញ',
     },
-    customIndicator: {
-      title: 'សូចនាករផ្ទាល់ខ្លួន',
-      subtitle: 'សរសេរ Code ផ្ទាល់ខ្លួន ហើយមើលលទ្ធផលភ្លាមៗលើតម្លៃមាស (PAXG) ជាក់ស្តែង។ គ្មានការរក្សាទុកទេ — Code នឹងកំណត់ឡើងវិញនៅពេល Reload ទំព័រ។',
-      loading: 'កំពុងទាញយកទិន្នន័យ...',
-      error: 'មិនអាចទាញយកទិន្នន័យបានទេ។',
-      applyBtn: 'អនុវត្ត',
-      disclosure:
-        'ក្រាហ្វិចនេះប្រើតម្លៃ PAXG (Token មាសពិត ១:១) ជាតំណាងសម្រាប់មាស ព្រោះ Code ផ្ទាល់ខ្លួនមិនអាចប្រើទិន្នន័យពិតរបស់ OANDA ខាងលើបានទេ។ សម្រាប់ការសិក្សា មិនមែនជាដំបូន្មានវិនិយោគទេ។ Code ដំណើរការដោយផ្ទាល់ក្នុង Browser របស់អ្នក។',
-    },
     advanced: {
       back: '← ផ្នែកសិក្សា',
       eyebrow: 'VIP',
@@ -517,15 +508,6 @@ export const strings = {
       comingSoonTitle: 'Coming Soon',
       comingSoonBody: "We're preparing this new product. Check back regularly.",
       fullscreenBtn: 'Fullscreen',
-    },
-    customIndicator: {
-      title: 'Custom Indicator',
-      subtitle: 'Write your own code and see it plotted live on real-time gold (PAXG) data. Nothing is saved — code resets on page reload.',
-      loading: 'Loading chart data...',
-      error: 'Could not load chart data.',
-      applyBtn: 'Apply',
-      disclosure:
-        "This chart uses PAXG (a token backed 1:1 by real gold) as a stand-in, since custom code can't access the real OANDA data used above. For learning purposes only, not investment advice. Code runs directly in your own browser.",
     },
     advanced: {
       back: '← Sections',

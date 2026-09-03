@@ -70,10 +70,9 @@ function buildCategories(t, approved, isVip) {
       id: 'new-product',
       Icon: SparkleIcon,
       title: t.newProductTitle,
-      tag: t.vipTag,
+      tag: t.newProductTag,
       locked: false,
       pendingLocked: !approved,
-      vipLocked: approved && !isVip,
     },
   ];
 }

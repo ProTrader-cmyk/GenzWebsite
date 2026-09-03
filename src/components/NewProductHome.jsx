@@ -1,6 +1,5 @@
 import Footer from './Footer.jsx';
 import GoldChart from './GoldChart.jsx';
-import CustomIndicatorChart from './CustomIndicatorChart.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
 
@@ -21,7 +20,6 @@ export default function NewProductHome({ onBack, isActive = true }) {
       </div>
 
       <GoldChart />
-      <CustomIndicatorChart />
 
       <Footer />
     </div>
