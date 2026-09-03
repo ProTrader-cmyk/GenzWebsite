@@ -57,17 +57,6 @@ export function BacktestIcon() {
   );
 }
 
-export function CalendarIcon() {
-  return (
-    <svg {...common}>
-      <rect x="3.5" y="5" width="17" height="16" rx="2.2" />
-      <path d="M3.5 9.5h17" />
-      <path d="M8 3v4M16 3v4" />
-      <path d="M7.5 13.2h2M11.5 13.2h2M15.5 13.2h2M7.5 17h2M11.5 17h2" />
-    </svg>
-  );
-}
-
 export function DollarIcon(props) {
   return (
     <svg {...common} {...props}>
@@ -82,14 +71,6 @@ export function TrendUpIcon(props) {
     <svg {...common} {...props}>
       <path d="M3.5 16.5 9.5 10l4 4 6.5-7.5" />
       <path d="M15.5 6h4.5v4.5" />
-    </svg>
-  );
-}
-
-export function BoltIcon(props) {
-  return (
-    <svg {...common} {...props}>
-      <path d="M13 2.5 4.5 13.5H11L10.5 21.5 19.5 10H13.5L13 2.5Z" />
     </svg>
   );
 }

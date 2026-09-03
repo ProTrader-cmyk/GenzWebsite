@@ -99,6 +99,17 @@ export default function App() {
   const [section, setSection] = useState(() => loadNav().section);
   const [view, setView] = useState(() => loadNav().view);
   const [doneMap, setDoneMap] = useState({});
+  // Once opened, the gold chart section stays mounted (just hidden via the
+  // .view/.view.active CSS toggle) instead of being unmounted on every
+  // navigation away — TradingView's embedded widget has no account/session
+  // to save drawings to, so the only way anything drawn on it survives
+  // leaving the section is keeping that same widget instance alive in
+  // memory for the rest of this browser tab. Doesn't survive an actual page
+  // refresh or reopening the site — nothing free from TradingView does.
+  const [hasVisitedNewProduct, setHasVisitedNewProduct] = useState(() => loadNav().section === 'new-product');
+  useEffect(() => {
+    if (section === 'new-product') setHasVisitedNewProduct(true);
+  }, [section]);
   // Bumped every time a pending (not-approved) user clicks a nav item that's
   // blocked for them (e.g. News) — passed to CategoryHome so it re-opens its
   // "contact admin" modal even when the user was already sitting on the
@@ -352,10 +363,12 @@ export default function App() {
     );
   }
 
-  // Same login for everyone — an admin account goes straight to the
+  // Same login for everyone — an admin (or dev) account goes straight to the
   // dashboard instead of the lesson site, unless they've clicked through to
-  // browse the site (adminViewingSite).
-  if (user.role === 'admin' && !adminViewingSite) {
+  // browse the site (adminViewingSite). Admin and dev see the same
+  // dashboard; only dev additionally gets the Videos panel (see isDev in
+  // AdminDashboard.jsx).
+  if ((user.role === 'admin' || user.role === 'dev') && !adminViewingSite) {
     return <AdminDashboard admin={user} onLogout={handleLogout} onViewSite={() => setAdminViewingSite(true)} />;
   }
 
@@ -369,8 +382,8 @@ export default function App() {
   const approved = user.status === 'approved' || user.role === 'admin';
 
   // VIP is a separate tier from approved/admin — it only gates VIP-only
-  // tracks (e.g. Advanced), set via Admin Dashboard's per-user Tier
-  // dropdown (data/auth.js: setUserTier). An admin always counts as VIP too.
+  // tracks (e.g. Advanced), set via Admin Dashboard's per-user Role dropdown
+  // (data/auth.js: setUserAccess). An admin always counts as VIP too.
   const isVip = user.tier === 'vip' || user.role === 'admin';
 
   // Not-yet-approved accounts go straight into the category picker like
@@ -448,7 +461,9 @@ export default function App() {
         {section === 'news' && <NewsPage onBack={backToCategories} />}
         {section === 'pricing' && <PricingPage onBack={backToCategories} onPay={handlePaySuccess} />}
         {section === 'contact' && <ContactPage onBack={backToCategories} />}
-        {section === 'new-product' && <NewProductHome onBack={backToCategories} />}
+        {hasVisitedNewProduct && (
+          <NewProductHome onBack={backToCategories} isActive={section === 'new-product'} />
+        )}
         {section === 'advanced' && <AdvancedHome onBack={backToCategories} />}
         {section === 'profile' && <Profile onBack={backToCategories} uid={user.uid} user={user} />}
         {section === 'technical' && effectiveView === 'home' && (

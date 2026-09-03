@@ -338,14 +338,31 @@ export async function setUserStatus(uid, status) {
   await updateDoc(doc(db, 'users', uid), { status });
 }
 
-export async function setUserRole(uid, role) {
-  await updateDoc(doc(db, 'users', uid), { role });
+// Deletes the account entirely (Auth + Firestore profile) — goes through
+// the backend Admin SDK, same as createUserAsAdmin, since a client can never
+// delete another user's doc directly (firestore.rules: allow delete: if false).
+export async function deleteUserAsAdmin(uid) {
+  try {
+    const idToken = await auth.currentUser.getIdToken();
+    const res = await fetch(`${NEWS_API_URL}/api/admin/delete-user`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+      body: JSON.stringify({ uid }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, error: data.error || 'Failed to delete user.' };
+    return { ok: true };
+  } catch {
+    return { ok: false, error: 'Failed to delete user.' };
+  }
 }
 
-// tier: 'member' | 'vip' — separate from role, which only ever gates
-// admin-dashboard access. VIP unlocks VIP-only tracks (e.g. Advanced).
-export async function setUserTier(uid, tier) {
-  await updateDoc(doc(db, 'users', uid), { tier });
+// role: 'user' | 'admin' | 'dev' — gates admin-dashboard access. tier:
+// 'member' | 'vip' — separate axis, unlocks VIP-only tracks (e.g. Advanced).
+// The Admin Dashboard's per-user select sets both together as one
+// Member/VIP/Admin/Dev choice.
+export async function setUserAccess(uid, { role, tier }) {
+  await updateDoc(doc(db, 'users', uid), { role, tier });
 }
 
 // lessonIds: array of lesson ids (e.g. ['l1','l3','a2']) this user is

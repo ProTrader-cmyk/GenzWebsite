@@ -9,7 +9,7 @@ import { getStrings } from '../i18n/strings.js';
 // Until then the page falls back to the static "coming soon" panel below.
 const NEWS_API_URL = import.meta.env.VITE_NEWS_API_URL;
 
-const LOCALE_BY_LANG = { kh: 'km-KH', en: 'en-US', zh: 'zh-CN' };
+const LOCALE_BY_LANG = { kh: 'km-KH', en: 'en-US' };
 
 function formatPublished(iso, lang) {
   try {

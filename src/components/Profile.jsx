@@ -6,7 +6,7 @@ import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
 import { DollarIcon, TrendUpIcon, StarIcon, CameraIcon } from './ui/CategoryIcons.jsx';
 
-const LOCALE_BY_LANG = { kh: 'km-KH', en: 'en-US', zh: 'zh-CN' };
+const LOCALE_BY_LANG = { kh: 'km-KH', en: 'en-US' };
 const PERIOD_DAYS = { '1w': 7, '1m': 30, '3m': 90 };
 
 function initials(name, email) {
@@ -548,14 +548,15 @@ export default function Profile({ onBack, uid, user }) {
                       {new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric', year: 'numeric' }).format(hoverDay)}
                     </div>
                     <div
-                      className={`pf-chart-tooltip-val${hoverPnl > 0 ? ' is-up' : hoverPnl < 0 ? ' is-down' : ''}`}
+                      className={`pf-chart-tooltip-val${hoverTotal > 0 ? ' is-up' : hoverTotal < 0 ? ' is-down' : ''}`}
                     >
-                      {hoverPnl != null ? formatPnl(hoverPnl) : t.noTrade}
+                      {formatPnl(hoverTotal)}
                     </div>
+                    <div className="pf-chart-tooltip-sub-label">{tj.totalLabel}</div>
                     <div className="pf-chart-tooltip-sub">
-                      {tj.totalLabel}:{' '}
-                      <span className={hoverTotal > 0 ? 'is-up' : hoverTotal < 0 ? 'is-down' : ''}>
-                        {formatPnl(hoverTotal)}
+                      {t.dayPnlLabel}:{' '}
+                      <span className={hoverPnl > 0 ? 'is-up' : hoverPnl < 0 ? 'is-down' : ''}>
+                        {hoverPnl != null ? formatPnl(hoverPnl) : t.noTrade}
                       </span>
                     </div>
                   </div>

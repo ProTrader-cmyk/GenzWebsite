@@ -3,7 +3,6 @@ import { createContext, useContext, useEffect, useState } from 'react';
 const LANG_KEY = 'gzt_lang';
 export const LANGUAGES = [
   { code: 'kh', label: 'KH' },
-  { code: 'zh', label: 'CH' },
   { code: 'en', label: 'EN' },
 ];
 

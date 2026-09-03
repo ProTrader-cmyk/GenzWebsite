@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   fetchAllUsers,
   setUserStatus,
-  setUserRole,
-  setUserTier,
+  setUserAccess,
   setUserLessonAccess,
   createUserAsAdmin,
+  deleteUserAsAdmin,
 } from '../data/auth.js';
 import { lessons } from '../data/lessons.js';
 import { appsLessons } from '../data/appsLessons.js';
@@ -67,6 +67,8 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
   const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'user', status: 'pending', tier: 'member' });
   const [addUserSaving, setAddUserSaving] = useState(false);
   const [addUserError, setAddUserError] = useState('');
+
+  const isDev = admin.role === 'dev';
 
   async function load() {
     setLoading(true);
@@ -168,24 +170,39 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
     setUpdatingUid(null);
   }
 
-  async function handleRoleChange(uid, role) {
-    setUpdatingUid(uid);
+  async function handleDeleteUser(u) {
+    if (!window.confirm(`Delete ${u.name || u.email}? This permanently removes their account and can't be undone.`)) {
+      return;
+    }
+    setUpdatingUid(u.uid);
+    setError('');
     try {
-      await setUserRole(uid, role);
-      setUsers((prev) => prev.map((u) => (u.uid === uid ? { ...u, role } : u)));
-    } catch {
-      setError('Failed to update role. Check Firestore rules / your admin access.');
+      const result = await deleteUserAsAdmin(u.uid);
+      if (!result.ok) throw new Error(result.error);
+      setUsers((prev) => prev.filter((x) => x.uid !== u.uid));
+    } catch (err) {
+      setError(err.message || 'Failed to delete user.');
     }
     setUpdatingUid(null);
   }
 
-  async function handleTierChange(uid, tier) {
+  // One dropdown covering both role and tier — Member/VIP set role: 'user'
+  // with tier: 'member'/'vip'; Admin/Dev set role and leave tier untouched.
+  function accessValue(u) {
+    if (u.role === 'admin') return 'admin';
+    if (u.role === 'dev') return 'dev';
+    return u.tier === 'vip' ? 'vip' : 'member';
+  }
+
+  async function handleAccessChange(uid, value) {
+    const role = value === 'admin' || value === 'dev' ? value : 'user';
+    const tier = value === 'vip' ? 'vip' : 'member';
     setUpdatingUid(uid);
     try {
-      await setUserTier(uid, tier);
-      setUsers((prev) => prev.map((u) => (u.uid === uid ? { ...u, tier } : u)));
+      await setUserAccess(uid, { role, tier });
+      setUsers((prev) => prev.map((u) => (u.uid === uid ? { ...u, role, tier } : u)));
     } catch {
-      setError('Failed to update tier. Check Firestore rules / your admin access.');
+      setError('Failed to update role. Check Firestore rules / your admin access.');
     }
     setUpdatingUid(null);
   }
@@ -381,8 +398,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
               <th>Email verified</th>
               <th>Status</th>
               <th>Role</th>
-              <th>Tier</th>
-              <th>Paid</th>
+              <th>Registered</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -401,23 +417,20 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
                   <span className={`status-pill status-${u.status}`}>{u.status}</span>
                 </td>
                 <td>
-                  <span className={`role-pill${u.role === 'admin' ? ' role-admin' : ''}`}>
-                    {u.role ?? 'user'}
-                  </span>
-                </td>
-                <td>
                   <select
-                    className={`tier-select${u.tier === 'vip' ? ' tier-vip' : ''}`}
-                    value={u.tier === 'vip' ? 'vip' : 'member'}
+                    className={`tier-select${accessValue(u) === 'vip' ? ' tier-vip' : ''}${accessValue(u) === 'admin' || accessValue(u) === 'dev' ? ' role-admin' : ''}${accessValue(u) === 'member' ? ' role-member' : ''}`}
+                    value={accessValue(u)}
                     disabled={updatingUid === u.uid || u.status !== 'approved'}
-                    title={u.status !== 'approved' ? 'Approve this user first to set their tier' : undefined}
-                    onChange={(e) => handleTierChange(u.uid, e.target.value)}
+                    title={u.status !== 'approved' ? 'Approve this user first to change their role' : undefined}
+                    onChange={(e) => handleAccessChange(u.uid, e.target.value)}
                   >
                     <option value="member">Member</option>
                     <option value="vip">VIP</option>
+                    <option value="admin">Admin</option>
+                    <option value="dev">Dev</option>
                   </select>
                 </td>
-                <td>{formatDate(u.paidAt)}</td>
+                <td>{formatDate(u.createdAt)}</td>
                 <td className="admin-actions">
                   <button
                     className="row-menu-trigger"
@@ -431,7 +444,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
             ))}
             {!loading && visibleUsers.length === 0 && (
               <tr>
-                <td colSpan={8} className="admin-empty">
+                <td colSpan={7} className="admin-empty">
                   No users in this view.
                 </td>
               </tr>
@@ -440,6 +453,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
         </table>
       </div>
 
+      {isDev && (
       <div className="admin-videos-section">
         <div className="admin-section-title">Videos</div>
         <p className="admin-section-sub">
@@ -511,6 +525,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
           })}
         </div>
       </div>
+      )}
 
       {actionsMenu && (() => {
         const u = users.find((x) => x.uid === actionsMenu.uid);
@@ -539,17 +554,6 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
                   Approve
                 </button>
               )}
-              {u.status !== 'rejected' && (
-                <button
-                  className="row-menu-item row-menu-danger"
-                  onClick={() => {
-                    handleStatusChange(u.uid, 'rejected');
-                    setActionsMenu(null);
-                  }}
-                >
-                  Reject
-                </button>
-              )}
               {u.status !== 'pending' && (
                 <button
                   className="row-menu-item"
@@ -561,27 +565,15 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
                   Set pending
                 </button>
               )}
-              {u.role === 'admin' ? (
-                <button
-                  className="row-menu-item"
-                  onClick={() => {
-                    handleRoleChange(u.uid, 'user');
-                    setActionsMenu(null);
-                  }}
-                >
-                  Remove admin
-                </button>
-              ) : (
-                <button
-                  className="row-menu-item"
-                  onClick={() => {
-                    handleRoleChange(u.uid, 'admin');
-                    setActionsMenu(null);
-                  }}
-                >
-                  Make admin
-                </button>
-              )}
+              <button
+                className="row-menu-item row-menu-danger"
+                onClick={() => {
+                  setActionsMenu(null);
+                  handleDeleteUser(u);
+                }}
+              >
+                Delete user
+              </button>
             </div>
           </>
         );
@@ -724,6 +716,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
                   >
                     <option value="user">User</option>
                     <option value="admin">Admin</option>
+                    <option value="dev">Dev</option>
                   </select>
                 </div>
                 <div>

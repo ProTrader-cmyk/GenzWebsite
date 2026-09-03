@@ -487,28 +487,16 @@ h3 .bar{width:3px;height:18px;border-radius:2px;background:var(--gold);flex:none
 .fig svg{display:block;width:100%;height:auto;}
 .cap{text-align:center;font-size:11px;color:var(--mute);margin-top:10px;font-style:italic;}
 
-/* GOLD CHART */
+/* GOLD CHART — TradingView OANDA widget (real forex data) */
 .gold-chart-card{background:var(--bg2);border:1px solid var(--faint);border-radius:var(--rl);padding:16px;margin:16px 0;box-shadow:0 20px 40px -26px rgba(0,0,0,0.6);}
 .gold-chart-symbols{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;}
-.gold-chart-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px;}
-.gold-chart-tf{display:flex;gap:4px;flex-wrap:wrap;}
-.gc-tf-btn{font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:600;color:var(--mute);background:var(--bg1);border:1px solid var(--faint);border-radius:8px;padding:5px 10px;cursor:pointer;transition:color .15s,border-color .15s,background .15s;}
-.gc-tf-btn:hover{color:var(--text);border-color:var(--brandline);}
-.gc-tf-btn.active{color:#0C0C0F;background:var(--gold);border-color:var(--gold);}
-.gc-indicators{position:relative;}
-.gc-indicator-menu{position:absolute;top:calc(100% + 6px);left:0;z-index:5;min-width:180px;background:var(--bg1);border:1px solid var(--faint);border-radius:10px;box-shadow:0 16px 32px -14px rgba(0,0,0,0.6);padding:4px;}
-.gc-indicator-item{display:block;width:100%;text-align:left;font-family:'Noto Sans Khmer',sans-serif;font-size:13px;color:var(--text);background:none;border:none;border-radius:6px;padding:8px 10px;cursor:pointer;transition:background .15s;}
-.gc-indicator-item:hover{background:var(--bg2);}
-.gc-indicator-item.active{color:var(--gold2);font-weight:600;}
-.gold-chart-legend{display:flex;align-items:center;font-family:'Noto Sans Khmer',sans-serif;font-size:12px;color:var(--mute);margin-bottom:10px;}
-.gc-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;}
-.gold-chart-price{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:var(--text);transition:color .3s;}
-.gold-chart-price.is-up{color:var(--up);}
-.gold-chart-price.is-down{color:var(--dn);}
-.gold-chart-canvas{position:relative;width:100%;height:440px;border-radius:var(--r);overflow:hidden;}
+.gold-chart-symbol-btn{font-family:'Space Grotesk','Noto Sans Khmer',sans-serif;font-size:12px;font-weight:600;color:var(--mute);background:var(--bg1);border:1px solid var(--faint);border-radius:8px;padding:5px 10px;cursor:pointer;transition:color .15s,border-color .15s,background .15s;}
+.gold-chart-symbol-btn:hover{color:var(--text);border-color:var(--brandline);}
+.gold-chart-symbol-btn.active{color:#0C0C0F;background:var(--gold);border-color:var(--gold);}
 .gold-chart-tv-wrap{position:relative;}
 .gold-chart-tv-wrap.is-fullscreen{background:#0C0C0F;}
 .gold-chart-tv-wrap.is-fullscreen .gold-chart-tv-iframe{height:100vh;border-radius:0;}
+.gold-chart-canvas{position:relative;width:100%;height:440px;border-radius:var(--r);overflow:hidden;}
 .gold-chart-tv-iframe{display:block;border:none;width:100%;height:440px;border-radius:var(--r);}
 .gold-chart-fullscreen-btn{position:absolute;top:8px;right:8px;z-index:2;width:30px;height:30px;border-radius:8px;background:rgba(19,19,24,0.75);border:1px solid var(--faint);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(4px);}
 .gold-chart-fullscreen-btn:hover{border-color:var(--brandline);}
@@ -516,35 +504,16 @@ h3 .bar{width:3px;height:18px;border-radius:2px;background:var(--gold);flex:none
 .gold-chart-status{text-align:center;font-size:13px;color:var(--mute);padding:10px 0 2px;}
 .gold-chart-disclosure{font-size:11px;color:var(--mute);line-height:1.6;margin-top:12px;padding-top:12px;border-top:1px solid var(--faint);}
 
-.gold-signal-card{background:var(--bg1);border:1px solid var(--faint);border-radius:var(--r);padding:16px;margin-top:14px;}
-.gold-signal-title{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px;}
-.gold-signal-badge{display:inline-flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;letter-spacing:.04em;padding:8px 22px;border-radius:10px;margin-bottom:12px;}
-.gold-signal-badge.is-buy{background:var(--upd);color:var(--up);}
-.gold-signal-badge.is-sell{background:var(--dnd);color:var(--dn);}
-.gold-signal-badge.is-wait{background:var(--warnd);color:var(--warn);}
-.gold-signal-rows{display:flex;flex-direction:column;gap:8px;}
-.gold-signal-row{display:flex;align-items:center;justify-content:space-between;font-size:13px;color:var(--mute);}
-.gold-signal-row span:last-child{font-weight:600;color:var(--text);}
-.gold-signal-row .is-up{color:var(--up);}
-.gold-signal-row .is-down{color:var(--dn);}
-@media(max-width:540px){.gold-chart-canvas{height:320px;}}
-
-/* GOLD CHART — ADMIN-ONLY CUSTOM INDICATOR EDITOR */
-.gc-admin-editor{margin-top:16px;padding:14px;background:var(--warnd);border:1px solid var(--warn);border-radius:var(--r);}
-.gc-admin-editor-head{display:flex;align-items:center;justify-content:space-between;gap:10px;font-family:'Noto Sans Khmer',sans-serif;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px;}
-.gc-admin-new-btn{font-family:'Noto Sans Khmer',sans-serif;font-size:12px;font-weight:600;color:var(--mute);background:var(--bg1);border:1px solid var(--faint);border-radius:8px;padding:4px 10px;cursor:pointer;transition:color .15s,border-color .15s;}
-.gc-admin-new-btn:hover{color:var(--text);border-color:var(--brandline);}
-.gc-admin-editor-warning{font-size:11px;color:var(--mute);line-height:1.5;margin-bottom:10px;}
-.gc-admin-name-input{width:100%;background:var(--bg1);color:var(--text);border:1px solid var(--faint);border-radius:8px;padding:8px 12px;font-family:'Noto Sans Khmer',sans-serif;font-size:13px;margin-bottom:8px;}
-.gc-admin-name-input:focus{outline:none;border-color:var(--brandline);}
-.gc-admin-textarea{width:100%;min-height:140px;background:var(--bg1);color:var(--text);border:1px solid var(--faint);border-radius:8px;padding:10px 12px;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12.5px;line-height:1.6;resize:vertical;}
+/* CUSTOM INDICATOR — write-your-own-code chart (all users) */
+.gc-custom-head{font-family:'Space Grotesk','Noto Sans Khmer',sans-serif;font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px;}
+.gc-custom-sub{font-size:12px;color:var(--mute);line-height:1.5;margin-bottom:12px;}
+.gc-admin-textarea{width:100%;min-height:140px;background:var(--bg1);color:var(--text);border:1px solid var(--faint);border-radius:8px;padding:10px 12px;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12.5px;line-height:1.6;resize:vertical;margin-top:14px;}
 .gc-admin-textarea:focus{outline:none;border-color:var(--brandline);}
 .gc-admin-error{margin-top:8px;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;color:var(--dn);background:var(--dnd);border-radius:6px;padding:8px 10px;white-space:pre-wrap;word-break:break-word;}
 .gc-admin-actions{display:flex;gap:8px;margin-top:10px;}
 .gc-admin-btn{font-family:'Noto Sans Khmer',sans-serif;font-size:13px;font-weight:600;color:var(--text);background:var(--bg1);border:1px solid var(--faint);border-radius:8px;padding:7px 16px;cursor:pointer;transition:border-color .15s;}
 .gc-admin-btn:hover{border-color:var(--brandline);}
 .gc-admin-btn-primary{color:#0C0C0F;background:var(--gold);border-color:var(--gold);}
-.gc-admin-btn:disabled{opacity:.6;cursor:default;}
 
 /* TRADING CALENDAR (calendar grid — embedded in the Profile page) */
 .tc-card{background:var(--bg2);border:1px solid var(--faint);border-radius:var(--rl);padding:18px;margin:16px 0;box-shadow:0 20px 40px -26px rgba(0,0,0,0.6);}
@@ -552,7 +521,7 @@ h3 .bar{width:3px;height:18px;border-radius:2px;background:var(--gold);flex:none
 .tc-nav-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--faint);background:var(--bg1);color:var(--text);font-size:15px;cursor:pointer;transition:border-color .15s,color .15s;}
 .tc-nav-btn:hover:not(:disabled){border-color:var(--brandline);color:var(--brand2);}
 .tc-nav-btn:disabled{opacity:.35;cursor:not-allowed;}
-.tc-month-label{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;color:var(--text);min-width:160px;text-align:center;}
+.tc-month-label{font-family:'Space Grotesk','Noto Sans Khmer',sans-serif;font-size:16px;font-weight:700;color:var(--text);min-width:160px;text-align:center;}
 
 .tc-loading{text-align:center;font-size:13px;color:var(--mute);padding:30px 0;}
 
@@ -582,7 +551,7 @@ h3 .bar{width:3px;height:18px;border-radius:2px;background:var(--gold);flex:none
 .pf-header-cover{height:76px;background:linear-gradient(120deg,var(--brand2),var(--warn));}
 .pf-header-body{display:flex;align-items:flex-end;gap:16px;padding:0 20px 18px;margin-top:-34px;}
 .pf-avatar-wrap{position:relative;flex:none;}
-.pf-avatar{position:relative;width:68px;height:68px;flex:none;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-size:23px;font-weight:700;color:#0C0C0F;background:linear-gradient(135deg,var(--warn),var(--brand2));border:3px solid var(--bg2);box-shadow:0 6px 18px -6px rgba(0,0,0,0.5);cursor:pointer;padding:0;overflow:hidden;font-family:inherit;}
+.pf-avatar{position:relative;width:68px;height:68px;flex:none;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk','Noto Sans Khmer',sans-serif;font-size:23px;font-weight:700;color:#0C0C0F;background:linear-gradient(135deg,var(--warn),var(--brand2));border:3px solid var(--bg2);box-shadow:0 6px 18px -6px rgba(0,0,0,0.5);cursor:pointer;padding:0;overflow:hidden;font-family:inherit;}
 .pf-avatar:disabled{cursor:default;opacity:.85;}
 .pf-avatar-img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
 .pf-avatar-edit{position:absolute;right:-12px;bottom:-10px;width:22px;height:22px;border-radius:50%;background:var(--bg1);border:2px solid var(--bg2);color:var(--text);display:flex;align-items:center;justify-content:center;}
@@ -592,12 +561,12 @@ h3 .bar{width:3px;height:18px;border-radius:2px;background:var(--gold);flex:none
 .pf-header-info{flex:1;min-width:0;padding-bottom:2px;}
 .pf-header-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 @media(max-width:480px){.pf-header-cover{height:60px;}.pf-header-body{margin-top:-26px;gap:12px;}.pf-avatar{width:52px;height:52px;font-size:18px;border-width:2px;}}
-.pf-name{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:var(--text);}
+.pf-name{font-family:'Space Grotesk','Noto Sans Khmer',sans-serif;font-size:18px;font-weight:700;color:var(--text);}
 .pf-email{font-size:12px;color:var(--mute);margin-top:2px;word-break:break-all;}
 .pf-header-badges{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;}
 .pf-verified{font-size:11px;font-weight:600;color:var(--up);}
 
-.pf-section-title{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:var(--text);margin:22px 0 12px;}
+.pf-section-title{font-family:'Space Grotesk','Noto Sans Khmer',sans-serif;font-size:15px;font-weight:700;color:var(--text);margin:22px 0 12px;}
 
 .pf-stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
 .pf-stat-card{position:relative;overflow:hidden;background:var(--bg2);border:1px solid var(--faint);border-radius:14px;padding:14px 14px 10px;box-shadow:0 16px 32px -24px rgba(0,0,0,0.6);}
@@ -607,7 +576,7 @@ h3 .bar{width:3px;height:18px;border-radius:2px;background:var(--gold);flex:none
 .pf-stat-card-change .pf-stat-icon{color:var(--brand2);background:var(--brandd);}
 .pf-stat-card-pair .pf-stat-icon{color:var(--purple);background:var(--purpled);}
 .pf-stat-tag{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);}
-.pf-stat-value{font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pf-stat-value{font-family:'Space Grotesk','Noto Sans Khmer',sans-serif;font-size:19px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .pf-stat-value.is-up{color:var(--up);}
 .pf-stat-value.is-down{color:var(--dn);}
 .pf-stat-sub{font-size:11px;color:var(--mute);margin-top:2px;font-weight:600;}
@@ -647,17 +616,11 @@ h3 .bar{width:3px;height:18px;border-radius:2px;background:var(--gold);flex:none
 .pf-chart-tooltip-val{font-weight:700;font-size:13px;color:var(--text);margin-top:1px;}
 .pf-chart-tooltip-val.is-up{color:var(--up);}
 .pf-chart-tooltip-val.is-down{color:var(--dn);}
+.pf-chart-tooltip-sub-label{font-size:9px;color:var(--mute);text-transform:uppercase;letter-spacing:.04em;}
 .pf-chart-tooltip-sub{color:var(--mute);font-weight:600;margin-top:3px;padding-top:3px;border-top:1px solid var(--faint);}
 .pf-chart-tooltip-sub .is-up{color:var(--up);}
 .pf-chart-tooltip-sub .is-down{color:var(--dn);}
 .pf-chart-labels{display:flex;justify-content:space-between;margin-top:8px;font-size:10px;color:var(--mute);}
-
-/* GOLD CHART — INDICATOR RIGHT-CLICK CONTEXT MENU */
-.gc-context-overlay{position:fixed;inset:0;z-index:20;background:transparent;}
-.gc-context-menu{position:fixed;z-index:21;min-width:130px;background:var(--bg1);border:1px solid var(--faint);border-radius:10px;box-shadow:0 16px 32px -14px rgba(0,0,0,0.6);padding:4px;}
-.gc-context-item{display:block;width:100%;text-align:left;font-family:'Noto Sans Khmer',sans-serif;font-size:13px;color:var(--text);background:none;border:none;border-radius:6px;padding:8px 10px;cursor:pointer;transition:background .15s;}
-.gc-context-item:hover{background:var(--bg2);}
-.gc-context-danger{color:var(--dn);}
 
 /* BADGE */
 .badge{display:inline-block;font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px;font-family:'Noto Sans Khmer',sans-serif;}
@@ -779,11 +742,11 @@ h3 .bar{width:3px;height:18px;border-radius:2px;background:var(--gold);flex:none
 .status-approved{background:var(--upd);color:var(--up);}
 .status-rejected{background:var(--dnd);color:var(--dn);}
 
-.role-pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:capitalize;background:var(--bg2);color:var(--mute);}
 .role-admin{background:var(--brandd);color:var(--brand2);}
 
 .tier-select{padding:3px 8px;border-radius:20px;font-size:11px;font-weight:700;background:var(--bg2);color:var(--mute);border:1px solid var(--faint);cursor:pointer;}
 .tier-select.tier-vip{background:var(--warnd);color:var(--warn);border-color:transparent;}
+.tier-select.role-member{background:var(--blued);color:var(--blue);border-color:transparent;}
 
 .admin-actions{display:flex;gap:6px;flex-wrap:wrap;}
 .action-btn{border:none;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:filter .15s;}
