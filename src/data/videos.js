@@ -34,6 +34,12 @@ export const VIDEO_KEYS = [
   { key: 'bt-scenario-3', label: 'Backtest — Scenario 3' },
   { key: 'bt-scenario-4', label: 'Backtest — Scenario 4' },
   { key: 'psy-ch1', label: 'Psychology — Chapter 1: Road to Success' },
+  { key: 'psy-ch2', label: 'Psychology — Chapter 2: The Lure (and the Dangers) of Trading' },
+  { key: 'adv1', label: 'Advanced — Lesson 1: Dealing Range (ICT)' },
+  { key: 'adv2', label: 'Advanced — Lesson 2: Advanced Liquidity (LQ)' },
+  { key: 'adv3', label: 'Advanced — Lesson 3: PD Array' },
+  { key: 'adv4', label: 'Advanced — Lesson 4: Time and Price' },
+  { key: 'adv5', label: 'Advanced — Lesson 5: How to Set Up an A+ Trade' },
 ];
 
 // { key: { url, label, updatedAt } }, all videos in one read.

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { loginUser, requestPasswordResetLink, confirmPasswordReset } from '../data/auth.js';
 import AuthBackgroundVideo from '../components/ui/AuthBackgroundVideo.jsx';
 import LanguageDropdown from '../components/LanguageDropdown.jsx';
@@ -30,6 +30,34 @@ export default function Login({
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  // Set from loginUser()'s lockedMs after a lockout-triggering attempt, so
+  // the button itself goes disabled with a live countdown instead of the
+  // user having to hit Log In again and again just to see the same error.
+  const [lockedUntil, setLockedUntil] = useState(null);
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    if (!lockedUntil) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [lockedUntil]);
+
+  const lockRemainingMs = lockedUntil ? Math.max(0, lockedUntil - now) : 0;
+  const isLocked = lockRemainingMs > 0;
+
+  useEffect(() => {
+    if (lockedUntil && lockRemainingMs === 0) {
+      setLockedUntil(null);
+      setError('');
+    }
+  }, [lockRemainingMs, lockedUntil]);
+
+  function formatCountdown(ms) {
+    const totalSeconds = Math.ceil(ms / 1000);
+    const m = Math.floor(totalSeconds / 60);
+    const s = totalSeconds % 60;
+    return `${m}:${String(s).padStart(2, '0')}`;
+  }
 
   // Forgot-password flow — an emailed link, not a code to type:
   // 'email' (enter address, request a link) -> 'sent' (check your inbox)
@@ -41,17 +69,17 @@ export default function Login({
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setLoading(true);
+    if (isLocked) return;
     // Must be set before loginUser() — it's the signInWithEmailAndPassword
     // call inside it that fires App.jsx's onAuthStateChanged listener,
     // which would otherwise race this handler to set `user` first.
     onAuthStart?.();
     const result = await loginUser({ email, password }, lang);
-    setLoading(false);
 
     if (!result.ok) {
       onAuthCancel?.();
       setError(result.error);
+      if (result.lockedMs) setLockedUntil(Date.now() + result.lockedMs);
       return;
     }
 
@@ -191,8 +219,8 @@ export default function Login({
 
               {error && <div className="auth-error">{error}</div>}
 
-              <button type="submit" className="auth-btn" disabled={loading}>
-                {loading ? t.loginBtnLoading : <>{t.loginBtn} →</>}
+              <button type="submit" className="auth-btn" disabled={isLocked}>
+                {isLocked ? t.loginBtnLocked(formatCountdown(lockRemainingMs)) : <>{t.loginBtn} →</>}
               </button>
             </form>
 

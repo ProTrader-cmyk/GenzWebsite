@@ -45,10 +45,10 @@ export default function Home({ doneMap, onSelectLesson, onBack, approved, allowe
       </p>
 
       {lessons.map((lesson, i) => {
-        // Every lesson stays locked until the account is approved (by an
-        // admin, or by paying on the Pricing page) — no free preview. Once
-        // approved, lessons unlock one at a time in order — lesson N+1 stays
-        // locked until lesson N is marked done. An admin always sees every
+        // Every lesson stays locked until the account is approved by an
+        // admin — no free preview. Once approved, lessons unlock one at a
+        // time in order — lesson N+1 stays locked until lesson N is marked
+        // done. An admin always sees every
         // lesson unlocked, and an admin-set permissions list
         // (allowedLessons) overrides both rules entirely for the account —
         // it's an explicit, order-independent grant.

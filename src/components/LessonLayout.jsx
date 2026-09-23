@@ -10,6 +10,11 @@ import {
   getPrevPsychologyLessonId,
   getPsychologyLessonShortLabel,
 } from '../data/psychologyLessons.js';
+import {
+  getAdvancedLessonEyebrow,
+  getPrevAdvancedLessonId,
+  getAdvancedLessonShortLabel,
+} from '../data/advancedLessons.js';
 import LessonNav from './ui/LessonNav.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getLessonChrome } from '../i18n/lessonStrings.js';
@@ -19,8 +24,9 @@ import { getLessonChrome } from '../i18n/lessonStrings.js';
 // link and its label are derived automatically from lesson order in
 // src/data/lessons.js (`track="technical"`, the default),
 // src/data/appsLessons.js (`track="apps"`), src/data/backtestLessons.js
-// (`track="backtest"`), or src/data/psychologyLessons.js
-// (`track="psychology"`) — individual lesson files only supply their
+// (`track="backtest"`), src/data/psychologyLessons.js
+// (`track="psychology"`), or src/data/advancedLessons.js
+// (`track="advanced"`) — individual lesson files only supply their
 // content via `children`. See src/pages/Lesson1.jsx.
 export default function LessonLayout({
   id,
@@ -48,6 +54,10 @@ export default function LessonLayout({
     prevId = getPrevPsychologyLessonId(id);
     eyebrow = getPsychologyLessonEyebrow(id, lang);
     prevShortLabel = getPsychologyLessonShortLabel;
+  } else if (track === 'advanced') {
+    prevId = getPrevAdvancedLessonId(id);
+    eyebrow = getAdvancedLessonEyebrow(id, lang);
+    prevShortLabel = getAdvancedLessonShortLabel;
   } else {
     prevId = getPrevLessonId(id);
     eyebrow = getLessonEyebrow(id, lang);

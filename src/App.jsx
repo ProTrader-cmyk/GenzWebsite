@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import Navbar from './components/Navbar.jsx';
@@ -9,19 +9,18 @@ import BacktestHome from './components/BacktestHome.jsx';
 import PsychologyHome from './components/PsychologyHome.jsx';
 import NewProductHome from './components/NewProductHome.jsx';
 import AdvancedHome from './components/AdvancedHome.jsx';
-import Profile from './components/Profile.jsx';
 import AccessGrantedModal from './components/AccessGrantedModal.jsx';
+import LessonFeedbackModal from './components/LessonFeedbackModal.jsx';
 import NewsPage from './components/NewsPage.jsx';
 import ContactPage from './components/ContactPage.jsx';
-import PricingPage from './components/PricingPage.jsx';
 import Login from './pages/Login.jsx';
 import Signup from './pages/Signup.jsx';
 import VerifyOtp from './pages/VerifyOtp.jsx';
-import AdminDashboard from './pages/AdminDashboard.jsx';
 import { lessons, getNextLessonId } from './data/lessons.js';
 import { appsLessons, getNextAppsLessonId } from './data/appsLessons.js';
 import { backtestLessons, getNextBacktestLessonId } from './data/backtestLessons.js';
 import { psychologyLessons, getNextPsychologyLessonId } from './data/psychologyLessons.js';
+import { advancedLessons, getNextAdvancedLessonId } from './data/advancedLessons.js';
 import { lessonPages } from './pages/registry.js';
 import favicon from './assets/Fav.png';
 import { auth, db } from './firebase.js';
@@ -32,10 +31,29 @@ import {
   clearSession,
   logoutUser,
   markLessonDone,
-  markPaymentClicked,
 } from './data/auth.js';
+import { submitFeedback } from './data/feedback.js';
 
 const NAV_KEY = 'gzt_nav';
+
+// Lazy-loaded: each is a large, conditionally-rendered section (dashboard,
+// lesson content, profile) that most page loads never touch, so they get
+// their own chunk instead of bloating everyone's initial bundle. Every call
+// site below wraps its usage in <Suspense fallback={<BootScreen />}>.
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard.jsx'));
+const Profile = lazy(() => import('./components/Profile.jsx'));
+
+// Shared with the checkingSession screen below and every Suspense fallback
+// (AdminDashboard, lesson pages) so a lazy chunk fetch looks the same as the
+// app's normal boot loader instead of flashing a different spinner.
+function BootScreen() {
+  return (
+    <div className="app-boot-screen">
+      <img src={favicon} alt="GenZ Trader" className="app-boot-logo" />
+      <span className="app-boot-spinner" />
+    </div>
+  );
+}
 
 // Where the user was (category picker / lesson list / a specific lesson) —
 // restored on mount so an F5 refresh doesn't dump them back on the category
@@ -99,6 +117,8 @@ export default function App() {
   const [section, setSection] = useState(() => loadNav().section);
   const [view, setView] = useState(() => loadNav().view);
   const [doneMap, setDoneMap] = useState({});
+  // { lessonId, lessonTitle } while the post-lesson feedback prompt is open, else null.
+  const [feedbackPrompt, setFeedbackPrompt] = useState(null);
   // Once opened, the gold chart section stays mounted (just hidden via the
   // .view/.view.active CSS toggle) instead of being unmounted on every
   // navigation away — TradingView's embedded widget has no account/session
@@ -228,10 +248,33 @@ export default function App() {
       ? getNextBacktestLessonId(id)
       : id.startsWith('psy')
         ? getNextPsychologyLessonId(id)
-        : id.startsWith('a')
-          ? getNextAppsLessonId(id)
-          : getNextLessonId(id);
+        : id.startsWith('adv')
+          ? getNextAdvancedLessonId(id)
+          : id.startsWith('a')
+            ? getNextAppsLessonId(id)
+            : getNextLessonId(id);
     setView(next ?? 'home');
+    setFeedbackPrompt({ lessonId: id, lessonTitle: findLessonTitle(id) });
+  }
+
+  function findLessonTitle(id) {
+    const all = [...lessons, ...appsLessons, ...backtestLessons, ...psychologyLessons, ...advancedLessons];
+    return all.find((l) => l.id === id)?.title ?? null;
+  }
+
+  function handleFeedbackSubmit(rating, comment) {
+    if (feedbackPrompt) {
+      submitFeedback({
+        uid: user.uid,
+        name: user.name,
+        email: user.email,
+        lessonId: feedbackPrompt.lessonId,
+        lessonTitle: feedbackPrompt.lessonTitle,
+        rating,
+        comment,
+      }).catch(() => {});
+    }
+    setFeedbackPrompt(null);
   }
 
   // 'technical', 'apps', 'backtest', and 'psychology' are lesson tracks;
@@ -284,16 +327,6 @@ export default function App() {
     setPendingVerification(pending);
   }
 
-  // Persisted to Firestore (not just local state) so a user who's clicked
-  // Pay isn't sent back to the Pricing gate on refresh or after logging
-  // back in — see markPaymentClicked in data/auth.js.
-  function handlePaySuccess() {
-    markPaymentClicked(user.uid).catch(() => {});
-    const updated = { ...user, clickedPay: true };
-    setUser(updated);
-    saveSession(updated);
-  }
-
   async function handleLogout() {
     await logoutUser();
     setUser(null);
@@ -324,12 +357,7 @@ export default function App() {
   }
 
   if (checkingSession) {
-    return (
-      <div className="app-boot-screen">
-        <img src={favicon} alt="GenZ Trader" className="app-boot-logo" />
-        <span className="app-boot-spinner" />
-      </div>
-    );
+    return <BootScreen />;
   }
 
   if (pendingVerification) {
@@ -369,46 +397,55 @@ export default function App() {
   // dashboard; only dev additionally gets the Videos panel (see isDev in
   // AdminDashboard.jsx).
   if ((user.role === 'admin' || user.role === 'dev') && !adminViewingSite) {
-    return <AdminDashboard admin={user} onLogout={handleLogout} onViewSite={() => setAdminViewingSite(true)} />;
+    return (
+      <Suspense fallback={<BootScreen />}>
+        <AdminDashboard admin={user} onLogout={handleLogout} onViewSite={() => setAdminViewingSite(true)} />
+      </Suspense>
+    );
   }
 
-  // Verified but not paid/approved — logged in and can see the category
+  // Verified but not yet approved — logged in and can see the category
   // picker, but every lesson in every track stays locked (no free preview)
-  // until either an admin approves the account / flips status to
-  // 'approved' in Firestore, or the account pays on the Pricing page
-  // (which also sets status: 'approved', see genztrader-news-api/payment.js).
-  // An admin browsing the site gets full access regardless of their own
-  // status.
-  const approved = user.status === 'approved' || user.role === 'admin';
+  // until an admin approves the account / flips status to 'approved' in
+  // Firestore. An admin or dev browsing the site gets full access regardless
+  // of their own status.
+  const approved = user.status === 'approved' || user.role === 'admin' || user.role === 'dev';
 
   // VIP is a separate tier from approved/admin — it only gates VIP-only
   // tracks (e.g. Advanced), set via Admin Dashboard's per-user Role dropdown
-  // (data/auth.js: setUserAccess). An admin always counts as VIP too.
-  const isVip = user.tier === 'vip' || user.role === 'admin';
+  // (data/auth.js: setUserAccess). An admin or dev always counts as VIP too.
+  const isVip = user.tier === 'vip' || user.role === 'admin' || user.role === 'dev';
 
   // Not-yet-approved accounts go straight into the category picker like
   // everyone else — every track stays locked (isLessonLocked below) and
-  // CategoryHome shows its own "contact admin" modal automatically. The
-  // Pricing page is no longer forced on first sign-up; it's still reachable
-  // from the nav for anyone who wants to pay directly.
+  // CategoryHome shows its own "contact admin" modal automatically.
 
   // An admin can grant a specific list of lesson ids per user (Admin
   // Dashboard "Permissions"), overriding the default approved/pending rule
   // entirely for that account — across both tracks. Absent (not an array)
   // means "no override", so the default rule below applies as before.
-  const allowedLessons = Array.isArray(user.allowedLessons) ? user.allowedLessons : null;
-  const isAdmin = user.role === 'admin';
+  const isAdmin = user.role === 'admin' || user.role === 'dev';
+  // An admin/dev account ignores allowedLessons entirely — that override
+  // exists to restrict/grant lessons for regular accounts, and should never
+  // end up locking out an admin or dev themselves.
+  const allowedLessons = !isAdmin && Array.isArray(user.allowedLessons) ? user.allowedLessons : null;
 
   // Lessons within a track unlock one at a time in order (lesson N+1 needs
-  // lesson N done) — except for an admin, who always sees every lesson in
-  // every track unlocked, and an account with an explicit allowedLessons
+  // lesson N done) — except for an admin/dev, who always sees every lesson
+  // in every track unlocked, and an account with an explicit allowedLessons
   // override, which is order-independent by design.
-  const TRACK_LESSONS = { technical: lessons, apps: appsLessons, backtest: backtestLessons, psychology: psychologyLessons };
+  const TRACK_LESSONS = {
+    technical: lessons,
+    apps: appsLessons,
+    backtest: backtestLessons,
+    psychology: psychologyLessons,
+    advanced: advancedLessons,
+  };
 
   function isLessonLocked(id) {
+    if (isAdmin) return false;
     if (allowedLessons) return !allowedLessons.includes(id);
     if (!approved) return true;
-    if (isAdmin) return false;
     const trackLessons = TRACK_LESSONS[section];
     const idx = trackLessons ? trackLessons.findIndex((l) => l.id === id) : -1;
     if (idx <= 0) return false; // first lesson in the track, or an unrecognized id
@@ -422,7 +459,11 @@ export default function App() {
   const requestedLesson = view !== 'home' ? lessonPages[view] : null;
   const lessonBlocked =
     requestedLesson &&
-    (section === 'technical' || section === 'apps' || section === 'backtest' || section === 'psychology') &&
+    (section === 'technical' ||
+      section === 'apps' ||
+      section === 'backtest' ||
+      section === 'psychology' ||
+      section === 'advanced') &&
     isLessonLocked(view);
   const CurrentLesson = lessonBlocked ? null : requestedLesson;
   const effectiveView = CurrentLesson ? view : 'home';
@@ -445,7 +486,7 @@ export default function App() {
         onNavProfile={() => setSection('profile')}
         user={user}
         onLogout={handleLogout}
-        isAdmin={user.role === 'admin'}
+        isAdmin={user.role === 'admin' || user.role === 'dev'}
         onNavAdmin={() => setAdminViewingSite(false)}
         approved={approved}
       />
@@ -459,13 +500,15 @@ export default function App() {
           />
         )}
         {section === 'news' && <NewsPage onBack={backToCategories} />}
-        {section === 'pricing' && <PricingPage onBack={backToCategories} onPay={handlePaySuccess} />}
         {section === 'contact' && <ContactPage onBack={backToCategories} />}
         {hasVisitedNewProduct && (
           <NewProductHome onBack={backToCategories} isActive={section === 'new-product'} />
         )}
-        {section === 'advanced' && <AdvancedHome onBack={backToCategories} />}
-        {section === 'profile' && <Profile onBack={backToCategories} uid={user.uid} user={user} />}
+        {section === 'profile' && (
+          <Suspense fallback={<BootScreen />}>
+            <Profile onBack={backToCategories} uid={user.uid} user={user} />
+          </Suspense>
+        )}
         {section === 'technical' && effectiveView === 'home' && (
           <Home
             doneMap={doneMap}
@@ -506,11 +549,36 @@ export default function App() {
             isAdmin={isAdmin}
           />
         )}
-        {(section === 'technical' || section === 'apps' || section === 'backtest' || section === 'psychology') &&
-          CurrentLesson && <CurrentLesson onNavigate={navigate} onDone={() => markDone(view)} />}
+        {section === 'advanced' && effectiveView === 'home' && (
+          <AdvancedHome
+            doneMap={doneMap}
+            onSelectLesson={navigate}
+            onBack={backToCategories}
+            approved={approved}
+            allowedLessons={allowedLessons}
+            isAdmin={isAdmin}
+          />
+        )}
+        {(section === 'technical' ||
+          section === 'apps' ||
+          section === 'backtest' ||
+          section === 'psychology' ||
+          section === 'advanced') &&
+          CurrentLesson && (
+            <Suspense fallback={<BootScreen />}>
+              <CurrentLesson onNavigate={navigate} onDone={() => markDone(view)} />
+            </Suspense>
+          )}
       </div>
 
       <AccessGrantedModal kind={accessAlert} onClose={() => setAccessAlert(null)} />
+      {feedbackPrompt && (
+        <LessonFeedbackModal
+          lessonTitle={feedbackPrompt.lessonTitle}
+          onSubmit={handleFeedbackSubmit}
+          onSkip={() => setFeedbackPrompt(null)}
+        />
+      )}
     </>
   );
 }

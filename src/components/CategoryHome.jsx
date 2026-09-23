@@ -14,8 +14,8 @@ import {
   TelegramIcon,
 } from './ui/CategoryIcons.jsx';
 
-// Same Telegram contact as ContactPage.jsx/PricingPage.jsx — repeated here
-// so a pending user can reach an admin straight from the lock modals below.
+// Same Telegram contact as ContactPage.jsx — repeated here so a pending
+// user can reach an admin straight from the lock modals below.
 const TELEGRAM_URL = 'https://t.me/Vengsopheagenz?direct';
 
 function buildCategories(t, approved, isVip) {
@@ -120,10 +120,9 @@ export default function CategoryHome({ onSelectCategory, approved, isVip, notice
 
   // Pending (not-yet-approved) accounts see the "contact admin" modal right
   // away, every time they land on the category picker — not just when they
-  // click a locked card — since there's no other automatic gate anymore
-  // (the old forced Pricing-page redirect on first sign-up was removed).
-  // `noticeTick` also re-opens it when a blocked nav item (e.g. News) is
-  // clicked while already sitting on this screen, where switching `section`
+  // click a locked card. `noticeTick` also re-opens it when a blocked nav
+  // item (e.g. News) is clicked while already sitting on this screen, where
+  // switching `section`
   // back to 'categories' is otherwise a no-op that wouldn't re-trigger this.
   useEffect(() => {
     if (!approved) setShowPendingModal(true);

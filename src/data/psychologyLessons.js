@@ -16,6 +16,16 @@ export const psychologyLessons = [
       zh: '《交易心理分析》— 第一章：通往成功之路',
     },
   },
+  {
+    id: 'psy2',
+    title: 'Trading in the Zone — Chapter 2',
+    subtitle: 'The Lure (and the Dangers) of Trading · Mark Douglas',
+    pageTitle: {
+      kh: 'Trading in the Zone — ជំពូកទី ២៖ ភាពទាក់ទាញ (និងគ្រោះថ្នាក់) នៃការ Trading',
+      en: 'Trading in the Zone — Chapter 2: The Lure (and the Dangers) of Trading',
+      zh: '《交易心理分析》— 第二章：交易的诱惑（与危险）',
+    },
+  },
 ];
 
 export function getPsychologyLessonIndex(id) {

@@ -22,56 +22,44 @@ import { getStrings } from '../i18n/strings.js';
 const NEWS_API_URL = import.meta.env.VITE_NEWS_API_URL;
 const SESSION_KEY = 'gzt_session';
 const OTP_TTL_MS = 10 * 60 * 1000; // 6-digit code is valid for 10 minutes
-const LOGIN_ATTEMPTS_KEY = 'gzt_login_attempts';
-const MAX_LOGIN_ATTEMPTS = 3;
-const LOGIN_LOCKOUT_MS = 60 * 1000; // 1 minute
+const LOGIN_ATTEMPTS_COLLECTION = 'loginAttempts';
+const MAX_LOGIN_ATTEMPTS = 4;
+const LOGIN_LOCKOUT_MS = 2 * 60 * 1000; // 2 minutes
 
-// Client-side only (keyed by email in localStorage) — a UX layer that shows
-// a friendly "try again shortly" message after repeated wrong passwords.
-// Firebase's own server-side throttling (auth/too-many-requests, handled
-// below) is the real brute-force protection and isn't affected by
-// clearing this.
-function loadLoginAttempts() {
-  try {
-    return JSON.parse(localStorage.getItem(LOGIN_ATTEMPTS_KEY)) || {};
-  } catch {
-    return {};
-  }
-}
-
-function saveLoginAttempts(all) {
-  localStorage.setItem(LOGIN_ATTEMPTS_KEY, JSON.stringify(all));
-}
-
-function checkLoginLockout(email) {
-  const all = loadLoginAttempts();
-  const entry = all[email];
-  if (!entry?.lockedUntil) return { locked: false };
-  const remainingMs = entry.lockedUntil - Date.now();
+// Server-side (Firestore, keyed by the normalized email — not the device),
+// so the lockout follows the account across browsers instead of resetting
+// the moment someone opens a different browser, an incognito window, or
+// clears localStorage — a UX layer that shows a friendly "try again
+// shortly" message after repeated wrong passwords. Firebase's own
+// server-side throttling (auth/too-many-requests, handled below) remains
+// the real brute-force protection underneath this.
+async function checkLoginLockout(email) {
+  const ref = doc(db, LOGIN_ATTEMPTS_COLLECTION, email);
+  const snap = await getDoc(ref);
+  if (!snap.exists() || !snap.data().lockedUntil) return { locked: false };
+  const remainingMs = snap.data().lockedUntil - Date.now();
   if (remainingMs <= 0) {
-    delete all[email];
-    saveLoginAttempts(all);
+    await deleteDoc(ref);
     return { locked: false };
   }
   return { locked: true, remainingMs };
 }
 
-function recordFailedLogin(email) {
-  const all = loadLoginAttempts();
-  const entry = all[email] || { count: 0 };
-  entry.count += 1;
-  if (entry.count >= MAX_LOGIN_ATTEMPTS) {
-    all[email] = { count: 0, lockedUntil: Date.now() + LOGIN_LOCKOUT_MS };
-  } else {
-    all[email] = entry;
-  }
-  saveLoginAttempts(all);
+async function recordFailedLogin(email) {
+  const ref = doc(db, LOGIN_ATTEMPTS_COLLECTION, email);
+  const snap = await getDoc(ref);
+  const count = (snap.exists() ? snap.data().count : 0) + 1;
+  const justLocked = count >= MAX_LOGIN_ATTEMPTS;
+  await setDoc(ref, {
+    count: justLocked ? 0 : count,
+    lockedUntil: justLocked ? Date.now() + LOGIN_LOCKOUT_MS : null,
+    updatedAt: serverTimestamp(),
+  });
+  return justLocked ? { locked: true, remainingMs: LOGIN_LOCKOUT_MS } : { locked: false };
 }
 
-function clearLoginAttempts(email) {
-  const all = loadLoginAttempts();
-  delete all[email];
-  saveLoginAttempts(all);
+async function clearLoginAttempts(email) {
+  await deleteDoc(doc(db, LOGIN_ATTEMPTS_COLLECTION, email));
 }
 
 const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID;
@@ -201,19 +189,12 @@ export async function markLessonDone(uid, lessonId) {
   await updateDoc(doc(db, 'users', uid), { [`progress.${lessonId}`]: true });
 }
 
-// Once a not-yet-approved account has clicked "Pay" on the Pricing page,
-// they shouldn't be forced back onto that page on every refresh/login —
-// persisted so it survives logout, not just local component state.
-export async function markPaymentClicked(uid) {
-  await updateDoc(doc(db, 'users', uid), { clickedPay: true });
-}
-
 export async function loginUser({ email, password }, lang) {
   const normalizedEmail = email.trim().toLowerCase();
 
-  const lockout = checkLoginLockout(normalizedEmail);
+  const lockout = await checkLoginLockout(normalizedEmail);
   if (lockout.locked) {
-    return { ok: false, error: getStrings(lang).auth.errLoginLocked };
+    return { ok: false, error: getStrings(lang).auth.errLoginLocked, lockedMs: lockout.remainingMs };
   }
 
   try {
@@ -222,11 +203,14 @@ export async function loginUser({ email, password }, lang) {
     if (!profile) {
       return { ok: false, error: getStrings(lang).auth.errNoAccount };
     }
-    clearLoginAttempts(normalizedEmail);
+    clearLoginAttempts(normalizedEmail).catch(() => {});
     return { ok: true, user: profile };
   } catch (err) {
     if (['auth/invalid-credential', 'auth/wrong-password', 'auth/user-not-found'].includes(err.code)) {
-      recordFailedLogin(normalizedEmail);
+      const result = await recordFailedLogin(normalizedEmail);
+      if (result.locked) {
+        return { ok: false, error: getStrings(lang).auth.errLoginLocked, lockedMs: result.remainingMs };
+      }
     }
     return { ok: false, error: authErrorMessage(err.code, lang) };
   }

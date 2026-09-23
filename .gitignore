@@ -3,3 +3,10 @@ dist
 .DS_Store
 .env
 .env.local
+
+# Raw lesson footage — uploaded separately to GitHub Releases (see
+# src/data/videos.js), never committed to the repo itself.
+*.mov
+*.MOV
+*.mkv
+*.mp4

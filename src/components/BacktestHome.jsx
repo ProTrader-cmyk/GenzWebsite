@@ -6,9 +6,9 @@ import { LockIcon } from './ui/CategoryIcons.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
 
-// Every lesson stays locked until the account is approved (by an admin, or
-// by paying on the Pricing page) — same rule as Technical/Apps. Once
-// approved, lessons unlock one at a time in order. An admin-set permissions
+// Every lesson stays locked until the account is approved by an admin —
+// same rule as Technical/Apps. Once approved, lessons unlock one at a time
+// in order. An admin-set permissions
 // list (allowedLessons) overrides both rules entirely for a specific
 // account.
 export default function BacktestHome({ doneMap, onSelectLesson, onBack, approved, allowedLessons, isAdmin }) {

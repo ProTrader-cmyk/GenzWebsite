@@ -1,18 +1,4 @@
-import Lesson1 from './Lesson1.jsx';
-import Lesson2 from './Lesson2.jsx';
-import Lesson3 from './Lesson3.jsx';
-import Lesson4 from './Lesson4.jsx';
-import Lesson5 from './Lesson5.jsx';
-import Lesson6 from './Lesson6.jsx';
-import Lesson7 from './Lesson7.jsx';
-import AppsLesson1 from './AppsLesson1.jsx';
-import AppsLesson2 from './AppsLesson2.jsx';
-import AppsLesson3 from './AppsLesson3.jsx';
-import Backtest1 from './Backtest1.jsx';
-import Backtest2 from './Backtest2.jsx';
-import Backtest3 from './Backtest3.jsx';
-import Backtest4 from './Backtest4.jsx';
-import Psychology1 from './Psychology1.jsx';
+import { lazy } from 'react';
 
 // Maps a lesson id to the component that renders its content — 'l1'..'l7'
 // from src/data/lessons.js (Technical track), 'a1'..'a3' from
@@ -21,21 +7,31 @@ import Psychology1 from './Psychology1.jsx';
 // src/data/psychologyLessons.js (Psychology track). The id namespaces never
 // collide, so all tracks share one registry and one doneMap in App.jsx. Add
 // one line here for every new LessonN.jsx / AppsLessonN.jsx / BacktestN.jsx
-// / PsychologyN.jsx you create.
+// / PsychologyN.jsx / AdvancedN.jsx you create.
+//
+// Lazy-loaded (each becomes its own chunk, fetched only when opened) since
+// lesson content is the bulk of the app's source and most of it is never
+// touched by a given visitor — App.jsx wraps <CurrentLesson> in <Suspense>.
 export const lessonPages = {
-  l1: Lesson1,
-  l2: Lesson2,
-  l3: Lesson3,
-  l4: Lesson4,
-  l5: Lesson5,
-  l6: Lesson6,
-  l7: Lesson7,
-  a1: AppsLesson1,
-  a2: AppsLesson2,
-  a3: AppsLesson3,
-  bt1: Backtest1,
-  bt2: Backtest2,
-  bt3: Backtest3,
-  bt4: Backtest4,
-  psy1: Psychology1,
+  l1: lazy(() => import('./Lesson1.jsx')),
+  l2: lazy(() => import('./Lesson2.jsx')),
+  l3: lazy(() => import('./Lesson3.jsx')),
+  l4: lazy(() => import('./Lesson4.jsx')),
+  l5: lazy(() => import('./Lesson5.jsx')),
+  l6: lazy(() => import('./Lesson6.jsx')),
+  l7: lazy(() => import('./Lesson7.jsx')),
+  a1: lazy(() => import('./AppsLesson1.jsx')),
+  a2: lazy(() => import('./AppsLesson2.jsx')),
+  a3: lazy(() => import('./AppsLesson3.jsx')),
+  bt1: lazy(() => import('./Backtest1.jsx')),
+  bt2: lazy(() => import('./Backtest2.jsx')),
+  bt3: lazy(() => import('./Backtest3.jsx')),
+  bt4: lazy(() => import('./Backtest4.jsx')),
+  psy1: lazy(() => import('./Psychology1.jsx')),
+  psy2: lazy(() => import('./Psychology2.jsx')),
+  adv1: lazy(() => import('./Advanced1.jsx')),
+  adv2: lazy(() => import('./Advanced2.jsx')),
+  adv3: lazy(() => import('./Advanced3.jsx')),
+  adv4: lazy(() => import('./Advanced4.jsx')),
+  adv5: lazy(() => import('./Advanced5.jsx')),
 };

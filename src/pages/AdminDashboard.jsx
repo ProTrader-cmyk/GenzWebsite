@@ -11,8 +11,10 @@ import { lessons } from '../data/lessons.js';
 import { appsLessons } from '../data/appsLessons.js';
 import { backtestLessons } from '../data/backtestLessons.js';
 import { psychologyLessons } from '../data/psychologyLessons.js';
+import { advancedLessons } from '../data/advancedLessons.js';
 import { VIDEO_KEYS, fetchAllVideos, saveVideoUrl, deleteVideo } from '../data/videos.js';
 import { invalidateVideoCache } from '../data/useVideos.js';
+import { fetchAllFeedback } from '../data/feedback.js';
 import ThemeToggle from '../components/ThemeToggle.jsx';
 
 const TABS = [
@@ -67,6 +69,10 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
   const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'user', status: 'pending', tier: 'member' });
   const [addUserSaving, setAddUserSaving] = useState(false);
   const [addUserError, setAddUserError] = useState('');
+  const [feedback, setFeedback] = useState([]);
+  const [feedbackLoading, setFeedbackLoading] = useState(true);
+  const [feedbackError, setFeedbackError] = useState('');
+  const [showFeedback, setShowFeedback] = useState(false);
 
   const isDev = admin.role === 'dev';
 
@@ -93,9 +99,22 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
     setVideosLoading(false);
   }
 
+  async function loadFeedback() {
+    setFeedbackLoading(true);
+    setFeedbackError('');
+    try {
+      const all = await fetchAllFeedback();
+      setFeedback(all);
+    } catch {
+      setFeedbackError('Could not load feedback. Check that firestore.rules is published.');
+    }
+    setFeedbackLoading(false);
+  }
+
   useEffect(() => {
     load();
     loadVideos();
+    loadFeedback();
   }, []);
 
   function startEditing(key) {
@@ -222,6 +241,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
           ...appsLessons.map((l) => l.id),
           ...backtestLessons.map((l) => l.id),
           ...psychologyLessons.map((l) => l.id),
+          ...advancedLessons.map((l) => l.id),
         ];
     setPermUser(u);
     setPermSelection(initial);
@@ -301,6 +321,9 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
         <div className="admin-header-right">
           <span className="admin-whoami">{admin.email}</span>
           <ThemeToggle />
+          <button className="admin-feedback-btn" onClick={() => setShowFeedback(true)}>
+            Feedback{feedback.length ? <span className="admin-feedback-count">{feedback.length}</span> : null}
+          </button>
           <button className="admin-logout" onClick={onLogout}>
             Sign out
           </button>
@@ -640,6 +663,18 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
               ))}
             </div>
 
+            <div className="perm-section">
+              <div className="perm-section-title">Advanced (VIP)</div>
+              {advancedLessons.map((l, i) => (
+                <label key={l.id} className="perm-row">
+                  <input type="checkbox" checked={permSelection.includes(l.id)} onChange={() => toggleLesson(l.id)} />
+                  <span>
+                    {i + 1}. {l.title}
+                  </span>
+                </label>
+              ))}
+            </div>
+
             <div className="perm-modal-actions">
               <button className="action-btn reset" onClick={clearPermissions} disabled={permSaving}>
                 Use default access
@@ -767,6 +802,52 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showFeedback && (
+        <div className="modal-overlay" onClick={() => setShowFeedback(false)}>
+          <div className="perm-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="perm-modal-header">
+              <div>
+                <div className="perm-modal-title">User Feedback</div>
+                <div className="perm-modal-sub">Ratings and comments left after finishing a lesson.</div>
+              </div>
+            </div>
+
+            {feedbackError && <div className="admin-error admin-error-block">{feedbackError}</div>}
+
+            <div className="fbadm-list">
+              {feedback.map((f) => (
+                <div key={f.id} className="fbadm-row">
+                  <div className="fbadm-row-head">
+                    <div>
+                      <div className="fbadm-user">{f.name || f.email || 'Unknown user'}</div>
+                      <div className="fbadm-lesson">{f.lessonTitle || 'General website feedback'}</div>
+                    </div>
+                    <div className="fbadm-stars-display" aria-label={`${f.rating} out of 5 stars`}>
+                      {'★'.repeat(f.rating || 0)}
+                      {'☆'.repeat(5 - (f.rating || 0))}
+                    </div>
+                  </div>
+                  {f.comment && <div className="fbadm-comment">{f.comment}</div>}
+                  <div className="fbadm-date">{formatDate(f.createdAt)}</div>
+                </div>
+              ))}
+              {!feedbackLoading && feedback.length === 0 && (
+                <div className="admin-empty">No feedback yet.</div>
+              )}
+            </div>
+
+            <div className="perm-modal-actions">
+              <button className="action-btn reset" onClick={loadFeedback} disabled={feedbackLoading}>
+                {feedbackLoading ? 'Loading...' : 'Refresh'}
+              </button>
+              <button className="admin-btn-primary" onClick={() => setShowFeedback(false)}>
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
