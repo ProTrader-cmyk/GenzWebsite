@@ -200,7 +200,10 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
         reason: res.reason || '',
         status: 'active',
       });
-      setSignalSuccess('Gemini successfully generated institutional setup! Review below and click Drop Signal.');
+      setSignalSuccess('✨ Gemini auto-filled your signal! You can edit any numbers or rationale below before dropping.');
+      setTimeout(() => {
+        document.getElementById('signal-review-box')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 100);
     } catch (err) {
       console.error('AI Signal generation error:', err);
       setSignalError(err.message || 'Failed to generate signal with Gemini AI.');
@@ -893,12 +896,22 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
           </div>
 
           {/* RIGHT: REVIEW & DROP TO WEBSITE */}
-          <div className="signal-box review-drop-box">
+          <div className="signal-box review-drop-box" id="signal-review-box">
             <div className="signal-box-header">
               <div className="signal-box-title">
                 <span>🎯</span> Step 2: Review & Drop to Website
               </div>
-              <span className="drop-target-tag">VIP Member Terminal</span>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                {signalDraft.entry ? (
+                  <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '100px', background: 'rgba(34, 197, 94, 0.15)', color: '#4ade80', border: '1px solid rgba(34, 197, 94, 0.3)' }}>
+                    ✨ Auto-filled by AI
+                  </span>
+                ) : null}
+                <span className="drop-target-tag">VIP Member Terminal</span>
+              </div>
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--mute)', marginBottom: '14px', lineHeight: '1.5' }}>
+              Auto-filled by Gemini AI. You have 100% full control to review or modify any price levels and notes below before publishing live to VIP members.
             </div>
 
             <form onSubmit={handlePublishSignal}>

@@ -147,66 +147,76 @@ export default function MemberDashboard({ user, onNavigate }) {
           </div>
 
           <div className="panel-signals-list">
-            {activeSignals.map((s) => (
-              <div key={s.id} className="radar-signal-card active">
-                <div className="radar-card-top">
-                  <div className="radar-tag-row">
-                    <span className={`signal-dir-tag ${s.direction}`}>
-                      {s.direction === 'buy' ? 'BUY' : 'SELL'}
-                    </span>
-                    <span className="radar-pair">{s.pair}</span>
-                    <span className="radar-target-rr">{s.rr}R</span>
-                  </div>
-                  <span className="radar-live-tag">LIVE NOW</span>
-                </div>
-
-                <div className="radar-levels-row">
-                  <div>
-                    <span className="r-label">ENTRY</span>
-                    <span className="r-val">{s.entry}</span>
-                  </div>
-                  <div>
-                    <span className="r-label">SL</span>
-                    <span className="r-val sl">{s.sl}</span>
-                  </div>
-                  <div>
-                    <span className="r-label">TP</span>
-                    <span className="r-val tp">{s.tp}</span>
-                  </div>
-                </div>
-
-                <p className="radar-reason">{s.reason}</p>
+            {activeSignals.length === 0 && recentWinners.length === 0 ? (
+              <div style={{ padding: '36px 16px', textAlign: 'center', color: 'var(--mute)', fontSize: '13px' }}>
+                <div style={{ fontSize: '24px', marginBottom: '8px' }}>⚡</div>
+                <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>No Active Signals Right Now</div>
+                <div>Live institutional setups appear here as soon as dropped from Admin.</div>
               </div>
-            ))}
+            ) : (
+              <>
+                {activeSignals.map((s) => (
+                  <div key={s.id} className="radar-signal-card active">
+                    <div className="radar-card-top">
+                      <div className="radar-tag-row">
+                        <span className={`signal-dir-tag ${s.direction}`}>
+                          {s.direction === 'buy' ? 'BUY' : 'SELL'}
+                        </span>
+                        <span className="radar-pair">{s.pair}</span>
+                        <span className="radar-target-rr">{s.rr}R</span>
+                      </div>
+                      <span className="radar-live-tag">LIVE NOW</span>
+                    </div>
 
-            {recentWinners.map((s) => (
-              <div key={s.id} className="radar-signal-card tp-hit">
-                <div className="radar-card-top">
-                  <div className="radar-tag-row">
-                    <span className={`signal-dir-tag ${s.direction}`}>
-                      {s.direction === 'buy' ? 'BUY' : 'SELL'}
-                    </span>
-                    <span className="radar-pair">{s.pair}</span>
-                    <span className="radar-target-rr">+{s.rr}R</span>
+                    <div className="radar-levels-row">
+                      <div>
+                        <span className="r-label">ENTRY</span>
+                        <span className="r-val">{s.entry}</span>
+                      </div>
+                      <div>
+                        <span className="r-label">SL</span>
+                        <span className="r-val sl">{s.sl}</span>
+                      </div>
+                      <div>
+                        <span className="r-label">TP</span>
+                        <span className="r-val tp">{s.tp}</span>
+                      </div>
+                    </div>
+
+                    <p className="radar-reason">{s.reason}</p>
                   </div>
-                  <span className="radar-win-tag">✓ TP HIT</span>
-                </div>
-                <div className="radar-levels-row">
-                  <div>
-                    <span className="r-label">ENTRY</span>
-                    <span className="r-val">{s.entry}</span>
+                ))}
+
+                {recentWinners.map((s) => (
+                  <div key={s.id} className="radar-signal-card tp-hit">
+                    <div className="radar-card-top">
+                      <div className="radar-tag-row">
+                        <span className={`signal-dir-tag ${s.direction}`}>
+                          {s.direction === 'buy' ? 'BUY' : 'SELL'}
+                        </span>
+                        <span className="radar-pair">{s.pair}</span>
+                        <span className="radar-target-rr">+{s.rr}R</span>
+                      </div>
+                      <span className="radar-win-tag">✓ TP HIT</span>
+                    </div>
+                    <div className="radar-levels-row">
+                      <div>
+                        <span className="r-label">ENTRY</span>
+                        <span className="r-val">{s.entry}</span>
+                      </div>
+                      <div>
+                        <span className="r-label">TP HIT</span>
+                        <span className="r-val tp">{s.tp}</span>
+                      </div>
+                      <div>
+                        <span className="r-label">CLOSED</span>
+                        <span className="r-val">{formatRelativeTime(s.minutesAgo)}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <span className="r-label">TP HIT</span>
-                    <span className="r-val tp">{s.tp}</span>
-                  </div>
-                  <div>
-                    <span className="r-label">CLOSED</span>
-                    <span className="r-val">{formatRelativeTime(s.minutesAgo)}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
+                ))}
+              </>
+            )}
           </div>
         </div>
 

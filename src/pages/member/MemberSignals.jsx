@@ -231,15 +231,32 @@ export default function MemberSignals() {
 
       {/* SIGNALS LIST */}
       <div className="terminal-signal-feed">
-        {filtered.map((signal) => (
-          <SignalCard
-            key={signal.id}
-            signal={signal}
-            accountBalance={accountBalance}
-            riskPercent={riskPercent}
-            onCopy={handleSignalCopy}
-          />
-        ))}
+        {loading ? (
+          <div className="admin-empty" style={{ padding: '60px 20px', textAlign: 'center' }}>
+            <div style={{ fontSize: '26px', marginBottom: '8px' }}>📡</div>
+            <div style={{ fontWeight: 600, color: 'var(--text)' }}>Connecting to Live Signal Desk...</div>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="admin-empty" style={{ padding: '60px 20px', textAlign: 'center', background: 'var(--bg1)', border: '1px solid var(--faint)', borderRadius: '16px' }}>
+            <div style={{ fontSize: '32px', marginBottom: '12px' }}>⚡</div>
+            <div style={{ fontWeight: 700, fontSize: '16px', color: 'var(--text)', marginBottom: '8px' }}>
+              No Active Signals Right Now
+            </div>
+            <div style={{ fontSize: '13px', color: 'var(--mute)', maxWidth: '440px', margin: '0 auto', lineHeight: '1.6' }}>
+              Live institutional setups will appear here in real time as soon as they are published from the Desk during London & New York Killzones.
+            </div>
+          </div>
+        ) : (
+          filtered.map((signal) => (
+            <SignalCard
+              key={signal.id}
+              signal={signal}
+              accountBalance={accountBalance}
+              riskPercent={riskPercent}
+              onCopy={handleSignalCopy}
+            />
+          ))
+        )}
       </div>
     </div>
   );

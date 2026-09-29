@@ -11,14 +11,12 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../firebase.js';
-import { MOCK_SIGNALS } from './mockSignals.js';
 import { getPipApiKey } from '../services/pipAiService.js';
 
 const SIGNALS_COLLECTION = 'signals';
 
 /**
  * Subscribes to real-time signals from Firestore.
- * If collection is empty, returns fallback mock signals so members never see a blank screen.
  * @param {Function} callback - (signals: Array) => void
  * @returns {Function} unsubscribe function
  */
@@ -29,7 +27,7 @@ export function subscribeSignals(callback) {
       q,
       (snapshot) => {
         if (snapshot.empty) {
-          callback(MOCK_SIGNALS);
+          callback([]);
         } else {
           const list = snapshot.docs.map((docSnap) => {
             const data = docSnap.data();
@@ -49,13 +47,13 @@ export function subscribeSignals(callback) {
         }
       },
       (err) => {
-        console.warn('Could not subscribe to signals, using mock data:', err);
-        callback(MOCK_SIGNALS);
+        console.warn('Could not subscribe to signals:', err);
+        callback([]);
       }
     );
   } catch (err) {
     console.warn('Error setting up signals subscription:', err);
-    callback(MOCK_SIGNALS);
+    callback([]);
     return () => {};
   }
 }
