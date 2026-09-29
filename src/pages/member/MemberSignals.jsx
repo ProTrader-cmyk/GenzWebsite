@@ -8,7 +8,6 @@ import {
   subscribeLiveTicks,
   formatSpotPrice,
 } from '../../services/marketPriceService.js';
-import GoldChart from '../../components/GoldChart.jsx';
 
 const STATUS_FILTERS = [
   { key: 'all', label: 'All Signals' },
@@ -167,7 +166,6 @@ export default function MemberSignals() {
   const [riskPercent, setRiskPercent] = useState(1.0);
   const [toast, setToast] = useState(null);
   const [livePrices, setLivePrices] = useState({});
-  const [showChart, setShowChart] = useState(true);
 
   useEffect(() => {
     const unsub = subscribeSignals((list) => {
@@ -310,43 +308,6 @@ export default function MemberSignals() {
         </div>
       </div>
 
-      {/* LIVE OANDA TRADINGVIEW CHART */}
-      <div className="terminal-chart-section">
-        <div className="terminal-chart-header">
-          <div className="terminal-chart-title-wrap">
-            <span className="terminal-chart-icon">📈</span>
-            <div>
-              <div className="terminal-chart-title">
-                Live OANDA Market Chart
-                <span className="live-chart-feed-badge">
-                  <span className="pulse-dot" /> REAL-TIME OANDA FEED
-                </span>
-                {livePrices['XAUUSD'] && (
-                  <span className="live-chart-price-pill">
-                    <span className="pulse-dot" /> OANDA SPOT: ${formatSpotPrice('XAUUSD', livePrices['XAUUSD'])}
-                  </span>
-                )}
-              </div>
-              <div className="terminal-chart-sub">
-                Official OANDA institutional data feed (Cambodia GMT+7). Defaulted to <strong>⚡ 1m (Live Ticks)</strong> so active candles fluctuate live on every tick.
-              </div>
-            </div>
-          </div>
-          <button
-            type="button"
-            className="terminal-chart-toggle-btn"
-            onClick={() => setShowChart((v) => !v)}
-          >
-            {showChart ? 'Collapse Chart ▴' : 'Expand Chart ▾'}
-          </button>
-        </div>
-
-        {showChart && (
-          <div className="terminal-chart-body">
-            <GoldChart initialSymbol="gold" />
-          </div>
-        )}
-      </div>
 
       {/* SIGNALS LIST */}
       <div className="terminal-signal-feed">

@@ -27,7 +27,9 @@ import {
   evaluateSignalOutcome,
   calcTradeProgress,
   subscribeLiveTicks,
+  formatSpotPrice,
 } from '../services/marketPriceService.js';
+import GoldChart from '../components/GoldChart.jsx';
 import ThemeToggle from '../components/ThemeToggle.jsx';
 
 const TABS = [
@@ -137,6 +139,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
   const [aiHtfImage, setAiHtfImage] = useState(null); // Chart 1: HTF 1H/4H
   const [aiLtfImage, setAiLtfImage] = useState(null); // Chart 2: LTF 15m/5m
   const [aiGenerating, setAiGenerating] = useState(false);
+  const [showAdminChart, setShowAdminChart] = useState(true);
 
   // Draft Signal Form State
   const [signalDraft, setSignalDraft] = useState({
@@ -862,6 +865,44 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
             {signalSuccess}
           </div>
         )}
+
+        {/* LIVE INTERACTIVE OANDA CHART FOR SIGNAL ANALYSIS & SCREENSHOTS */}
+        <div className="terminal-chart-section">
+          <div className="terminal-chart-header">
+            <div className="terminal-chart-title-wrap">
+              <div className="terminal-chart-icon">📈</div>
+              <div>
+                <div className="terminal-chart-title">
+                  <span>OANDA Multi-Asset Live Chart</span>
+                  <span className="live-chart-feed-badge">
+                    <span className="status-live-pulse" style={{ width: '6px', height: '6px' }} />
+                    Live OANDA Feed
+                  </span>
+                  {livePrices['XAUUSD'] && (
+                    <span className="live-chart-price-pill">
+                      Gold Spot: ${formatSpotPrice('XAUUSD', livePrices['XAUUSD'])}
+                    </span>
+                  )}
+                </div>
+                <div className="terminal-chart-sub">
+                  Analyze real-time ICT market structure (1H bias / 15m entry) or capture screenshots to feed into Step 1 below.
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="terminal-chart-toggle-btn"
+              onClick={() => setShowAdminChart((v) => !v)}
+            >
+              {showAdminChart ? 'Hide Chart ▴' : 'Show Chart ▾'}
+            </button>
+          </div>
+          {showAdminChart && (
+            <div className="terminal-chart-body">
+              <GoldChart initialSymbol="gold" defaultTimeframe="1" />
+            </div>
+          )}
+        </div>
 
         {/* 2-COLUMN WORKBENCH */}
         <div className="signal-workbench-grid">
