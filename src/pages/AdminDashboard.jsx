@@ -26,6 +26,7 @@ import {
   fetchLivePrice,
   evaluateSignalOutcome,
   calcTradeProgress,
+  subscribeLiveTicks,
 } from '../services/marketPriceService.js';
 import ThemeToggle from '../components/ThemeToggle.jsx';
 
@@ -321,10 +322,34 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
 
   useEffect(() => {
     runPriceCheck(signals);
+    const pairs = Array.from(new Set(['XAUUSD', ...signals.map((s) => s.pair || 'XAUUSD')]));
+    const unsubTicks = subscribeLiveTicks(pairs, (incoming) => {
+      setLivePrices((prev) => ({ ...prev, ...incoming }));
+      setLastCheckedTime(new Date().toLocaleTimeString());
+      if (autoTrackingEnabled) {
+        const activeList = signals.filter((s) => s.status === 'active');
+        for (const s of activeList) {
+          const currentPrice = incoming[s.pair || 'XAUUSD'];
+          if (!currentPrice) continue;
+          const outcome = evaluateSignalOutcome(s, currentPrice);
+          if (outcome === 'tp' || outcome === 'sl') {
+            updateSignalStatus(s.id, outcome);
+            const isTp = outcome === 'tp';
+            setSignalSuccess(
+              `${isTp ? '🎯 [AUTO-TRIGGER]' : '❌ [AUTO-TRIGGER]'} ${s.pair} touched ${isTp ? 'Take Profit' : 'Stop Loss'} at $${currentPrice}! Signal status updated live on VIP terminal.`
+            );
+          }
+        }
+      }
+    });
+
     const interval = setInterval(() => {
       runPriceCheck(signals);
-    }, 4000);
-    return () => clearInterval(interval);
+    }, 10000);
+    return () => {
+      clearInterval(interval);
+      unsubTicks();
+    };
   }, [signals, autoTrackingEnabled]);
 
   async function load() {

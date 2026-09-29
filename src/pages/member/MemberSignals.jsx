@@ -1,16 +1,14 @@
 import { useState, useEffect } from 'react';
 import { formatRelativeTime } from '../../data/mockSignals.js';
 import { subscribeSignals, updateSignalStatus } from '../../data/signals.js';
-import { fetchLivePrice, calcTradeProgress, evaluateSignalOutcome } from '../../services/marketPriceService.js';
+import {
+  fetchLivePrice,
+  calcTradeProgress,
+  evaluateSignalOutcome,
+  subscribeLiveTicks,
+  formatSpotPrice,
+} from '../../services/marketPriceService.js';
 import GoldChart from '../../components/GoldChart.jsx';
-
-function formatSpotPrice(pair, price) {
-  if (price == null || isNaN(price)) return '---';
-  const p = String(pair || 'XAUUSD').toUpperCase();
-  if (p.includes('JPY')) return Number(price).toFixed(3);
-  if (p.includes('EUR') || p.includes('GBP') || p.includes('AUD')) return Number(price).toFixed(5);
-  return Number(price).toFixed(2);
-}
 
 const STATUS_FILTERS = [
   { key: 'all', label: 'All Signals' },
@@ -181,8 +179,10 @@ export default function MemberSignals() {
 
   useEffect(() => {
     let cancelled = false;
-    async function loadPrices() {
-      const activePairs = Array.from(new Set(['XAUUSD', ...signals.map((s) => s.pair || 'XAUUSD')]));
+    const activePairs = Array.from(new Set(['XAUUSD', ...signals.map((s) => s.pair || 'XAUUSD')]));
+
+    // 1. Initial snapshot fetch
+    async function loadSnapshot() {
       const nextPrices = {};
       for (const p of activePairs) {
         const price = await fetchLivePrice(p);
@@ -190,28 +190,34 @@ export default function MemberSignals() {
       }
       if (cancelled) return;
       setLivePrices((prev) => ({ ...prev, ...nextPrices }));
+    }
+    loadSnapshot();
 
-      // Auto-evaluate active signals against live OANDA tick
+    // 2. Direct real-time WebSocket tick stream from TradingView OANDA feed (matches chart candle 1:1)
+    const unsubTicks = subscribeLiveTicks(activePairs, (incoming) => {
+      if (cancelled) return;
+      setLivePrices((prev) => ({ ...prev, ...incoming }));
+
+      // Instant TP / SL outcome evaluation on every single live tick
       const activeList = signals.filter((s) => s.status === 'active');
       for (const s of activeList) {
-        const currentPrice = nextPrices[s.pair || 'XAUUSD'];
+        const pair = s.pair || 'XAUUSD';
+        const currentPrice = incoming[pair];
         if (!currentPrice) continue;
         const outcome = evaluateSignalOutcome(s, currentPrice);
         if (outcome === 'tp' || outcome === 'sl') {
-          try {
-            await updateSignalStatus(s.id, outcome);
-          } catch (err) {
-            console.warn('Auto signal outcome update error:', err);
-          }
+          updateSignalStatus(s.id, outcome).catch(() => {});
         }
       }
-    }
+    });
 
-    loadPrices();
-    const interval = setInterval(loadPrices, 3500); // 3.5s real-time tick streaming
+    // 3. Fallback poll every 8 seconds if WebSocket misses a symbol
+    const interval = setInterval(loadSnapshot, 8000);
+
     return () => {
       cancelled = true;
       clearInterval(interval);
+      unsubTicks();
     };
   }, [signals]);
 

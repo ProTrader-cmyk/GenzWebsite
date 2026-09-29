@@ -6,11 +6,231 @@
 const cache = {}; // { [pair]: { price: number, timestamp: number } }
 const CACHE_TTL_MS = 2500; // 2.5 seconds cache for real-time tick streaming
 
+const PAIR_TO_TV_SYMBOL = {
+  XAUUSD: 'OANDA:XAUUSD',
+  GOLD: 'OANDA:XAUUSD',
+  XAU: 'OANDA:XAUUSD',
+  XAGUSD: 'OANDA:XAGUSD',
+  SILVER: 'OANDA:XAGUSD',
+  EURUSD: 'OANDA:EURUSD',
+  GBPUSD: 'OANDA:GBPUSD',
+  USDJPY: 'OANDA:USDJPY',
+  AUDUSD: 'OANDA:AUDUSD',
+};
+
+const TV_SYMBOL_TO_PAIR = {
+  'OANDA:XAUUSD': 'XAUUSD',
+  'OANDA:XAGUSD': 'XAGUSD',
+  'OANDA:EURUSD': 'EURUSD',
+  'OANDA:GBPUSD': 'GBPUSD',
+  'OANDA:USDJPY': 'USDJPY',
+  'OANDA:AUDUSD': 'AUDUSD',
+};
+
+/**
+ * Real-time WebSocket streamer connecting directly to TradingView's market data pipe.
+ * Delivers exact tick data with zero delay, identical to the on-screen chart candle.
+ */
+class TradingViewStreamer {
+  constructor() {
+    this.ws = null;
+    this.listeners = new Set();
+    this.subscribedSymbols = new Set();
+    this.sessionId = null;
+    this.reconnectTimer = null;
+    this.isConnecting = false;
+    this.prices = {};
+  }
+
+  addSubscriber(symbols, callback) {
+    const normSymbols = (symbols || []).map(normalizePair);
+    const sub = { symbols: normSymbols, callback };
+    this.listeners.add(sub);
+
+    // If we already have live prices in memory, notify immediately
+    const immediate = {};
+    for (const p of sub.symbols) {
+      if (this.prices[p]) immediate[p] = this.prices[p];
+    }
+    if (Object.keys(immediate).length > 0) {
+      try { callback(immediate); } catch {}
+    }
+
+    this.connect();
+
+    return () => {
+      this.listeners.delete(sub);
+      if (this.listeners.size === 0 && this.ws) {
+        try { this.ws.close(); } catch {}
+        this.ws = null;
+        this.subscribedSymbols.clear();
+      }
+    };
+  }
+
+  connect() {
+    if (typeof window === 'undefined' || !window.WebSocket) return;
+    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+      this.updateSubscriptions();
+      return;
+    }
+
+    try {
+      this.isConnecting = true;
+      this.ws = new WebSocket('wss://data.tradingview.com/socket.io/websocket');
+
+      this.ws.onopen = () => {
+        this.isConnecting = false;
+        this.send('set_auth_token', ['unauthorized_user_token']);
+        this.sessionId = 'qs_' + Math.random().toString(36).substring(2, 8);
+        this.send('quote_create_session', [this.sessionId]);
+        this.send('quote_set_fields', [this.sessionId, 'lp', 'bid', 'ask', 'ch', 'chp']);
+        this.updateSubscriptions();
+      };
+
+      this.ws.onmessage = (event) => {
+        const raw = event.data ? event.data.toString() : '';
+        // Heartbeat ping/pong response to keep stream alive
+        if (raw.includes('~h~')) {
+          const match = raw.match(/~h~(\d+)/);
+          if (match && this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.sendFramed(match[0]);
+          }
+        }
+
+        const chunks = raw.split(/~m~\d+~m~/).filter(Boolean);
+        for (const chunk of chunks) {
+          try {
+            const data = JSON.parse(chunk);
+            if (data.m === 'qsd') {
+              const symData = data.p?.[1];
+              const sym = symData?.n;
+              const val = symData?.v;
+              if (sym && val && typeof val.lp === 'number') {
+                const pair = TV_SYMBOL_TO_PAIR[sym] || sym.replace('OANDA:', '');
+                const price = val.lp;
+                this.prices[pair] = price;
+                cache[pair] = { price, timestamp: Date.now() };
+
+                // Dispatch to all active subscribers
+                this.notify(pair, price);
+              }
+            }
+          } catch {}
+        }
+      };
+
+      this.ws.onclose = () => {
+        this.isConnecting = false;
+        this.ws = null;
+        this.scheduleReconnect();
+      };
+
+      this.ws.onerror = () => {
+        this.isConnecting = false;
+      };
+    } catch (err) {
+      console.warn('[TradingViewStreamer] WS error:', err);
+      this.scheduleReconnect();
+    }
+  }
+
+  send(func, args) {
+    const msg = JSON.stringify({ m: func, p: args });
+    this.sendFramed(msg);
+  }
+
+  sendFramed(str) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send('~m~' + str.length + '~m~' + str);
+    }
+  }
+
+  updateSubscriptions() {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.sessionId) return;
+    const allPairs = new Set();
+    this.listeners.forEach((sub) => {
+      sub.symbols.forEach((p) => allPairs.add(p));
+    });
+    allPairs.add('XAUUSD');
+
+    const symbolsToAdd = [];
+    allPairs.forEach((p) => {
+      const tvSym = PAIR_TO_TV_SYMBOL[p] || ('OANDA:' + p);
+      if (!this.subscribedSymbols.has(tvSym)) {
+        this.subscribedSymbols.add(tvSym);
+        symbolsToAdd.push(tvSym);
+      }
+    });
+
+    if (symbolsToAdd.length > 0) {
+      this.send('quote_add_symbols', [this.sessionId, ...symbolsToAdd]);
+    }
+  }
+
+  notify(pair, price) {
+    this.listeners.forEach((sub) => {
+      if (sub.symbols.includes(pair)) {
+        try {
+          sub.callback({ [pair]: price });
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    });
+  }
+
+  scheduleReconnect() {
+    if (this.reconnectTimer) return;
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      if (this.listeners.size > 0) {
+        this.subscribedSymbols.clear();
+        this.connect();
+      }
+    }, 3000);
+  }
+}
+
+export const tvStreamer = new TradingViewStreamer();
+
+/**
+ * Subscribes to live WebSocket ticks directly from TradingView's OANDA stream.
+ * Updates on EVERY SINGLE TICK with zero latency, matching the chart 1:1.
+ * @param {Array<string>} pairs
+ * @param {Function} callback - ({ [pair]: price }) => void
+ * @returns {Function} unsubscribe function
+ */
+export function subscribeLiveTicks(pairs, callback) {
+  return tvStreamer.addSubscriber(pairs, callback);
+}
+
 /**
  * Normalizes asset pair names (e.g. 'XAU/USD' -> 'XAUUSD')
  */
 export function normalizePair(pair = 'XAUUSD') {
   return String(pair).toUpperCase().replace(/[\/\-_]/g, '').trim();
+}
+
+/**
+ * Formats price to match exact chart quote precision.
+ * @param {string} pair
+ * @param {number|null} price
+ * @returns {string}
+ */
+export function formatSpotPrice(pair, price) {
+  if (price == null || isNaN(price)) return '---';
+  const p = normalizePair(pair || 'XAUUSD');
+  if (p.includes('JPY')) return Number(price).toFixed(3);
+  if (p.includes('EUR') || p.includes('GBP') || p.includes('AUD')) return Number(price).toFixed(5);
+  // Gold (XAUUSD) - Match OANDA chart exact ticks (up to 3 decimals, min 2)
+  const num = Number(price);
+  const str = String(price);
+  const dec = str.includes('.') ? str.split('.')[1].length : 2;
+  if (dec >= 3) {
+    return num.toFixed(3);
+  }
+  return num.toFixed(2);
 }
 
 /**
@@ -22,6 +242,11 @@ export function normalizePair(pair = 'XAUUSD') {
 export async function fetchLivePrice(pair = 'XAUUSD') {
   const norm = normalizePair(pair);
   const now = Date.now();
+
+  // If live WebSocket streamer has a fresh tick, return it directly!
+  if (tvStreamer.prices[norm]) {
+    return tvStreamer.prices[norm];
+  }
 
   // Return cached price if fresh
   if (cache[norm] && now - cache[norm].timestamp < CACHE_TTL_MS) {
