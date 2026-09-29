@@ -73,7 +73,7 @@ function smoothPath(points) {
   return d;
 }
 
-export default function Profile({ onBack, uid, user }) {
+export default function Profile({ onBack, uid, user, hideFooter = false }) {
   const { lang } = useLanguage();
   const t = getStrings(lang).profile;
   const tj = getStrings(lang).journal;
@@ -626,7 +626,7 @@ export default function Profile({ onBack, uid, user }) {
         )}
       </div>
 
-      <Footer />
+      {!hideFooter && <Footer />}
 
       {editingDay != null && (
         <div className="modal-overlay" onClick={closeEditor}>

@@ -11,15 +11,27 @@ import { getAdvancedLessonMeta } from '../data/advancedLessons.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { useVideos } from '../data/useVideos.js';
 
-function LessonVideo({ src, caption }) {
+function LessonVideo({ src, label, caption }) {
   if (!src) return null;
   return (
     <div className="fig" style={{ padding: 10, margin: '14px 0 4px' }}>
+      {label && (
+        <div className="gi-label" style={{ color: 'var(--gold)', marginBottom: 8, fontWeight: 600 }}>
+          {label}
+        </div>
+      )}
       <video
         controls
         controlsList="nodownload noremoteplayback"
         disablePictureInPicture
         onContextMenu={(e) => e.preventDefault()}
+        onPlay={(e) => {
+          document.querySelectorAll('video').forEach((v) => {
+            if (v !== e.currentTarget && !v.paused) {
+              v.pause();
+            }
+          });
+        }}
         playsInline
         preload="metadata"
         style={{ width: '100%', borderRadius: 8, display: 'block', background: '#000' }}
@@ -50,7 +62,16 @@ const CONTENT = {
         មេរៀននេះបង្ហាញពី PD Array ប្រភេទថ្មីៗចំនួន ១០ បន្ថែម ដែលប្រើញឹកញាប់បំផុតដោយ ICT Trader ។
       </>
     ),
-    videoCaption: 'ស្តាប់ដោយផ្តោតអារម្មណ៍ — PD Array នីមួយៗមានលក្ខណៈសម្គាល់ និងកម្លាំងខុសៗគ្នា កុំចាត់ទុកថាវាដូចគ្នាទាំងអស់ ។',
+    ifvgVideoLabel: 'វីដេអូពន្យល់ ៖ IFVG (Inverse Fair Value Gap)',
+    ifvgVideoCaption: 'ទស្សនាការបកស្រាយលម្អិតអំពីរបៀបដែល FVG បញ្ច្រាសតួនាទី (Flip) ក្លាយជា IFVG លើ Chart ជាក់ស្តែង ។',
+    obVideoLabel: 'វីដេអូពន្យល់ ៖ Order Block (OB)',
+    obVideoCaption: 'របៀបកំណត់ និងជ្រើសរើស High-Probability Order Block មុនពេល Displacement ខ្លាំងកើតឡើង ។',
+    bprVideoLabel: 'វីដេអូពន្យល់ ៖ BPR (Balanced Price Range)',
+    bprVideoCaption: 'ស្វែងយល់ពីតំបន់ Overlap រវាង Bullish និង Bearish FVG ដែលបង្កើតជា Balanced Price Range ។',
+    blocksVideoLabel: 'វីដេអូពន្យល់ ៖ Rejection Block, Mitigation Block & Breaker Block',
+    blocksVideoCaption: 'ការប្រៀបធៀប និងរបៀបសម្គាល់ Rejection Block, Mitigation Block និង Breaker Block ក្នុងការជួញដូរ ។',
+    ceMtVideoLabel: 'វីដេអូពន្យល់ ៖ Consequence Encroachment (CE) & Mean Threshold (MT)',
+    ceMtVideoCaption: 'របៀបវាស់ចំណុចពាក់កណ្តាល 50% នៃ FVG (CE) និង Order Block (MT) សម្រាប់កំណត់តម្លៃ Entry យ៉ាងសុក្រឹត ។',
     h1: 'តើ PD Array ជាអ្វី?',
     recapDef: (
       <p>
@@ -324,7 +345,16 @@ const CONTENT = {
         Pools you learned in Lesson 2. This lesson covers 10 more PD Array types that ICT traders use constantly.
       </>
     ),
-    videoCaption: "Listen closely — each PD Array has its own characteristics and strength, don't treat them all the same.",
+    ifvgVideoLabel: 'Video: IFVG (Inverse Fair Value Gap)',
+    ifvgVideoCaption: 'Watch how an invalid/closed FVG flips into an IFVG on real market charts.',
+    obVideoLabel: 'Video: Order Block (OB)',
+    obVideoCaption: 'How to identify and trade high-probability Order Blocks before displacement.',
+    bprVideoLabel: 'Video: BPR (Balanced Price Range)',
+    bprVideoCaption: 'Understanding overlapping Bullish and Bearish FVGs forming a Balanced Price Range.',
+    blocksVideoLabel: 'Video: Rejection Block, Mitigation Block & Breaker Block',
+    blocksVideoCaption: 'Detailed breakdown and differences between Rejection, Mitigation, and Breaker Blocks.',
+    ceMtVideoLabel: 'Video: CE & MT (Consequence Encroachment and Mean Threshold)',
+    ceMtVideoCaption: 'How to measure the 50% equilibrium level of FVGs (CE) and Order Blocks (MT) for precise entries.',
     h1: 'What Is a PD Array?',
     recapDef: (
       <p>
@@ -600,7 +630,16 @@ const CONTENT = {
         PD Array 类型。
       </>
     ),
-    videoCaption: '用心聆听 — 每一种 PD Array 都有各自的特征与强弱，不要把它们全部一视同仁。',
+    ifvgVideoLabel: '讲解视频：IFVG（反转公允价值缺口）',
+    ifvgVideoCaption: '观看实盘图表解析，了解 FVG 被完全贯穿后如何反转（Flip）成为 IFVG。',
+    obVideoLabel: '讲解视频：Order Block（订单块）',
+    obVideoCaption: '如何在强力位移（Displacement）之前识别并筛选高胜率的订单块。',
+    bprVideoLabel: '讲解视频：BPR（平衡价格区间）',
+    bprVideoCaption: '理解多头与空头 FVG 重叠区域构成的平衡价格区间（BPR）。',
+    blocksVideoLabel: '讲解视频：Rejection Block、Mitigation Block 与 Breaker Block',
+    blocksVideoCaption: '深入对比与辨识拒绝块、缓解块和破坏块（破位块）在实战中的用法。',
+    ceMtVideoLabel: '讲解视频：CE 与 MT（中线与均值阈值）',
+    ceMtVideoCaption: '如何精准测量 FVG 的 50% 中线（CE）与订单块的 50% 均值阈值（MT）以把握入场。',
     h1: '什么是 PD Array？',
     recapDef: (
       <p>
@@ -856,7 +895,11 @@ export default function Advanced3({ onNavigate, onDone }) {
   const { lang } = useLanguage();
   const t = CONTENT[lang];
   const { videos } = useVideos();
-  const src = videos['adv3']?.url;
+  const srcIfvg = videos['adv3-ifvg']?.url;
+  const srcOb = videos['adv3-ob']?.url;
+  const srcBpr = videos['adv3-bpr']?.url;
+  const srcBlocks = videos['adv3-blocks']?.url;
+  const srcCeMt = videos['adv3-ce-mt']?.url;
   const [gate, setGate] = useState({ passed: 0, total: t.finalTestQuestions.length, unlocked: false });
 
   const finalTestQuestions = t.finalTestQuestions.map((q) => ({
@@ -877,8 +920,6 @@ export default function Advanced3({ onNavigate, onDone }) {
     >
       <span className="badge bb">{t.lessonTag}</span>
       <p style={{ marginTop: 10 }}>{t.intro}</p>
-
-      <LessonVideo src={src} caption={t.videoCaption} />
 
       {/* ===== WHAT IS A PD ARRAY ===== */}
       <h3>
@@ -925,6 +966,7 @@ export default function Advanced3({ onNavigate, onDone }) {
         {t.h3}
       </h3>
       <Box variant="d">{t.ifvgDef}</Box>
+      <LessonVideo src={srcIfvg} label={t.ifvgVideoLabel} caption={t.ifvgVideoCaption} />
       <Rule title={t.ruleTitle}>{t.rule2}</Rule>
 
       {/* ===== OB ===== */}
@@ -933,6 +975,7 @@ export default function Advanced3({ onNavigate, onDone }) {
         {t.h4}
       </h3>
       <Box variant="u">{t.obDef}</Box>
+      <LessonVideo src={srcOb} label={t.obVideoLabel} caption={t.obVideoCaption} />
 
       <AnimatedFig caption={t.diagram2Caption}>
         <svg viewBox="0 0 700 200">
@@ -961,6 +1004,7 @@ export default function Advanced3({ onNavigate, onDone }) {
         {t.h5}
       </h3>
       <Box variant="b">{t.bprDef}</Box>
+      <LessonVideo src={srcBpr} label={t.bprVideoLabel} caption={t.bprVideoCaption} />
 
       <AnimatedFig caption={t.diagram3Caption}>
         <svg viewBox="0 0 700 190">
@@ -980,6 +1024,7 @@ export default function Advanced3({ onNavigate, onDone }) {
         <span className="bar"></span>
         {t.h6}
       </h3>
+      <LessonVideo src={srcBlocks} label={t.blocksVideoLabel} caption={t.blocksVideoCaption} />
       <div className="g3">
         <GridItem labelColor="#5B9BD5" label={t.rejectionLabel}>
           {t.rejectionBody}
@@ -1033,6 +1078,7 @@ export default function Advanced3({ onNavigate, onDone }) {
         {t.h8}
       </h3>
       <Box variant="g">{t.mtceDef}</Box>
+      <LessonVideo src={srcCeMt} label={t.ceMtVideoLabel} caption={t.ceMtVideoCaption} />
 
       {/* ===== QUIZ ===== */}
       <h3>

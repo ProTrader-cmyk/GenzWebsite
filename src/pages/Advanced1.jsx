@@ -12,17 +12,29 @@ import { getAdvancedLessonMeta } from '../data/advancedLessons.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { useVideos } from '../data/useVideos.js';
 
-function LessonVideo({ src, caption }) {
+function LessonVideo({ src, label, caption }) {
   // Skip the block entirely until its URL is set, instead of showing an
   // empty/broken player.
   if (!src) return null;
   return (
     <div className="fig" style={{ padding: 10, margin: '14px 0 4px' }}>
+      {label && (
+        <div className="gi-label" style={{ color: 'var(--gold)', marginBottom: 8, fontWeight: 600 }}>
+          {label}
+        </div>
+      )}
       <video
         controls
         controlsList="nodownload noremoteplayback"
         disablePictureInPicture
         onContextMenu={(e) => e.preventDefault()}
+        onPlay={(e) => {
+          document.querySelectorAll('video').forEach((v) => {
+            if (v !== e.currentTarget && !v.paused) {
+              v.pause();
+            }
+          });
+        }}
         playsInline
         preload="metadata"
         style={{ width: '100%', borderRadius: 8, display: 'block', background: '#000' }}
@@ -57,7 +69,8 @@ const CONTENT = {
         Range, OTE Fibo, និង Premium/Discount — តែងតែប្រើរួមគ្នាជានិច្ច ។
       </>
     ),
-    videoCaption: 'ស្តាប់ដោយផ្តោតអារម្មណ៍ — ការគូរ Dealing Range ឲ្យត្រឹមត្រូវ គឺជាជំហានដំបូងបំផុតសម្រាប់រាល់ការវិភាគ ICT ។',
+    drVideoLabel: '🎥 វីដេអូទី ១ ៖ Dealing Range',
+    drVideoCaption: 'ការគូរ Dealing Range ឲ្យត្រឹមត្រូវ គឺជាជំហានដំបូងបំផុតសម្រាប់រាល់ការវិភាគ ICT ។',
     h1: 'តើ Dealing Range ជាអ្វី?',
     drDef: (
       <p>
@@ -110,6 +123,8 @@ const CONTENT = {
       </>
     ),
     h3: 'OTE — Optimal Trade Entry (Fibo)',
+    oteVideoLabel: '🎥 វីដេអូទី ២ ៖ OTE (Optimal Trade Entry)',
+    oteVideoCaption: 'របៀបប្រើប្រាស់ Fibonacci ដើម្បីកំណត់តំបន់ OTE 61.8%–79% ។',
     oteDef: (
       <p>
         <strong>OTE (Optimal Trade Entry)</strong> គឺជាតំបន់ Retracement រវាង <strong>61.8%</strong> ទៅ{' '}
@@ -117,19 +132,6 @@ const CONTENT = {
         ICT រង់ចាំ Price ត្រឡប់ចូលទៅតំបន់នេះ មុននឹងចាប់ Entry តាមទិស Leg ដើម ។
       </p>
     ),
-    oteSteps: [
-      <>
-        សម្រាប់ Setup <strong>Bullish</strong>, គូរ Fibonacci ពី Dealing Range Low (0%) ទៅ Dealing Range High
-        (100%) ។
-      </>,
-      <>
-        រង់ចាំ Price Retrace ចុះមកវិញចូលតំបន់ <strong>61.8%–79%</strong> — នេះជា OTE Zone ។
-      </>,
-      <>
-        រកមើលថាតើមាន <strong>PD Array</strong> (ដូចជា OB ឬ FVG) ស្ថិតនៅក្នុង OTE Zone នេះដែរឬទេ ដើម្បីបង្កើន
-        Confluence មុននឹង Entry ។
-      </>,
-    ],
     diagram2Caption: (
       <>
         Price ឡើងដល់ Dealing Range High រួច Retrace ចូល OTE Zone (61.8%–79%) មុននឹង Reverse ឡើងបំបែក High ចាស់
@@ -143,6 +145,8 @@ const CONTENT = {
       </>
     ),
     h4: 'Premium and Discount (Fibo Only)',
+    pdVideoLabel: '🎥 វីដេអូទី ៣ ៖ Premium and Discount',
+    pdVideoCaption: 'ការបែងចែកតំបន់ Premium (លើ 50%) និង Discount (ក្រោម 50%) ក្នុង Dealing Range ។',
     premiumLabel: 'Premium (ថ្លៃ)',
     premiumBody: (
       <>
@@ -300,7 +304,8 @@ const CONTENT = {
         lesson — Dealing Range, OTE Fibo, and Premium/Discount — always work together.
       </>
     ),
-    videoCaption: 'Listen closely — drawing the Dealing Range correctly is the very first step behind every ICT analysis.',
+    drVideoLabel: '🎥 Video 1: Dealing Range',
+    drVideoCaption: 'Drawing the Dealing Range correctly is the very first step behind every ICT analysis.',
     h1: 'What Is a Dealing Range?',
     drDef: (
       <p>
@@ -354,6 +359,8 @@ const CONTENT = {
       </>
     ),
     h3: 'OTE — Optimal Trade Entry (Fibo)',
+    oteVideoLabel: '🎥 Video 2: OTE (Optimal Trade Entry)',
+    oteVideoCaption: 'How to use Fibonacci to identify the 61.8%–79% OTE zone.',
     oteDef: (
       <p>
         <strong>OTE (Optimal Trade Entry)</strong> is the retracement zone between <strong>61.8%</strong> and{' '}
@@ -362,19 +369,6 @@ const CONTENT = {
         original leg.
       </p>
     ),
-    oteSteps: [
-      <>
-        For a <strong>bullish</strong> setup, draw the Fibonacci tool from the Dealing Range Low (0%) up to the
-        Dealing Range High (100%).
-      </>,
-      <>
-        Wait for price to retrace back down into the <strong>61.8%–79%</strong> zone — that's the OTE.
-      </>,
-      <>
-        Check whether a <strong>PD array</strong> (like an OB or FVG) sits inside that OTE zone, for extra
-        confluence before entering.
-      </>,
-    ],
     diagram2Caption: (
       <>
         Price rallies to the Dealing Range High, retraces into the OTE zone (61.8%–79%), then reverses and breaks
@@ -388,6 +382,8 @@ const CONTENT = {
       </>
     ),
     h4: 'Premium and Discount (Fibo Only)',
+    pdVideoLabel: '🎥 Video 3: Premium and Discount',
+    pdVideoCaption: 'Distinguishing Premium (above 50%) and Discount (below 50%) zones in a Dealing Range.',
     premiumLabel: 'Premium (Expensive)',
     premiumBody: (
       <>
@@ -542,7 +538,8 @@ const CONTENT = {
         便宜）。本课的三个概念 — Dealing Range、OTE Fibo、Premium/Discount — 永远是配合在一起使用的。
       </>
     ),
-    videoCaption: '用心聆听 — 正确画出 Dealing Range，是每一次 ICT 分析最开始的一步。',
+    drVideoLabel: '🎥 视频 1：Dealing Range',
+    drVideoCaption: '用心聆听 — 正确画出 Dealing Range，是每一次 ICT 分析最开始的一步。',
     h1: '什么是 Dealing Range？',
     drDef: (
       <p>
@@ -589,6 +586,8 @@ const CONTENT = {
       </>
     ),
     h3: 'OTE — 最佳交易入场点（Fibo）',
+    oteVideoLabel: '🎥 视频 2：OTE（最佳交易入场点）',
+    oteVideoCaption: '如何运用 Fibonacci 确定 61.8%–79% 的 OTE 区域。',
     oteDef: (
       <p>
         <strong>OTE（Optimal Trade Entry）</strong>是从 Dealing Range Low 画到 Dealing Range High（或反向）的
@@ -596,19 +595,6 @@ const CONTENT = {
         这个区域，再沿着原推动段的方向入场。
       </p>
     ),
-    oteSteps: [
-      <>
-        对于<strong>看涨</strong>设置，从 Dealing Range Low（0%）向上画 Fibonacci 到 Dealing Range High
-        （100%）。
-      </>,
-      <>
-        等待价格回撤进入 <strong>61.8%–79%</strong> 区域 — 这就是 OTE。
-      </>,
-      <>
-        检查该 OTE 区域内是否有 <strong>PD array</strong>（例如 OB 或 FVG）叠加，以获得更高的共振
-        （confluence）后再入场。
-      </>,
-    ],
     diagram2Caption: '价格上涨至 Dealing Range High 后回撤进入 OTE 区域（61.8%–79%），随后反转并突破前高 — 这次回撤就是 OTE 入场点。',
     rule2: (
       <>
@@ -617,6 +603,8 @@ const CONTENT = {
       </>
     ),
     h4: 'Premium and Discount（仅限 Fibo）',
+    pdVideoLabel: '🎥 视频 3：Premium and Discount',
+    pdVideoCaption: '在 Dealing Range 中划分 Premium（50%以上）与 Discount（50%以下）区域。',
     premiumLabel: 'Premium（溢价）',
     premiumBody: (
       <>
@@ -758,7 +746,9 @@ export default function Advanced1({ onNavigate, onDone }) {
   const { lang } = useLanguage();
   const t = CONTENT[lang];
   const { videos } = useVideos();
-  const src = videos['adv1']?.url;
+  const srcDr = videos['adv1-dr']?.url;
+  const srcOte = videos['adv1-ote']?.url;
+  const srcPd = videos['adv1-premium-discount']?.url;
   const [gate, setGate] = useState({ passed: 0, total: t.finalTestQuestions.length, unlocked: false });
 
   const finalTestQuestions = t.finalTestQuestions.map((q) => ({
@@ -780,14 +770,13 @@ export default function Advanced1({ onNavigate, onDone }) {
       <span className="badge bb">{t.lessonTag}</span>
       <p style={{ marginTop: 10 }}>{t.intro}</p>
 
-      <LessonVideo src={src} caption={t.videoCaption} />
-
       {/* ===== WHAT IS A DEALING RANGE ===== */}
       <h3>
         <span className="bar"></span>
         {t.h1}
       </h3>
       <Box variant="g">{t.drDef}</Box>
+      <LessonVideo src={srcDr} label={t.drVideoLabel} caption={t.drVideoCaption} />
       <div className="g2">
         <GridItem labelColor="#2E7CF6" label={t.drHighLabel} valStyle={{ marginTop: 6, fontSize: 13 }}>
           {t.drHighBody}
@@ -859,59 +848,14 @@ export default function Advanced1({ onNavigate, onDone }) {
         {t.h3}
       </h3>
       <Box variant="b">{t.oteDef}</Box>
-      <Steps items={t.oteSteps} />
-
-      <AnimatedFig caption={t.diagram2Caption}>
-        <svg viewBox="0 0 700 260">
-          <text x="350" y="16" textAnchor="middle" fontSize="12" fill="#5B9BD5" fontWeight="700" fontFamily="Space Grotesk,sans-serif">
-            OTE — FIBONACCI RETRACEMENT (61.8%–79%)
-          </text>
-
-          {/* fib grid lines: 0%=45, 23.6%=83, 50%=125, 61.8%=144, 70.5%=158, 79%=171, 100%=205 */}
-          <line x1="20" y1="45" x2="650" y2="45" stroke="#2E7CF6" strokeWidth="0.6" strokeDasharray="3 3" className="ac" style={{ animationDelay: '.1s' }} />
-          <line x1="20" y1="83" x2="650" y2="83" stroke="#2E7CF6" strokeWidth="0.6" strokeDasharray="3 3" className="ac" style={{ animationDelay: '.1s' }} />
-          <line x1="20" y1="125" x2="650" y2="125" stroke="#2E7CF6" strokeWidth="0.6" strokeDasharray="3 3" className="ac" style={{ animationDelay: '.1s' }} />
-          <rect x="20" y="144" width="630" height="27" fill="#5B9BD5" opacity="0.18" className="ac" style={{ animationDelay: '.15s' }} />
-          <line x1="20" y1="144" x2="650" y2="144" stroke="#5B9BD5" strokeWidth="0.8" strokeDasharray="3 3" className="ac" style={{ animationDelay: '.1s' }} />
-          <line x1="20" y1="171" x2="650" y2="171" stroke="#5B9BD5" strokeWidth="0.8" strokeDasharray="3 3" className="ac" style={{ animationDelay: '.1s' }} />
-          <line x1="20" y1="205" x2="650" y2="205" stroke="#2E7CF6" strokeWidth="0.6" strokeDasharray="3 3" className="ac" style={{ animationDelay: '.1s' }} />
-
-          <text x="15" y="48" textAnchor="end" fontSize="8" fill="#9aa0ab" fontFamily="Space Grotesk,sans-serif">0%</text>
-          <text x="15" y="86" textAnchor="end" fontSize="8" fill="#9aa0ab" fontFamily="Space Grotesk,sans-serif">23.6%</text>
-          <text x="15" y="128" textAnchor="end" fontSize="8" fill="#9aa0ab" fontFamily="Space Grotesk,sans-serif">50%</text>
-          <text x="15" y="147" textAnchor="end" fontSize="8" fill="#5B9BD5" fontWeight="700" fontFamily="Space Grotesk,sans-serif">61.8%</text>
-          <text x="15" y="174" textAnchor="end" fontSize="8" fill="#5B9BD5" fontWeight="700" fontFamily="Space Grotesk,sans-serif">79%</text>
-          <text x="15" y="208" textAnchor="end" fontSize="8" fill="#9aa0ab" fontFamily="Space Grotesk,sans-serif">100%</text>
-          <text x="580" y="162" textAnchor="middle" fontSize="9" fill="#5B9BD5" fontWeight="700" fontFamily="Space Grotesk,sans-serif" className="ac" style={{ animationDelay: '.9s' }}>OTE ZONE</text>
-
-          <g className="ac" style={{ animationDelay: '.2s' }}><line x1="40" y1="185" x2="40" y2="205" stroke="#3EC97A" strokeWidth="1" /><rect x="36" y="188" width="8" height="14" rx="0.8" fill="#3EC97A" /></g>
-          <g className="ac" style={{ animationDelay: '.28s' }}><line x1="80" y1="140" x2="80" y2="180" stroke="#3EC97A" strokeWidth="1.4" /><rect x="74" y="145" width="12" height="30" rx="1" fill="#3EC97A" /></g>
-          <g className="ac" style={{ animationDelay: '.36s' }}><line x1="120" y1="95" x2="120" y2="140" stroke="#3EC97A" strokeWidth="1.4" /><rect x="114" y="100" width="12" height="35" rx="1" fill="#3EC97A" /></g>
-          <g className="ac" style={{ animationDelay: '.44s' }}><line x1="160" y1="60" x2="160" y2="100" stroke="#3EC97A" strokeWidth="1.4" /><rect x="154" y="65" width="12" height="32" rx="1" fill="#3EC97A" /></g>
-          <g className="ac" style={{ animationDelay: '.52s' }}><line x1="200" y1="45" x2="200" y2="65" stroke="#3EC97A" strokeWidth="1.4" /><rect x="194" y="48" width="12" height="14" rx="1" fill="#3EC97A" /></g>
-          <g className="ac" style={{ animationDelay: '.52s' }}><circle cx="200" cy="45" r="4" fill="#2E7CF6" /><text x="200" y="35" textAnchor="middle" fontSize="9" fill="#2E7CF6" fontWeight="700" fontFamily="Space Grotesk,sans-serif">DR High</text></g>
-
-          <g className="ac" style={{ animationDelay: '.6s' }}><line x1="250" y1="48" x2="250" y2="90" stroke="#E05555" strokeWidth="1.4" /><rect x="244" y="52" width="12" height="35" rx="1" fill="#E05555" /></g>
-          <g className="ac" style={{ animationDelay: '.68s' }}><line x1="290" y1="90" x2="290" y2="125" stroke="#E05555" strokeWidth="1.4" /><rect x="284" y="95" width="12" height="27" rx="1" fill="#E05555" /></g>
-          <g className="ac" style={{ animationDelay: '.76s' }}><line x1="330" y1="120" x2="330" y2="156" stroke="#E05555" strokeWidth="1.4" /><rect x="324" y="128" width="12" height="24" rx="1" fill="#E05555" /></g>
-          <g className="ac" style={{ animationDelay: '.84s' }}><line x1="370" y1="150" x2="370" y2="168" stroke="#E05555" strokeWidth="1.4" /><rect x="364" y="153" width="12" height="13" rx="1" fill="#E05555" /></g>
-          <g className="ac" style={{ animationDelay: '.9s' }}><circle cx="370" cy="168" r="4" fill="#5B9BD5" /><text x="370" y="185" textAnchor="middle" fontSize="9" fill="#5B9BD5" fontWeight="700" fontFamily="Space Grotesk,sans-serif">OTE Entry</text></g>
-
-          <g className="ac" style={{ animationDelay: '.98s' }}><line x1="410" y1="140" x2="410" y2="165" stroke="#3EC97A" strokeWidth="1.4" /><rect x="404" y="143" width="12" height="22" rx="1" fill="#3EC97A" /></g>
-          <g className="ac" style={{ animationDelay: '1.06s' }}><line x1="450" y1="100" x2="450" y2="140" stroke="#3EC97A" strokeWidth="1.4" /><rect x="444" y="104" width="12" height="33" rx="1" fill="#3EC97A" /></g>
-          <g className="ac" style={{ animationDelay: '1.14s' }}><line x1="490" y1="60" x2="490" y2="100" stroke="#3EC97A" strokeWidth="1.4" /><rect x="484" y="64" width="12" height="33" rx="1" fill="#3EC97A" /></g>
-          <g className="ac" style={{ animationDelay: '1.22s' }}><line x1="530" y1="28" x2="530" y2="60" stroke="#3EC97A" strokeWidth="1.4" /><rect x="524" y="33" width="12" height="24" rx="1" fill="#3EC97A" /></g>
-          <text x="565" y="24" textAnchor="middle" fontSize="10" fill="#3EC97A" fontWeight="700" fontFamily="Space Grotesk,sans-serif" className="ac" style={{ animationDelay: '1.3s' }}>New High — BOS ↑</text>
-        </svg>
-      </AnimatedFig>
-
-      <Rule title={t.ruleTitle}>{t.rule2}</Rule>
+      <LessonVideo src={srcOte} label={t.oteVideoLabel} caption={t.oteVideoCaption} />
 
       {/* ===== PREMIUM / DISCOUNT ===== */}
       <h3>
         <span className="bar"></span>
         {t.h4}
       </h3>
+      <LessonVideo src={srcPd} label={t.pdVideoLabel} caption={t.pdVideoCaption} />
       <div className="g2">
         <GridItem labelColor="var(--dn)" label={t.premiumLabel} valStyle={{ marginTop: 6, fontSize: 13 }}>
           {t.premiumBody}

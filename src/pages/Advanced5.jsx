@@ -11,15 +11,27 @@ import { getAdvancedLessonMeta } from '../data/advancedLessons.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { useVideos } from '../data/useVideos.js';
 
-function LessonVideo({ src, caption }) {
+function LessonVideo({ src, label, caption }) {
   if (!src) return null;
   return (
     <div className="fig" style={{ padding: 10, margin: '14px 0 4px' }}>
+      {label && (
+        <div className="gi-label" style={{ color: 'var(--gold)', marginBottom: 8, fontWeight: 600 }}>
+          {label}
+        </div>
+      )}
       <video
         controls
         controlsList="nodownload noremoteplayback"
         disablePictureInPicture
         onContextMenu={(e) => e.preventDefault()}
+        onPlay={(e) => {
+          document.querySelectorAll('video').forEach((v) => {
+            if (v !== e.currentTarget && !v.paused) {
+              v.pause();
+            }
+          });
+        }}
         playsInline
         preload="metadata"
         style={{ width: '100%', borderRadius: 8, display: 'block', background: '#000' }}
@@ -52,7 +64,10 @@ const CONTENT = {
         <strong>Time and Price</strong> ។ មេរៀននេះបង្ហាញពីរបៀបផ្គុំវាទាំងអស់ជា Checklist តែមួយ ។
       </>
     ),
-    videoCaption: 'ស្តាប់ដោយផ្តោតអារម្មណ៍ — កុំប្រញាប់ចូល Trade ប្រសិនបើមិនទាន់មានគ្រប់ជំហានទាំង ៥ នេះ Confluence គ្នា ។',
+    checklistVideoLabel: 'វីដេអូពន្យល់ ៖ A+ Trade Setup Checklist (៥ ជំហាន)',
+    checklistVideoCaption: 'របៀបផ្គុំ Dealing Range, Liquidity, PD Array និង Time & Price ចូលគ្នាជា Setup មួយដែលមាន Probability ខ្ពស់បំផុត ។',
+    walkthroughVideoLabel: 'វីដេអូពន្យល់ ៖ ការវិភាគ និងអនុវត្តជាក់ស្តែងលើ Chart (Case Study Walkthrough)',
+    walkthroughVideoCaption: 'ទស្សនាការវិភាគ Trade ជាក់ស្តែងមួយជំហានម្តងៗ ចាប់តាំងពី Accumulation រហូតដល់ Distribution ក្នុង OTE Zone ។',
     h1: 'A+ Trade Checklist — ៥ ជំហាន',
     steps: [
       <>
@@ -238,7 +253,10 @@ const CONTENT = {
         <strong>Time and Price</strong>. This lesson shows how to combine all four into a single checklist.
       </>
     ),
-    videoCaption: "Listen closely — don't rush into a trade unless all 5 steps below line up together.",
+    checklistVideoLabel: 'Video: A+ Trade Setup Checklist (5 Steps)',
+    checklistVideoCaption: 'How to align Dealing Range, Liquidity, PD Array, and Time & Price into a single high-probability setup.',
+    walkthroughVideoLabel: 'Video: Full Trade Walkthrough & Case Study',
+    walkthroughVideoCaption: 'Step-by-step real chart walkthrough from Asia Accumulation to Manipulation and OTE Distribution.',
     h1: 'The A+ Trade Checklist — 5 Steps',
     steps: [
       <>
@@ -421,7 +439,10 @@ const CONTENT = {
         这四者合并为一份检查清单。
       </>
     ),
-    videoCaption: '用心聆听 — 如果下面这 5 个步骤没有同时对齐，就不要急着进场。',
+    checklistVideoLabel: '讲解视频：A+ 级交易设置清单（5 大步骤）',
+    checklistVideoCaption: '如何将 Dealing Range、流动性、PD Array 与时间价格完美对齐，筛选出最高胜率的交易设置。',
+    walkthroughVideoLabel: '讲解视频：实盘案例深度复盘（Case Study Walkthrough）',
+    walkthroughVideoCaption: '跟随实盘图表一步步复盘，从亚洲时段积累、诱导扫荡到 OTE 区间派发的完整过程。',
     h1: 'A+ 交易检查清单 — 5 个步骤',
     steps: [
       <>
@@ -587,7 +608,8 @@ export default function Advanced5({ onNavigate, onDone }) {
   const { lang } = useLanguage();
   const t = CONTENT[lang];
   const { videos } = useVideos();
-  const src = videos['adv5']?.url;
+  const srcChecklist = videos['adv5-checklist']?.url;
+  const srcWalkthrough = videos['adv5-walkthrough']?.url;
   const [gate, setGate] = useState({ passed: 0, total: t.finalTestQuestions.length, unlocked: false });
 
   const finalTestQuestions = t.finalTestQuestions.map((q) => ({
@@ -609,14 +631,13 @@ export default function Advanced5({ onNavigate, onDone }) {
       <span className="badge bb">{t.lessonTag}</span>
       <p style={{ marginTop: 10 }}>{t.intro}</p>
 
-      <LessonVideo src={src} caption={t.videoCaption} />
-
       {/* ===== A+ CHECKLIST ===== */}
       <h3>
         <span className="bar"></span>
         {t.h1}
       </h3>
       <Steps items={t.steps} />
+      <LessonVideo src={srcChecklist} label={t.checklistVideoLabel} caption={t.checklistVideoCaption} />
 
       <AnimatedFig caption={t.diagramCaption}>
         <svg viewBox="0 0 700 260">
@@ -682,6 +703,7 @@ export default function Advanced5({ onNavigate, onDone }) {
         <span className="bar"></span>
         {t.homeworkHeading}
       </h3>
+      <LessonVideo src={srcWalkthrough} label={t.walkthroughVideoLabel} caption={t.walkthroughVideoCaption} />
       <Box variant="g">
         <p>{t.homeworkIntro}</p>
         <ul>

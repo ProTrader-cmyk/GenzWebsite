@@ -12,15 +12,27 @@ import { getAdvancedLessonMeta } from '../data/advancedLessons.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { useVideos } from '../data/useVideos.js';
 
-function LessonVideo({ src, caption }) {
+function LessonVideo({ src, label, caption }) {
   if (!src) return null;
   return (
     <div className="fig" style={{ padding: 10, margin: '14px 0 4px' }}>
+      {label && (
+        <div className="gi-label" style={{ color: 'var(--gold)', marginBottom: 8, fontWeight: 600 }}>
+          {label}
+        </div>
+      )}
       <video
         controls
         controlsList="nodownload noremoteplayback"
         disablePictureInPicture
         onContextMenu={(e) => e.preventDefault()}
+        onPlay={(e) => {
+          document.querySelectorAll('video').forEach((v) => {
+            if (v !== e.currentTarget && !v.paused) {
+              v.pause();
+            }
+          });
+        }}
         playsInline
         preload="metadata"
         style={{ width: '100%', borderRadius: 8, display: 'block', background: '#000' }}
@@ -52,7 +64,16 @@ const CONTENT = {
         កម្រិត Advanced ៧ ប្រភេទ ។
       </>
     ),
-    videoCaption: 'ស្តាប់ដោយផ្តោតអារម្មណ៍ — Liquidity Pool ណាមួយ ក៏អាចក្លាយជាគោលដៅរបស់ Smart Money បានទាំងអស់ ។',
+    eqhVideoLabel: '🎥 វីដេអូទី ១ ៖ EQH & EQL',
+    eqhVideoCaption: 'Equal Highs (EQH) និង Equal Lows (EQL) — តំបន់ប្រមូលផ្តុំ Liquidity ដ៏ធំ ។',
+    pdhVideoLabel: '🎥 វីដេអូទី ២ ៖ PDH & PDL (PWH & PWL)',
+    pdhVideoCaption: 'របៀបកំណត់ និងប្រើប្រាស់ PDH/PDL និង PWH/PWL ក្នុងការវិភាគ Liquidity ។',
+    sessionVideoLabel: '🎥 វីដេអូទី ៣ ៖ Session Liquidity',
+    sessionVideoCaption: 'របៀបដែល Session បន្ទាប់ (London/NY) មក Sweep Liquidity របស់ Asia Session ។',
+    psychVideoLabel: '🎥 វីដេអូទី ៤ ៖ Psychology Number',
+    psychVideoCaption: 'លេខមូល (Round Numbers) និងទិន្នន័យ CME ក្នុងការកំណត់ Liquidity Level ។',
+    irlVideoLabel: '🎥 វីដេអូទី ៥ ៖ IRL & ERL',
+    irlVideoCaption: 'Internal Range Liquidity (IRL) និង External Range Liquidity (ERL) — លំហូរពិតរបស់ Smart Money ។',
     h1: 'តើ Liquidity ជាអ្វី?',
     liquidityDef: (
       <p>
@@ -315,7 +336,16 @@ const CONTENT = {
         is usually just above or below a swing point. This lesson expands the LQ concept into 7 advanced forms.
       </>
     ),
-    videoCaption: 'Listen closely — every liquidity pool is a potential target for Smart Money.',
+    eqhVideoLabel: '🎥 Video 1: EQH and EQL',
+    eqhVideoCaption: 'Equal Highs (EQH) and Equal Lows (EQL) — major liquidity pool targets.',
+    pdhVideoLabel: '🎥 Video 2: PDH and PDL (PWH & PWL)',
+    pdhVideoCaption: 'How to identify and utilize PDH/PDL and PWH/PWL levels.',
+    sessionVideoLabel: '🎥 Video 3: Session Liquidity',
+    sessionVideoCaption: 'How London & New York sessions sweep Asia session liquidity.',
+    psychVideoLabel: '🎥 Video 4: Psychology Number',
+    psychVideoCaption: 'Institutional round numbers and CME liquidity levels.',
+    irlVideoLabel: '🎥 Video 5: IRL and ERL',
+    irlVideoCaption: 'Internal Range Liquidity vs External Range Liquidity — Smart Money sequence.',
     h1: 'What Is Liquidity?',
     liquidityDef: (
       <p>
@@ -581,7 +611,16 @@ const CONTENT = {
         扩展为 7 种进阶形态。
       </>
     ),
-    videoCaption: '用心聆听 — 每一个流动性池，都可能是机构资金的潜在目标。',
+    eqhVideoLabel: '🎥 视频 1：EQH 与 EQL',
+    eqhVideoCaption: '等高点（EQH）与等低点（EQL）— 大量流动性聚集的关键目标。',
+    pdhVideoLabel: '🎥 视频 2：PDH 与 PDL（PWH 与 PWL）',
+    pdhVideoCaption: '前日高低点与前周高低点的识别与运用。',
+    sessionVideoLabel: '🎥 视频 3：Session Liquidity',
+    sessionVideoCaption: '伦敦时段与纽约时段如何掠夺亚洲时段的流动性。',
+    psychVideoLabel: '🎥 视频 4：Psychology Number',
+    psychVideoCaption: '机构整数关口与 CME 心理关键位。',
+    irlVideoLabel: '🎥 视频 5：IRL 与 ERL',
+    irlVideoCaption: '内外部流动性（IRL 与 ERL）的轮动与 Smart Money 标准交易序列。',
     h1: '什么是流动性？',
     liquidityDef: (
       <p>
@@ -831,7 +870,11 @@ export default function Advanced2({ onNavigate, onDone }) {
   const { lang } = useLanguage();
   const t = CONTENT[lang];
   const { videos } = useVideos();
-  const src = videos['adv2']?.url;
+  const srcEqh = videos['adv2-eqh-eql']?.url;
+  const srcPdh = videos['adv2-pdh-pdl']?.url;
+  const srcSession = videos['adv2-session-lq']?.url;
+  const srcPsych = videos['adv2-psychology-number']?.url;
+  const srcIrl = videos['adv2-irl-erl']?.url;
   const [gate, setGate] = useState({ passed: 0, total: t.finalTestQuestions.length, unlocked: false });
 
   const finalTestQuestions = t.finalTestQuestions.map((q) => ({
@@ -852,8 +895,6 @@ export default function Advanced2({ onNavigate, onDone }) {
     >
       <span className="badge bb">{t.lessonTag}</span>
       <p style={{ marginTop: 10 }}>{t.intro}</p>
-
-      <LessonVideo src={src} caption={t.videoCaption} />
 
       {/* ===== WHAT IS LIQUIDITY ===== */}
       <h3>
@@ -907,6 +948,7 @@ export default function Advanced2({ onNavigate, onDone }) {
         {t.h3}
       </h3>
       <Box variant="b">{t.eqhDef}</Box>
+      <LessonVideo src={srcEqh} label={t.eqhVideoLabel} caption={t.eqhVideoCaption} />
 
       <AnimatedFig caption={t.diagram2Caption}>
         <svg viewBox="0 0 700 190">
@@ -935,6 +977,7 @@ export default function Advanced2({ onNavigate, onDone }) {
         <span className="bar"></span>
         {t.h4}
       </h3>
+      <LessonVideo src={srcPdh} label={t.pdhVideoLabel} caption={t.pdhVideoCaption} />
       <div className="g2">
         <GridItem labelColor="var(--up)" label={t.pdhLabel} valStyle={{ marginTop: 6, fontSize: 13 }}>
           {t.pdhBody}
@@ -977,6 +1020,7 @@ export default function Advanced2({ onNavigate, onDone }) {
         {t.h5}
       </h3>
       <Box variant="g">{t.sessionDef}</Box>
+      <LessonVideo src={srcSession} label={t.sessionVideoLabel} caption={t.sessionVideoCaption} />
 
       <AnimatedFig caption={t.diagram4Caption}>
         <svg viewBox="0 0 700 190">
@@ -1009,6 +1053,7 @@ export default function Advanced2({ onNavigate, onDone }) {
         {t.h6}
       </h3>
       <Box variant="b">{t.psychDef}</Box>
+      <LessonVideo src={srcPsych} label={t.psychVideoLabel} caption={t.psychVideoCaption} />
       <div className="fig" style={{ padding: 10, margin: '14px 0 4px' }}>
         <div className="gi-label" style={{ color: '#5B9BD5', marginBottom: 8 }}>
           {t.psychExampleLabel}
@@ -1034,6 +1079,7 @@ export default function Advanced2({ onNavigate, onDone }) {
         <span className="bar"></span>
         {t.h7}
       </h3>
+      <LessonVideo src={srcIrl} label={t.irlVideoLabel} caption={t.irlVideoCaption} />
       <div className="g2">
         <GridItem labelColor="var(--dn)" label={t.erlLabel} valStyle={{ marginTop: 6, fontSize: 13 }}>
           {t.erlBody}

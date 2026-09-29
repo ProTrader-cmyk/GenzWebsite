@@ -12,15 +12,27 @@ import { getAdvancedLessonMeta } from '../data/advancedLessons.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { useVideos } from '../data/useVideos.js';
 
-function LessonVideo({ src, caption }) {
+function LessonVideo({ src, label, caption }) {
   if (!src) return null;
   return (
     <div className="fig" style={{ padding: 10, margin: '14px 0 4px' }}>
+      {label && (
+        <div className="gi-label" style={{ color: 'var(--gold)', marginBottom: 8, fontWeight: 600 }}>
+          {label}
+        </div>
+      )}
       <video
         controls
         controlsList="nodownload noremoteplayback"
         disablePictureInPicture
         onContextMenu={(e) => e.preventDefault()}
+        onPlay={(e) => {
+          document.querySelectorAll('video').forEach((v) => {
+            if (v !== e.currentTarget && !v.paused) {
+              v.pause();
+            }
+          });
+        }}
         playsInline
         preload="metadata"
         style={{ width: '100%', borderRadius: 8, display: 'block', background: '#000' }}
@@ -65,7 +77,9 @@ const CONTENT = {
     asiaLabel: 'Asia Session',
     asiaBody: (
       <>
-        23:00–08:00 GMT
+        <strong>06:00 – 15:00 ម៉ោងនៅកម្ពុជា</strong>
+        <br />
+        <span style={{ fontSize: 12, color: 'var(--mute)' }}>23:00–08:00 GMT</span>
         <br />
         Volatility ទាប, ច្រើនធ្វើ Range
         <br />
@@ -75,7 +89,9 @@ const CONTENT = {
     londonLabel: 'London Session',
     londonBody: (
       <>
-        08:00–17:00 GMT
+        <strong>15:00 – 00:00 ម៉ោងនៅកម្ពុជា</strong>
+        <br />
+        <span style={{ fontSize: 12, color: 'var(--mute)' }}>08:00–17:00 GMT</span>
         <br />
         Volatility ខ្លាំង, ច្រើន Sweep Asia Range
         <br />
@@ -85,18 +101,19 @@ const CONTENT = {
     nySessionLabel: 'New York Session',
     nySessionBody: (
       <>
-        13:00–22:00 GMT
+        <strong>20:00 – 05:00 ម៉ោងនៅកម្ពុជា</strong>
         <br />
-        Overlap ជាមួយ London (13:00–17:00) = Volatility ខ្លាំងបំផុត
+        <span style={{ fontSize: 12, color: 'var(--mute)' }}>13:00–22:00 GMT</span>
+        <br />
+        Overlap ជាមួយ London (<strong>20:00 – 00:00 ម៉ោងកម្ពុជា</strong> / 13:00–17:00 GMT) = Volatility ខ្លាំងបំផុត
         <br />
         <strong>→ ច្រើនបន្ត ឬបញ្ច្រាស Trend ពី London</strong>
       </>
     ),
-    diagram1Caption: 'Session ទាំង ៣ តាមពេលវេលា GMT — London-NY Overlap (13:00–17:00) ជាទូទៅមាន Volume ធំបំផុត ។',
+    diagram1Caption: 'Session ទាំង ៣ បង្ហាញជាម៉ោងនៅកម្ពុជា (GMT+7) ធៀបនឹង GMT — London-NY Overlap (20:00–00:00 យប់) ជាទូទៅមាន Volume ធំបំផុត ។',
     rule1: (
       <>
-        ត្រូវប្តូរម៉ោង GMT ខាងលើទៅតាម Server Time របស់ Broker ខ្លួនឯង — Broker ខុសគ្នា អាចមាន Offset ខុសគ្នា ២-៣
-        ម៉ោង ។
+        ម៉ោង Session និង Killzone ទាំងអស់ខាងលើ ត្រូវបានបំប្លែងទៅជា <strong>ម៉ោងនៅកម្ពុជា (GMT+7)</strong> រួចរាល់ហើយ ដើម្បីងាយស្រួលអនុវត្ត ។ ប្រសិនបើអ្នកមើលម៉ោងលើ Broker ត្រូវផ្ទៀងផ្ទាត់ជាមួយ Server Time របស់ Broker បន្ថែម ។
       </>
     ),
     h2: 'Killzones',
@@ -106,12 +123,19 @@ const CONTENT = {
         ការធ្វើ Displacement ។ Trader ICT ផ្តោតការ Trade ភាគច្រើននៅក្នុង Killzone ជាជាង Session ទាំងមូល ។
       </p>
     ),
-    londonKzLabel: 'London Killzone',
-    londonKzBody: '07:00–10:00 GMT',
-    nyKzLabel: 'New York Killzone (AM)',
-    nyKzBody: '12:00–15:00 GMT',
     asiaKzLabel: 'Asian Killzone',
-    asiaKzBody: '00:00–03:00 GMT',
+    asiaKzBody: '07:00 – 10:00 ព្រឹក (ម៉ោងកម្ពុជា) · 00:00–03:00 GMT',
+    londonKzLabel: 'London Killzone',
+    londonKzBody: '14:00 – 17:00 រសៀល (ម៉ោងកម្ពុជា) · 07:00–10:00 GMT',
+    nyKzLabel: 'New York Killzone (AM)',
+    nyKzBody: '19:00 – 22:00 យប់ (ម៉ោងកម្ពុជា) · 12:00–15:00 GMT',
+    amdVideoLabel: 'វីដេអូពន្យល់ ៖ AMD (Accumulation, Manipulation, Distribution)',
+    amdVideoCaption: 'ស្វែងយល់លម្អិតអំពីវដ្ត AMD របៀបដែល Smart Money រៀបចំអន្ទាក់ Sweep Liquidity និងបង្កើត Trend ពិតប្រាកដ ។',
+    diagram1Title: 'TRADING SESSIONS (ម៉ោងនៅកម្ពុជា GMT+7)',
+    diagram1Asia: 'ASIA 06:00–15:00',
+    diagram1London: 'LONDON 15:00–00:00',
+    diagram1NY: 'NEW YORK 20:00–05:00',
+    diagram1Overlap: 'OVERLAP (20:00–00:00) — Volume ធំបំផុត',
     diagram2Caption: 'Killzone (បន្ទាត់ត្រង់) ជា Window តូចជាង Session (ប្រអប់ស) — ភាគច្រើននៃ Displacement កើតឡើងក្នុងតំបន់តូចនេះ ។',
     rule2: (
       <>
@@ -175,12 +199,12 @@ const CONTENT = {
       question: 'Session ណាមួយ ជាទូទៅមាន Volatility ខ្ពស់បំផុត?',
       options: [
         { label: 'Asia Session', type: 'no' },
-        { label: 'London-New York Overlap', type: 'ok' },
+        { label: 'London-New York Overlap (20:00–00:00 ម៉ោងកម្ពុជា)', type: 'ok' },
         { label: 'Session ណាមួយក៏ដូចគ្នា', type: 'no' },
       ],
       feedback: {
-        ok: '✓ ត្រឹមត្រូវ! London-NY Overlap (13:00–17:00 GMT) ជាទូទៅមាន Volatility ខ្លាំងបំផុត ។',
-        no: '✗ London-New York Overlap ជាទូទៅមាន Volatility ខ្លាំងបំផុត ។',
+        ok: '✓ ត្រឹមត្រូវ! London-NY Overlap (20:00–00:00 ម៉ោងនៅកម្ពុជា / 13:00–17:00 GMT) ជាទូទៅមាន Volatility ខ្លាំងបំផុត ។',
+        no: '✗ London-New York Overlap (20:00–00:00 ម៉ោងនៅកម្ពុជា) ជាទូទៅមាន Volatility ខ្លាំងបំផុត ។',
       },
     },
     quiz2: {
@@ -299,7 +323,9 @@ const CONTENT = {
     asiaLabel: 'Asia Session',
     asiaBody: (
       <>
-        23:00–08:00 GMT
+        <strong>06:00–15:00 Cambodia Time (GMT+7)</strong>
+        <br />
+        <span style={{ fontSize: 12, color: 'var(--mute)' }}>23:00–08:00 GMT</span>
         <br />
         Low volatility, tends to range
         <br />
@@ -309,7 +335,9 @@ const CONTENT = {
     londonLabel: 'London Session',
     londonBody: (
       <>
-        08:00–17:00 GMT
+        <strong>15:00–00:00 Cambodia Time (GMT+7)</strong>
+        <br />
+        <span style={{ fontSize: 12, color: 'var(--mute)' }}>08:00–17:00 GMT</span>
         <br />
         High volatility, often sweeps the Asia range
         <br />
@@ -319,18 +347,19 @@ const CONTENT = {
     nySessionLabel: 'New York Session',
     nySessionBody: (
       <>
-        13:00–22:00 GMT
+        <strong>20:00–05:00 Cambodia Time (GMT+7)</strong>
         <br />
-        Overlaps with London (13:00–17:00) = highest volatility of the day
+        <span style={{ fontSize: 12, color: 'var(--mute)' }}>13:00–22:00 GMT</span>
+        <br />
+        Overlaps with London (<strong>20:00–00:00 Cambodia</strong> / 13:00–17:00 GMT) = highest volatility of the day
         <br />
         <strong>→ Often continues or reverses London's trend</strong>
       </>
     ),
-    diagram1Caption: 'The 3 sessions across the day in GMT — the London-NY overlap (13:00–17:00) usually carries the biggest volume.',
+    diagram1Caption: 'The 3 sessions shown in Cambodia Time (GMT+7) with GMT reference — the London-NY overlap (20:00–00:00 Cambodia / 13:00–17:00 GMT) carries the biggest volume.',
     rule1: (
       <>
-        Convert the GMT times above to your own broker's server time — different brokers can run 2-3 hours off
-        from GMT.
+        Session times are displayed in <strong>Cambodia Time (GMT+7)</strong> for local convenience. When comparing on your broker's charts, check your broker's server time offset (e.g. GMT+2 or GMT+3).
       </>
     ),
     h2: 'Killzones',
@@ -341,12 +370,19 @@ const CONTENT = {
         session.
       </p>
     ),
-    londonKzLabel: 'London Killzone',
-    londonKzBody: '07:00–10:00 GMT',
-    nyKzLabel: 'New York Killzone (AM)',
-    nyKzBody: '12:00–15:00 GMT',
     asiaKzLabel: 'Asian Killzone',
-    asiaKzBody: '00:00–03:00 GMT',
+    asiaKzBody: '07:00–10:00 Cambodia (00:00–03:00 GMT)',
+    londonKzLabel: 'London Killzone',
+    londonKzBody: '14:00–17:00 Cambodia (07:00–10:00 GMT)',
+    nyKzLabel: 'New York Killzone (AM)',
+    nyKzBody: '19:00–22:00 Cambodia (12:00–15:00 GMT)',
+    amdVideoLabel: 'Video: AMD (Accumulation, Manipulation, Distribution)',
+    amdVideoCaption: 'Detailed video breakdown of the AMD cycle, liquidity sweeps, and timing true distribution.',
+    diagram1Title: 'TRADING SESSIONS (CAMBODIA GMT+7 / GMT)',
+    diagram1Asia: 'ASIA 06:00–15:00',
+    diagram1London: 'LONDON 15:00–00:00',
+    diagram1NY: 'NEW YORK 20:00–05:00',
+    diagram1Overlap: 'OVERLAP (20:00–00:00) — HIGHEST VOLUME',
     diagram2Caption: 'A Killzone (solid line) is a smaller window inside a session (white box) — most displacement happens in that narrow slice.',
     rule2: (
       <>
@@ -411,12 +447,12 @@ const CONTENT = {
       question: 'Which session usually carries the highest volatility?',
       options: [
         { label: 'The Asia session', type: 'no' },
-        { label: 'The London-New York overlap', type: 'ok' },
+        { label: 'The London-New York overlap (20:00–00:00 Cambodia)', type: 'ok' },
         { label: 'Every session is the same', type: 'no' },
       ],
       feedback: {
-        ok: '✓ Correct! The London-NY overlap (13:00–17:00 GMT) usually carries the highest volatility of the day.',
-        no: '✗ The London-New York overlap usually carries the highest volatility of the day.',
+        ok: '✓ Correct! The London-NY overlap (20:00–00:00 Cambodia / 13:00–17:00 GMT) usually carries the highest volatility of the day.',
+        no: '✗ The London-New York overlap (20:00–00:00 Cambodia) usually carries the highest volatility of the day.',
       },
     },
     quiz2: {
@@ -534,7 +570,9 @@ const CONTENT = {
     asiaLabel: 'Asia Session（亚洲时段）',
     asiaBody: (
       <>
-        23:00–08:00 GMT
+        <strong>06:00–15:00 柬埔寨时间 (GMT+7)</strong>
+        <br />
+        <span style={{ fontSize: 12, color: 'var(--mute)' }}>23:00–08:00 GMT</span>
         <br />
         波动较低，倾向于区间震荡
         <br />
@@ -544,7 +582,9 @@ const CONTENT = {
     londonLabel: 'London Session（伦敦时段）',
     londonBody: (
       <>
-        08:00–17:00 GMT
+        <strong>15:00–00:00 柬埔寨时间 (GMT+7)</strong>
+        <br />
+        <span style={{ fontSize: 12, color: 'var(--mute)' }}>08:00–17:00 GMT</span>
         <br />
         波动较高，经常扫荡亚洲时段的区间
         <br />
@@ -554,17 +594,19 @@ const CONTENT = {
     nySessionLabel: 'New York Session（纽约时段）',
     nySessionBody: (
       <>
-        13:00–22:00 GMT
+        <strong>20:00–05:00 柬埔寨时间 (GMT+7)</strong>
         <br />
-        与伦敦时段重叠（13:00–17:00）= 全天波动最大
+        <span style={{ fontSize: 12, color: 'var(--mute)' }}>13:00–22:00 GMT</span>
+        <br />
+        与伦敦时段重叠（<strong>20:00–00:00 柬埔寨时间</strong> / 13:00–17:00 GMT）= 全天波动最大
         <br />
         <strong>→ 常常延续或反转伦敦时段的趋势</strong>
       </>
     ),
-    diagram1Caption: '按 GMT 时间划分的 3 个时段 — 伦敦-纽约重叠期（13:00–17:00）通常成交量最大。',
+    diagram1Caption: '时段按柬埔寨时间（GMT+7）与 GMT 对照展示 — 伦敦-纽约重叠期（20:00–00:00）通常成交量最大。',
     rule1: (
       <>
-        请把上面的 GMT 时间换算成你自己经纪商的服务器时间 — 不同经纪商可能与 GMT 相差 2-3 小时。
+        上面的时间已转换为<strong>柬埔寨本地时间（GMT+7）</strong>以方便对照。在经纪商图表上交易时，请同时核对经纪商的服务器时间差（如 GMT+2 或 GMT+3）。
       </>
     ),
     h2: 'Killzones（关键时区）',
@@ -574,12 +616,19 @@ const CONTENT = {
         交易者大多把交易精力集中在 Killzone 内，而不是整个时段。
       </p>
     ),
-    londonKzLabel: 'London Killzone（伦敦关键时区）',
-    londonKzBody: '07:00–10:00 GMT',
-    nyKzLabel: 'New York Killzone（纽约关键时区，上午）',
-    nyKzBody: '12:00–15:00 GMT',
     asiaKzLabel: 'Asian Killzone（亚洲关键时区）',
-    asiaKzBody: '00:00–03:00 GMT',
+    asiaKzBody: '07:00–10:00 柬埔寨时间 (00:00–03:00 GMT)',
+    londonKzLabel: 'London Killzone（伦敦关键时区）',
+    londonKzBody: '14:00–17:00 柬埔寨时间 (07:00–10:00 GMT)',
+    nyKzLabel: 'New York Killzone（纽约关键时区，上午）',
+    nyKzBody: '19:00–22:00 柬埔寨时间 (12:00–15:00 GMT)',
+    amdVideoLabel: '讲解视频：AMD（积累、诱导操纵与派发）',
+    amdVideoCaption: '深入剖析 AMD 周期运作机制，以及 Smart Money 如何设局扫荡流动性并启动真实趋势。',
+    diagram1Title: '交易时段（柬埔寨 GMT+7 / GMT）',
+    diagram1Asia: '亚洲时段 06:00–15:00',
+    diagram1London: '伦敦时段 15:00–00:00',
+    diagram1NY: '纽约时段 20:00–05:00',
+    diagram1Overlap: '重叠时段 (20:00–00:00) — 成交量最大',
     diagram2Caption: 'Killzone（实线区域）是时段（白色方框）内更小的窗口 — 大部分的推动行情都发生在这个狭窄的区间内。',
     rule2: (
       <>
@@ -642,12 +691,12 @@ const CONTENT = {
       question: '哪个时段通常波动最大？',
       options: [
         { label: '亚洲时段', type: 'no' },
-        { label: '伦敦-纽约重叠期', type: 'ok' },
+        { label: '伦敦-纽约重叠期（柬埔寨时间 20:00–00:00）', type: 'ok' },
         { label: '每个时段都一样', type: 'no' },
       ],
       feedback: {
-        ok: '✓ 正确！伦敦-纽约重叠期（13:00–17:00 GMT）通常是全天波动最大的时段。',
-        no: '✗ 伦敦-纽约重叠期通常是全天波动最大的时段。',
+        ok: '✓ 正确！伦敦-纽约重叠期（柬埔寨时间 20:00–00:00 / 13:00–17:00 GMT）通常是全天波动最大的时段。',
+        no: '✗ 伦敦-纽约重叠期（柬埔寨时间 20:00–00:00）通常是全天波动最大的时段。',
       },
     },
     quiz2: {
@@ -767,8 +816,6 @@ export default function Advanced4({ onNavigate, onDone }) {
       <span className="badge bb">{t.lessonTag}</span>
       <p style={{ marginTop: 10 }}>{t.intro}</p>
 
-      <LessonVideo src={src} caption={t.videoCaption} />
-
       {/* ===== SESSIONS ===== */}
       <h3>
         <span className="bar"></span>
@@ -789,19 +836,19 @@ export default function Advanced4({ onNavigate, onDone }) {
 
       <AnimatedFig caption={t.diagram1Caption}>
         <svg viewBox="0 0 700 160">
-          <text x="350" y="16" textAnchor="middle" fontSize="12" fill="#5B9BD5" fontWeight="700" fontFamily="Space Grotesk,sans-serif">SESSIONS (GMT)</text>
+          <text x="350" y="16" textAnchor="middle" fontSize="12" fill="#5B9BD5" fontWeight="700" fontFamily="Space Grotesk,sans-serif">{t.diagram1Title}</text>
 
           <rect x="20" y="40" width="220" height="60" fill="#5B9BD5" opacity="0.12" className="ac" style={{ animationDelay: '.1s' }} />
-          <text x="130" y="35" textAnchor="middle" fontSize="9" fill="#5B9BD5" fontWeight="700" fontFamily="Space Grotesk,sans-serif" className="ac" style={{ animationDelay: '.15s' }}>ASIA 23:00–08:00</text>
+          <text x="130" y="35" textAnchor="middle" fontSize="9" fill="#5B9BD5" fontWeight="700" fontFamily="Space Grotesk,sans-serif" className="ac" style={{ animationDelay: '.15s' }}>{t.diagram1Asia}</text>
 
           <rect x="240" y="40" width="260" height="60" fill="#3EC97A" opacity="0.12" className="ac" style={{ animationDelay: '.2s' }} />
-          <text x="370" y="35" textAnchor="middle" fontSize="9" fill="#3EC97A" fontWeight="700" fontFamily="Space Grotesk,sans-serif" className="ac" style={{ animationDelay: '.25s' }}>LONDON 08:00–17:00</text>
+          <text x="370" y="35" textAnchor="middle" fontSize="9" fill="#3EC97A" fontWeight="700" fontFamily="Space Grotesk,sans-serif" className="ac" style={{ animationDelay: '.25s' }}>{t.diagram1London}</text>
 
           <rect x="400" y="40" width="200" height="60" fill="#E05555" opacity="0.12" className="ac" style={{ animationDelay: '.3s' }} />
-          <text x="500" y="115" textAnchor="middle" fontSize="9" fill="#E05555" fontWeight="700" fontFamily="Space Grotesk,sans-serif" className="ac" style={{ animationDelay: '.35s' }}>NEW YORK 13:00–22:00</text>
+          <text x="500" y="115" textAnchor="middle" fontSize="9" fill="#E05555" fontWeight="700" fontFamily="Space Grotesk,sans-serif" className="ac" style={{ animationDelay: '.35s' }}>{t.diagram1NY}</text>
 
           <rect x="400" y="40" width="100" height="60" fill="#D9B25F" opacity="0.25" className="ac" style={{ animationDelay: '.45s' }} />
-          <text x="450" y="128" textAnchor="middle" fontSize="9" fill="#D9B25F" fontWeight="700" fontFamily="Space Grotesk,sans-serif" className="ac" style={{ animationDelay: '.5s' }}>OVERLAP — highest volume</text>
+          <text x="450" y="128" textAnchor="middle" fontSize="9" fill="#D9B25F" fontWeight="700" fontFamily="Space Grotesk,sans-serif" className="ac" style={{ animationDelay: '.5s' }}>{t.diagram1Overlap}</text>
         </svg>
       </AnimatedFig>
 
@@ -846,6 +893,7 @@ export default function Advanced4({ onNavigate, onDone }) {
         {t.h3}
       </h3>
       <Box variant="g">{t.amdDef}</Box>
+      <LessonVideo src={src} label={t.amdVideoLabel} caption={t.amdVideoCaption} />
       <div className="g3">
         <GridItem labelColor="#5B9BD5" label={t.accLabel}>
           {t.accBody}

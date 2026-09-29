@@ -21,13 +21,24 @@ const TABS = [
   { key: 'all', label: 'All' },
   { key: 'pending', label: 'Pending' },
   { key: 'approved', label: 'Approved' },
-  { key: 'rejected', label: 'Rejected' },
+  { key: 'rejected', label: 'Suspended' },
 ];
+
+// The underlying status value stays 'rejected' (Firestore, setUserStatus,
+// stats.rejected, etc.) -- only the display label reads "Suspended".
+const STATUS_LABELS = { pending: 'Pending', approved: 'Approved', rejected: 'Suspended' };
 
 function formatDate(ts) {
   if (!ts) return '—';
   const date = ts.toDate ? ts.toDate() : new Date(ts);
   return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+// Short "19 Jul" form for the member table's Joined column.
+function formatJoined(ts) {
+  if (!ts) return '—';
+  const date = ts.toDate ? ts.toDate() : new Date(ts);
+  return date.toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
 }
 
 function initials(name, email) {
@@ -73,6 +84,23 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
   const [feedbackLoading, setFeedbackLoading] = useState(true);
   const [feedbackError, setFeedbackError] = useState('');
   const [showFeedback, setShowFeedback] = useState(false);
+  const [hideMembers, setHideMembers] = useState(() => {
+    try {
+      return localStorage.getItem('admin_hide_members') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  function toggleHideMembers() {
+    setHideMembers((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('admin_hide_members', String(next));
+      } catch {}
+      return next;
+    });
+  }
 
   const isDev = admin.role === 'dev';
 
@@ -321,6 +349,30 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
         <div className="admin-header-right">
           <span className="admin-whoami">{admin.email}</span>
           <ThemeToggle />
+          <button
+            type="button"
+            className={`admin-toggle-members-btn${hideMembers ? ' is-hidden' : ''}`}
+            onClick={toggleHideMembers}
+            title={hideMembers ? 'Show Members' : 'Hide Members'}
+          >
+            {hideMembers ? (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+                <span>Show Members</span>
+              </>
+            ) : (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                  <line x1="1" y1="1" x2="23" y2="23" />
+                </svg>
+                <span>Hide Members</span>
+              </>
+            )}
+          </button>
           <button className="admin-feedback-btn" onClick={() => setShowFeedback(true)}>
             Feedback{feedback.length ? <span className="admin-feedback-count">{feedback.length}</span> : null}
           </button>
@@ -330,7 +382,46 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
         </div>
       </header>
 
-      <div className="admin-stats">
+      {/* ===== MEMBERS SECTION ===== */}
+      {hideMembers ? (
+        <div className="admin-collapsed-banner">
+          <div className="admin-collapsed-banner-info">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            <span>Members section is hidden ({users.length} total members) — focusing on Videos</span>
+          </div>
+          <button
+            type="button"
+            className="admin-btn-primary admin-collapsed-show-btn"
+            onClick={toggleHideMembers}
+          >
+            Show Members
+          </button>
+        </div>
+      ) : (
+        <div className="admin-members-section">
+          <div className="admin-section-bar">
+            <div className="admin-section-title" style={{ margin: 0 }}>
+              Members Management
+            </div>
+            <button
+              type="button"
+              className="admin-collapse-inline-btn"
+              onClick={toggleHideMembers}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                <line x1="1" y1="1" x2="23" y2="23" />
+              </svg>
+              <span>Hide Members</span>
+            </button>
+          </div>
+
+          <div className="admin-stats">
         <div className="stat-card">
           <div className="stat-num">{stats.total}</div>
           <div className="stat-label">Total users</div>
@@ -345,7 +436,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
         </div>
         <div className="stat-card stat-rejected">
           <div className="stat-num">{stats.rejected}</div>
-          <div className="stat-label">Rejected</div>
+          <div className="stat-label">Suspended</div>
         </div>
       </div>
 
@@ -416,12 +507,11 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
         <table className="admin-table">
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Email verified</th>
-              <th>Status</th>
+              <th>Member</th>
+              <th>Joined</th>
               <th>Role</th>
-              <th>Registered</th>
+              <th>Plan</th>
+              <th>Status</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -430,15 +520,11 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
               <tr key={u.uid}>
                 <td>
                   <div className="admin-user-cell">
-                    <div className="admin-avatar">{initials(u.name, u.email)}</div>
-                    {u.name}
+                    <div className="admin-user-name">{u.name}</div>
+                    <div className="admin-user-email">{u.email}</div>
                   </div>
                 </td>
-                <td>{u.email}</td>
-                <td>{u.emailVerified ? 'Yes' : 'No'}</td>
-                <td>
-                  <span className={`status-pill status-${u.status}`}>{u.status}</span>
-                </td>
+                <td>{formatJoined(u.createdAt)}</td>
                 <td>
                   <select
                     className={`tier-select${accessValue(u) === 'vip' ? ' tier-vip' : ''}${accessValue(u) === 'admin' || accessValue(u) === 'dev' ? ' role-admin' : ''}${accessValue(u) === 'member' ? ' role-member' : ''}`}
@@ -453,21 +539,58 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
                     <option value="dev">Dev</option>
                   </select>
                 </td>
-                <td>{formatDate(u.createdAt)}</td>
-                <td className="admin-actions">
-                  <button
-                    className="row-menu-trigger"
-                    disabled={updatingUid === u.uid}
-                    onClick={(e) => openActionsMenu(e, u.uid)}
-                  >
-                    ⋯
-                  </button>
+                <td>
+                  {/* No real AI Trading subscription data exists yet (see
+                      AITradingPage.jsx) -- every account just shows "Free"
+                      here until real plan purchases are wired up. */}
+                  <span className="plan-badge">Free</span>
+                </td>
+                <td>
+                  <span className={`status-pill status-${u.status}`}>{STATUS_LABELS[u.status] ?? u.status}</span>
+                </td>
+                <td>
+                  <div className="admin-actions">
+                    {u.status === 'pending' && (
+                      <button
+                        className="action-btn approve"
+                        disabled={updatingUid === u.uid}
+                        onClick={() => handleStatusChange(u.uid, 'approved')}
+                      >
+                        Approve
+                      </button>
+                    )}
+                    {u.status === 'approved' && (
+                      <button
+                        className="action-btn reject"
+                        disabled={updatingUid === u.uid}
+                        onClick={() => handleStatusChange(u.uid, 'rejected')}
+                      >
+                        Suspend
+                      </button>
+                    )}
+                    {u.status === 'rejected' && (
+                      <button
+                        className="action-btn approve"
+                        disabled={updatingUid === u.uid}
+                        onClick={() => handleStatusChange(u.uid, 'approved')}
+                      >
+                        Reinstate
+                      </button>
+                    )}
+                    <button
+                      className="row-menu-trigger"
+                      disabled={updatingUid === u.uid}
+                      onClick={(e) => openActionsMenu(e, u.uid)}
+                    >
+                      ⋯
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
             {!loading && visibleUsers.length === 0 && (
               <tr>
-                <td colSpan={7} className="admin-empty">
+                <td colSpan={6} className="admin-empty">
                   No users in this view.
                 </td>
               </tr>
@@ -475,6 +598,8 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
           </tbody>
         </table>
       </div>
+      </div>
+      )}
 
       {isDev && (
       <div className="admin-videos-section">
@@ -566,17 +691,6 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
               >
                 Permissions{Array.isArray(u.allowedLessons) ? ` (${u.allowedLessons.length})` : ''}
               </button>
-              {u.status !== 'approved' && (
-                <button
-                  className="row-menu-item row-menu-approve"
-                  onClick={() => {
-                    handleStatusChange(u.uid, 'approved');
-                    setActionsMenu(null);
-                  }}
-                >
-                  Approve
-                </button>
-              )}
               {u.status !== 'pending' && (
                 <button
                   className="row-menu-item"

@@ -12,12 +12,14 @@ export default function Navbar({
   activeSection,
   onNavHome,
   onNavNews,
+  onNavAITrading,
   onNavContact,
   onNavProfile,
   user,
   onLogout,
   isAdmin,
   onNavAdmin,
+  onNavMemberPreview,
   showNavLinks = true,
   approved = true,
 }) {
@@ -58,6 +60,13 @@ export default function Navbar({
             >
               {!approved && <LockIcon />}
               {t.news}
+            </button>
+            <button
+              type="button"
+              className={`nav-link${activeSection === 'ai-trading' ? ' active' : ''}`}
+              onClick={onNavAITrading}
+            >
+              {t.aiTrading}
             </button>
             <button
               type="button"
@@ -120,6 +129,13 @@ export default function Navbar({
               >
                 {!approved && <LockIcon />}
                 {t.news}
+              </button>
+              <button
+                type="button"
+                className={`nav-mobile-link${activeSection === 'ai-trading' ? ' active' : ''}`}
+                onClick={() => handleNav(onNavAITrading)}
+              >
+                {t.aiTrading}
               </button>
               <button
                 type="button"

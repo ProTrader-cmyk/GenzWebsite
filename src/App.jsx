@@ -12,6 +12,7 @@ import AdvancedHome from './components/AdvancedHome.jsx';
 import AccessGrantedModal from './components/AccessGrantedModal.jsx';
 import LessonFeedbackModal from './components/LessonFeedbackModal.jsx';
 import NewsPage from './components/NewsPage.jsx';
+import AITradingPage from './components/AITradingPage.jsx';
 import ContactPage from './components/ContactPage.jsx';
 import Login from './pages/Login.jsx';
 import Signup from './pages/Signup.jsx';
@@ -42,6 +43,10 @@ const NAV_KEY = 'gzt_nav';
 // site below wraps its usage in <Suspense fallback={<BootScreen />}>.
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard.jsx'));
 const Profile = lazy(() => import('./components/Profile.jsx'));
+// Dev/admin-only mock preview of the paid member area (Dashboard + Signals)
+// — gated below by isAdmin since it shows fabricated data, never real
+// numbers, and must never be reachable by an actual paying member.
+const MemberArea = lazy(() => import('./pages/MemberArea.jsx'));
 
 // Shared with the checkingSession screen below and every Suspense fallback
 // (AdminDashboard, lesson pages) so a lazy chunk fetch looks the same as the
@@ -130,6 +135,23 @@ export default function App() {
   useEffect(() => {
     if (section === 'new-product') setHasVisitedNewProduct(true);
   }, [section]);
+
+  // Whenever any video starts playing anywhere in the app, pause any other
+  // video that is currently playing so audio never overlaps.
+  useEffect(() => {
+    function handlePlay(e) {
+      if (e.target && e.target.tagName === 'VIDEO') {
+        if (e.target.classList.contains('auth-bg-video')) return;
+        document.querySelectorAll('video').forEach((v) => {
+          if (v !== e.target && !v.paused && !v.classList.contains('auth-bg-video')) {
+            v.pause();
+          }
+        });
+      }
+    }
+    document.addEventListener('play', handlePlay, true);
+    return () => document.removeEventListener('play', handlePlay, true);
+  }, []);
   // Bumped every time a pending (not-approved) user clicks a nav item that's
   // blocked for them (e.g. News) — passed to CategoryHome so it re-opens its
   // "contact admin" modal even when the user was already sitting on the
@@ -482,6 +504,8 @@ export default function App() {
                 setPendingNoticeTick((n) => n + 1);
               }
         }
+        onNavAITrading={() => setSection('ai-trading')}
+        onNavMemberPreview={() => setSection('member-preview')}
         onNavContact={() => setSection('contact')}
         onNavProfile={() => setSection('profile')}
         user={user}
@@ -490,7 +514,7 @@ export default function App() {
         onNavAdmin={() => setAdminViewingSite(false)}
         approved={approved}
       />
-      <div className="wrap">
+      <div className={`wrap${(section === 'member-preview' || (section === 'ai-trading' && isAdmin)) ? ' wrap-terminal' : ''}`}>
         {section === 'categories' && (
           <CategoryHome
             onSelectCategory={selectCategory}
@@ -500,6 +524,30 @@ export default function App() {
           />
         )}
         {section === 'news' && <NewsPage onBack={backToCategories} />}
+        {section === 'ai-trading' && (
+          isAdmin ? (
+            <Suspense fallback={<BootScreen />}>
+              <MemberArea
+                user={user}
+                doneMap={doneMap}
+                onExit={backToCategories}
+                onViewProfile={() => setSection('profile')}
+              />
+            </Suspense>
+          ) : (
+            <AITradingPage onBack={backToCategories} />
+          )
+        )}
+        {section === 'member-preview' && isAdmin && (
+          <Suspense fallback={<BootScreen />}>
+            <MemberArea
+              user={user}
+              doneMap={doneMap}
+              onExit={backToCategories}
+              onViewProfile={() => setSection('profile')}
+            />
+          </Suspense>
+        )}
         {section === 'contact' && <ContactPage onBack={backToCategories} />}
         {hasVisitedNewProduct && (
           <NewProductHome onBack={backToCategories} isActive={section === 'new-product'} />
