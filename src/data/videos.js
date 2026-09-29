@@ -49,8 +49,8 @@ export const VIDEO_KEYS = [
   { key: 'adv3-blocks', label: 'Advanced — Lesson 3: Video 4 - Rejection, Mitigation and Breaker Block' },
   { key: 'adv3-ce-mt', label: 'Advanced — Lesson 3: Video 5 - CE and MT' },
   { key: 'adv4', label: 'Advanced — Lesson 4: Video - AMD (Time and Price)' },
-  { key: 'adv5-checklist', label: 'Advanced — Lesson 5: Video 1 - A+ Trade Checklist' },
-  { key: 'adv5-walkthrough', label: 'Advanced — Lesson 5: Video 2 - Trade Example Walkthrough' },
+  { key: 'adv5-checklist', label: 'Advanced — Lesson 5: Setup A + Scenario 1' },
+  { key: 'adv5-walkthrough', label: 'Advanced — Lesson 5: Setup B + Scenario 2' },
 ];
 
 // { key: { url, label, updatedAt } }, all videos in one read.
