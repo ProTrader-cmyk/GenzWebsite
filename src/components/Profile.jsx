@@ -5,6 +5,7 @@ import { uploadProfilePhoto } from '../data/avatar.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
 import { DollarIcon, TrendUpIcon, StarIcon, CameraIcon } from './ui/CategoryIcons.jsx';
+import MemberAcademy from '../pages/member/MemberAcademy.jsx';
 
 const LOCALE_BY_LANG = { kh: 'km-KH', en: 'en-US' };
 const PERIOD_DAYS = { '1w': 7, '1m': 30, '3m': 90 };
@@ -73,7 +74,7 @@ function smoothPath(points) {
   return d;
 }
 
-export default function Profile({ onBack, uid, user, hideFooter = false }) {
+export default function Profile({ onBack, uid, user, hideFooter = false, doneMap = {}, onSelectCategory }) {
   const { lang } = useLanguage();
   const t = getStrings(lang).profile;
   const tj = getStrings(lang).journal;
@@ -625,6 +626,12 @@ export default function Profile({ onBack, uid, user, hideFooter = false }) {
           </div>
         )}
       </div>
+
+      <MemberAcademy
+        doneMap={doneMap}
+        onExit={onBack}
+        onSelectCategory={onSelectCategory}
+      />
 
       {!hideFooter && <Footer />}
 

@@ -3,7 +3,7 @@ import { advancedLessons } from '../../data/advancedLessons.js';
 import { backtestLessons } from '../../data/backtestLessons.js';
 import { psychologyLessons } from '../../data/psychologyLessons.js';
 
-export default function MemberAcademy({ doneMap, onExit }) {
+export default function MemberAcademy({ doneMap, onExit, onSelectCategory }) {
   const tracks = [
     {
       id: 'advanced',
@@ -61,7 +61,11 @@ export default function MemberAcademy({ doneMap, onExit }) {
           const pct = Math.round((completedCount / totalCount) * 100);
 
           return (
-            <div key={track.id} className="academy-track-card">
+            <div
+              key={track.id}
+              className={`academy-track-card${onSelectCategory ? ' clickable' : ''}`}
+              onClick={() => onSelectCategory?.(track.id)}
+            >
               <div className="track-card-top">
                 <span className="track-badge">{track.badge}</span>
                 <span className="track-count">

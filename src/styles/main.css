@@ -1200,25 +1200,27 @@ h3 .bar{width:3px;height:18px;border-radius:2px;background:var(--gold);flex:none
 .modal-textarea{resize:vertical;}
 .modal-cancel-btn{background:none;border:1px solid rgba(255,255,255,0.1);color:#94A3B8;font-size:12px;font-weight:600;padding:9px 16px;border-radius:8px;cursor:pointer;font-family:inherit;}
 
-/* ACADEMY VIEW */
-.member-academy-page{display:flex;flex-direction:column;gap:20px;}
-.academy-head-card{display:flex;align-items:center;justify-content:space-between;background:#0F1420;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:22px 26px;flex-wrap:wrap;gap:16px;}
-.academy-main-title{font-size:18px;font-weight:800;color:#fff;margin:0 0 4px;}
-.academy-main-sub{font-size:12.5px;color:#94A3B8;margin:0;max-width:620px;}
+/* ACADEMY VIEW / PROFILE CURRICULUM TRACKER */
+.member-academy-page{display:flex;flex-direction:column;gap:20px;margin:28px 0 16px;}
+.academy-head-card{display:flex;align-items:center;justify-content:space-between;background:var(--bg2);border:1px solid var(--faint);border-radius:16px;padding:22px 26px;flex-wrap:wrap;gap:16px;box-shadow:0 16px 32px -24px rgba(0,0,0,0.6);}
+.academy-main-title{font-size:18px;font-weight:800;color:var(--text);margin:0 0 4px;font-family:'Space Grotesk','Noto Sans Khmer',sans-serif;}
+.academy-main-sub{font-size:12.5px;color:var(--mute);margin:0;max-width:620px;}
 .academy-tracks-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;}
-.academy-track-card{background:#0F1420;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:18px 20px;}
+.academy-track-card{background:var(--bg2);border:1px solid var(--faint);border-radius:14px;padding:18px 20px;box-shadow:0 16px 32px -24px rgba(0,0,0,0.6);transition:border-color .15s,transform .15s;}
+.academy-track-card.clickable{cursor:pointer;}
+.academy-track-card.clickable:hover{border-color:var(--brandline);transform:translateY(-2px);}
 .track-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
-.track-badge{font-size:10px;font-weight:800;color:#10B981;background:rgba(16,185,129,0.15);padding:2px 8px;border-radius:6px;text-transform:uppercase;}
-.track-count{font-size:11.5px;font-weight:700;color:#64748B;}
-.track-title{font-size:14.5px;font-weight:800;color:#fff;margin-bottom:4px;}
-.track-desc{font-size:12px;color:#94A3B8;line-height:1.5;margin:0 0 12px;}
-.track-progress-bar{height:6px;background:rgba(255,255,255,0.06);border-radius:6px;overflow:hidden;margin-bottom:14px;}
-.track-progress-fill{height:100%;background:linear-gradient(90deg,#10B981,#34D399);border-radius:6px;transition:width .4s ease;}
+.track-badge{font-size:10px;font-weight:800;color:var(--up);background:var(--upd);padding:2px 8px;border-radius:6px;text-transform:uppercase;}
+.track-count{font-size:11.5px;font-weight:700;color:var(--mute);}
+.track-title{font-size:14.5px;font-weight:800;color:var(--text);margin-bottom:4px;font-family:'Space Grotesk','Noto Sans Khmer',sans-serif;}
+.track-desc{font-size:12px;color:var(--mute);line-height:1.5;margin:0 0 12px;}
+.track-progress-bar{height:6px;background:var(--faint);border-radius:6px;overflow:hidden;margin-bottom:14px;}
+.track-progress-fill{height:100%;background:linear-gradient(90deg,var(--up),#34D399);border-radius:6px;transition:width .4s ease;}
 .track-lessons-list{display:flex;flex-direction:column;gap:5px;max-height:160px;overflow-y:auto;}
-.track-lesson-item{display:flex;align-items:center;gap:8px;font-size:12px;color:#64748B;padding:4px 6px;border-radius:6px;}
-.track-lesson-item.done{color:#CBD5E1;}
-.lesson-check{font-size:10px;font-weight:800;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.05);flex:none;}
-.track-lesson-item.done .lesson-check{background:rgba(16,185,129,0.2);color:#34D399;}
+.track-lesson-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mute);padding:4px 6px;border-radius:6px;}
+.track-lesson-item.done{color:var(--text);}
+.lesson-check{font-size:10px;font-weight:800;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--faint);flex:none;}
+.track-lesson-item.done .lesson-check{background:var(--upd);color:var(--up);}
 
 /* MOBILE NAVIGATION BAR */
 .terminal-mobile-tabbar{display:none;}

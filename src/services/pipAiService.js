@@ -77,102 +77,123 @@ export function savePipApiKey(key) {
  * @returns {Promise<string>}
  */
 export async function askPipCoach(history, prompt, base64Image = null) {
+  // 1. Try our secure Railway backend first (works seamlessly on ALL devices & live sites)
+  const backendUrl = import.meta.env.VITE_NEWS_API_URL || 'https://genzapi-production.up.railway.app';
+  if (backendUrl) {
+    try {
+      const endpoint = `${backendUrl.replace(/\/+$/, '')}/api/pip/chat`;
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          history,
+          prompt,
+          image: base64Image,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.reply) {
+          return data.reply;
+        }
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        console.warn('Backend Pip API returned status:', res.status, errJson);
+      }
+    } catch (backendErr) {
+      console.warn('Could not reach backend Pip API, falling back to client mode:', backendErr);
+    }
+  }
+
+  // 2. Direct client fallback (if user provided a local API key in .env or localStorage)
   const apiKey = getPipApiKey();
+  if (apiKey) {
+    try {
+      const contents = [];
 
-  // If no Gemini key is provided, use high-precision local ICT expert fallback
-  if (!apiKey) {
-    return localIctFallback(prompt);
-  }
-
-  try {
-    const contents = [];
-
-    // System instruction passed inside first turn or system parameter
-    // Add past history turns (last 6 turns for context)
-    const recent = history.slice(-6);
-    for (const msg of recent) {
-      if (msg.sender === 'user') {
-        contents.push({
-          role: 'user',
-          parts: [{ text: msg.text }],
-        });
-      } else if (msg.sender === 'bot') {
-        contents.push({
-          role: 'model',
-          parts: [{ text: msg.text }],
-        });
+      const recent = history.slice(-6);
+      for (const msg of recent) {
+        if (msg.sender === 'user') {
+          contents.push({
+            role: 'user',
+            parts: [{ text: msg.text }],
+          });
+        } else if (msg.sender === 'bot') {
+          contents.push({
+            role: 'model',
+            parts: [{ text: msg.text }],
+          });
+        }
       }
-    }
 
-    // Current turn
-    const currentParts = [];
-    if (base64Image) {
-      // Strip mime prefix if present (e.g. data:image/png;base64,...)
-      const match = base64Image.match(/^data:([^;]+);base64,(.+)$/);
-      if (match) {
-        currentParts.push({
-          inlineData: {
-            mimeType: match[1],
-            data: match[2],
-          },
-        });
+      const currentParts = [];
+      if (base64Image) {
+        const match = base64Image.match(/^data:([^;]+);base64,(.+)$/);
+        if (match) {
+          currentParts.push({
+            inlineData: {
+              mimeType: match[1],
+              data: match[2],
+            },
+          });
+        }
       }
-    }
 
-    currentParts.push({ text: prompt });
-    contents.push({ role: 'user', parts: currentParts });
+      currentParts.push({ text: prompt });
+      contents.push({ role: 'user', parts: currentParts });
 
-    const requestBody = {
-      systemInstruction: {
-        parts: [{ text: SYSTEM_PROMPT }],
-      },
-      contents,
-      generationConfig: {
-        temperature: 0.5,
-        maxOutputTokens: 1200,
-      },
-    };
+      const requestBody = {
+        systemInstruction: {
+          parts: [{ text: SYSTEM_PROMPT }],
+        },
+        contents,
+        generationConfig: {
+          temperature: 0.5,
+          maxOutputTokens: 1200,
+        },
+      };
 
-    const modelsToTry = ['gemini-3.1-flash-lite', 'gemini-3-flash-preview', 'gemini-3.5-flash'];
-    let lastError = null;
+      const modelsToTry = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-flash-latest'];
+      let lastError = null;
 
-    for (const model of modelsToTry) {
-      try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody),
-        });
+      for (const model of modelsToTry) {
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody),
+          });
 
-        if (!response.ok) {
-          const errJson = await response.json().catch(() => ({}));
-          const errMsg = errJson?.error?.message || `HTTP ${response.status}`;
-          lastError = new Error(errMsg);
-          // If model is overloaded (503) or not found (404), seamlessly proceed to next model
-          if (response.status === 503 || response.status === 404 || errMsg.toLowerCase().includes('not found') || errMsg.toLowerCase().includes('no longer available') || errMsg.toLowerCase().includes('high demand')) {
-            continue;
+          if (!response.ok) {
+            const errJson = await response.json().catch(() => ({}));
+            const errMsg = errJson?.error?.message || `HTTP ${response.status}`;
+            lastError = new Error(errMsg);
+            if (response.status === 503 || response.status === 404 || errMsg.toLowerCase().includes('not found') || errMsg.toLowerCase().includes('high demand')) {
+              continue;
+            }
+            throw lastError;
           }
-          throw lastError;
-        }
 
-        const data = await response.json();
-        const candidate = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (candidate) {
-          return candidate;
+          const data = await response.json();
+          const candidate = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (candidate) {
+            return candidate;
+          }
+        } catch (err) {
+          lastError = err;
         }
-      } catch (err) {
-        lastError = err;
       }
-    }
 
-    if (lastError) throw lastError;
-    throw new Error('No response generated by Gemini models.');
-  } catch (error) {
-    console.warn('Gemini API call failed, falling back to local ICT engine:', error);
-    // Return seamless fallback without technical leak
-    return localIctFallback(prompt);
+      if (lastError) throw lastError;
+    } catch (clientErr) {
+      console.warn('Direct Gemini call failed:', clientErr);
+    }
   }
+
+  // 3. Heuristic offline rule engine fallback
+  return localIctFallback(prompt);
 }
 
 /**

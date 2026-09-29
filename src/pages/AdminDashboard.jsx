@@ -778,7 +778,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
             </div>
 
             <div className="perm-section">
-              <div className="perm-section-title">Advanced (VIP)</div>
+              <div className="perm-section-title">Advanced</div>
               {advancedLessons.map((l, i) => (
                 <label key={l.id} className="perm-row">
                   <input type="checkbox" checked={permSelection.includes(l.id)} onChange={() => toggleLesson(l.id)} />

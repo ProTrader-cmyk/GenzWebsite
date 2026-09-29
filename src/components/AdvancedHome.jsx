@@ -6,10 +6,8 @@ import { LockIcon } from './ui/CategoryIcons.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
 
-// This track is already gated behind VIP at the category-picker level
-// (CategoryHome's vipLocked), so every prop here mirrors the
-// approved/allowedLessons/isAdmin gating of the other tracks (Technical,
-// Apps, Backtest, Psychology) on top of that — same sequential-unlock rule.
+// This track mirrors the approved/allowedLessons/isAdmin gating of the
+// other tracks (Technical, Apps, Backtest, Psychology) — sequential-unlock rule.
 export default function AdvancedHome({ doneMap, onSelectLesson, onBack, approved, allowedLessons, isAdmin }) {
   const { lang } = useLanguage();
   const t = getStrings(lang).advanced;

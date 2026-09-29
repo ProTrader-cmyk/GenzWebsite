@@ -59,12 +59,9 @@ function buildCategories(t, approved, isVip) {
       id: 'advanced',
       Icon: AdvancedChartIcon,
       title: t.advancedTitle,
-      tag: t.vipTag,
+      tag: t.advancedLessonsCount,
       locked: false,
       pendingLocked: !approved,
-      // On top of the normal approved-gate, this track also needs VIP tier —
-      // only relevant once the account is already approved.
-      vipLocked: approved && !isVip,
     },
     {
       id: 'new-product',

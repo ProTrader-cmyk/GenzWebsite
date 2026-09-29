@@ -554,7 +554,13 @@ export default function App() {
         )}
         {section === 'profile' && (
           <Suspense fallback={<BootScreen />}>
-            <Profile onBack={backToCategories} uid={user.uid} user={user} />
+            <Profile
+              onBack={backToCategories}
+              uid={user.uid}
+              user={user}
+              doneMap={doneMap}
+              onSelectCategory={selectCategory}
+            />
           </Suspense>
         )}
         {section === 'technical' && effectiveView === 'home' && (

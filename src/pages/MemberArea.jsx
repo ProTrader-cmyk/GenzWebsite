@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { TrendUpIcon, BookIcon } from '../components/ui/CategoryIcons.jsx';
+import { TrendUpIcon } from '../components/ui/CategoryIcons.jsx';
 import MemberDashboard from './member/MemberDashboard.jsx';
 import MemberSignals from './member/MemberSignals.jsx';
 import MemberPipCoach from './member/MemberPipCoach.jsx';
 import MemberPerks from './member/MemberPerks.jsx';
-import MemberAcademy from './member/MemberAcademy.jsx';
 import MemberTierLocked from './member/MemberTierLocked.jsx';
 
 const common = { width: 19, height: 19, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' };
@@ -41,7 +40,6 @@ function BotIcon(props) {
 const NAV_ITEMS = [
   { key: 'dashboard', label: 'Terminal Overview', Icon: TerminalIcon },
   { key: 'signals', label: 'VIP Signals Stream', Icon: TrendUpIcon, badge: 'Live' },
-  { key: 'academy', label: 'Academy Tracker', Icon: BookIcon },
   { key: 'pip', label: 'Pip Trading Coach', Icon: BotIcon, badge: 'PRO', proOnly: true },
   { key: 'perks', label: 'VIP Perks & Playbooks', Icon: DiamondIcon, badge: 'PRO+', proOnly: true },
 ];
@@ -222,12 +220,6 @@ export default function MemberArea({ user, doneMap, onExit }) {
             />
           )}
 
-          {view === 'academy' && (
-            <MemberAcademy
-              doneMap={doneMap}
-              onExit={onExit}
-            />
-          )}
 
           {view === 'pip' && (
             !isProOrElite ? (
