@@ -22,6 +22,11 @@ import {
   deleteSignal,
   generateAiSignal,
 } from '../data/signals.js';
+import {
+  fetchLivePrice,
+  evaluateSignalOutcome,
+  calcTradeProgress,
+} from '../services/marketPriceService.js';
 import ThemeToggle from '../components/ThemeToggle.jsx';
 
 const TABS = [
@@ -117,6 +122,12 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
   const [signalError, setSignalError] = useState('');
   const [signalSuccess, setSignalSuccess] = useState('');
   const [updatingSignalId, setUpdatingSignalId] = useState(null);
+
+  // Live Market Prices & Automated TP/SL State
+  const [livePrices, setLivePrices] = useState({});
+  const [autoTrackingEnabled, setAutoTrackingEnabled] = useState(true);
+  const [isCheckingPrices, setIsCheckingPrices] = useState(false);
+  const [lastCheckedTime, setLastCheckedTime] = useState(null);
 
   // AI Generator Form State (Option B Dual-Timeframe)
   const [aiPair, setAiPair] = useState('XAUUSD');
@@ -270,6 +281,51 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
       setSignalError('Failed to delete signal.');
     }
   }
+
+  async function runPriceCheck(signalsList = signals) {
+    if (isCheckingPrices) return;
+    setIsCheckingPrices(true);
+    const activeList = signalsList.filter((s) => s.status === 'active');
+    const newPrices = { ...livePrices };
+
+    try {
+      const pairs = Array.from(new Set(['XAUUSD', ...activeList.map((s) => s.pair || 'XAUUSD')]));
+      for (const p of pairs) {
+        const price = await fetchLivePrice(p);
+        if (price) newPrices[p] = price;
+      }
+      setLivePrices(newPrices);
+      setLastCheckedTime(new Date().toLocaleTimeString());
+
+      if (autoTrackingEnabled) {
+        for (const s of activeList) {
+          const currentPrice = newPrices[s.pair || 'XAUUSD'];
+          if (!currentPrice) continue;
+
+          const outcome = evaluateSignalOutcome(s, currentPrice);
+          if (outcome === 'tp' || outcome === 'sl') {
+            await updateSignalStatus(s.id, outcome);
+            const isTp = outcome === 'tp';
+            setSignalSuccess(
+              `${isTp ? '🎯 [AUTO-TRIGGER]' : '❌ [AUTO-TRIGGER]'} ${s.pair} touched ${isTp ? 'Take Profit' : 'Stop Loss'} at $${currentPrice}! Signal status updated live on VIP terminal.`
+            );
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Auto price check error:', err);
+    } finally {
+      setIsCheckingPrices(false);
+    }
+  }
+
+  useEffect(() => {
+    runPriceCheck(signals);
+    const interval = setInterval(() => {
+      runPriceCheck(signals);
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [signals, autoTrackingEnabled]);
 
   async function load() {
     setLoading(true);
@@ -1106,6 +1162,44 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
             </div>
           </div>
 
+          {/* LIVE PRICE TRACKER & AUTO EVALUATOR BAR */}
+          <div className="price-tracker-bar">
+            <div className="tracker-bar-left">
+              <div className="tracker-pulse-badge">
+                <span className="pulse-dot" /> LIVE MARKET FEED
+              </div>
+              <div className="tracker-rates-row">
+                {Object.entries(livePrices).map(([pair, price]) => (
+                  <span key={pair} className="tracker-price-pill">
+                    <strong>{pair}:</strong> ${price}
+                  </span>
+                ))}
+              </div>
+              {lastCheckedTime && (
+                <span className="tracker-last-sync">Synced: {lastCheckedTime}</span>
+              )}
+            </div>
+
+            <div className="tracker-bar-right">
+              <label className="auto-toggle-wrap" title="Auto-detect when price touches TP or SL">
+                <input
+                  type="checkbox"
+                  checked={autoTrackingEnabled}
+                  onChange={(e) => setAutoTrackingEnabled(e.target.checked)}
+                />
+                <span>Auto-Trigger TP/SL ({autoTrackingEnabled ? 'Active' : 'Off'})</span>
+              </label>
+              <button
+                type="button"
+                className="btn-check-now"
+                onClick={() => runPriceCheck()}
+                disabled={isCheckingPrices}
+              >
+                {isCheckingPrices ? 'Checking...' : '🔄 Check Price'}
+              </button>
+            </div>
+          </div>
+
           {signalsLoading ? (
             <div className="admin-empty">Loading live signals...</div>
           ) : signals.length === 0 ? (
@@ -1118,6 +1212,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
                     <th>Asset</th>
                     <th>Direction</th>
                     <th>Entry</th>
+                    <th>Live Price</th>
                     <th>SL</th>
                     <th>TP</th>
                     <th>R:R</th>
@@ -1139,6 +1234,23 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
                         </span>
                       </td>
                       <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{s.entry}</td>
+                      <td>
+                        {livePrices[s.pair] ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <div style={{ fontFamily: 'monospace', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+                              ${livePrices[s.pair]}
+                            </div>
+                            {s.status === 'active' && (
+                              <span style={{ fontSize: '10.5px', color: 'var(--brand2)', fontWeight: 600 }}>
+                                {calcTradeProgress(s, livePrices[s.pair]).pipsToTp} pips to TP
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span style={{ color: 'var(--mute)', fontSize: '11.5px' }}>Connecting...</span>
+                        )}
+                      </td>
                       <td style={{ fontFamily: 'monospace', color: 'var(--down)' }}>{s.sl}</td>
                       <td style={{ fontFamily: 'monospace', color: 'var(--up)' }}>{s.tp}</td>
                       <td>{s.rr}R</td>

@@ -1438,3 +1438,26 @@ h3 .bar{width:3px;height:18px;border-radius:2px;background:var(--gold);flex:none
 .status-btn-pill.current.tp{background:rgba(245,158,11,0.18);border-color:#F59E0B;color:#FBBF24;}
 .status-btn-pill.current.sl{background:rgba(239,68,68,0.18);border-color:#EF4444;color:#EF4444;}
 
+/* Live Price Tracker Bar & Auto TP/SL */
+.price-tracker-bar{display:flex;justify-content:space-between;align-items:center;background:var(--bg2);border:1px solid var(--faint);border-radius:12px;padding:10px 14px;margin-bottom:14px;gap:12px;flex-wrap:wrap;}
+.tracker-bar-left{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.tracker-pulse-badge{font-size:10.5px;font-weight:800;color:var(--brand2);display:flex;align-items:center;gap:6px;background:rgba(59,130,246,0.1);padding:4px 9px;border-radius:100px;border:1px solid rgba(59,130,246,0.25);}
+.tracker-rates-row{display:flex;gap:8px;flex-wrap:wrap;}
+.tracker-price-pill{font-size:11.5px;background:var(--bg1);border:1px solid var(--faint);padding:3px 9px;border-radius:6px;color:var(--text);font-family:monospace;}
+.tracker-price-pill strong{color:var(--brand2);margin-right:4px;}
+.tracker-last-sync{font-size:10.5px;color:var(--mute);}
+.tracker-bar-right{display:flex;align-items:center;gap:10px;}
+.auto-toggle-wrap{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;}
+.auto-toggle-wrap input{cursor:pointer;accent-color:var(--brand2);}
+.btn-check-now{background:var(--bg1);border:1px solid var(--brandline);color:var(--text);font-size:11.5px;font-weight:700;padding:5px 12px;border-radius:8px;cursor:pointer;transition:all .15s;}
+.btn-check-now:hover:not(:disabled){border-color:var(--brand2);background:rgba(59,130,246,0.08);}
+
+/* VIP Terminal Live Progress Track */
+.signal-live-tracker-strip{margin:12px 0 6px 0;background:rgba(59,130,246,0.04);border:1px solid rgba(59,130,246,0.18);border-radius:10px;padding:8px 12px;}
+.tracker-strip-info{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;margin-bottom:6px;}
+.live-spot-val{display:flex;align-items:center;gap:6px;color:var(--text);font-weight:600;}
+.spot-dot{width:6px;height:6px;border-radius:50%;background:#22C55E;display:inline-block;box-shadow:0 0 6px #22C55E;}
+.live-progress-val{font-size:11px;font-weight:700;color:var(--brand2);}
+.tracker-progress-track{width:100%;height:5px;background:rgba(255,255,255,0.06);border-radius:10px;overflow:hidden;}
+.tracker-progress-fill{height:100%;background:linear-gradient(90deg,#3B82F6,#10B981);border-radius:10px;transition:width .4s ease;}
+

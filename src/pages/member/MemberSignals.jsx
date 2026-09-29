@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { formatRelativeTime } from '../../data/mockSignals.js';
 import { subscribeSignals } from '../../data/signals.js';
+import { fetchLivePrice, calcTradeProgress } from '../../services/marketPriceService.js';
 
 const STATUS_FILTERS = [
   { key: 'all', label: 'All Signals' },
@@ -9,7 +10,7 @@ const STATUS_FILTERS = [
   { key: 'sl', label: '✕ Hit Stop Loss' },
 ];
 
-function SignalCard({ signal, accountBalance, riskPercent, onCopy }) {
+function SignalCard({ signal, accountBalance, riskPercent, onCopy, livePrice }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -77,6 +78,26 @@ function SignalCard({ signal, accountBalance, riskPercent, onCopy }) {
         </div>
       </div>
 
+      {/* LIVE MARKET SPOT TRACKER & TP PROGRESS */}
+      {isActive && livePrice && (
+        <div className="signal-live-tracker-strip">
+          <div className="tracker-strip-info">
+            <div className="live-spot-val">
+              <span className="spot-dot" /> Live Spot: <strong>${Number(livePrice).toFixed(1)}</strong>
+            </div>
+            <div className="live-progress-val">
+              {calcTradeProgress(signal, livePrice).progressPct}% to Target ({calcTradeProgress(signal, livePrice).pipsToTp} pips remaining)
+            </div>
+          </div>
+          <div className="tracker-progress-track">
+            <div
+              className="tracker-progress-fill"
+              style={{ width: `${calcTradeProgress(signal, livePrice).progressPct}%` }}
+            />
+          </div>
+        </div>
+      )}
+
       <div className="signal-bottom-bar">
         <div className="signal-confluence-tags">
           <span className="confluence-tag">ICT Model</span>
@@ -138,6 +159,7 @@ export default function MemberSignals() {
   const [accountBalance, setAccountBalance] = useState(1000);
   const [riskPercent, setRiskPercent] = useState(1.0);
   const [toast, setToast] = useState(null);
+  const [livePrices, setLivePrices] = useState({});
 
   useEffect(() => {
     const unsub = subscribeSignals((list) => {
@@ -146,6 +168,21 @@ export default function MemberSignals() {
     });
     return () => unsub();
   }, []);
+
+  useEffect(() => {
+    async function loadPrices() {
+      const activePairs = Array.from(new Set(['XAUUSD', ...signals.map((s) => s.pair || 'XAUUSD')]));
+      const nextPrices = {};
+      for (const p of activePairs) {
+        const price = await fetchLivePrice(p);
+        if (price) nextPrices[p] = price;
+      }
+      setLivePrices((prev) => ({ ...prev, ...nextPrices }));
+    }
+    loadPrices();
+    const interval = setInterval(loadPrices, 15000);
+    return () => clearInterval(interval);
+  }, [signals]);
 
   const sorted = [...signals].sort((a, b) => (a.minutesAgo ?? 0) - (b.minutesAgo ?? 0));
   const filtered = sorted.filter((s) => statusFilter === 'all' || s.status === statusFilter);
@@ -224,8 +261,15 @@ export default function MemberSignals() {
             </button>
           ))}
         </div>
-        <div className="signals-count-tag">
-          Showing <strong>{filtered.length}</strong> verified signals
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {livePrices['XAUUSD'] && (
+            <div className="tracker-pulse-badge" style={{ padding: '3px 10px' }}>
+              <span className="pulse-dot" /> SPOT GOLD: ${livePrices['XAUUSD']}
+            </div>
+          )}
+          <div className="signals-count-tag">
+            Showing <strong>{filtered.length}</strong> verified signals
+          </div>
         </div>
       </div>
 
@@ -254,6 +298,7 @@ export default function MemberSignals() {
               accountBalance={accountBalance}
               riskPercent={riskPercent}
               onCopy={handleSignalCopy}
+              livePrice={livePrices[signal.pair || 'XAUUSD']}
             />
           ))
         )}
