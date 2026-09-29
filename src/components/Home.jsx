@@ -16,6 +16,10 @@ export default function Home({ doneMap, onSelectLesson, onBack, approved, allowe
   const pct = Math.round((count / total) * 100);
   const showProgress = count > 0;
 
+  const [itemsPart, suffixPart] = (t.subtitle || '').split('—');
+  const subtitleItems = (itemsPart || '').split('·').map((s) => s.trim()).filter(Boolean);
+  const technicalLessonIds = ['l1', 'l2', 'l3', 'l4', 'l5', 'l6'];
+
   return (
     <div className="view active" id="v-home">
       <button className="back" onClick={onBack}>
@@ -25,7 +29,25 @@ export default function Home({ doneMap, onSelectLesson, onBack, approved, allowe
       <div className="sec-hero">
         <div className="sec-hero-ey sg">{t.eyebrow}</div>
         <h2>{t.title}</h2>
-        <p className={approved ? '' : 'blur-locked'}>{t.subtitle}</p>
+        <p className="sec-hero-sub">
+          {subtitleItems.map((item, idx) => {
+            const lessonId = technicalLessonIds[idx];
+            const isFinished = isAdmin || (approved && !!(lessonId && doneMap?.[lessonId]));
+            return (
+              <span key={idx}>
+                {idx > 0 && ' · '}
+                <span className={isFinished ? '' : 'blur-locked'}>
+                  {item}
+                </span>
+              </span>
+            );
+          })}
+          {suffixPart && (
+            <span className={approved ? '' : 'blur-locked'}>
+              {` — ${suffixPart.trim()}`}
+            </span>
+          )}
+        </p>
       </div>
 
       <div id="prog-outer" style={{ display: showProgress ? 'block' : 'none' }}>
