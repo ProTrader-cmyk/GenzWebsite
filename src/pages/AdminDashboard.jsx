@@ -118,11 +118,11 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
   const [signalSuccess, setSignalSuccess] = useState('');
   const [updatingSignalId, setUpdatingSignalId] = useState(null);
 
-  // AI Generator Form State
+  // AI Generator Form State (Option B Dual-Timeframe)
   const [aiPair, setAiPair] = useState('XAUUSD');
   const [aiNotes, setAiNotes] = useState('');
-  const [aiImage, setAiImage] = useState(null);
-  const [aiImagePreview, setAiImagePreview] = useState(null);
+  const [aiHtfImage, setAiHtfImage] = useState(null); // Chart 1: HTF 1H/4H
+  const [aiLtfImage, setAiLtfImage] = useState(null); // Chart 2: LTF 15m/5m
   const [aiGenerating, setAiGenerating] = useState(false);
 
   // Draft Signal Form State
@@ -158,24 +158,28 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
     });
   }
 
-  function handleImageUpload(e) {
+  function handleHtfImageUpload(e) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 4 * 1024 * 1024) {
-      setSignalError('Chart screenshot must be smaller than 4MB.');
+      setSignalError('HTF chart screenshot must be smaller than 4MB.');
       return;
     }
     const reader = new FileReader();
-    reader.onload = () => {
-      setAiImage(reader.result);
-      setAiImagePreview(reader.result);
-    };
+    reader.onload = () => setAiHtfImage(reader.result);
     reader.readAsDataURL(file);
   }
 
-  function handleRemoveImage() {
-    setAiImage(null);
-    setAiImagePreview(null);
+  function handleLtfImageUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 4 * 1024 * 1024) {
+      setSignalError('LTF chart screenshot must be smaller than 4MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setAiLtfImage(reader.result);
+    reader.readAsDataURL(file);
   }
 
   async function handleAiGenerate() {
@@ -183,10 +187,11 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
     setSignalSuccess('');
     setAiGenerating(true);
     try {
+      const base64Images = [aiHtfImage, aiLtfImage].filter(Boolean);
       const res = await generateAiSignal({
         notes: aiNotes,
         pair: aiPair,
-        base64Image: aiImage,
+        base64Images,
       });
 
       setSignalDraft({
@@ -200,7 +205,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
         reason: res.reason || '',
         status: 'active',
       });
-      setSignalSuccess('✨ Gemini auto-filled your signal! You can edit any numbers or rationale below before dropping.');
+      setSignalSuccess('✨ Gemini analyzed both timeframes and auto-filled your setup! Review or edit levels below before publishing.');
       setTimeout(() => {
         document.getElementById('signal-review-box')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }, 100);
@@ -234,8 +239,8 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
         reason: '',
       }));
       setAiNotes('');
-      setAiImage(null);
-      setAiImagePreview(null);
+      setAiHtfImage(null);
+      setAiLtfImage(null);
     } catch (err) {
       console.error('Error dropping signal:', err);
       setSignalError('Failed to publish signal. Check Firestore rules / admin access.');
@@ -843,37 +848,93 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
             </div>
 
             <div className="signal-form-group">
-              <label className="signal-form-label">CHART SCREENSHOT (OPTIONAL)</label>
-              {aiImagePreview ? (
-                <div className="chart-preview-wrap">
-                  <img src={aiImagePreview} alt="Chart preview" className="chart-preview-img" />
-                  <button
-                    type="button"
-                    className="chart-remove-btn"
-                    onClick={handleRemoveImage}
-                  >
-                    ✕ Remove Image
-                  </button>
-                </div>
-              ) : (
-                <label className="chart-upload-dropzone">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    style={{ display: 'none' }}
-                  />
-                  <div className="chart-dropzone-content">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                      <circle cx="8.5" cy="8.5" r="1.5"/>
-                      <polyline points="21 15 16 10 5 21"/>
-                    </svg>
-                    <span>Click or drop TradingView screenshot here</span>
-                    <span className="dropzone-sub">Gemini analyzes price action, liquidity sweeps & FVGs</span>
-                  </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <label className="signal-form-label" style={{ margin: 0 }}>
+                  DUAL-TIMEFRAME CHARTS (OPTION B)
                 </label>
-              )}
+                <span style={{ fontSize: '11px', color: 'var(--brand2)', fontWeight: 700 }}>
+                  1H Bias + 15m Entry
+                </span>
+              </div>
+              <div style={{ fontSize: '11.5px', color: 'var(--mute)', marginBottom: '10px', lineHeight: '1.4' }}>
+                Upload <strong>Chart 1 (1H/4H HTF)</strong> for overall orderflow & liquidity, and <strong>Chart 2 (15m/5m LTF)</strong> for the execution sweep & FVG entry (or 1 dual split-screen screenshot).
+              </div>
+
+              <div className="dual-charts-grid">
+                {/* CHART 1: HTF 1H/4H */}
+                <div className="chart-upload-col">
+                  <div className="chart-slot-label">
+                    <span>📊</span> Chart 1: 1H / 4H HTF (Bias)
+                  </div>
+                  {aiHtfImage ? (
+                    <div className="chart-preview-wrap">
+                      <img src={aiHtfImage} alt="HTF Chart" className="chart-preview-img" />
+                      <button
+                        type="button"
+                        className="chart-remove-btn"
+                        onClick={() => setAiHtfImage(null)}
+                      >
+                        ✕ Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="chart-upload-dropzone">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleHtfImageUpload}
+                        style={{ display: 'none' }}
+                      />
+                      <div className="chart-dropzone-content">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                          <circle cx="8.5" cy="8.5" r="1.5"/>
+                          <polyline points="21 15 16 10 5 21"/>
+                        </svg>
+                        <span>Drop 1H/4H Chart</span>
+                        <span className="dropzone-sub">Higher Timeframe Bias</span>
+                      </div>
+                    </label>
+                  )}
+                </div>
+
+                {/* CHART 2: LTF 15m/5m */}
+                <div className="chart-upload-col">
+                  <div className="chart-slot-label">
+                    <span>⚡</span> Chart 2: 15m / 5m LTF (Entry)
+                  </div>
+                  {aiLtfImage ? (
+                    <div className="chart-preview-wrap">
+                      <img src={aiLtfImage} alt="LTF Chart" className="chart-preview-img" />
+                      <button
+                        type="button"
+                        className="chart-remove-btn"
+                        onClick={() => setAiLtfImage(null)}
+                      >
+                        ✕ Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="chart-upload-dropzone">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLtfImageUpload}
+                        style={{ display: 'none' }}
+                      />
+                      <div className="chart-dropzone-content">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                          <circle cx="8.5" cy="8.5" r="1.5"/>
+                          <polyline points="21 15 16 10 5 21"/>
+                        </svg>
+                        <span>Drop 15m/5m Chart</span>
+                        <span className="dropzone-sub">Session Sweep & FVG</span>
+                      </div>
+                    </label>
+                  )}
+                </div>
+              </div>
             </div>
 
             <button
@@ -885,11 +946,11 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
               {aiGenerating ? (
                 <>
                   <span className="spinner-ai" />
-                  <span>Gemini Analyzing SMC Structure...</span>
+                  <span>Gemini Correlating HTF + LTF Structure...</span>
                 </>
               ) : (
                 <>
-                  <span>⚡ Generate ICT Setup with Gemini</span>
+                  <span>⚡ Generate Dual-Timeframe Setup with Gemini</span>
                 </>
               )}
             </button>

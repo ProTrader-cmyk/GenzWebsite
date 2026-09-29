@@ -124,26 +124,36 @@ export async function deleteSignal(signalId) {
 }
 
 /**
- * Uses Google Gemini AI to analyze market context/chart and generate a complete ICT Signal.
+ * Uses Google Gemini AI to analyze market context and chart screenshots using Top-Down Dual-Timeframe ICT Analysis.
  * @param {Object} options
  * @param {string} options.notes - market notes, price, or description
  * @param {string} options.pair - e.g. 'XAUUSD'
- * @param {string|null} options.base64Image - optional chart screenshot
+ * @param {string|null} options.base64Image - single chart screenshot
+ * @param {Array<string>} options.base64Images - multiple chart screenshots (e.g. HTF 1H + LTF 15m)
  * @returns {Promise<Object>} structured signal data
  */
-export async function generateAiSignal({ notes = '', pair = 'XAUUSD', base64Image = null }) {
+export async function generateAiSignal({
+  notes = '',
+  pair = 'XAUUSD',
+  base64Image = null,
+  base64Images = [],
+}) {
   const apiKey = getPipApiKey();
   if (!apiKey) {
     throw new Error('Gemini API key is not configured. Please add VITE_GEMINI_API_KEY in your environment or Settings.');
   }
 
   const systemInstruction = `You are the GenZ Trader Institutional ICT Signal Engine.
-You specialize in Gold (XAU/USD) and major Forex pairs using Inner Circle Trader (ICT) Smart Money Concepts (SMC):
-- Dealing Ranges, Liquidity Sweeps (BSL/SSL), Fair Value Gaps (FVG), Order Blocks (OB), Optimal Trade Entry (OTE 62%-79%), and Session Killzones (Asia, London 14:00-17:00 GMT+7, New York 19:00-22:00 GMT+7).
-- Strict minimum Risk to Reward: 1:2.0 or higher.
-- Gold $1 move = 10 pips.
+You specialize in Gold (XAU/USD) and major Forex pairs using Inner Circle Trader (ICT) Smart Money Concepts (SMC) with Top-Down Dual-Timeframe Analysis:
+- Higher Timeframe (HTF - 1H/4H): Identify overall orderflow, Dealing Range, HTF Liquidity (BSL/SSL pools), and major PD Arrays (Daily/4H/1H FVG, Order Blocks).
+- Lower Timeframe (LTF - 15m/5m): Identify session high/low liquidity sweeps during London (14:00-17:00 GMT+7) or New York (19:00-22:00 GMT+7), Market Structure Shift (MSS) with displacement body, and execution entry inside the FVG / OTE (62%-79%).
+- When provided dual screenshots or a split-screen chart (e.g. 1H HTF + 15m/5m LTF):
+  1. Determine directional bias and Draw on Liquidity strictly from the Higher Timeframe.
+  2. Align the execution setup on the Lower Timeframe in confluence with the HTF bias.
+  3. Ensure a strict minimum Risk to Reward: 1:2.0 or higher.
+  4. Gold $1 move = 10 pips.
 
-When provided market notes, current prices, or a chart image:
+When provided market notes, prices, or chart images:
 Generate a high-probability ICT setup and return ONLY a valid, raw JSON object (without markdown code fences, no extra commentary) matching this exact format:
 {
   "pair": "${pair || 'XAUUSD'}",
@@ -153,18 +163,38 @@ Generate a high-probability ICT setup and return ONLY a valid, raw JSON object (
   "tp": 2698.50,
   "rr": 2.0,
   "session": "London Killzone" or "New York AM Killzone",
-  "reason": "Detailed institutional ICT narrative: swept Asian Low into 15m Bullish FVG with 5m MSS displacement. Clear draw on Buy-side liquidity."
+  "reason": "Detailed dual-timeframe ICT narrative: 1H HTF swept BSL into Bearish Order Block; 15m executed on MSS displacement with 15m FVG entry. Target Draw on Liquidity at SSL."
 }`;
 
-  const userPrompt = notes.trim()
-    ? `Analyze this market context for ${pair}: "${notes}". Provide an institutional ICT setup with specific entry, sl, and tp.`
-    : `Generate a high-probability institutional ICT setup for ${pair} during the current market session.`;
+  const allImages = [
+    ...(Array.isArray(base64Images) ? base64Images : []),
+    ...(base64Image ? [base64Image] : []),
+  ].filter(Boolean);
+
+  let userPrompt = '';
+  if (allImages.length >= 2) {
+    userPrompt = `Perform Top-Down Dual-Timeframe ICT Analysis for ${pair}.
+The screenshots contain:
+- Higher Timeframe (HTF 1H/4H): Establish market bias, dealing range, and draw on liquidity.
+- Lower Timeframe (LTF 15m/5m): Locate liquidity sweep, MSS displacement, and precision FVG entry.
+${notes.trim() ? `Trader Context Notes: "${notes.trim()}".` : ''}
+Provide an institutional ICT setup with exact numeric entry, sl, and tp adhering strictly to the HTF bias.`;
+  } else if (allImages.length === 1) {
+    userPrompt = `Perform Top-Down Dual-Timeframe / ICT Analysis for ${pair} using this chart screenshot.
+If the chart shows a dual split-screen layout (e.g. 1H on left and 15m on right), correlate both timeframes top-down: establish bias from 1H and pinpoint execution entry from 15m.
+${notes.trim() ? `Trader Context Notes: "${notes.trim()}".` : ''}
+Provide an institutional ICT setup with specific entry, sl, and tp.`;
+  } else {
+    userPrompt = notes.trim()
+      ? `Analyze this market context for ${pair}: "${notes}". Provide an institutional ICT setup with specific entry, sl, and tp.`
+      : `Generate a high-probability institutional ICT setup for ${pair} during the current market session.`;
+  }
 
   const contents = [];
   const currentParts = [];
 
-  if (base64Image) {
-    const match = base64Image.match(/^data:([^;]+);base64,(.+)$/);
+  for (const img of allImages) {
+    const match = img.match(/^data:([^;]+);base64,(.+)$/);
     if (match) {
       currentParts.push({
         inlineData: {
