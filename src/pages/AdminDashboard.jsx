@@ -15,6 +15,13 @@ import { advancedLessons } from '../data/advancedLessons.js';
 import { VIDEO_KEYS, fetchAllVideos, saveVideoUrl, deleteVideo } from '../data/videos.js';
 import { invalidateVideoCache } from '../data/useVideos.js';
 import { fetchAllFeedback } from '../data/feedback.js';
+import {
+  subscribeSignals,
+  publishSignal,
+  updateSignalStatus,
+  deleteSignal,
+  generateAiSignal,
+} from '../data/signals.js';
 import ThemeToggle from '../components/ThemeToggle.jsx';
 
 const TABS = [
@@ -104,6 +111,158 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
 
   const isDev = admin.role === 'dev';
 
+  // Signals State & AI Generator
+  const [signals, setSignals] = useState([]);
+  const [signalsLoading, setSignalsLoading] = useState(true);
+  const [signalError, setSignalError] = useState('');
+  const [signalSuccess, setSignalSuccess] = useState('');
+  const [updatingSignalId, setUpdatingSignalId] = useState(null);
+
+  // AI Generator Form State
+  const [aiPair, setAiPair] = useState('XAUUSD');
+  const [aiNotes, setAiNotes] = useState('');
+  const [aiImage, setAiImage] = useState(null);
+  const [aiImagePreview, setAiImagePreview] = useState(null);
+  const [aiGenerating, setAiGenerating] = useState(false);
+
+  // Draft Signal Form State
+  const [signalDraft, setSignalDraft] = useState({
+    pair: 'XAUUSD',
+    direction: 'buy',
+    entry: '',
+    sl: '',
+    tp: '',
+    rr: '2.0',
+    session: 'London Killzone',
+    reason: '',
+    status: 'active',
+  });
+  const [isDroppingSignal, setIsDroppingSignal] = useState(false);
+
+  function updateDraftField(field, value) {
+    setSignalDraft((prev) => {
+      const next = { ...prev, [field]: value };
+      if (field === 'entry' || field === 'sl' || field === 'tp') {
+        const e = parseFloat(field === 'entry' ? value : next.entry);
+        const s = parseFloat(field === 'sl' ? value : next.sl);
+        const t = parseFloat(field === 'tp' ? value : next.tp);
+        if (e && s && t) {
+          const risk = Math.abs(e - s);
+          const reward = Math.abs(t - e);
+          if (risk > 0) {
+            next.rr = (Math.round((reward / risk) * 10) / 10).toFixed(1);
+          }
+        }
+      }
+      return next;
+    });
+  }
+
+  function handleImageUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 4 * 1024 * 1024) {
+      setSignalError('Chart screenshot must be smaller than 4MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setAiImage(reader.result);
+      setAiImagePreview(reader.result);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleRemoveImage() {
+    setAiImage(null);
+    setAiImagePreview(null);
+  }
+
+  async function handleAiGenerate() {
+    setSignalError('');
+    setSignalSuccess('');
+    setAiGenerating(true);
+    try {
+      const res = await generateAiSignal({
+        notes: aiNotes,
+        pair: aiPair,
+        base64Image: aiImage,
+      });
+
+      setSignalDraft({
+        pair: res.pair || aiPair || 'XAUUSD',
+        direction: res.direction || 'buy',
+        entry: res.entry ? String(res.entry) : '',
+        sl: res.sl ? String(res.sl) : '',
+        tp: res.tp ? String(res.tp) : '',
+        rr: res.rr ? String(res.rr) : '2.0',
+        session: res.session || 'London Killzone',
+        reason: res.reason || '',
+        status: 'active',
+      });
+      setSignalSuccess('Gemini successfully generated institutional setup! Review below and click Drop Signal.');
+    } catch (err) {
+      console.error('AI Signal generation error:', err);
+      setSignalError(err.message || 'Failed to generate signal with Gemini AI.');
+    } finally {
+      setAiGenerating(false);
+    }
+  }
+
+  async function handlePublishSignal(e) {
+    e?.preventDefault?.();
+    setSignalError('');
+    setSignalSuccess('');
+
+    if (!signalDraft.entry || !signalDraft.sl || !signalDraft.tp) {
+      setSignalError('Please fill in Entry, Stop Loss, and Take Profit levels before dropping signal.');
+      return;
+    }
+
+    setIsDroppingSignal(true);
+    try {
+      await publishSignal(signalDraft);
+      setSignalSuccess(`🚀 Dropped ${signalDraft.pair} ${signalDraft.direction.toUpperCase()} signal live to website!`);
+      setSignalDraft((prev) => ({
+        ...prev,
+        entry: '',
+        sl: '',
+        tp: '',
+        reason: '',
+      }));
+      setAiNotes('');
+      setAiImage(null);
+      setAiImagePreview(null);
+    } catch (err) {
+      console.error('Error dropping signal:', err);
+      setSignalError('Failed to publish signal. Check Firestore rules / admin access.');
+    } finally {
+      setIsDroppingSignal(false);
+    }
+  }
+
+  async function handleUpdateSignalStatus(id, newStatus) {
+    setUpdatingSignalId(id);
+    try {
+      await updateSignalStatus(id, newStatus);
+    } catch (err) {
+      console.error('Error updating signal status:', err);
+      setSignalError('Failed to update signal status.');
+    } finally {
+      setUpdatingSignalId(null);
+    }
+  }
+
+  async function handleDeleteSignal(id, pair) {
+    if (!window.confirm(`Delete ${pair} signal? This removes it from the member terminal.`)) return;
+    try {
+      await deleteSignal(id);
+    } catch (err) {
+      console.error('Error deleting signal:', err);
+      setSignalError('Failed to delete signal.');
+    }
+  }
+
   async function load() {
     setLoading(true);
     setError('');
@@ -143,6 +302,11 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
     load();
     loadVideos();
     loadFeedback();
+    const unsubSignals = subscribeSignals((list) => {
+      setSignals(list);
+      setSignalsLoading(false);
+    });
+    return () => unsubSignals();
   }, []);
 
   function startEditing(key) {
@@ -373,6 +537,13 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
               </>
             )}
           </button>
+          <button
+            type="button"
+            className="admin-signals-shortcut-btn"
+            onClick={() => document.getElementById('admin-signals-section')?.scrollIntoView({ behavior: 'smooth' })}
+          >
+            ⚡ Signals ({signals.filter((s) => s.status === 'active').length})
+          </button>
           <button className="admin-feedback-btn" onClick={() => setShowFeedback(true)}>
             Feedback{feedback.length ? <span className="admin-feedback-count">{feedback.length}</span> : null}
           </button>
@@ -600,6 +771,353 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
       </div>
       </div>
       )}
+
+      {/* ===== INSTITUTIONAL SIGNALS & AI GENERATOR SECTION ===== */}
+      <div className="admin-signals-section" id="admin-signals-section">
+        <div className="admin-section-bar">
+          <div className="admin-section-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ color: 'var(--brand2)', fontSize: '18px' }}>⚡</span>
+            <span>Institutional Signals & AI Generator</span>
+          </div>
+          <div className="signals-live-badge">
+            <span className="status-live-pulse" />
+            <span>LIVE TERMINAL FEED ({signals.filter((s) => s.status === 'active').length} Active)</span>
+          </div>
+        </div>
+        <p className="admin-section-sub">
+          Generate high-probability ICT Smart Money Concept (SMC) setups with Google Gemini AI or craft them manually,
+          review the confluence, and drop them directly to the VIP Member Terminal with one click.
+        </p>
+
+        {signalError && <div className="admin-error admin-error-block">{signalError}</div>}
+        {signalSuccess && (
+          <div className="admin-success-block">
+            {signalSuccess}
+          </div>
+        )}
+
+        {/* 2-COLUMN WORKBENCH */}
+        <div className="signal-workbench-grid">
+          {/* LEFT: GEMINI AI GENERATOR */}
+          <div className="signal-box ai-generator-box">
+            <div className="signal-box-header">
+              <div className="signal-box-title">
+                <span className="sparkle-icon">✨</span> Step 1: AI Setup Generator
+              </div>
+              <span className="gemini-tag">Gemini Flash</span>
+            </div>
+
+            <div className="signal-form-group">
+              <label className="signal-form-label">SELECT ASSET</label>
+              <div className="asset-pills">
+                {['XAUUSD', 'EURUSD', 'GBPUSD', 'BTCUSD', 'US30'].map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    className={`asset-pill${aiPair === p ? ' active' : ''}`}
+                    onClick={() => {
+                      setAiPair(p);
+                      updateDraftField('pair', p);
+                    }}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="signal-form-group">
+              <label className="signal-form-label">
+                MARKET CONTEXT / OBSERVATIONS (OPTIONAL)
+              </label>
+              <textarea
+                className="signal-textarea"
+                placeholder="e.g. Gold at 2685 swept Asian low (SSL), 5m bullish displacement with FVG, expecting continuation towards Asian high 2698 during London Killzone..."
+                rows={3}
+                value={aiNotes}
+                onChange={(e) => setAiNotes(e.target.value)}
+              />
+            </div>
+
+            <div className="signal-form-group">
+              <label className="signal-form-label">CHART SCREENSHOT (OPTIONAL)</label>
+              {aiImagePreview ? (
+                <div className="chart-preview-wrap">
+                  <img src={aiImagePreview} alt="Chart preview" className="chart-preview-img" />
+                  <button
+                    type="button"
+                    className="chart-remove-btn"
+                    onClick={handleRemoveImage}
+                  >
+                    ✕ Remove Image
+                  </button>
+                </div>
+              ) : (
+                <label className="chart-upload-dropzone">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    style={{ display: 'none' }}
+                  />
+                  <div className="chart-dropzone-content">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                      <circle cx="8.5" cy="8.5" r="1.5"/>
+                      <polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                    <span>Click or drop TradingView screenshot here</span>
+                    <span className="dropzone-sub">Gemini analyzes price action, liquidity sweeps & FVGs</span>
+                  </div>
+                </label>
+              )}
+            </div>
+
+            <button
+              type="button"
+              className="admin-btn-ai-generate"
+              onClick={handleAiGenerate}
+              disabled={aiGenerating}
+            >
+              {aiGenerating ? (
+                <>
+                  <span className="spinner-ai" />
+                  <span>Gemini Analyzing SMC Structure...</span>
+                </>
+              ) : (
+                <>
+                  <span>⚡ Generate ICT Setup with Gemini</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* RIGHT: REVIEW & DROP TO WEBSITE */}
+          <div className="signal-box review-drop-box">
+            <div className="signal-box-header">
+              <div className="signal-box-title">
+                <span>🎯</span> Step 2: Review & Drop to Website
+              </div>
+              <span className="drop-target-tag">VIP Member Terminal</span>
+            </div>
+
+            <form onSubmit={handlePublishSignal}>
+              <div className="signal-fields-row">
+                <div className="signal-field-col">
+                  <label className="signal-form-label">PAIR</label>
+                  <input
+                    type="text"
+                    className="signal-input"
+                    value={signalDraft.pair}
+                    onChange={(e) => updateDraftField('pair', e.target.value.toUpperCase())}
+                    required
+                  />
+                </div>
+
+                <div className="signal-field-col">
+                  <label className="signal-form-label">DIRECTION</label>
+                  <div className="dir-toggle-group">
+                    <button
+                      type="button"
+                      className={`dir-toggle-btn buy${signalDraft.direction === 'buy' ? ' active' : ''}`}
+                      onClick={() => updateDraftField('direction', 'buy')}
+                    >
+                      ▲ BUY
+                    </button>
+                    <button
+                      type="button"
+                      className={`dir-toggle-btn sell${signalDraft.direction === 'sell' ? ' active' : ''}`}
+                      onClick={() => updateDraftField('direction', 'sell')}
+                    >
+                      ▼ SELL
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="signal-fields-triple">
+                <div className="signal-field-col">
+                  <label className="signal-form-label">ENTRY LEVEL</label>
+                  <input
+                    type="number"
+                    step="any"
+                    className="signal-input highlight-entry"
+                    placeholder="e.g. 2685.50"
+                    value={signalDraft.entry}
+                    onChange={(e) => updateDraftField('entry', e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="signal-field-col">
+                  <label className="signal-form-label">STOP LOSS (SL)</label>
+                  <input
+                    type="number"
+                    step="any"
+                    className="signal-input highlight-sl"
+                    placeholder="e.g. 2679.00"
+                    value={signalDraft.sl}
+                    onChange={(e) => updateDraftField('sl', e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="signal-field-col">
+                  <label className="signal-form-label">TAKE PROFIT (TP)</label>
+                  <input
+                    type="number"
+                    step="any"
+                    className="signal-input highlight-tp"
+                    placeholder="e.g. 2698.50"
+                    value={signalDraft.tp}
+                    onChange={(e) => updateDraftField('tp', e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="signal-fields-row">
+                <div className="signal-field-col">
+                  <label className="signal-form-label">RISK : REWARD (R:R)</label>
+                  <input
+                    type="text"
+                    className="signal-input"
+                    value={signalDraft.rr ? `${signalDraft.rr}R` : '2.0R'}
+                    onChange={(e) => updateDraftField('rr', e.target.value.replace('R', ''))}
+                  />
+                </div>
+                <div className="signal-field-col">
+                  <label className="signal-form-label">SESSION</label>
+                  <select
+                    className="signal-select"
+                    value={signalDraft.session}
+                    onChange={(e) => updateDraftField('session', e.target.value)}
+                  >
+                    <option value="London Killzone">London Killzone (14:00-17:00 GMT+7)</option>
+                    <option value="New York AM Killzone">New York AM Killzone (19:00-22:00 GMT+7)</option>
+                    <option value="Asian Session">Asian Session (07:00-13:00 GMT+7)</option>
+                    <option value="London Close">London Close (22:00-00:00 GMT+7)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="signal-form-group">
+                <label className="signal-form-label">INSTITUTIONAL SMC RATIONALE</label>
+                <textarea
+                  className="signal-textarea"
+                  rows={3}
+                  placeholder="Explain why this setup works: Liquidity sweep, FVG, OTE, Order Block confluence..."
+                  value={signalDraft.reason}
+                  onChange={(e) => updateDraftField('reason', e.target.value)}
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="admin-btn-drop-signal"
+                disabled={isDroppingSignal}
+              >
+                {isDroppingSignal ? 'Dropping to Website...' : '🚀 Drop Signal to Website (Live)'}
+              </button>
+            </form>
+          </div>
+        </div>
+
+        {/* BOTTOM: LIVE SIGNALS LIST ON WEBSITE */}
+        <div className="live-signals-manager">
+          <div className="live-signals-head">
+            <div className="live-signals-title">
+              📡 Published Signals on Website ({signals.length})
+            </div>
+            <div className="live-signals-sub">
+              Manage live setups, update trade outcomes (Take Profit / Stop Loss), or remove expired signals.
+            </div>
+          </div>
+
+          {signalsLoading ? (
+            <div className="admin-empty">Loading live signals...</div>
+          ) : signals.length === 0 ? (
+            <div className="admin-empty">No signals published yet. Use the generator above to drop your first signal!</div>
+          ) : (
+            <div className="admin-signals-table-wrap">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Asset</th>
+                    <th>Direction</th>
+                    <th>Entry</th>
+                    <th>SL</th>
+                    <th>TP</th>
+                    <th>R:R</th>
+                    <th>Session</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {signals.map((s) => (
+                    <tr key={s.id}>
+                      <td>
+                        <strong>{s.pair}</strong>
+                      </td>
+                      <td>
+                        <span className={`signal-dir-pill ${s.direction}`}>
+                          {s.direction === 'buy' ? '▲ BUY' : '▼ SELL'}
+                        </span>
+                      </td>
+                      <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{s.entry}</td>
+                      <td style={{ fontFamily: 'monospace', color: 'var(--down)' }}>{s.sl}</td>
+                      <td style={{ fontFamily: 'monospace', color: 'var(--up)' }}>{s.tp}</td>
+                      <td>{s.rr}R</td>
+                      <td style={{ fontSize: '12px', color: 'var(--mute)' }}>{s.session || '—'}</td>
+                      <td>
+                        <div className="status-selector-row">
+                          <button
+                            type="button"
+                            className={`status-btn-pill active${s.status === 'active' ? ' current' : ''}`}
+                            onClick={() => handleUpdateSignalStatus(s.id, 'active')}
+                            disabled={updatingSignalId === s.id}
+                          >
+                            Active
+                          </button>
+                          <button
+                            type="button"
+                            className={`status-btn-pill tp${s.status === 'tp' ? ' current' : ''}`}
+                            onClick={() => handleUpdateSignalStatus(s.id, 'tp')}
+                            disabled={updatingSignalId === s.id}
+                          >
+                            🎯 Hit TP
+                          </button>
+                          <button
+                            type="button"
+                            className={`status-btn-pill sl${s.status === 'sl' ? ' current' : ''}`}
+                            onClick={() => handleUpdateSignalStatus(s.id, 'sl')}
+                            disabled={updatingSignalId === s.id}
+                          >
+                            ❌ Hit SL
+                          </button>
+                        </div>
+                      </td>
+                      <td style={{ fontSize: '11px', color: 'var(--mute)' }}>
+                        {s.minutesAgo != null ? `${s.minutesAgo}m ago` : 'Just now'}
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <button
+                          type="button"
+                          className="action-btn reject"
+                          onClick={() => handleDeleteSignal(s.id, s.pair)}
+                          title="Delete Signal"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
 
       {isDev && (
       <div className="admin-videos-section">

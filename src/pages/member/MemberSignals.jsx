@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { MOCK_SIGNALS, formatRelativeTime } from '../../data/mockSignals.js';
+import { useState, useEffect } from 'react';
+import { formatRelativeTime } from '../../data/mockSignals.js';
+import { subscribeSignals } from '../../data/signals.js';
 
 const STATUS_FILTERS = [
   { key: 'all', label: 'All Signals' },
@@ -131,12 +132,22 @@ function SignalCard({ signal, accountBalance, riskPercent, onCopy }) {
 }
 
 export default function MemberSignals() {
+  const [signals, setSignals] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
   const [accountBalance, setAccountBalance] = useState(1000);
   const [riskPercent, setRiskPercent] = useState(1.0);
   const [toast, setToast] = useState(null);
 
-  const sorted = [...MOCK_SIGNALS].sort((a, b) => a.minutesAgo - b.minutesAgo);
+  useEffect(() => {
+    const unsub = subscribeSignals((list) => {
+      setSignals(list);
+      setLoading(false);
+    });
+    return () => unsub();
+  }, []);
+
+  const sorted = [...signals].sort((a, b) => (a.minutesAgo ?? 0) - (b.minutesAgo ?? 0));
   const filtered = sorted.filter((s) => statusFilter === 'all' || s.status === statusFilter);
 
   function handleSignalCopy(pair) {

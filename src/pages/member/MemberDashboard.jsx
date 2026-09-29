@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { MOCK_SIGNALS, formatRelativeTime } from '../../data/mockSignals.js';
+import { useState, useEffect } from 'react';
+import { formatRelativeTime } from '../../data/mockSignals.js';
+import { subscribeSignals } from '../../data/signals.js';
 import { getSessionStatus } from '../../data/marketSessions.js';
 import { TelegramIcon } from '../../components/ui/CategoryIcons.jsx';
 
@@ -19,8 +20,17 @@ function firstName(user) {
 
 export default function MemberDashboard({ user, onNavigate }) {
   const sessions = getSessionStatus();
-  const activeSignals = MOCK_SIGNALS.filter((s) => s.status === 'active');
-  const recentWinners = MOCK_SIGNALS.filter((s) => s.status === 'tp').slice(0, 2);
+  const [signals, setSignals] = useState([]);
+
+  useEffect(() => {
+    const unsub = subscribeSignals((list) => {
+      setSignals(list);
+    });
+    return () => unsub();
+  }, []);
+
+  const activeSignals = signals.filter((s) => s.status === 'active');
+  const recentWinners = signals.filter((s) => s.status === 'tp').slice(0, 2);
 
   // Quick Account Compound Calculator
   const [calcCap, setCalcCap] = useState(1000);

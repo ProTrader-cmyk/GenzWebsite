@@ -1,0 +1,140 @@
+rules_version = '2';
+
+// Firebase project used by genztrader-react (public site + embedded admin
+// dashboard). Deploy/paste this whole file into Firebase console > Firestore
+// Database > Rules.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Admin-ness lives on the requester's own users/{uid} doc as role:
+    // 'admin'. To make someone an admin, open their doc in the Firebase
+    // console and set role to "admin" (or use the dashboard's own "Make
+    // admin" action once one admin already exists).
+    function isAdmin() {
+      return request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Dev has the exact same Admin Dashboard access as admin (user approvals,
+    // roles, tiers, permissions — everything below) with one difference: only
+    // dev can see/edit the Videos panel (src/pages/AdminDashboard.jsx) —
+    // admin can no longer write to /videos, see that match block below.
+    function isDev() {
+      return request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'dev';
+    }
+
+    match /users/{userId} {
+      allow read: if request.auth != null &&
+        (request.auth.uid == userId || isAdmin() || isDev());
+
+      // Signup: the client may create its own profile, but only as a
+      // 'pending' / unverified / plain 'user' — it can't create itself
+      // pre-approved or as an admin.
+      allow create: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.status == 'pending'
+        && request.resource.data.emailVerified == false
+        && request.resource.data.role == 'user';
+
+      // A regular user may only ever flip emailVerified (via OTP
+      // confirmation) — 'status', 'role', 'tier', and 'allowedLessons' never
+      // change through their own write. Without pinning these here too, a
+      // signed-in user could call updateDoc on their own profile from the
+      // browser console and grant themselves every paid lesson (or VIP
+      // access) directly — they must only ever be settable by an admin. An
+      // admin may only ever change 'status', 'role', 'tier', and/or
+      // 'allowedLessons' (per-user lesson permissions) on someone else's
+      // doc — nothing else about the profile. 'tier' is 'member' or 'vip',
+      // separate from 'role' (which only ever gates admin-dashboard access).
+      // Tier can only be changed once the account is already approved (the
+      // Admin Dashboard also disables the Tier dropdown until then) — VIP is
+      // an upgrade on top of a paid/approved account, not a substitute for it.
+      allow update: if request.auth != null && (
+        (request.auth.uid == userId
+          && request.resource.data.status == resource.data.status
+          && request.resource.data.role == resource.data.role
+          && request.resource.data.get('tier', null) == resource.data.get('tier', null)
+          && request.resource.data.name == resource.data.name
+          && request.resource.data.email == resource.data.email
+          && request.resource.data.get('allowedLessons', null) == resource.data.get('allowedLessons', null))
+        ||
+        ((isAdmin() || isDev())
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'role', 'tier', 'allowedLessons'])
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['tier']) || resource.data.status == 'approved'))
+      );
+
+      allow delete: if false;
+
+      // Trading calendar entries — one doc per day, keyed "YYYY-MM-DD"
+      // (src/data/journal.js). Private per-user: only the account itself
+      // can ever read or write its own journal, no admin visibility since
+      // this is personal trading data, not site content.
+      match /journal/{dateId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // One-time OTP codes, keyed by uid. Only the owning (just-created) user
+    // can read/write their own pending code.
+    match /otps/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Login lockout counters, keyed by normalized email (src/data/auth.js) —
+    // a failed sign-in has no uid to scope this to, so unlike everything
+    // else here this has to be writable while signed out. Bounded so a
+    // stranger can't abuse the open write to grief someone else's email
+    // with a runaway or nonsensical lockout: count stays 0-4 and a lockout
+    // can never be set more than ~2 minutes (plus a small clock-skew
+    // allowance) out from now.
+    match /loginAttempts/{email} {
+      allow read: if true;
+      allow write: if request.resource.data.keys().hasOnly(['count', 'lockedUntil', 'updatedAt'])
+        && request.resource.data.count is int
+        && request.resource.data.count >= 0
+        && request.resource.data.count <= 4
+        && (request.resource.data.lockedUntil == null
+          || request.resource.data.lockedUntil <= request.time.toMillis() + 130000);
+    }
+
+    // Video URL registry (Hero, lesson demo clips, etc.), keyed by a fixed
+    // set of ids in src/data/videos.js — src/pages/*.jsx read this to know
+    // which video to play (the files themselves live as GitHub Release
+    // assets, not in Firebase at all). Public read (those URLs are already
+    // public regardless); write is dev-only — admin does not get the Videos
+    // panel in the Admin Dashboard, only dev does.
+    match /videos/{videoId} {
+      allow read: if true;
+      allow write: if isDev();
+    }
+
+    // New Product gold chart's saved custom indicators (src/data/customIndicator.js)
+    // — one doc per named indicator {name, code, updatedAt}. Admin-only read
+    // AND write, unlike `videos` above: this is a private admin tool, never
+    // rendered for regular users, so there's no reason for anyone else to
+    // even read it.
+    match /customIndicators/{indicatorId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Post-lesson (and general) feedback — one doc per submission
+    // (src/data/feedback.js). Any signed-in user may leave feedback as
+    // themselves; only admin/dev can read the list (Admin Dashboard's
+    // Feedback panel) or remove entries — nobody can edit one after
+    // submitting.
+    match /feedback/{feedbackId} {
+      allow read, delete: if isAdmin() || isDev();
+      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      allow update: if false;
+    }
+
+    // VIP Signals stream (src/data/signals.js)
+    // Any signed-in user may read the signals feed; only admin/dev can publish
+    // or update signal statuses (active -> tp -> sl).
+    match /signals/{signalId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin() || isDev();
+    }
+  }
+}
