@@ -3,12 +3,8 @@
  * and evaluating automated Take Profit (TP) and Stop Loss (SL) triggers.
  */
 
-const cache = {
-  prices: {},
-  timestamp: 0,
-};
-
-const CACHE_TTL_MS = 10000; // 10 seconds cache
+const cache = {}; // { [pair]: { price: number, timestamp: number } }
+const CACHE_TTL_MS = 2500; // 2.5 seconds cache for real-time tick streaming
 
 /**
  * Normalizes asset pair names (e.g. 'XAU/USD' -> 'XAUUSD')
@@ -28,16 +24,15 @@ export async function fetchLivePrice(pair = 'XAUUSD') {
   const now = Date.now();
 
   // Return cached price if fresh
-  if (cache.prices[norm] && now - cache.timestamp < CACHE_TTL_MS) {
-    return cache.prices[norm];
+  if (cache[norm] && now - cache[norm].timestamp < CACHE_TTL_MS) {
+    return cache[norm].price;
   }
 
   try {
     if (norm === 'XAUUSD' || norm === 'GOLD' || norm === 'XAU') {
       const price = await fetchGoldPrice();
       if (price) {
-        cache.prices[norm] = price;
-        cache.timestamp = now;
+        cache[norm] = { price, timestamp: now };
         return price;
       }
     }
@@ -45,8 +40,7 @@ export async function fetchLivePrice(pair = 'XAUUSD') {
     if (norm === 'BTCUSD' || norm === 'BTC') {
       const price = await fetchBtcPrice();
       if (price) {
-        cache.prices[norm] = price;
-        cache.timestamp = now;
+        cache[norm] = { price, timestamp: now };
         return price;
       }
     }
@@ -54,15 +48,14 @@ export async function fetchLivePrice(pair = 'XAUUSD') {
     // Forex pairs via open exchange rate API
     const forexPrice = await fetchForexPrice(norm);
     if (forexPrice) {
-      cache.prices[norm] = forexPrice;
-      cache.timestamp = now;
+      cache[norm] = { price: forexPrice, timestamp: now };
       return forexPrice;
     }
   } catch (err) {
     console.warn(`[marketPriceService] Error fetching price for ${norm}:`, err);
   }
 
-  return cache.prices[norm] || null;
+  return cache[norm]?.price || null;
 }
 
 /**

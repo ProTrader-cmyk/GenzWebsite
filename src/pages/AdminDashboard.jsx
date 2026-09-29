@@ -323,7 +323,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
     runPriceCheck(signals);
     const interval = setInterval(() => {
       runPriceCheck(signals);
-    }, 15000);
+    }, 4000);
     return () => clearInterval(interval);
   }, [signals, autoTrackingEnabled]);
 

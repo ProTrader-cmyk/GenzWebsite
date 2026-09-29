@@ -1467,7 +1467,8 @@ h3 .bar{width:3px;height:18px;border-radius:2px;background:var(--gold);flex:none
 .terminal-chart-title-wrap{display:flex;align-items:center;gap:12px;}
 .terminal-chart-icon{font-size:24px;}
 .terminal-chart-title{font-size:15px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-.live-chart-feed-badge{font-size:10px;font-weight:800;color:#10B981;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25);border-radius:100px;padding:2px 8px;display:flex;align-items:center;gap:5px;letter-spacing:.04em;}
+.live-chart-feed-badge{font-size:10px;font-weight:800;color:#10B981;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25);border-radius:100px;padding:2px 8px;display:inline-flex;align-items:center;gap:5px;letter-spacing:.04em;}
+.live-chart-price-pill{font-size:11px;font-weight:800;color:var(--brand2);background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.3);border-radius:100px;padding:2px 10px;display:inline-flex;align-items:center;gap:6px;letter-spacing:.03em;font-variant-numeric:tabular-nums;}
 .terminal-chart-sub{font-size:12px;color:var(--mute);margin-top:2px;}
 .terminal-chart-toggle-btn{background:var(--bg2);border:1px solid var(--faint);color:var(--text);font-size:12px;font-weight:600;padding:6px 14px;border-radius:8px;cursor:pointer;transition:all .15s;}
 .terminal-chart-toggle-btn:hover{border-color:var(--brandline);color:var(--brand2);}

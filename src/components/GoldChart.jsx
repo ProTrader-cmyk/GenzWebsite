@@ -17,6 +17,14 @@ const SYMBOLS = [
   { id: 'usdjpy', symbol: 'OANDA:USDJPY', label: 'USD/JPY' },
 ];
 
+const TIMEFRAMES = [
+  { id: '1', label: '⚡ 1m (Live Ticks)' },
+  { id: '5', label: '5m' },
+  { id: '15', label: '15m (ICT)' },
+  { id: '60', label: '1H' },
+  { id: '240', label: '4H' },
+];
+
 // Loads TradingView's real "Advanced Chart" widget script once (module-level
 // promise cached across every mount/remount) — this is their proper
 // embeddable widget (not the bare widgetembed iframe URL), which includes
@@ -41,11 +49,12 @@ function cssVar(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 
-export default function GoldChart({ initialSymbol = 'gold' }) {
+export default function GoldChart({ initialSymbol = 'gold', defaultTimeframe = '1' }) {
   const { theme } = useTheme();
   const { lang } = useLanguage();
   const t = getStrings(lang)?.newProduct ?? {};
   const [symbolId, setSymbolId] = useState(initialSymbol);
+  const [timeframe, setTimeframe] = useState(defaultTimeframe);
   const symbol = SYMBOLS.find((s) => s.id === symbolId) ?? SYMBOLS[0];
   const tvContainerId = `tv-gold-${useId().replace(/:/g, '')}`;
   const tvContainerRef = useRef(null);
@@ -79,17 +88,25 @@ export default function GoldChart({ initialSymbol = 'gold' }) {
       tvWidgetRef.current = new window.TradingView.widget({
         autosize: true,
         symbol: symbol.symbol,
-        interval: '15',
-        timezone: 'Etc/UTC',
+        interval: timeframe,
+        timezone: 'Asia/Bangkok', // GMT+7 Cambodia Time
         theme: theme === 'light' ? 'light' : 'dark',
         style: '1',
         locale: TV_LOCALE,
         toolbar_bg: cssVar('--bg1'),
         enable_publishing: false,
-        allow_symbol_change: false,
+        allow_symbol_change: true,
         hide_side_toolbar: false,
         withdateranges: true,
+        details: true,
+        hotlist: true,
+        calendar: true,
         container_id: tvContainerId,
+        overrides: {
+          'mainSeriesProperties.showCountdown': true,
+          'paneProperties.legendProperties.showSeriesTitle': true,
+          'scalesProperties.showSeriesLastValue': true,
+        },
       });
     });
 
@@ -98,26 +115,38 @@ export default function GoldChart({ initialSymbol = 'gold' }) {
       tvWidgetRef.current?.remove?.();
       tvWidgetRef.current = null;
     };
-    // The free widget's API has no changeTheme()/setSymbol() method (only
-    // the paid Charting Library has that) — a real theme or symbol change
-    // genuinely has to tear down and recreate the widget, which loses any
-    // drawings. Locale is fixed (TV_LOCALE, module-level) so it's not a
-    // dependency here.
-  }, [theme, symbol.symbol, tvContainerId]);
+  }, [theme, symbol.symbol, timeframe, tvContainerId]);
 
   return (
     <div className="gold-chart-card">
       <div className="gold-chart-symbols">
-        {SYMBOLS.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            className={`gold-chart-symbol-btn${s.id === symbolId ? ' active' : ''}`}
-            onClick={() => setSymbolId(s.id)}
-          >
-            {s.label}
-          </button>
-        ))}
+        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--mute)', marginRight: '2px' }}>ASSET:</span>
+          {SYMBOLS.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              className={`gold-chart-symbol-btn${s.id === symbolId ? ' active' : ''}`}
+              onClick={() => setSymbolId(s.id)}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center', marginLeft: 'auto' }}>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--mute)', marginRight: '2px' }}>TIMEFRAME:</span>
+          {TIMEFRAMES.map((tf) => (
+            <button
+              key={tf.id}
+              type="button"
+              className={`gold-chart-symbol-btn${tf.id === timeframe ? ' active' : ''}`}
+              onClick={() => setTimeframe(tf.id)}
+            >
+              {tf.label}
+            </button>
+          ))}
+        </div>
       </div>
       <div ref={tvWrapRef} className={`gold-chart-tv-wrap${tvFullscreen ? ' is-fullscreen' : ''}`}>
         <button

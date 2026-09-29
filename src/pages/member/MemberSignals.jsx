@@ -1,8 +1,16 @@
 import { useState, useEffect } from 'react';
 import { formatRelativeTime } from '../../data/mockSignals.js';
-import { subscribeSignals } from '../../data/signals.js';
-import { fetchLivePrice, calcTradeProgress } from '../../services/marketPriceService.js';
+import { subscribeSignals, updateSignalStatus } from '../../data/signals.js';
+import { fetchLivePrice, calcTradeProgress, evaluateSignalOutcome } from '../../services/marketPriceService.js';
 import GoldChart from '../../components/GoldChart.jsx';
+
+function formatSpotPrice(pair, price) {
+  if (price == null || isNaN(price)) return '---';
+  const p = String(pair || 'XAUUSD').toUpperCase();
+  if (p.includes('JPY')) return Number(price).toFixed(3);
+  if (p.includes('EUR') || p.includes('GBP') || p.includes('AUD')) return Number(price).toFixed(5);
+  return Number(price).toFixed(2);
+}
 
 const STATUS_FILTERS = [
   { key: 'all', label: 'All Signals' },
@@ -84,7 +92,7 @@ function SignalCard({ signal, accountBalance, riskPercent, onCopy, livePrice }) 
         <div className="signal-live-tracker-strip">
           <div className="tracker-strip-info">
             <div className="live-spot-val">
-              <span className="spot-dot" /> Live Spot: <strong>${Number(livePrice).toFixed(1)}</strong>
+              <span className="spot-dot" /> Live Spot: <strong>${formatSpotPrice(signal.pair, livePrice)}</strong>
             </div>
             <div className="live-progress-val">
               {calcTradeProgress(signal, livePrice).progressPct}% to Target ({calcTradeProgress(signal, livePrice).pipsToTp} pips remaining)
@@ -172,6 +180,7 @@ export default function MemberSignals() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     async function loadPrices() {
       const activePairs = Array.from(new Set(['XAUUSD', ...signals.map((s) => s.pair || 'XAUUSD')]));
       const nextPrices = {};
@@ -179,11 +188,31 @@ export default function MemberSignals() {
         const price = await fetchLivePrice(p);
         if (price) nextPrices[p] = price;
       }
+      if (cancelled) return;
       setLivePrices((prev) => ({ ...prev, ...nextPrices }));
+
+      // Auto-evaluate active signals against live OANDA tick
+      const activeList = signals.filter((s) => s.status === 'active');
+      for (const s of activeList) {
+        const currentPrice = nextPrices[s.pair || 'XAUUSD'];
+        if (!currentPrice) continue;
+        const outcome = evaluateSignalOutcome(s, currentPrice);
+        if (outcome === 'tp' || outcome === 'sl') {
+          try {
+            await updateSignalStatus(s.id, outcome);
+          } catch (err) {
+            console.warn('Auto signal outcome update error:', err);
+          }
+        }
+      }
     }
+
     loadPrices();
-    const interval = setInterval(loadPrices, 15000);
-    return () => clearInterval(interval);
+    const interval = setInterval(loadPrices, 3500); // 3.5s real-time tick streaming
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [signals]);
 
   const sorted = [...signals].sort((a, b) => (a.minutesAgo ?? 0) - (b.minutesAgo ?? 0));
@@ -266,7 +295,7 @@ export default function MemberSignals() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           {livePrices['XAUUSD'] && (
             <div className="tracker-pulse-badge" style={{ padding: '3px 10px' }}>
-              <span className="pulse-dot" /> SPOT GOLD: ${livePrices['XAUUSD']}
+              <span className="pulse-dot" /> SPOT GOLD: ${formatSpotPrice('XAUUSD', livePrices['XAUUSD'])}
             </div>
           )}
           <div className="signals-count-tag">
@@ -286,9 +315,14 @@ export default function MemberSignals() {
                 <span className="live-chart-feed-badge">
                   <span className="pulse-dot" /> REAL-TIME OANDA FEED
                 </span>
+                {livePrices['XAUUSD'] && (
+                  <span className="live-chart-price-pill">
+                    <span className="pulse-dot" /> OANDA SPOT: ${formatSpotPrice('XAUUSD', livePrices['XAUUSD'])}
+                  </span>
+                )}
               </div>
               <div className="terminal-chart-sub">
-                Official OANDA institutional data feed. Verify technical levels, Fair Value Gaps, and liquidity sweeps before executing trades.
+                Official OANDA institutional data feed (Cambodia GMT+7). Defaulted to <strong>⚡ 1m (Live Ticks)</strong> so active candles fluctuate live on every tick.
               </div>
             </div>
           </div>
