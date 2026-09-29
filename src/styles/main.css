@@ -1474,3 +1474,162 @@ h3 .bar{width:3px;height:18px;border-radius:2px;background:var(--gold);flex:none
 .terminal-chart-toggle-btn:hover{border-color:var(--brandline);color:var(--brand2);}
 .terminal-chart-body .gold-chart-card{margin:0;padding:12px;background:var(--bg2);box-shadow:none;border-radius:12px;}
 
+/* ADMIN TOP 3-BUTTON NAVIGATION BAR */
+.admin-nav-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 26px 0;
+  padding: 6px;
+  background: var(--bg1);
+  border: 1px solid var(--faint);
+  border-radius: 14px;
+  width: fit-content;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.15);
+  flex-wrap: wrap;
+}
+
+.admin-nav-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 22px;
+  border-radius: 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--mute);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  letter-spacing: 0.02em;
+  font-family: inherit;
+}
+
+.admin-nav-tab-btn:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.admin-nav-tab-btn.active {
+  background: var(--bg2);
+  color: var(--text);
+  border-color: var(--brandline);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.admin-nav-tab-icon {
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+}
+
+.admin-nav-tab-text {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.admin-nav-tab-pill {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--mute);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-nav-tab-btn.active .admin-nav-tab-pill {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--brand2);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.admin-nav-tab-pill.green-pill {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10B981;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.admin-nav-tab-pill.blue-pill {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3B82F6;
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+/* CONFIGURE SECTION STYLES */
+.admin-configure-section {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.admin-config-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.config-card {
+  background: var(--bg1);
+  border: 1px solid var(--faint);
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
+
+.config-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.config-card-icon {
+  font-size: 26px;
+}
+
+.config-card-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.config-card-sub {
+  font-size: 12px;
+  color: var(--mute);
+  margin-top: 2px;
+}
+
+.config-card-status {
+  font-size: 12px;
+  font-weight: 700;
+  color: #10B981;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.config-toggle-btn {
+  background: var(--bg2);
+  border: 1px solid var(--faint);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 7px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all .15s;
+  width: fit-content;
+}
+
+.config-toggle-btn.active {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #34D399;
+}
+

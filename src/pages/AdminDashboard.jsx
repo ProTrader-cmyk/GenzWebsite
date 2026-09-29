@@ -97,6 +97,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
   const [feedbackLoading, setFeedbackLoading] = useState(true);
   const [feedbackError, setFeedbackError] = useState('');
   const [showFeedback, setShowFeedback] = useState(false);
+  const [adminSection, setAdminSection] = useState('members'); // 'members' | 'signals' | 'configure'
   const [hideMembers, setHideMembers] = useState(() => {
     try {
       return localStorage.getItem('admin_hide_members') === 'true';
@@ -602,82 +603,58 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
         <div className="admin-header-right">
           <span className="admin-whoami">{admin.email}</span>
           <ThemeToggle />
-          <button
-            type="button"
-            className={`admin-toggle-members-btn${hideMembers ? ' is-hidden' : ''}`}
-            onClick={toggleHideMembers}
-            title={hideMembers ? 'Show Members' : 'Hide Members'}
-          >
-            {hideMembers ? (
-              <>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-                <span>Show Members</span>
-              </>
-            ) : (
-              <>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                  <line x1="1" y1="1" x2="23" y2="23" />
-                </svg>
-                <span>Hide Members</span>
-              </>
-            )}
-          </button>
-          <button
-            type="button"
-            className="admin-signals-shortcut-btn"
-            onClick={() => document.getElementById('admin-signals-section')?.scrollIntoView({ behavior: 'smooth' })}
-          >
-            ⚡ Signals ({signals.filter((s) => s.status === 'active').length})
-          </button>
-          <button className="admin-feedback-btn" onClick={() => setShowFeedback(true)}>
-            Feedback{feedback.length ? <span className="admin-feedback-count">{feedback.length}</span> : null}
-          </button>
           <button className="admin-logout" onClick={onLogout}>
             Sign out
           </button>
         </div>
       </header>
 
+      {/* 3 TOP NAVIGATION BUTTONS: Member, Signal, Configure */}
+      <div className="admin-nav-bar">
+        <button
+          type="button"
+          className={`admin-nav-tab-btn${adminSection === 'members' ? ' active' : ''}`}
+          onClick={() => setAdminSection('members')}
+        >
+          <span className="admin-nav-tab-icon">👥</span>
+          <span className="admin-nav-tab-text">Member</span>
+          <span className="admin-nav-tab-pill">{users.length}</span>
+        </button>
+
+        <button
+          type="button"
+          className={`admin-nav-tab-btn${adminSection === 'signals' ? ' active' : ''}`}
+          onClick={() => setAdminSection('signals')}
+        >
+          <span className="admin-nav-tab-icon">⚡</span>
+          <span className="admin-nav-tab-text">Signal</span>
+          <span className="admin-nav-tab-pill green-pill">
+            {signals.filter((s) => s.status === 'active').length} Active
+          </span>
+        </button>
+
+        <button
+          type="button"
+          className={`admin-nav-tab-btn${adminSection === 'configure' ? ' active' : ''}`}
+          onClick={() => setAdminSection('configure')}
+        >
+          <span className="admin-nav-tab-icon">⚙️</span>
+          <span className="admin-nav-tab-text">Configure</span>
+          {feedback.length > 0 && (
+            <span className="admin-nav-tab-pill blue-pill">{feedback.length}</span>
+          )}
+        </button>
+      </div>
+
       {/* ===== MEMBERS SECTION ===== */}
-      {hideMembers ? (
-        <div className="admin-collapsed-banner">
-          <div className="admin-collapsed-banner-info">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-              <circle cx="9" cy="7" r="4"></circle>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-            </svg>
-            <span>Members section is hidden ({users.length} total members) — focusing on Videos</span>
-          </div>
-          <button
-            type="button"
-            className="admin-btn-primary admin-collapsed-show-btn"
-            onClick={toggleHideMembers}
-          >
-            Show Members
-          </button>
-        </div>
-      ) : (
+      {adminSection === 'members' && (
         <div className="admin-members-section">
           <div className="admin-section-bar">
             <div className="admin-section-title" style={{ margin: 0 }}>
               Members Management
             </div>
-            <button
-              type="button"
-              className="admin-collapse-inline-btn"
-              onClick={toggleHideMembers}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                <line x1="1" y1="1" x2="23" y2="23" />
-              </svg>
-              <span>Hide Members</span>
+            <button type="button" className="admin-btn-primary" onClick={openAddUser}>
+              + Add User
             </button>
           </div>
 
@@ -862,6 +839,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
       )}
 
       {/* ===== INSTITUTIONAL SIGNALS & AI GENERATOR SECTION ===== */}
+      {adminSection === 'signals' && (
       <div className="admin-signals-section" id="admin-signals-section">
         <div className="admin-section-bar">
           <div className="admin-section-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1329,79 +1307,141 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
           )}
         </div>
       </div>
+      )}
 
-      {isDev && (
-      <div className="admin-videos-section">
-        <div className="admin-section-title">Videos</div>
-        <p className="admin-section-sub">
-          For each spot below: upload the file to a GitHub Release (any repo → Releases → attach the file to a
-          release), copy the resulting direct-download link, then paste it here. The site reads the URL from
-          Firestore, so nothing needs redeploying after saving.
-        </p>
-
-        {videoError && <div className="admin-error admin-error-block">{videoError}</div>}
-
-        <div className="video-list">
-          {VIDEO_KEYS.map(({ key, label }) => {
-            const existing = videos[key];
-            const isEditing = editingKey === key;
-            const isSaving = savingKey === key;
-            return (
-              <div key={key} className="video-row">
-                <div className="video-row-info">
-                  <div className={`video-status-dot${existing ? ' uploaded' : ''}`}></div>
-                  <div style={{ flex: 1 }}>
-                    <div className="video-row-label">{label}</div>
-                    {isEditing ? (
-                      <input
-                        type="url"
-                        className="admin-date-input video-url-input"
-                        placeholder="https://github.com/.../releases/download/.../file.mp4"
-                        value={urlDraft}
-                        onChange={(e) => setUrlDraft(e.target.value)}
-                        autoFocus
-                      />
-                    ) : existing ? (
-                      <a className="video-row-link" href={existing.url} target="_blank" rel="noopener noreferrer">
-                        View current video
-                      </a>
-                    ) : (
-                      <div className="video-row-empty">Not set yet</div>
-                    )}
-                  </div>
-                </div>
-                <div className="video-row-actions">
-                  {isEditing ? (
-                    <>
-                      <button
-                        className="admin-btn-primary"
-                        onClick={() => handleSaveUrl(key)}
-                        disabled={isSaving || !urlDraft.trim()}
-                      >
-                        {isSaving ? 'Saving...' : 'Save'}
-                      </button>
-                      <button className="action-btn reset" onClick={() => setEditingKey(null)} disabled={isSaving}>
-                        Cancel
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button className="action-btn perm" onClick={() => startEditing(key)} disabled={videosLoading}>
-                        {existing ? 'Replace' : 'Set URL'}
-                      </button>
-                      {existing && (
-                        <button className="action-btn reject" onClick={() => handleDeleteVideo(key)}>
-                          Delete
-                        </button>
-                      )}
-                    </>
-                  )}
+      {/* ===== CONFIGURE SECTION ===== */}
+      {adminSection === 'configure' && (
+        <div className="admin-configure-section">
+          {/* SYSTEM & ENGINE STATUS CARDS */}
+          <div className="admin-config-cards-grid">
+            <div className="config-card">
+              <div className="config-card-header">
+                <span className="config-card-icon">🤖</span>
+                <div>
+                  <div className="config-card-title">AI Signal Engine</div>
+                  <div className="config-card-sub">Google Gemini 1.5 Flash (Dual-Timeframe Vision)</div>
                 </div>
               </div>
-            );
-          })}
+              <div className="config-card-status">
+                <span className="pulse-dot live" /> Ready for HTF 1H + LTF 15m Analysis
+              </div>
+            </div>
+
+            <div className="config-card">
+              <div className="config-card-header">
+                <span className="config-card-icon">📡</span>
+                <div>
+                  <div className="config-card-title">Live Market Pipe</div>
+                  <div className="config-card-sub">TradingView OANDA WebSocket Feed</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                className={`config-toggle-btn${autoTrackingEnabled ? ' active' : ''}`}
+                onClick={() => setAutoTrackingEnabled((v) => !v)}
+              >
+                {autoTrackingEnabled ? '✓ Auto TP/SL Active' : '✕ Auto TP/SL Paused'}
+              </button>
+            </div>
+
+            <div className="config-card">
+              <div className="config-card-header">
+                <span className="config-card-icon">💬</span>
+                <div>
+                  <div className="config-card-title">Feedback & Inquiries</div>
+                  <div className="config-card-sub">{feedback.length} student submission{feedback.length === 1 ? '' : 's'}</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="admin-btn-primary"
+                style={{ padding: '6px 14px', fontSize: '12px', width: 'fit-content' }}
+                onClick={() => setShowFeedback(true)}
+              >
+                View Feedback Inbox ({feedback.length})
+              </button>
+            </div>
+          </div>
+
+          {/* COURSE LESSON VIDEOS CONFIGURATION */}
+          <div className="admin-videos-section" style={{ marginTop: '12px' }}>
+            <div className="admin-section-bar">
+              <div className="admin-section-title" style={{ margin: 0 }}>
+                Course Lesson Video URLs
+              </div>
+              <span className="signals-count-tag">
+                {Object.keys(videos).length} of {VIDEO_KEYS.length} videos configured
+              </span>
+            </div>
+            <p className="admin-section-sub">
+              Upload your MP4 lesson recordings to GitHub Releases (any repo → Releases → attach MP4),
+              copy the direct download link, and paste it here. The website reads directly from Firestore in real time.
+            </p>
+
+            {videoError && <div className="admin-error admin-error-block">{videoError}</div>}
+
+            <div className="video-list">
+              {VIDEO_KEYS.map(({ key, label }) => {
+                const existing = videos[key];
+                const isEditing = editingKey === key;
+                const isSaving = savingKey === key;
+                return (
+                  <div key={key} className="video-row">
+                    <div className="video-row-info">
+                      <div className={`video-status-dot${existing ? ' uploaded' : ''}`}></div>
+                      <div style={{ flex: 1 }}>
+                        <div className="video-row-label">{label}</div>
+                        {isEditing ? (
+                          <input
+                            type="url"
+                            className="admin-date-input video-url-input"
+                            placeholder="https://github.com/.../releases/download/.../file.mp4"
+                            value={urlDraft}
+                            onChange={(e) => setUrlDraft(e.target.value)}
+                            autoFocus
+                          />
+                        ) : existing ? (
+                          <a className="video-row-link" href={existing.url} target="_blank" rel="noopener noreferrer">
+                            View current video
+                          </a>
+                        ) : (
+                          <div className="video-row-empty">Not set yet</div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="video-row-actions">
+                      {isEditing ? (
+                        <>
+                          <button
+                            className="admin-btn-primary"
+                            onClick={() => handleSaveUrl(key)}
+                            disabled={isSaving || !urlDraft.trim()}
+                          >
+                            {isSaving ? 'Saving...' : 'Save'}
+                          </button>
+                          <button className="action-btn reset" onClick={() => setEditingKey(null)} disabled={isSaving}>
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button className="action-btn perm" onClick={() => startEditing(key)} disabled={videosLoading}>
+                            {existing ? 'Replace' : 'Set URL'}
+                          </button>
+                          {existing && (
+                            <button className="action-btn reject" onClick={() => handleDeleteVideo(key)}>
+                              Delete
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
-      </div>
       )}
 
       {actionsMenu && (() => {
