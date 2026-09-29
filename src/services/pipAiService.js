@@ -3,15 +3,14 @@
 const SYSTEM_PROMPT = `You are Pip, the official Trading Coach for GenZ Trader.
 You were taught directly by GenZ Trader to help all traders and users master financial trading, ICT (Inner Circle Trader) Smart Money Concepts (SMC), and algorithmic price delivery for Forex and Gold (XAU/USD).
 
-STRICT SCOPE ENFORCEMENT (CRITICAL & NON-NEGOTIABLE):
-1. YOU ONLY TALK ABOUT TRADING AND FINANCIAL MARKETS.
-2. If the user asks about ANY topic outside of trading (e.g., movies, gaming, cooking, coding/tech not related to trading, politics, celebrities, homework, general chit-chat, dating, science, etc.):
-   - You MUST REFUSE to answer the off-topic question.
-   - You MUST politely and firmly remind them:
-     "In this chat, we strictly only talk about trading! Please ask me about ICT concepts (FVG, Order Blocks, Liquidity Sweeps, Killzones), Gold (XAU/USD) analysis, lot sizing, or upload a chart screenshot for price action breakdown."
-   - If asked in Khmer, reply in Khmer:
-     "នៅក្នុងការជជែកនេះ យើងនិយាយតែអំពីការជួញដូរ (Trading), ការវិភាគទីផ្សារ និងការគ្រប់គ្រងហានិភ័យប៉ុណ្ណោះ! សូមសួរខ្ញុំអំពីមេរៀន ICT SMC, ការគណនា Lot size មាស (XAUUSD) ឬផ្ញើរូបភាព Chart មកពិនិត្យ!"
-3. NEVER entertain off-topic discussions, roleplay, or non-trading requests under any circumstances.
+STRICT SCOPE ENFORCEMENT & WHAT IS IN-SCOPE:
+1. IN-SCOPE TOPICS (ALWAYS ANSWER ENTHUSIASTICALLY & REALISTICALLY):
+   - All questions about trading, making profits, consistency, trading career/business, trader psychology (FOMO, discipline, greed, fear, revenge trading), risk management, account scaling, prop firm challenges, Gold/Forex pairs, ICT/SMC concepts, market structure, chart analysis, and learning curriculum.
+   - When asked if trading is profitable, if they can make profit, or if you make profit: explain honestly that trading is a game of probabilities, edge, and strict risk management—not gambling.
+2. OUT-OF-SCOPE TOPICS (REFUSE POLITELY):
+   - If the user asks about topics completely unrelated to trading or finance (e.g. movies, video games, cooking, politics, pop celebrities, dating, homework, generic computer programming):
+   - Politely refuse: "In this chat, we strictly talk about trading and financial markets! Please ask me about ICT concepts, market analysis, profit & risk management, or share a chart for breakdown."
+   - If in Khmer: "នៅក្នុងការជជែកនេះ យើងនិយាយតែអំពីការជួញដូរ (Trading), ការវិភាគទីផ្សារ និងការគ្រប់គ្រងហានិភ័យប៉ុណ្ណោះ! សូមសួរខ្ញុំអំពីមេរៀន ICT SMC, ការគ្រប់គ្រងហានិភ័យ ឬផ្ញើរូបភាព Chart មកពិនិត្យ!"
 
 YOUR CORE KNOWLEDGE & TRADING PHILOSOPHY:
 1. TIME & PRICE ARE KING:
@@ -154,7 +153,14 @@ export async function askPipCoach(history, prompt, base64Image = null) {
         },
       };
 
-      const modelsToTry = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-flash-latest'];
+      const modelsToTry = [
+        'gemini-flash-lite-latest',
+        'gemini-3.5-flash-lite',
+        'gemini-3.1-flash-lite',
+        'gemini-3.8-flash',
+        'gemini-flash-latest',
+        'gemini-2.5-flash',
+      ];
       let lastError = null;
 
       for (const model of modelsToTry) {
@@ -170,7 +176,7 @@ export async function askPipCoach(history, prompt, base64Image = null) {
             const errJson = await response.json().catch(() => ({}));
             const errMsg = errJson?.error?.message || `HTTP ${response.status}`;
             lastError = new Error(errMsg);
-            if (response.status === 503 || response.status === 404 || errMsg.toLowerCase().includes('not found') || errMsg.toLowerCase().includes('high demand')) {
+            if (response.status === 503 || response.status === 404 || errMsg.toLowerCase().includes('not found') || errMsg.toLowerCase().includes('high demand') || response.status === 429) {
               continue;
             }
             throw lastError;
@@ -206,11 +212,11 @@ function localIctFallback(query) {
   if (/^(hi|hello|hey|yo|greetings|good morning|good afternoon|good evening|who are you)[\s!.]*$/i.test(q)) {
     return (
       "Hello Trader! 👋 Ready to break down the markets?\n\n" +
-      "**Please note:** In this chat, we strictly only talk about trading, market structure, and risk management!\n\n" +
+      "**Please note:** In this chat, we strictly talk about trading, market structure, psychology, and risk management!\n\n" +
       "Feel free to ask me about:\n" +
       "• ICT Smart Money Concepts (FVG, Order Blocks, Liquidity Sweeps, Killzones)\n" +
       "• Gold (XAU/USD) price action & dealing ranges\n" +
-      "• Exact lot sizing for your account\n" +
+      "• How to achieve consistent profitability and manage risk\n" +
       "• Or paste a chart screenshot (Ctrl+V) for instant technical breakdown!"
     );
   }
@@ -224,7 +230,12 @@ function localIctFallback(query) {
     'resistance', 'demand', 'supply', 'breaker', 'imbalance', 'spread', 'broker', 'metatrader',
     'mt4', 'mt5', 'prop firm', 'funded', 'leverage', 'volume', 'indicator', 'bias', 'entry', 'exit',
     'analysis', 'dollar', 'account', 'capital', 'balance', 'drawdown', 'rr', 'r:r', 'mentor', 'veng',
-    'sophea', 'buy', 'sell', 'long', 'short', 'swing', 'scalp', 'high', 'low', 'range', 'displacement'
+    'sophea', 'buy', 'sell', 'long', 'short', 'swing', 'scalp', 'high', 'low', 'range', 'displacement',
+    'profit', 'profitable', 'profits', 'money', 'win', 'winning', 'winrate', 'loss', 'losses', 'losing',
+    'earn', 'earning', 'rich', 'income', 'roi', 'invest', 'investing', 'investment', 'strategy', 'system',
+    'rules', 'rule', 'ruleset', 'model', 'setup', 'setups', 'target', 'targets', 'psychology', 'discipline',
+    'emotion', 'emotions', 'fear', 'greed', 'fomo', 'overtrade', 'overtrading', 'patience', 'plan', 'trading plan',
+    'career', 'business', 'fund', 'payout', 'withdraw', 'deposit'
   ];
 
   const isTradingRelated = TRADING_TERMS.some((term) => q.includes(term));
@@ -232,12 +243,23 @@ function localIctFallback(query) {
   // If the query is off-topic, refuse politely and remind the user
   if (!isTradingRelated) {
     return (
-      "⚠️ **Notice:** In this chat, we strictly only talk about trading!\n\n" +
+      "⚠️ **Notice:** In this chat, we strictly talk about trading!\n\n" +
       "I am your dedicated ICT Trading Coach for financial markets. Please ask me about:\n" +
       "• **ICT & SMC Models**: Fair Value Gaps (FVG), Order Blocks, Liquidity Sweeps, Killzones\n" +
       "• **Gold (XAU/USD) & Forex**: Setups, Dealing Ranges, Higher Timeframe Bias\n" +
-      "• **Risk Management**: Lot sizing formulas, 1%-2% discipline, Compounding\n" +
+      "• **Risk & Profitability**: Lot sizing formulas, 1%-2% discipline, Compounding, Trader psychology\n" +
       "• **Chart Analysis**: Upload or paste a chart screenshot for price action review!"
+    );
+  }
+
+  if (q.includes('profit') || q.includes('money') || q.includes('earn') || q.includes('win')) {
+    return (
+      "💰 **Pip's Guide to Consistent Trading Profitability:**\n\n" +
+      "Trading is not gambling or a get-rich-quick scheme—it is a business of probabilities, edge, and capital preservation:\n\n" +
+      "1. **Protect Capital First**: Most traders lose because they risk 5%–20% per trade and blow up. Pro traders risk only **1%–2% per setup**.\n" +
+      "2. **Asymmetric Risk-to-Reward (R:R)**: With a 1:2 or 1:3 R:R, even a 40% win rate makes you consistently profitable.\n" +
+      "3. **Stick to One High-Probability Model**: Wait patiently for Asian liquidity sweeps + London/NY Killzone displacements into Fair Value Gaps (FVG).\n" +
+      "4. **Emotional Discipline**: Eliminate FOMO, never revenge trade after a loss, and follow your trading plan strictly every day!"
     );
   }
 
@@ -250,6 +272,26 @@ function localIctFallback(query) {
       "   • $1.00 move in Gold = 10 pips.\n" +
       "   • With a $5.00 SL ($50 pips), risking $10 means **0.02 lots**.\n" +
       "4. **Execution Rule**: Never increase lot size to recover past losses. Compound steadily!"
+    );
+  }
+
+  if (q.includes('strategy') || q.includes('model') || q.includes('setup') || q.includes('how to trade')) {
+    return (
+      "🎯 **The Core ICT High-Probability Setup:**\n\n" +
+      "1. **Higher Timeframe Narrative (H4/H1)**: Determine if price is drawing toward Buy-side Liquidity (BSL) or Sell-side Liquidity (SSL).\n" +
+      "2. **Session Timing**: Only execute during active Killzones (London 14:00-17:00 or NY 19:00-22:00 GMT+7).\n" +
+      "3. **The Sweep**: Wait for price to raid previous session highs/lows or key swing points.\n" +
+      "4. **Displacement & MSS**: Look for energetic, long-bodied candle closures breaking market structure.\n" +
+      "5. **Entry**: Limit order at the newly created Fair Value Gap (FVG) or 50% Mean Threshold of the Order Block."
+    );
+  }
+
+  if (q.includes('psychology') || q.includes('emotion') || q.includes('fear') || q.includes('fomo') || q.includes('discipline')) {
+    return (
+      "🧠 **Pip's Trading Psychology Principles:**\n\n" +
+      "• **Accept Losses as Business Expenses**: No strategy has a 100% win rate. When you lose 1%, you simply execute the rules.\n" +
+      "• **Defeat FOMO**: The market will be here tomorrow. Chasing green candles into Premium pricing is how retail gets trapped.\n" +
+      "• **The 2-Loss Rule**: If you lose 2 trades in a single session, close your charts and step away for the day."
     );
   }
 
