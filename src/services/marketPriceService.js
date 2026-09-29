@@ -66,10 +66,66 @@ export async function fetchLivePrice(pair = 'XAUUSD') {
 }
 
 /**
- * Spot Gold (XAU/USD) fetcher with multiple fallback endpoints
+ * Fetches the official TradingView OANDA quote for Gold and Forex.
+ * This guarantees the live spot price matches the OANDA chart on screen 1:1.
+ */
+async function fetchTradingViewOandaPrice(symbol) {
+  // If Gold / Silver, use CFD scanner
+  if (symbol === 'OANDA:XAUUSD' || symbol === 'OANDA:XAGUSD') {
+    try {
+      const res = await fetch('https://scanner.tradingview.com/cfd/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbols: { tickers: [symbol] },
+          columns: ['close']
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const price = data.data?.[0]?.d?.[0];
+        if (typeof price === 'number') {
+          return Math.round(price * 100) / 100;
+        }
+      }
+    } catch (err) {
+      console.warn(`[marketPriceService] TV CFD quote error for ${symbol}:`, err);
+    }
+  }
+
+  // If Forex, use Forex scanner
+  try {
+    const res = await fetch('https://scanner.tradingview.com/forex/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        symbols: { tickers: [symbol] },
+        columns: ['close']
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const price = data.data?.[0]?.d?.[0];
+      if (typeof price === 'number') {
+        return price;
+      }
+    }
+  } catch (err) {
+    console.warn(`[marketPriceService] TV Forex quote error for ${symbol}:`, err);
+  }
+
+  return null;
+}
+
+/**
+ * Spot Gold (XAU/USD) fetcher — Primary: Official TradingView OANDA feed
  */
 async function fetchGoldPrice() {
-  // Primary: gold-api.com
+  // Primary: Official TradingView OANDA:XAUUSD
+  const oandaPrice = await fetchTradingViewOandaPrice('OANDA:XAUUSD');
+  if (oandaPrice) return oandaPrice;
+
+  // Secondary: gold-api.com
   try {
     const res = await fetch('https://api.gold-api.com/price/XAU', { cache: 'no-cache' });
     if (res.ok) {
@@ -119,6 +175,11 @@ async function fetchBtcPrice() {
  * Major Forex Pairs (EURUSD, GBPUSD, AUDUSD, USDJPY)
  */
 async function fetchForexPrice(pair) {
+  // Primary: Official TradingView OANDA feed
+  const oandaPrice = await fetchTradingViewOandaPrice('OANDA:' + pair);
+  if (oandaPrice) return oandaPrice;
+
+  // Secondary fallback: open exchange rate
   try {
     const res = await fetch('https://open.er-api.com/v6/latest/USD', { cache: 'no-cache' });
     if (res.ok) {

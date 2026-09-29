@@ -41,11 +41,11 @@ function cssVar(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 
-export default function GoldChart() {
+export default function GoldChart({ initialSymbol = 'gold' }) {
   const { theme } = useTheme();
   const { lang } = useLanguage();
-  const t = getStrings(lang).newProduct;
-  const [symbolId, setSymbolId] = useState('gold');
+  const t = getStrings(lang)?.newProduct ?? {};
+  const [symbolId, setSymbolId] = useState(initialSymbol);
   const symbol = SYMBOLS.find((s) => s.id === symbolId) ?? SYMBOLS[0];
   const tvContainerId = `tv-gold-${useId().replace(/:/g, '')}`;
   const tvContainerRef = useRef(null);
@@ -124,8 +124,8 @@ export default function GoldChart() {
           type="button"
           className="gold-chart-fullscreen-btn"
           onClick={toggleTvFullscreen}
-          aria-label={t.fullscreenBtn}
-          title={t.fullscreenBtn}
+          aria-label={t.fullscreenBtn || 'Toggle Fullscreen'}
+          title={t.fullscreenBtn || 'Toggle Fullscreen'}
         >
           {tvFullscreen ? (
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
