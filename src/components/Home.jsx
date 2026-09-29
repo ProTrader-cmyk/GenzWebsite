@@ -16,9 +16,14 @@ export default function Home({ doneMap, onSelectLesson, onBack, approved, allowe
   const pct = Math.round((count / total) * 100);
   const showProgress = count > 0;
 
-  const [itemsPart, suffixPart] = (t.subtitle || '').split('—');
-  const subtitleItems = (itemsPart || '').split('·').map((s) => s.trim()).filter(Boolean);
-  const technicalLessonIds = ['l1', 'l2', 'l3', 'l4', 'l5', 'l6'];
+  const technicalLessons = [
+    { id: 'l1', label: 'Market Structure' },
+    { id: 'l2', label: 'BOS/CHoCH' },
+    { id: 'l3', label: 'Order Block' },
+    { id: 'l4', label: 'FVG' },
+    { id: 'l5', label: 'Liquidity' },
+    { id: 'l6', label: 'EMA' },
+  ];
 
   return (
     <div className="view active" id="v-home">
@@ -30,23 +35,21 @@ export default function Home({ doneMap, onSelectLesson, onBack, approved, allowe
         <div className="sec-hero-ey sg">{t.eyebrow}</div>
         <h2>{t.title}</h2>
         <p className="sec-hero-sub">
-          {subtitleItems.map((item, idx) => {
-            const lessonId = technicalLessonIds[idx];
-            const isFinished = isAdmin || (approved && !!(lessonId && doneMap?.[lessonId]));
+          {technicalLessons.map((item, idx) => {
+            const isUnlocked =
+              isAdmin ||
+              (allowedLessons
+                ? allowedLessons.includes(item.id)
+                : approved && (idx === 0 || !!doneMap?.[technicalLessons[idx - 1].id]));
             return (
-              <span key={idx}>
+              <span key={item.id}>
                 {idx > 0 && ' · '}
-                <span className={isFinished ? '' : 'blur-locked'}>
-                  {item}
+                <span className={isUnlocked ? '' : 'blur-locked'}>
+                  {item.label}
                 </span>
               </span>
             );
           })}
-          {suffixPart && (
-            <span className={approved ? '' : 'blur-locked'}>
-              {` — ${suffixPart.trim()}`}
-            </span>
-          )}
         </p>
       </div>
 
