@@ -200,17 +200,17 @@ export default function MemberDashboard({ user, onNavigate }) {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: PIP AI TEASER & COMPOUND CALCULATOR */}
+        {/* RIGHT COLUMN: PIP COACH TEASER & COMPOUND CALCULATOR */}
         <div className="terminal-column-stack">
-          {/* PIP AI COACH CARD */}
+          {/* PIP COACH CARD */}
           <div className="terminal-panel ai-panel">
             <div className="ai-panel-glow" />
             <div className="panel-header">
               <div className="ai-badge-header">
                 <span className="ai-bot-icon">🤖</span>
                 <div>
-                  <div className="panel-title">Pip AI Trading Coach</div>
-                  <div className="panel-sub">Instant answers for ICT concepts & trade sizing</div>
+                  <div className="panel-title">Pip Trading Coach</div>
+                  <div className="panel-sub">Taught directly by GenZ to help all traders succeed</div>
                 </div>
               </div>
             </div>
@@ -241,7 +241,7 @@ export default function MemberDashboard({ user, onNavigate }) {
               className="open-pip-btn"
               onClick={() => onNavigate('pip')}
             >
-              Open AI Trading Terminal
+              Open Pip Trading Terminal
             </button>
           </div>
 

@@ -5,7 +5,7 @@ const INITIAL_MESSAGES = [
   {
     id: 1,
     sender: 'bot',
-    text: "Hello Trader! I'm Pip, your GenZ Trader AI Coach powered by Google Gemini. Ask me about ICT SMC concepts (FVG, Order Blocks, Liquidity Sweeps, Killzones), lot sizing on Gold (XAUUSD), or upload a chart screenshot for instant price action analysis!",
+    text: "Hello Trader! I'm Pip, your GenZ Trader Coach taught directly by GenZ to help all traders succeed. In this chat, we strictly talk about trading! Ask me about ICT SMC concepts (FVG, Order Blocks, Liquidity Sweeps, Killzones), lot sizing on Gold (XAUUSD), or upload a chart screenshot for instant price action analysis!",
     time: 'Just now',
   },
 ];
@@ -259,7 +259,7 @@ export default function MemberPipCoach({ user }) {
         <div className="pip-head-left">
           <div className="pip-bot-badge">
             <div className="pip-pulse-dot" />
-            <span>Pip AI Coach • Online</span>
+            <span>Pip Coach • Online</span>
           </div>
           <div className="pip-active-session-title" title={activeTitle}>
             💬 {activeTitle}

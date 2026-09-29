@@ -42,7 +42,7 @@ const NAV_ITEMS = [
   { key: 'dashboard', label: 'Terminal Overview', Icon: TerminalIcon },
   { key: 'signals', label: 'VIP Signals Stream', Icon: TrendUpIcon, badge: 'Live' },
   { key: 'academy', label: 'Academy Tracker', Icon: BookIcon },
-  { key: 'pip', label: 'Pip AI Trading Coach', Icon: BotIcon, badge: 'AI', proOnly: true },
+  { key: 'pip', label: 'Pip Trading Coach', Icon: BotIcon, badge: 'PRO', proOnly: true },
   { key: 'perks', label: 'VIP Perks & Playbooks', Icon: DiamondIcon, badge: 'PRO+', proOnly: true },
 ];
 

@@ -20,18 +20,18 @@ export default function MemberTierLocked({ feature, onUpgrade, onNavigate }) {
         </div>
 
         <h2 className="tier-locked-title">
-          {isPip ? 'Unlock Pip AI Trading Coach' : 'Unlock VIP Perks & Playbooks'}
+          {isPip ? 'Unlock Pip Trading Coach' : 'Unlock VIP Perks & Playbooks'}
         </h2>
 
         <p className="tier-locked-sub">
           {isPip
-            ? '24/7 Institutional SMC Analysis, Lot Sizing & Gemini Vision Chart Reviews'
+            ? '24/7 Institutional SMC Analysis, Lot Sizing & Chart Reviews taught by GenZ'
             : 'Downloadable Institutional Playbooks, Weekly Live Zooms & Mentorship'}
         </p>
 
         <p className="tier-locked-desc">
           {isPip
-            ? 'Pip AI is our proprietary trading intelligence trained on SMC dealing ranges, liquidity sweeps, Killzones, and Gold risk models. This feature is reserved exclusively for Pro VIP and Elite VIP tiers.'
+            ? 'Pip is our dedicated trading coach taught directly by GenZ Trader to help all users master SMC dealing ranges, liquidity sweeps, Killzones, and Gold risk models. This feature is reserved for Pro VIP and Elite VIP tiers.'
             : 'Access our high-probability ICT playbooks (BOS, CHoCH, PD Array Matrix), live weekly Zoom killzone breakdowns with Veng Sophea, and direct chart submission reviews reserved for Pro VIP & Elite VIP tiers.'}
         </p>
 
@@ -43,7 +43,7 @@ export default function MemberTierLocked({ feature, onUpgrade, onNavigate }) {
             <ul className="matrix-features-list">
               <li>✓ Basic Signals Feed</li>
               <li>✓ Academy Tracker</li>
-              <li className="dim">✕ {isPip ? 'Pip AI Trading Coach' : 'Institutional Playbooks'}</li>
+              <li className="dim">✕ {isPip ? 'Pip Trading Coach' : 'Institutional Playbooks'}</li>
               <li className="dim">✕ Live Zoom Reviews</li>
             </ul>
           </div>
@@ -54,7 +54,7 @@ export default function MemberTierLocked({ feature, onUpgrade, onNavigate }) {
             <ul className="matrix-features-list">
               <li>✓ All VIP Signals + Live Alerts</li>
               <li>✓ Full Academy Tracker</li>
-              <li>✓ {isPip ? '24/7 Pip AI Coach (Gemini Powered)' : 'ICT PDFs & Excel Journals'}</li>
+              <li>✓ {isPip ? '24/7 Pip Coach (Taught by GenZ)' : 'ICT PDFs & Excel Journals'}</li>
               <li>✓ Weekly Live Zoom Market Outlooks</li>
             </ul>
           </div>
