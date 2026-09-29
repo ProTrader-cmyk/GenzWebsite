@@ -62,9 +62,9 @@ async function clearLoginAttempts(email) {
   await deleteDoc(doc(db, LOGIN_ATTEMPTS_COLLECTION, email));
 }
 
-const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID;
-const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
-const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
+const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID || 'service_x5a3ylf';
+const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'template_48lnomi';
+const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'skTsXl_YXN2PxAgcQ';
 
 function authErrorMessage(code, lang) {
   const t = getStrings(lang).auth;
@@ -90,21 +90,33 @@ function generateOtpCode() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
-async function sendOtpEmail({ email, code, expiresAt }) {
+async function sendOtpEmail({ email, code, expiresAt, name }) {
+  const formattedTime = new Date(expiresAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  const recipientName = name || email.split('@')[0];
   await emailjs.send(
     EMAILJS_SERVICE_ID,
     EMAILJS_TEMPLATE_ID,
     {
       email,
+      to_email: email,
+      user_email: email,
+      recipient: email,
+      reply_to: email,
       passcode: code,
-      time: new Date(expiresAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      code,
+      otp: code,
+      verification_code: code,
+      name: recipientName,
+      to_name: recipientName,
+      user_name: recipientName,
+      time: formattedTime,
     },
     { publicKey: EMAILJS_PUBLIC_KEY }
   );
 }
 
 // Creates a fresh 6-digit code for uid, stores it in Firestore, and emails it.
-async function issueOtp({ uid, email }) {
+async function issueOtp({ uid, email, name }, throwOnEmailError = false) {
   const code = generateOtpCode();
   const expiresAt = Date.now() + OTP_TTL_MS;
   await setDoc(doc(db, 'otps', uid), {
@@ -113,7 +125,14 @@ async function issueOtp({ uid, email }) {
     expiresAt,
     attempts: 0,
   });
-  await sendOtpEmail({ email, code, expiresAt });
+  try {
+    await sendOtpEmail({ email, code, expiresAt, name });
+    return { ok: true };
+  } catch (emailErr) {
+    console.error('Failed to send OTP email via EmailJS:', emailErr);
+    if (throwOnEmailError) throw emailErr;
+    return { ok: false, error: emailErr };
+  }
 }
 
 // name, email, password -> creates the Firebase Auth account, the Firestore
@@ -138,6 +157,20 @@ export async function registerUser({ name, email, password }, lang) {
 
     return { ok: true, uid, email: normalizedEmail, name };
   } catch (err) {
+    if (err.code === 'auth/email-already-in-use') {
+      try {
+        // If account exists but was never verified, resume verification gracefully
+        const cred = await signInWithEmailAndPassword(auth, normalizedEmail, password);
+        const profile = await fetchUserProfile(cred.user.uid);
+        if (profile && !profile.emailVerified) {
+          await issueOtp({ uid: cred.user.uid, email: normalizedEmail, name: profile.name || name });
+          return { ok: true, uid: cred.user.uid, email: normalizedEmail, name: profile.name || name };
+        }
+      } catch (resumeErr) {
+        console.warn('Could not resume unverified account:', resumeErr);
+      }
+    }
+    console.error('Registration error:', err);
     return { ok: false, error: authErrorMessage(err.code, lang) };
   }
 }
@@ -145,9 +178,10 @@ export async function registerUser({ name, email, password }, lang) {
 // Re-sends a new OTP code for an already-created, not-yet-verified account.
 export async function resendOtp({ uid, email, name }, lang) {
   try {
-    await issueOtp({ uid, email, name });
+    await issueOtp({ uid, email, name }, true);
     return { ok: true };
-  } catch {
+  } catch (err) {
+    console.error('Resend OTP error:', err);
     return { ok: false, error: getStrings(lang).otp.errResendFailed };
   }
 }
