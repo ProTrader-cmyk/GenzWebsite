@@ -33,7 +33,6 @@ export default function MemberDashboard({ user, onNavigate }) {
   const tpSignals = signals.filter((s) => s.status === 'tp');
   const slSignals = signals.filter((s) => s.status === 'sl');
   const closedSignals = signals.filter((s) => s.status === 'tp' || s.status === 'sl');
-  const recentClosed = closedSignals.slice(0, 3);
 
   // Dynamic Win Rate calculation based on real trade outcomes
   const totalClosed = closedSignals.length;
@@ -182,7 +181,7 @@ export default function MemberDashboard({ user, onNavigate }) {
           <div className="panel-header">
             <div>
               <div className="panel-title">Institutional Setups Radar</div>
-              <div className="panel-sub">Latest market entries and target projections</div>
+              <div className="panel-sub">Latest active market entries and target projections</div>
             </div>
             <button
               type="button"
@@ -194,7 +193,7 @@ export default function MemberDashboard({ user, onNavigate }) {
           </div>
 
           <div className="panel-signals-list">
-            {activeSignals.length === 0 && recentClosed.length === 0 ? (
+            {activeSignals.length === 0 ? (
               <div style={{ padding: '36px 16px', textAlign: 'center', color: 'var(--mute)', fontSize: '13px' }}>
                 <div style={{ fontSize: '24px', marginBottom: '8px' }}>⚡</div>
                 <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>No Active Signals Right Now</div>
@@ -235,43 +234,6 @@ export default function MemberDashboard({ user, onNavigate }) {
                   </div>
                 ))}
 
-                {/* RECENT CLOSED TRADES (TP WINNERS & SL STOPS) */}
-                {recentClosed.map((s) => {
-                  const isTp = s.status === 'tp';
-                  return (
-                    <div key={s.id} className={`radar-signal-card ${isTp ? 'tp-hit' : 'sl-hit'}`}>
-                      <div className="radar-card-top">
-                        <div className="radar-tag-row">
-                          <span className={`signal-dir-tag ${s.direction}`}>
-                            {s.direction === 'buy' ? '▲ BUY' : '▼ SELL'}
-                          </span>
-                          <span className="radar-pair">{s.pair}</span>
-                          <span className="radar-target-rr">{isTp ? `+${s.rr || 2.0}R` : '-1.0R'}</span>
-                        </div>
-                        <span className={isTp ? 'radar-win-tag' : 'radar-sl-tag'}>
-                          {isTp ? '✓ TP HIT' : '✕ HIT SL'}
-                        </span>
-                      </div>
-                      <div className="radar-levels-row">
-                        <div>
-                          <span className="r-label">ENTRY</span>
-                          <span className="r-val">{s.entry}</span>
-                        </div>
-                        <div>
-                          <span className="r-label">{isTp ? 'TP HIT' : 'STOPPED'}</span>
-                          <span className={`r-val ${isTp ? 'tp' : 'sl'}`}>{isTp ? s.tp : s.sl}</span>
-                        </div>
-                        <div>
-                          <span className="r-label">{isTp ? 'CLOSED' : 'OUTCOME'}</span>
-                          <span className={`r-val ${isTp ? 'tp' : 'sl'}`}>
-                            {isTp ? `+${s.rr || 2.0}R` : '-1.0R'}
-                          </span>
-                        </div>
-                      </div>
-                      {s.reason && <p className="radar-reason">{s.reason}</p>}
-                    </div>
-                  );
-                })}
               </>
             )}
           </div>
