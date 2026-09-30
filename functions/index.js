@@ -1,11 +1,8 @@
-// Cloud Functions for GenZ Trader: MT5 signal ingestion and paid-member
-// Firebase Cloud Messaging delivery for newly published signal documents.
+// Cloud Functions for GenZ Trader: MT5 signal ingestion.
 const { onRequest } = require('firebase-functions/v2/https');
-const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { defineSecret } = require('firebase-functions/params');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
-const { getMessaging } = require('firebase-admin/messaging');
 
 initializeApp();
 const db = getFirestore();
@@ -76,73 +73,5 @@ exports.createSignal = onRequest({ secrets: [SIGNAL_API_KEY], cors: false }, asy
   } catch (err) {
     console.error('createSignal failed', err);
     res.status(500).json({ ok: false, error: 'Internal error' });
-  }
-});
-
-function isPaidNotificationRecipient(profile = {}) {
-  if (profile.role === 'admin' || profile.role === 'dev') return true;
-  const plans = [profile.plan, profile.tier, profile.subscription, profile.membership]
-    .filter((value) => typeof value === 'string')
-    .map((value) => value.trim().toLowerCase());
-  return plans.some((plan) =>
-    plan.includes('starter') || plan.includes('pro') || plan.includes('elite') || plan === 'vip'
-  );
-}
-
-// Send server-side Web Push so paid members receive signal alerts when the
-// site is backgrounded or closed. Plan status is checked from Firestore here,
-// not trusted from the device that registered the token.
-exports.sendPaidMemberSignalPush = onDocumentCreated('signals/{signalId}', async (event) => {
-  const signal = event.data?.data();
-  if (!signal || (signal.status && signal.status !== 'active')) return;
-
-  const tokenSnapshot = await db.collectionGroup('notificationTokens').get();
-  const profiles = new Map();
-  const recipients = [];
-
-  await Promise.all(tokenSnapshot.docs.map(async (tokenDoc) => {
-    const uid = tokenDoc.ref.parent.parent?.id;
-    const token = tokenDoc.data().token;
-    if (!uid || !token) return;
-
-    let profile = profiles.get(uid);
-    if (profile === undefined) {
-      const profileSnap = await db.collection('users').doc(uid).get();
-      profile = profileSnap.exists ? profileSnap.data() : null;
-      profiles.set(uid, profile);
-    }
-    if (profile && isPaidNotificationRecipient(profile)) {
-      recipients.push({ token, ref: tokenDoc.ref });
-    }
-  }));
-
-  const title = '⚡ New Signal';
-  const body = 'A new signal structure is in the market. Check it out.';
-  for (let start = 0; start < recipients.length; start += 500) {
-    const batch = recipients.slice(start, start + 500);
-    const result = await getMessaging().sendEachForMulticast({
-      tokens: batch.map((recipient) => recipient.token),
-      notification: { title, body },
-      data: { url: 'https://genztradermentorship.org/' },
-      webpush: {
-        notification: {
-          icon: 'https://genztradermentorship.org/favicon.png',
-          badge: 'https://genztradermentorship.org/favicon.png',
-          tag: `signal-${event.params.signalId}`,
-          renotify: true,
-          requireInteraction: true,
-        },
-        fcmOptions: { link: 'https://genztradermentorship.org/' },
-      },
-    });
-
-    const removals = [];
-    result.responses.forEach((response, index) => {
-      const code = response.error?.code;
-      if (!response.success && (code === 'messaging/registration-token-not-registered' || code === 'messaging/invalid-registration-token')) {
-        removals.push(batch[index].ref.delete());
-      }
-    });
-    await Promise.all(removals);
   }
 });

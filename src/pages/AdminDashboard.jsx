@@ -34,6 +34,7 @@ import {
 } from '../services/marketPriceService.js';
 import {
   broadcastSignalNotification,
+  sendPaidMemberSignalNotification,
   getNotificationPermission,
   requestNotificationPermission,
 } from '../services/pushNotificationService.js';
@@ -358,7 +359,13 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
         try { await requestNotificationPermission(); } catch {}
       }
 
-      await publishSignal(signalDraft);
+      const publishedSignal = await publishSignal(signalDraft);
+
+      try {
+        await sendPaidMemberSignalNotification(publishedSignal.id);
+      } catch (pushErr) {
+        console.warn('Server push notification notice:', pushErr);
+      }
 
       // 🔔 Push notification — broadcast to all subscribed member clients & local tab
       try {

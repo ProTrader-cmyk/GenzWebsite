@@ -21,11 +21,29 @@ import {
   setDoc,
 } from 'firebase/firestore';
 import { getMessaging, getToken, isSupported } from 'firebase/messaging';
-import { app, db } from '../firebase.js';
+import { app, auth, db } from '../firebase.js';
 
 const SIGNALS_COLLECTION = 'signals';
 const SIGNAL_NOTIFICATION_TITLE = '⚡ New Signal';
 const SIGNAL_NOTIFICATION_BODY = 'A new signal structure is in the market. Check it out.';
+
+/** Ask the authenticated Railway API to send this signal to paid member devices. */
+export async function sendPaidMemberSignalNotification(signalId) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Sign in as an admin to send signal notifications.');
+  const apiBase = (import.meta.env.VITE_NEWS_API_URL || 'https://genzapi-production.up.railway.app').replace(/\/$/, '');
+  const response = await fetch(`${apiBase}/api/admin/notify-signal`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${await user.getIdToken()}`,
+    },
+    body: JSON.stringify({ signalId }),
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.error || `Notification API returned ${response.status}.`);
+  return result;
+}
 
 // ---------------------------------------------------------------------------
 // 1. PERMISSION — query & request user consent for browser notifications
