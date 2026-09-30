@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { formatRelativeTime } from '../../data/mockSignals.js';
 import { subscribeSignals } from '../../data/signals.js';
 import { getSessionStatus } from '../../data/marketSessions.js';
+import { fetchLivePrice, formatSpotPrice, subscribeGoldMarketSnapshot } from '../../services/marketPriceService.js';
 import { TelegramIcon } from '../../components/ui/CategoryIcons.jsx';
 
 const TELEGRAM_VIP_URL = 'https://t.me/Vengsopheagenz?direct';
+const NEWS_API_URL = (import.meta.env.VITE_NEWS_API_URL || 'https://genzapi-production.up.railway.app').replace(/\/$/, '');
 
 function greeting() {
   const hour = new Date().getHours();
@@ -19,8 +20,60 @@ function firstName(user) {
 }
 
 export default function MemberDashboard({ user, onNavigate }) {
-  const sessions = getSessionStatus();
   const [signals, setSignals] = useState([]);
+  const [now, setNow] = useState(() => new Date());
+  const [goldSnapshot, setGoldSnapshot] = useState({ price: null, change: null, changePercent: null, status: 'loading' });
+  const [upcomingUsdNews, setUpcomingUsdNews] = useState({ status: 'loading', events: [] });
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const sessions = getSessionStatus(now);
+
+  useEffect(() => {
+    let cancelled = false;
+    const unsubscribe = subscribeGoldMarketSnapshot((snapshot) => {
+      setGoldSnapshot((current) => ({ ...current, ...snapshot, status: 'live' }));
+    });
+    fetchLivePrice('XAUUSD')
+      .then((price) => {
+        if (!cancelled && price) {
+          setGoldSnapshot((current) => current.price ? current : { ...current, price, status: 'delayed' });
+        } else if (!cancelled && !price) {
+          setGoldSnapshot((current) => current.price ? current : { ...current, status: 'error' });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setGoldSnapshot((current) => current.price ? current : { ...current, status: 'error' });
+      });
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${NEWS_API_URL}/api/calendar?lang=en`)
+      .then((response) => {
+        if (!response.ok) throw new Error(`Calendar API returned ${response.status}`);
+        return response.json();
+      })
+      .then((data) => {
+        if (cancelled) return;
+        const currentTime = Date.now();
+        const events = (data.events || [])
+          .filter((event) => event.currency === 'USD' && event.impact === 'high' && new Date(event.time).getTime() >= currentTime)
+          .sort((a, b) => new Date(a.time) - new Date(b.time));
+        setUpcomingUsdNews({ status: events.length ? 'loaded' : 'empty', events });
+      })
+      .catch(() => {
+        if (!cancelled) setUpcomingUsdNews({ status: 'error', events: [] });
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     const unsub = subscribeSignals((list) => {
@@ -56,11 +109,9 @@ export default function MemberDashboard({ user, onNavigate }) {
     profitFactorDisplay = '0.00';
   }
 
-  // Quick Account Compound Calculator
-  const [calcCap, setCalcCap] = useState(1000);
-  const [calcMonths, setCalcMonths] = useState(6);
-  const monthlyRate = 0.12; // 12% target conservative monthly growth
-  const compoundTotal = Math.round(calcCap * Math.pow(1 + monthlyRate, calcMonths));
+  const nextUsdEvents = upcomingUsdNews.events
+    .filter((event) => new Date(event.time).getTime() >= now.getTime())
+    .slice(0, 3);
 
   return (
     <div className="terminal-dashboard-page">
@@ -239,98 +290,76 @@ export default function MemberDashboard({ user, onNavigate }) {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: PIP COACH TEASER & COMPOUND CALCULATOR */}
+        {/* RIGHT COLUMN: LIVE GOLD PRICE & UPCOMING USD NEWS */}
         <div className="terminal-column-stack">
-          {/* PIP COACH CARD */}
-          <div className="terminal-panel ai-panel">
-            <div className="ai-panel-glow" />
+          <div className="terminal-panel gold-snapshot-panel">
             <div className="panel-header">
-              <div className="ai-badge-header">
-                <span className="ai-bot-icon">🤖</span>
-                <div>
-                  <div className="panel-title">Pip Trading Coach</div>
-                  <div className="panel-sub">Taught directly by GenZ to help all traders succeed</div>
+              <div>
+                <div className="panel-title">Gold Market Snapshot</div>
+                <div className="panel-sub">XAU/USD spot price and daily move</div>
+              </div>
+              <span className={`gold-snapshot-status ${goldSnapshot.status}`}>
+                {goldSnapshot.status === 'live' ? 'LIVE' : goldSnapshot.status === 'delayed' ? 'SPOT' : goldSnapshot.status === 'error' ? 'OFFLINE' : 'WAITING'}
+              </span>
+            </div>
+            {goldSnapshot.price ? (
+              <div className="gold-snapshot-content">
+                <div className="gold-snapshot-price">${formatSpotPrice('XAUUSD', goldSnapshot.price)}</div>
+                {typeof goldSnapshot.changePercent === 'number' ? (
+                  <div className={`gold-snapshot-change ${goldSnapshot.changePercent >= 0 ? 'up' : 'down'}`}>
+                    {typeof goldSnapshot.change === 'number' ? `${goldSnapshot.change >= 0 ? '+' : ''}${goldSnapshot.change.toFixed(2)} ` : ''}
+                    ({goldSnapshot.changePercent >= 0 ? '+' : ''}{goldSnapshot.changePercent.toFixed(2)}%) today
+                  </div>
+                ) : (
+                  <div className="gold-snapshot-change muted">Daily move is waiting for the live quote.</div>
+                )}
+                <div className="gold-snapshot-updated">
+                  {goldSnapshot.status === 'live' ? 'Live quote · OANDA / TradingView' : 'Spot price · live feed reconnecting'}
                 </div>
               </div>
-            </div>
-
-            <p className="ai-teaser-desc">
-              Have questions about current market structure, liquidity sweeps, or where to put your Stop Loss? Pip is available 24/7.
-            </p>
-
-            <div className="ai-quick-prompts">
-              <button
-                type="button"
-                className="ai-prompt-chip"
-                onClick={() => onNavigate('pip')}
-              >
-                "How to trade the London-NY overlap?" →
-              </button>
-              <button
-                type="button"
-                className="ai-prompt-chip"
-                onClick={() => onNavigate('pip')}
-              >
-                "Calculate lot size for $1,000 account" →
-              </button>
-            </div>
-
-            <button
-              type="button"
-              className="open-pip-btn"
-              onClick={() => onNavigate('pip')}
-            >
-              Open Pip Trading Terminal
-            </button>
+            ) : (
+              <div className="dashboard-empty-state">
+                {goldSnapshot.status === 'error' ? 'Gold price is temporarily unavailable.' : 'Connecting to the live Gold quote...'}
+              </div>
+            )}
           </div>
 
-          {/* CAPITAL COMPOUNDING CALCULATOR */}
-          <div className="terminal-panel compound-panel">
+          <div className="terminal-panel usd-news-panel">
             <div className="panel-header">
               <div>
-                <div className="panel-title">Growth & Compounding Model</div>
-                <div className="panel-sub">Project your capital with disciplined 1%-2% risk</div>
+                <div className="panel-title">Upcoming USD News</div>
+                <div className="panel-sub">High impact events · Cambodia time (GMT+7)</div>
               </div>
+              <span className="usd-news-badge">USD</span>
             </div>
-
-            <div className="compound-controls">
-              <div>
-                <label className="compound-label">STARTING CAPITAL ($)</label>
-                <input
-                  type="number"
-                  min="200"
-                  step="100"
-                  value={calcCap}
-                  onChange={(e) => setCalcCap(Math.max(100, Number(e.target.value)))}
-                  className="compound-input"
-                />
+            {upcomingUsdNews.status === 'loading' ? (
+              <div className="dashboard-empty-state">Loading the economic calendar...</div>
+            ) : nextUsdEvents.length ? (
+              <div className="usd-news-list">
+                {nextUsdEvents.map((event) => (
+                  <div className="usd-news-event" key={event.key}>
+                    <span className="usd-news-impact">HIGH</span>
+                    <div className="usd-news-event-main">
+                      <div className="usd-news-event-title">{event.event}</div>
+                      <div className="usd-news-event-time">
+                        {new Intl.DateTimeFormat('en-GB', {
+                          timeZone: 'Asia/Phnom_Penh', weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true,
+                        }).format(new Date(event.time))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-
-              <div>
-                <label className="compound-label">TIME HORIZON ({calcMonths} MONTHS)</label>
-                <input
-                  type="range"
-                  min="1"
-                  max="12"
-                  value={calcMonths}
-                  onChange={(e) => setCalcMonths(Number(e.target.value))}
-                  className="compound-slider"
-                />
+            ) : (
+              <div className="dashboard-empty-state">
+                {upcomingUsdNews.status !== 'error'
+                  ? 'No upcoming high impact USD events in the calendar.'
+                  : 'The economic calendar is temporarily unavailable.'}
               </div>
-            </div>
-
-            <div className="compound-result-box">
-              <div>
-                <div className="compound-res-label">PROJECTED CAPITAL</div>
-                <div className="compound-res-val">${compoundTotal.toLocaleString()}</div>
-              </div>
-              <div className="compound-res-gain">
-                +${(compoundTotal - calcCap).toLocaleString()} ({Math.round(((compoundTotal - calcCap) / calcCap) * 100)}%)
-              </div>
-            </div>
-            <div className="compound-note">
-              *Model assumes conservative 12% monthly growth targeting 2R per setup with strict 1% risk discipline.
-            </div>
+            )}
+            <button type="button" className="panel-action-link usd-news-signals" onClick={() => onNavigate('signals')}>
+              Check live signals {'>'}
+            </button>
           </div>
         </div>
       </div>

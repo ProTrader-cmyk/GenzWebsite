@@ -45,6 +45,7 @@ class TradingViewStreamer {
     this.disconnectTimer = null;
     this.isConnecting = false;
     this.prices = {};
+    this.quoteMetrics = {};
   }
 
   addSubscriber(symbols, callback) {
@@ -135,6 +136,12 @@ class TradingViewStreamer {
                 const pair = TV_SYMBOL_TO_PAIR[sym] || sym.replace('OANDA:', '');
                 const price = val.lp;
                 this.prices[pair] = price;
+                if (typeof val.chp === 'number') {
+                  this.quoteMetrics[pair] = {
+                    change: typeof val.ch === 'number' ? val.ch : null,
+                    changePercent: val.chp,
+                  };
+                }
                 cache[pair] = { price, timestamp: Date.now() };
 
                 // Dispatch to all active subscribers
@@ -228,6 +235,17 @@ export const tvStreamer = new TradingViewStreamer();
  */
 export function subscribeLiveTicks(pairs, callback) {
   return tvStreamer.addSubscriber(pairs, callback);
+}
+
+/** Subscribes to the live Gold quote plus TradingView's daily price change. */
+export function subscribeGoldMarketSnapshot(callback) {
+  return tvStreamer.addSubscriber(['XAUUSD'], (prices) => {
+    callback({
+      price: prices.XAUUSD,
+      ...(tvStreamer.quoteMetrics.XAUUSD || {}),
+      updatedAt: Date.now(),
+    });
+  });
 }
 
 /**
