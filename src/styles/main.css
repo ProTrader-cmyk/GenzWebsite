@@ -2694,6 +2694,10 @@ h3 .bar{width:3px;height:18px;border-radius:2px;background:var(--gold);flex:none
   background: linear-gradient(135deg, rgba(224,85,85,0.12), rgba(20,20,32,0.96));
   border-color: rgba(224,85,85,0.35);
 }
+.notif-toast-banner.news {
+  background: linear-gradient(135deg, rgba(46,124,246,0.16), rgba(20,20,32,0.96));
+  border-color: rgba(46,124,246,0.45);
+}
 
 @keyframes notifToastIn {
   from { opacity: 0; transform: translateX(30px); }

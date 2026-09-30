@@ -38,6 +38,7 @@ import {
   subscribeToNotifications,
   registerNotificationServiceWorker,
 } from './services/pushNotificationService.js';
+import { startNewsWatcher } from './services/newsNotificationService.js';
 import { submitFeedback } from './data/feedback.js';
 
 const NAV_KEY = 'gzt_nav';
@@ -134,6 +135,16 @@ export default function App() {
   // Register push notification service worker on mount
   useEffect(() => {
     registerNotificationServiceWorker();
+  }, []);
+
+  // Live breaking market news watcher (polls for new market stories and alerts with chime, desktop popup & toast)
+  useEffect(() => {
+    const stopNewsWatcher = startNewsWatcher((newsAlert) => {
+      setGlobalNotifToast(newsAlert);
+      const timer = setTimeout(() => setGlobalNotifToast(null), 9000);
+      return () => clearTimeout(timer);
+    }, 60000);
+    return () => stopNewsWatcher();
   }, []);
 
   // Site-wide real-time live trading signal notification stream + local custom event listener
@@ -679,17 +690,23 @@ export default function App() {
         />
       )}
 
-      {/* ── GLOBAL LIVE SIGNAL ALERT TOAST ── */}
+      {/* ── GLOBAL LIVE SIGNAL & BREAKING NEWS ALERT TOAST ── */}
       {globalNotifToast && (
         <div
-          className={`notif-toast-banner ${globalNotifToast.direction === 'sell' ? 'sell' : 'buy'}`}
+          className={`notif-toast-banner ${globalNotifToast.type === 'news' ? 'news' : globalNotifToast.direction === 'sell' ? 'sell' : 'buy'}`}
           onClick={() => {
-            setSection('ai-trading');
+            if (globalNotifToast.type === 'news') {
+              setSection('news');
+            } else {
+              setSection('ai-trading');
+            }
             setGlobalNotifToast(null);
           }}
           style={{ cursor: 'pointer', zIndex: 99999 }}
         >
-          <span className="notif-toast-icon">⚡</span>
+          <span className="notif-toast-icon">
+            {globalNotifToast.type === 'news' ? '📰' : '⚡'}
+          </span>
           <div className="notif-toast-text">
             <strong>{globalNotifToast.title}</strong>
             <span>{globalNotifToast.body}</span>

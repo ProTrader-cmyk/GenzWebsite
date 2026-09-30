@@ -196,22 +196,23 @@ export async function showBrowserNotification(data) {
  * @returns {Function} unsubscribe function
  */
 export function subscribeToNotifications(onNotification) {
-  const subscribedAt = Date.now();
   let initialLoad = true;
+  const seenSignalIds = new Set();
 
   try {
     const q = query(
       collection(db, SIGNALS_COLLECTION),
       orderBy('createdAt', 'desc'),
-      limit(5)
+      limit(10)
     );
 
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        // Skip alerting on signals that already existed before this page was opened
+        // On initial load, record all existing signal IDs so we never alert on old signals
         if (initialLoad) {
           initialLoad = false;
+          snapshot.docs.forEach((d) => seenSignalIds.add(d.id));
           return;
         }
 
@@ -219,21 +220,16 @@ export function subscribeToNotifications(onNotification) {
           // ONLY trigger on brand-new added signals (NOT on status updates to TP/SL or deletes)
           if (change.type !== 'added') continue;
 
+          const docId = change.doc.id;
+          if (seenSignalIds.has(docId)) continue;
+          seenSignalIds.add(docId);
+
           const data = change.doc.data();
           if (data.status && data.status !== 'active') continue;
 
-          // Check timestamp to avoid stale events; default to Date.now() if serverTimestamp is pending
-          const publishedTime =
-            data.publishedAt ||
-            (data.createdAt?.toMillis ? data.createdAt.toMillis() : Date.now());
-
-          if (publishedTime && publishedTime < subscribedAt - 15000) {
-            continue; // Created before we opened the session
-          }
-
           const dirLabel = (data.direction || '').toUpperCase() === 'SELL' ? '🔴 SELL' : '🟢 BUY';
           const notifPayload = {
-            id: change.doc.id,
+            id: docId,
             title: `⚡ New Signal: ${data.pair || 'XAUUSD'} ${dirLabel}`,
             body: `Entry: ${data.entry} | SL: ${data.sl} | TP: ${data.tp} (1:2 R:R)`,
             pair: data.pair || 'XAUUSD',
@@ -242,7 +238,7 @@ export function subscribeToNotifications(onNotification) {
             sl: data.sl,
             tp: data.tp,
             session: data.session || 'London Killzone',
-            publishedAt: publishedTime || Date.now(),
+            publishedAt: data.publishedAt || Date.now(),
           };
 
           console.log('[PushNotification] Live signal detected, triggering alerts:', notifPayload.title);

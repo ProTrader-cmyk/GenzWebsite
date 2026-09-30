@@ -33,6 +33,7 @@ import {
   formatSpotPrice,
 } from '../services/marketPriceService.js';
 import { broadcastSignalNotification, triggerTestNotification } from '../services/pushNotificationService.js';
+import { triggerTestNewsNotification } from '../services/newsNotificationService.js';
 import GoldChart from '../components/GoldChart.jsx';
 import ThemeToggle from '../components/ThemeToggle.jsx';
 
@@ -1416,6 +1417,41 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
                   }}
                 >
                   🔔 Test Alert
+                </button>
+                <button
+                  type="button"
+                  title="Test breaking market news push notification and chime"
+                  onClick={async () => {
+                    try {
+                      const res = await triggerTestNewsNotification();
+                      const permGranted = res?.perm === 'granted';
+                      setSignalSuccess(
+                        `📰 Test news alert fired! ${permGranted ? '✅ Native OS Web Push + Chime + Toast active!' : '⚠️ Audio Chime + Toast fired. Click "Allow" on the browser notification prompt to see native desktop popups.'}`
+                      );
+                    } catch (err) {
+                      console.error('Test news notification error:', err);
+                      setSignalError('Could not trigger test news alert: ' + (err?.message || err));
+                    }
+                  }}
+                  style={{
+                    padding: '0 16px',
+                    minHeight: 46,
+                    background: 'rgba(230,175,46,0.12)',
+                    border: '1px solid rgba(230,175,46,0.4)',
+                    color: '#F5C842',
+                    borderRadius: 10,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    fontSize: '0.86rem',
+                    whiteSpace: 'nowrap',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  📰 Test News
                 </button>
               </div>
             </form>
