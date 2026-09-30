@@ -340,8 +340,9 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
         document.getElementById('signal-review-box')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }, 100);
     } catch (err) {
-      console.error('Pip AI Signal generation error:', err);
-      setSignalError(err.message || 'Failed to generate signal with Pip AI.');
+      const message = err.message || 'Failed to generate signal with Pip AI.';
+      console.info('[Pip] No signal generated:', message);
+      setSignalError(message);
     } finally {
       setAiGenerating(false);
     }
@@ -1016,7 +1017,6 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
           review the confluence, and drop them directly to the VIP Member Terminal with one click.
         </p>
 
-        {signalError && <div className="admin-error admin-error-block">{signalError}</div>}
         {signalSuccess && (
           <div className="admin-success-block">
             {signalSuccess}
@@ -1269,6 +1269,12 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
                 </>
               )}
             </button>
+            {signalError && (
+              <div className="admin-error admin-error-block" role="alert" style={{ marginTop: '12px', marginBottom: 0 }}>
+                <strong>NO TRADE / SETUP NOT GENERATED</strong>
+                <div style={{ marginTop: '4px' }}>{signalError}</div>
+              </div>
+            )}
           </div>
 
           {/* RIGHT: REVIEW & DROP TO WEBSITE */}
