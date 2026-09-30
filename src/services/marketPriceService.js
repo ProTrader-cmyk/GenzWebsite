@@ -42,6 +42,7 @@ class TradingViewStreamer {
     this.subscribedSymbols = new Set();
     this.sessionId = null;
     this.reconnectTimer = null;
+    this.disconnectTimer = null;
     this.isConnecting = false;
     this.prices = {};
   }
@@ -50,6 +51,12 @@ class TradingViewStreamer {
     const normSymbols = (symbols || []).map(normalizePair);
     const sub = { symbols: normSymbols, callback };
     this.listeners.add(sub);
+
+    // Cancel pending teardown if a subscriber attaches before timeout
+    if (this.disconnectTimer) {
+      clearTimeout(this.disconnectTimer);
+      this.disconnectTimer = null;
+    }
 
     // If we already have live prices in memory, notify immediately
     const immediate = {};
@@ -64,10 +71,24 @@ class TradingViewStreamer {
 
     return () => {
       this.listeners.delete(sub);
-      if (this.listeners.size === 0 && this.ws) {
-        try { this.ws.close(); } catch {}
-        this.ws = null;
-        this.subscribedSymbols.clear();
+      if (this.listeners.size === 0) {
+        // Debounce socket close so rapid React effect unmount/remount doesn't kill connection
+        this.disconnectTimer = setTimeout(() => {
+          this.disconnectTimer = null;
+          if (this.listeners.size === 0 && this.ws) {
+            const socket = this.ws;
+            this.ws = null;
+            this.subscribedSymbols.clear();
+            if (socket.readyState === WebSocket.OPEN) {
+              try { socket.close(); } catch {}
+            } else if (socket.readyState === WebSocket.CONNECTING) {
+              // Wait for open before closing to avoid browser console warning
+              socket.onopen = () => {
+                try { socket.close(); } catch {}
+              };
+            }
+          }
+        }, 1500);
       }
     };
   }
