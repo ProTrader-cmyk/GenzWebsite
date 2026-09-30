@@ -137,15 +137,22 @@ export default function App() {
     registerNotificationServiceWorker();
   }, []);
 
-  // Live breaking market news watcher (polls for new market stories and alerts with chime, desktop popup & toast)
+  // Live news watcher is for paid members while the site is open. The Railway
+  // API sends background pushes when the site is closed.
   useEffect(() => {
+    const canReceivePush = Boolean(
+      user &&
+      (user.role === 'admin' || user.role === 'dev' || getUserPlan(user) !== 'free')
+    );
+    if (!canReceivePush) return undefined;
+
     const stopNewsWatcher = startNewsWatcher((newsAlert) => {
       setGlobalNotifToast(newsAlert);
       const timer = setTimeout(() => setGlobalNotifToast(null), 9000);
       return () => clearTimeout(timer);
     }, 60000);
     return () => stopNewsWatcher();
-  }, []);
+  }, [user?.uid, user?.role, user?.plan, user?.tier, user?.subscription, user?.membership]);
 
   // Site-wide real-time live trading signal notification stream + local custom event listener
   useEffect(() => {

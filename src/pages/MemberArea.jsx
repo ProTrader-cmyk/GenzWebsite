@@ -181,8 +181,8 @@ export default function MemberArea({ user, doneMap, onExit, initialView = 'dashb
           <div className="notif-permission-content">
             <span className="notif-permission-icon">🔔</span>
             <div className="notif-permission-text">
-              <strong>Enable Signal Alerts</strong>
-              <span>Get instant notifications when new trading signals drop.</span>
+              <strong>Enable Push Alerts</strong>
+              <span>Get notifications for new trading signals and breaking market news.</span>
             </div>
           </div>
           <div className="notif-permission-actions">

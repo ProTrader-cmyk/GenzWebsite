@@ -361,10 +361,15 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
 
       const publishedSignal = await publishSignal(signalDraft);
 
+      let pushStatus = '';
       try {
-        await sendPaidMemberSignalNotification(publishedSignal.id);
+        const pushResult = await sendPaidMemberSignalNotification(publishedSignal.id);
+        pushStatus = pushResult.sentCount > 0
+          ? ` Push sent to ${pushResult.sentCount} paid member device${pushResult.sentCount === 1 ? '' : 's'}.`
+          : ` No paid member devices received the push (${pushResult.registeredCount} registered, ${pushResult.failedCount} failed).`;
       } catch (pushErr) {
         console.warn('Server push notification notice:', pushErr);
+        pushStatus = ' Signal published, but push sending failed. Check the API service logs.';
       }
 
       // 🔔 Push notification — broadcast to all subscribed member clients & local tab
@@ -374,7 +379,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
         console.warn('Notification broadcast notice:', broadcastErr);
       }
 
-      setSignalSuccess(`🚀 Dropped ${signalDraft.pair} ${signalDraft.direction.toUpperCase()} signal live to website!`);
+      setSignalSuccess(`🚀 Dropped ${signalDraft.pair} ${signalDraft.direction.toUpperCase()} signal live to website!${pushStatus}`);
       setSignalDraft((prev) => ({
         ...prev,
         entry: '',
