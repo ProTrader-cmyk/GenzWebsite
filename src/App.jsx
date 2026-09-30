@@ -136,9 +136,21 @@ export default function App() {
     registerNotificationServiceWorker();
   }, []);
 
-  // Site-wide real-time live trading signal notification stream
+  // Site-wide real-time live trading signal notification stream + local custom event listener
   useEffect(() => {
-    if (!user) return;
+    function handleCustomAlert(e) {
+      if (e?.detail) {
+        setGlobalNotifToast(e.detail);
+        const timer = setTimeout(() => setGlobalNotifToast(null), 9000);
+        return () => clearTimeout(timer);
+      }
+    }
+    window.addEventListener('genz_signal_notification', handleCustomAlert);
+
+    if (!user) {
+      return () => window.removeEventListener('genz_signal_notification', handleCustomAlert);
+    }
+
     const unsubscribe = subscribeToNotifications((notif) => {
       setGlobalNotifToast(notif);
       const timer = setTimeout(() => {
@@ -146,7 +158,11 @@ export default function App() {
       }, 9000);
       return () => clearTimeout(timer);
     });
-    return () => unsubscribe();
+
+    return () => {
+      window.removeEventListener('genz_signal_notification', handleCustomAlert);
+      unsubscribe();
+    };
   }, [user?.uid]);
   // Once opened, the gold chart section stays mounted (just hidden via the
   // .view/.view.active CSS toggle) instead of being unmounted on every

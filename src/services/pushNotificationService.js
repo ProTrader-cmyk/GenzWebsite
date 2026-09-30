@@ -52,18 +52,41 @@ export async function requestNotificationPermission() {
 }
 
 // ---------------------------------------------------------------------------
-// 2. AUDIO ALERT — Web Audio API two-tone institutional chime
+// ---------------------------------------------------------------------------
+// 2. AUDIO ALERT — Web Audio API institutional two-tone chime
 // ---------------------------------------------------------------------------
 
-export function playNotificationSound() {
+let sharedAudioCtx = null;
+function getAudioContext() {
+  if (typeof window === 'undefined') return null;
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) return null;
+  if (!sharedAudioCtx) {
+    sharedAudioCtx = new AudioContextClass();
+  }
+  return sharedAudioCtx;
+}
+
+// Warm up / unlock audio on any user tap or keypress
+if (typeof window !== 'undefined') {
+  const unlockAudio = () => {
+    const ctx = getAudioContext();
+    if (ctx && ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+  };
+  window.addEventListener('click', unlockAudio, { passive: true, once: true });
+  window.addEventListener('keydown', unlockAudio, { passive: true, once: true });
+  window.addEventListener('touchstart', unlockAudio, { passive: true, once: true });
+}
+
+export async function playNotificationSound() {
   if (typeof window === 'undefined') return;
   try {
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextClass) return;
-    const ctx = new AudioContextClass();
-
+    const ctx = getAudioContext();
+    if (!ctx) return;
     if (ctx.state === 'suspended') {
-      ctx.resume().catch(() => {});
+      await ctx.resume().catch(() => {});
     }
 
     const now = ctx.currentTime;
@@ -73,26 +96,26 @@ export function playNotificationSound() {
     const gain1 = ctx.createGain();
     osc1.type = 'sine';
     osc1.frequency.setValueAtTime(1318.51, now);
-    gain1.gain.setValueAtTime(0.25, now);
+    gain1.gain.setValueAtTime(0.3, now);
     gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
     osc1.connect(gain1);
     gain1.connect(ctx.destination);
     osc1.start(now);
     osc1.stop(now + 0.22);
 
-    // Tone 2: A6 (1760.0 Hz) — higher accent chime
+    // Tone 2: A6 (1760.0 Hz) — accent chime
     const osc2 = ctx.createOscillator();
     const gain2 = ctx.createGain();
     osc2.type = 'sine';
     osc2.frequency.setValueAtTime(1760.0, now + 0.1);
-    gain2.gain.setValueAtTime(0.35, now + 0.1);
-    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+    gain2.gain.setValueAtTime(0.4, now + 0.1);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.48);
     osc2.connect(gain2);
     gain2.connect(ctx.destination);
     osc2.start(now + 0.1);
-    osc2.stop(now + 0.45);
+    osc2.stop(now + 0.48);
   } catch (err) {
-    // Autoplay policy may restrict audio before user gesture
+    console.warn('[PushNotification] Sound error:', err);
   }
 }
 
@@ -113,7 +136,6 @@ export async function showBrowserNotification(data) {
     tag: `signal-${data.id || Date.now()}`,
     renotify: true,
     requireInteraction: true,
-    vibrate: [250, 100, 250],
     data: {
       url: '/member',
       pair: data.pair,
@@ -121,38 +143,40 @@ export async function showBrowserNotification(data) {
     },
   };
 
-  // 1. Try Service Worker showNotification with a 1s timeout to prevent hanging
-  let swShown = false;
-  if ('serviceWorker' in navigator) {
+  let shown = false;
+
+  // 1. Desktop: Try native window.Notification first
+  // (Pops up directly in Chrome/Edge on Windows/Mac without being suppressed by Windows Action Center)
+  try {
+    const notif = new Notification(title, options);
+    notif.onclick = () => {
+      window.focus();
+      try { notif.close(); } catch {}
+    };
+    setTimeout(() => {
+      try { notif.close(); } catch {}
+    }, 20000);
+    shown = true;
+    console.log('[PushNotification] Visual popup created via window.Notification');
+  } catch (winErr) {
+    // Expected on Android Chrome where Notification constructor is restricted
+    console.log('[PushNotification] window.Notification not supported directly, falling back to ServiceWorker');
+  }
+
+  // 2. Mobile/Android: Use Service Worker showNotification
+  if (!shown && 'serviceWorker' in navigator) {
     try {
       const reg = await Promise.race([
         navigator.serviceWorker.ready,
-        new Promise((resolve) => setTimeout(() => resolve(null), 1000)),
+        new Promise((resolve) => setTimeout(() => resolve(null), 1200)),
       ]);
       if (reg && typeof reg.showNotification === 'function') {
         await reg.showNotification(title, options);
-        swShown = true;
+        shown = true;
         console.log('[PushNotification] Notification shown via ServiceWorker');
       }
     } catch (swErr) {
       console.warn('[PushNotification] ServiceWorker showNotification notice:', swErr);
-    }
-  }
-
-  // 2. Fallback to standard window Notification if SW didn't show
-  if (!swShown) {
-    try {
-      const notif = new Notification(title, options);
-      notif.onclick = () => {
-        window.focus();
-        try { notif.close(); } catch {}
-      };
-      setTimeout(() => {
-        try { notif.close(); } catch {}
-      }, 30000);
-      console.log('[PushNotification] Notification shown via window.Notification');
-    } catch (winErr) {
-      console.warn('[PushNotification] window.Notification notice:', winErr);
     }
   }
 }
@@ -226,12 +250,17 @@ export function subscribeToNotifications(onNotification) {
           // 1. Play audio chime
           playNotificationSound();
 
-          // 2. Show native OS notification
+          // 2. Show native OS notification (desktop popup or mobile service worker)
           showBrowserNotification(notifPayload);
 
-          // 3. Fire in-app toast
+          // 3. Fire in-app toast callback
           if (typeof onNotification === 'function') {
             onNotification(notifPayload);
+          }
+
+          // 4. Dispatch site-wide event for floating alert toast
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('genz_signal_notification', { detail: notifPayload }));
           }
         }
       },
@@ -276,6 +305,11 @@ export async function triggerTestNotification(onNotification) {
     onNotification(testPayload);
   }
 
+  // Dispatch global event so the floating toast banner pops up immediately
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('genz_signal_notification', { detail: testPayload }));
+  }
+
   return { perm, ok: true };
 }
 
@@ -284,10 +318,30 @@ export async function triggerTestNotification(onNotification) {
 // ---------------------------------------------------------------------------
 
 export async function broadcastSignalNotification(signal) {
-  // Publishing to `signals` collection automatically fires onSnapshot for all clients!
-  // We play sound locally on admin console as confirmation
+  const dirLabel = (signal.direction || '').toUpperCase() === 'SELL' ? '🔴 SELL' : '🟢 BUY';
+  const payload = {
+    id: `local-sig-${Date.now()}`,
+    title: `⚡ Live Signal: ${signal.pair || 'XAUUSD'} ${dirLabel}`,
+    body: `Entry: ${signal.entry} | SL: ${signal.sl} | TP: ${signal.tp} (1:2 R:R)`,
+    pair: signal.pair || 'XAUUSD',
+    direction: (signal.direction || 'buy').toLowerCase(),
+    entry: signal.entry,
+    sl: signal.sl,
+    tp: signal.tp,
+    session: signal.session || 'London Killzone',
+  };
+
   playNotificationSound();
-  return `sig-${Date.now()}`;
+
+  if (getNotificationPermission() === 'granted') {
+    showBrowserNotification(payload);
+  }
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('genz_signal_notification', { detail: payload }));
+  }
+
+  return payload.id;
 }
 
 // ---------------------------------------------------------------------------
