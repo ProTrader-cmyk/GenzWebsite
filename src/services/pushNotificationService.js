@@ -1,40 +1,30 @@
 /**
  * Push Notification Service for GenZ Trader
  *
- * Uses the browser Notification API + Firestore real-time listener.
- * When an admin publishes a signal, a notification doc is written to
- * Firestore's `notifications` collection. All connected clients with
- * granted notification permission receive a native OS notification.
+ * Direct integration with Firestore's `signals` collection (which is already
+ * authorized for reads and writes). No external backend or separate collections needed.
  *
- * Architecture (no Cloud Functions needed):
- *  1. Admin publishes signal → `broadcastSignalNotification()` writes to Firestore
- *  2. Member clients call `subscribeToNotifications()` on login
- *  3. Firestore `onSnapshot` fires → browser Notification shown
+ * Triggers:
+ *  1. Native OS Web Push Notification (via Service Worker showNotification & window.Notification)
+ *  2. Synthetic institutional double-chime alert sound (Web Audio API)
+ *  3. In-app glassmorphism toast alert banner
  */
 
 import {
   collection,
-  doc,
-  setDoc,
   onSnapshot,
   query,
   orderBy,
   limit,
-  serverTimestamp,
-  Timestamp,
 } from 'firebase/firestore';
 import { db } from '../firebase.js';
 
-const NOTIFICATIONS_COLLECTION = 'notifications';
+const SIGNALS_COLLECTION = 'signals';
 
 // ---------------------------------------------------------------------------
-// 1. PERMISSION — request user consent for browser notifications
+// 1. PERMISSION — query & request user consent for browser notifications
 // ---------------------------------------------------------------------------
 
-/**
- * Returns the current Notification permission state.
- * @returns {'granted'|'denied'|'default'|'unsupported'}
- */
 export function getNotificationPermission() {
   if (typeof window === 'undefined' || !('Notification' in window)) {
     return 'unsupported';
@@ -42,10 +32,6 @@ export function getNotificationPermission() {
   return Notification.permission;
 }
 
-/**
- * Requests notification permission from the user.
- * @returns {Promise<'granted'|'denied'|'default'>}
- */
 export async function requestNotificationPermission() {
   if (typeof window === 'undefined' || !('Notification' in window)) {
     console.warn('[PushNotification] Notifications not supported in this browser.');
@@ -57,6 +43,7 @@ export async function requestNotificationPermission() {
 
   try {
     const result = await Notification.requestPermission();
+    console.log('[PushNotification] Permission result:', result);
     return result;
   } catch (err) {
     console.error('[PushNotification] Error requesting permission:', err);
@@ -65,157 +52,250 @@ export async function requestNotificationPermission() {
 }
 
 // ---------------------------------------------------------------------------
-// 2. BROADCAST — admin writes a notification doc when publishing a signal
+// 2. AUDIO ALERT — Web Audio API two-tone institutional chime
 // ---------------------------------------------------------------------------
 
-/**
- * Broadcasts a signal notification to all connected clients via Firestore.
- * Called ONLY when the admin clicks "Drop Signal to Website (Live)".
- *
- * @param {Object} signal - The published signal data
- * @param {string} signal.pair - e.g. 'XAUUSD'
- * @param {string} signal.direction - 'buy' or 'sell'
- * @param {number} signal.entry - Entry price
- * @param {number} signal.sl - Stop loss
- * @param {number} signal.tp - Take profit
- * @param {string} signal.session - e.g. 'London Killzone'
- */
-export async function broadcastSignalNotification(signal) {
+export function playNotificationSound() {
+  if (typeof window === 'undefined') return;
   try {
-    const dirLabel = signal.direction === 'sell' ? '🔴 SELL' : '🟢 BUY';
-    const notifId = `notif-${Date.now()}`;
-    const notifDoc = doc(db, NOTIFICATIONS_COLLECTION, notifId);
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
 
-    await setDoc(notifDoc, {
-      type: 'signal',
-      title: `⚡ New Signal: ${signal.pair} ${dirLabel}`,
-      body: `Entry: ${signal.entry} | SL: ${signal.sl} | TP: ${signal.tp} | Session: ${signal.session || 'London KZ'}`,
-      pair: signal.pair || 'XAUUSD',
-      direction: signal.direction || 'buy',
-      entry: signal.entry,
-      sl: signal.sl,
-      tp: signal.tp,
-      session: signal.session || 'London Killzone',
-      createdAt: serverTimestamp(),
-      // Client-side timestamp for immediate comparison (serverTimestamp resolves async)
-      clientTimestamp: Date.now(),
-    });
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
 
-    console.log('[PushNotification] Signal notification broadcast to Firestore:', notifId);
-    return notifId;
+    const now = ctx.currentTime;
+
+    // Tone 1: E6 (1318.5 Hz)
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(1318.51, now);
+    gain1.gain.setValueAtTime(0.25, now);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.start(now);
+    osc1.stop(now + 0.22);
+
+    // Tone 2: A6 (1760.0 Hz) — higher accent chime
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(1760.0, now + 0.1);
+    gain2.gain.setValueAtTime(0.35, now + 0.1);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.start(now + 0.1);
+    osc2.stop(now + 0.45);
   } catch (err) {
-    console.error('[PushNotification] Failed to broadcast notification:', err);
-    // Don't throw — notification failure shouldn't block signal publishing
-    return null;
+    // Autoplay policy may restrict audio before user gesture
   }
 }
 
 // ---------------------------------------------------------------------------
-// 3. SUBSCRIBE — member clients listen for new notification docs
+// 3. NATIVE OS NOTIFICATION DISPLAY
 // ---------------------------------------------------------------------------
 
-/**
- * Subscribes to new signal notifications in real-time.
- * Shows a native browser Notification when a new signal is published.
- *
- * @param {Function} [onNotification] - Optional callback for in-app toast
- * @returns {Function} unsubscribe function
- */
-export function subscribeToNotifications(onNotification) {
-  // Only subscribe to the latest notification doc
-  const q = query(
-    collection(db, NOTIFICATIONS_COLLECTION),
-    orderBy('createdAt', 'desc'),
-    limit(1)
-  );
-
-  // Track the timestamp we started listening to avoid firing on old docs
-  const subscribedAt = Date.now();
-
-  const unsubscribe = onSnapshot(q, (snapshot) => {
-    if (snapshot.empty) return;
-
-    for (const change of snapshot.docChanges()) {
-      if (change.type !== 'added') continue;
-
-      const data = change.doc.data();
-      if (!data.type || data.type !== 'signal') continue;
-
-      // Skip old notifications (only show ones created after we subscribed)
-      const docTimestamp = data.clientTimestamp || (data.createdAt?.toMillis?.() ?? 0);
-      if (docTimestamp < subscribedAt - 5000) continue; // 5s grace for clock skew
-
-      // 1. Show native browser notification (if permission granted)
-      showBrowserNotification(data);
-
-      // 2. Fire in-app callback for toast / UI update
-      if (typeof onNotification === 'function') {
-        onNotification(data);
-      }
-    }
-  });
-
-  return unsubscribe;
-}
-
-// ---------------------------------------------------------------------------
-// 4. DISPLAY — show a native OS notification
-// ---------------------------------------------------------------------------
-
-/**
- * Shows a native browser notification with sound.
- * @param {Object} data - Notification data from Firestore
- */
-function showBrowserNotification(data) {
+export async function showBrowserNotification(data) {
   if (typeof window === 'undefined' || !('Notification' in window)) return;
   if (Notification.permission !== 'granted') return;
 
-  try {
-    const notification = new Notification(data.title || '⚡ New Trading Signal', {
-      body: data.body || 'A new signal has been published. Check the terminal!',
-      icon: '/src/assets/Fav.png',
-      badge: '/src/assets/Fav.png',
-      tag: `signal-${data.pair}-${data.clientTimestamp || Date.now()}`,
-      requireInteraction: true, // Keep notification visible until user interacts
-      vibrate: [200, 100, 200], // Vibration pattern for mobile
-      data: {
-        url: '/member', // Navigate to member area on click
-        pair: data.pair,
-        direction: data.direction,
-      },
-    });
+  const title = data.title || `⚡ New Signal: ${data.pair || 'XAUUSD'}`;
+  const dirUpper = (data.direction || 'BUY').toUpperCase();
+  const options = {
+    body: data.body || `${data.pair} ${dirUpper} | Entry: ${data.entry} | SL: ${data.sl} | TP: ${data.tp}`,
+    icon: '/favicon.png',
+    badge: '/favicon.png',
+    tag: `signal-${data.id || Date.now()}`,
+    renotify: true,
+    requireInteraction: true,
+    vibrate: [250, 100, 250],
+    data: {
+      url: '/member',
+      pair: data.pair,
+      direction: data.direction,
+    },
+  };
 
-    // Navigate to member terminal when notification is clicked
-    notification.onclick = () => {
-      window.focus();
-      if (window.location.pathname !== '/member') {
-        window.location.href = '/member';
+  // 1. Try Service Worker showNotification with a 1s timeout to prevent hanging
+  let swShown = false;
+  if ('serviceWorker' in navigator) {
+    try {
+      const reg = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise((resolve) => setTimeout(() => resolve(null), 1000)),
+      ]);
+      if (reg && typeof reg.showNotification === 'function') {
+        await reg.showNotification(title, options);
+        swShown = true;
+        console.log('[PushNotification] Notification shown via ServiceWorker');
       }
-      notification.close();
-    };
+    } catch (swErr) {
+      console.warn('[PushNotification] ServiceWorker showNotification notice:', swErr);
+    }
+  }
 
-    // Auto-close after 30 seconds
-    setTimeout(() => {
-      try { notification.close(); } catch {}
-    }, 30000);
-
-    console.log('[PushNotification] Browser notification shown:', data.title);
-  } catch (err) {
-    console.error('[PushNotification] Failed to show browser notification:', err);
+  // 2. Fallback to standard window Notification if SW didn't show
+  if (!swShown) {
+    try {
+      const notif = new Notification(title, options);
+      notif.onclick = () => {
+        window.focus();
+        try { notif.close(); } catch {}
+      };
+      setTimeout(() => {
+        try { notif.close(); } catch {}
+      }, 30000);
+      console.log('[PushNotification] Notification shown via window.Notification');
+    } catch (winErr) {
+      console.warn('[PushNotification] window.Notification notice:', winErr);
+    }
   }
 }
 
 // ---------------------------------------------------------------------------
-// 5. SERVICE WORKER REGISTRATION (for background notifications)
+// 4. REAL-TIME SIGNAL SUBSCRIBER — listens to the authorized `signals` collection
 // ---------------------------------------------------------------------------
 
 /**
- * Registers the push notification service worker.
- * This enables notifications even when the tab is in the background.
+ * Subscribes to newly published signals in real-time.
+ * Automatically triggers:
+ *  - Native OS notification (if permission granted)
+ *  - High-pitch audio chime
+ *  - In-app toast callback (for all active users)
+ *
+ * @param {Function} [onNotification] - Callback for in-app toast banner: (data) => void
+ * @returns {Function} unsubscribe function
  */
+export function subscribeToNotifications(onNotification) {
+  const subscribedAt = Date.now();
+  let initialLoad = true;
+
+  try {
+    const q = query(
+      collection(db, SIGNALS_COLLECTION),
+      orderBy('createdAt', 'desc'),
+      limit(5)
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        // Skip alerting on signals that already existed before this page was opened
+        if (initialLoad) {
+          initialLoad = false;
+          return;
+        }
+
+        for (const change of snapshot.docChanges()) {
+          // ONLY trigger on brand-new added signals (NOT on status updates to TP/SL or deletes)
+          if (change.type !== 'added') continue;
+
+          const data = change.doc.data();
+          if (data.status && data.status !== 'active') continue;
+
+          // Check timestamp to avoid stale events; default to Date.now() if serverTimestamp is pending
+          const publishedTime =
+            data.publishedAt ||
+            (data.createdAt?.toMillis ? data.createdAt.toMillis() : Date.now());
+
+          if (publishedTime && publishedTime < subscribedAt - 15000) {
+            continue; // Created before we opened the session
+          }
+
+          const dirLabel = (data.direction || '').toUpperCase() === 'SELL' ? '🔴 SELL' : '🟢 BUY';
+          const notifPayload = {
+            id: change.doc.id,
+            title: `⚡ New Signal: ${data.pair || 'XAUUSD'} ${dirLabel}`,
+            body: `Entry: ${data.entry} | SL: ${data.sl} | TP: ${data.tp} (1:2 R:R)`,
+            pair: data.pair || 'XAUUSD',
+            direction: (data.direction || 'buy').toLowerCase(),
+            entry: data.entry,
+            sl: data.sl,
+            tp: data.tp,
+            session: data.session || 'London Killzone',
+            publishedAt: publishedTime || Date.now(),
+          };
+
+          console.log('[PushNotification] Live signal detected, triggering alerts:', notifPayload.title);
+
+          // 1. Play audio chime
+          playNotificationSound();
+
+          // 2. Show native OS notification
+          showBrowserNotification(notifPayload);
+
+          // 3. Fire in-app toast
+          if (typeof onNotification === 'function') {
+            onNotification(notifPayload);
+          }
+        }
+      },
+      (err) => {
+        console.warn('[PushNotification] Error subscribing to signals collection:', err);
+      }
+    );
+
+    return unsubscribe;
+  } catch (err) {
+    console.warn('[PushNotification] Failed to initialize signals listener:', err);
+    return () => {};
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 5. TEST ALERT TRIGGER — allows admin or user to test notification instantly
+// ---------------------------------------------------------------------------
+
+export async function triggerTestNotification(onNotification) {
+  const perm = await requestNotificationPermission();
+
+  const testPayload = {
+    id: `test-${Date.now()}`,
+    title: '⚡ TEST SIGNAL: XAUUSD 🟢 BUY',
+    body: 'Entry: 4174.50 | SL: 4168.50 | TP: 4186.50 (1:2 R:R)',
+    pair: 'XAUUSD',
+    direction: 'buy',
+    entry: '4174.50',
+    sl: '4168.50',
+    tp: '4186.50',
+    session: 'London Killzone',
+  };
+
+  playNotificationSound();
+
+  if (perm === 'granted') {
+    await showBrowserNotification(testPayload);
+  }
+
+  if (typeof onNotification === 'function') {
+    onNotification(testPayload);
+  }
+
+  return { perm, ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// 6. BROADCAST (kept for compatibility with Admin publish button)
+// ---------------------------------------------------------------------------
+
+export async function broadcastSignalNotification(signal) {
+  // Publishing to `signals` collection automatically fires onSnapshot for all clients!
+  // We play sound locally on admin console as confirmation
+  playNotificationSound();
+  return `sig-${Date.now()}`;
+}
+
+// ---------------------------------------------------------------------------
+// 7. SERVICE WORKER REGISTRATION
+// ---------------------------------------------------------------------------
+
 export async function registerNotificationServiceWorker() {
   if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
-    console.warn('[PushNotification] Service workers not supported.');
     return null;
   }
 
@@ -223,10 +303,10 @@ export async function registerNotificationServiceWorker() {
     const registration = await navigator.serviceWorker.register('/notification-sw.js', {
       scope: '/',
     });
-    console.log('[PushNotification] Service worker registered:', registration.scope);
+    console.log('[PushNotification] Service worker ready:', registration.scope);
     return registration;
   } catch (err) {
-    console.warn('[PushNotification] Service worker registration failed:', err);
+    console.warn('[PushNotification] Service worker registration notice:', err);
     return null;
   }
 }

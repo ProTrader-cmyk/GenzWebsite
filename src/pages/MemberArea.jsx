@@ -8,8 +8,6 @@ import MemberTierLocked from './member/MemberTierLocked.jsx';
 import {
   getNotificationPermission,
   requestNotificationPermission,
-  subscribeToNotifications,
-  registerNotificationServiceWorker,
 } from '../services/pushNotificationService.js';
 import { getUserPlan } from '../data/auth.js';
 
@@ -63,17 +61,20 @@ export default function MemberArea({ user, doneMap, onExit, initialView = 'dashb
   const userPlan = getUserPlan(user);
 
   // Admins can preview any tier ('starter', 'pro', 'elite'); members always use their actual assigned plan
-  const [previewPlan, setPreviewPlan] = useState(() => (isAdmin ? 'elite' : userPlan));
+  const [previewPlan, setPreviewPlan] = useState(() => {
+    if (userPlan && userPlan !== 'free') return userPlan;
+    return isAdmin ? 'elite' : 'starter';
+  });
 
   const activePlan = isAdmin ? previewPlan : userPlan;
   const isProOrElite = activePlan === 'pro' || activePlan === 'elite';
 
-  // Sync state if user's plan is updated in real-time by admin
+  // Sync state if user's plan is updated in real-time
   useEffect(() => {
-    if (!isAdmin && userPlan) {
+    if (userPlan && userPlan !== 'free') {
       setPreviewPlan(userPlan);
     }
-  }, [isAdmin, userPlan]);
+  }, [userPlan]);
 
   const [view, setView] = useState(() => {
     if (initialView === 'pip' && !isProOrElite && !isAdmin) {
@@ -126,35 +127,17 @@ export default function MemberArea({ user, doneMap, onExit, initialView = 'dashb
     } catch {}
   }
 
-  // ── Push Notifications ──────────────────────────────────────────────
+  // ── Push Notifications Permission Prompt ───────────────────────────
   const [notifPermission, setNotifPermission] = useState(() => getNotificationPermission());
   const [showNotifPrompt, setShowNotifPrompt] = useState(false);
-  const [notifToast, setNotifToast] = useState(null); // { title, body }
 
-  // On mount: register service worker + subscribe to notification stream
   useEffect(() => {
-    registerNotificationServiceWorker();
-
     // Show the permission prompt if not yet decided
     if (getNotificationPermission() === 'default') {
-      const timer = setTimeout(() => setShowNotifPrompt(true), 3000);
+      const timer = setTimeout(() => setShowNotifPrompt(true), 2500);
       return () => clearTimeout(timer);
     }
   }, []);
-
-  // Subscribe to Firestore notification stream (only when permission granted)
-  useEffect(() => {
-    if (notifPermission !== 'granted' && notifPermission !== 'default') return;
-
-    const unsubscribe = subscribeToNotifications((data) => {
-      // Show in-app toast
-      setNotifToast({ title: data.title, body: data.body, pair: data.pair, direction: data.direction });
-      // Auto-dismiss after 8 seconds
-      setTimeout(() => setNotifToast(null), 8000);
-    });
-
-    return () => unsubscribe();
-  }, [notifPermission]);
 
   const handleEnableNotifications = useCallback(async () => {
     const result = await requestNotificationPermission();
@@ -182,18 +165,6 @@ export default function MemberArea({ user, doneMap, onExit, initialView = 'dashb
             <button className="notif-enable-btn" onClick={handleEnableNotifications}>Enable</button>
             <button className="notif-dismiss-btn" onClick={handleDismissNotifPrompt}>Later</button>
           </div>
-        </div>
-      )}
-
-      {/* ── IN-APP NOTIFICATION TOAST ── */}
-      {notifToast && (
-        <div className={`notif-toast-banner ${notifToast.direction === 'sell' ? 'sell' : 'buy'}`} onClick={() => { setView('signals'); setNotifToast(null); }}>
-          <span className="notif-toast-icon">⚡</span>
-          <div className="notif-toast-text">
-            <strong>{notifToast.title}</strong>
-            <span>{notifToast.body}</span>
-          </div>
-          <button className="notif-toast-close" onClick={(e) => { e.stopPropagation(); setNotifToast(null); }}>✕</button>
         </div>
       )}
       {/* MOBILE DRAWER BACKDROP */}

@@ -34,6 +34,10 @@ import {
   markLessonDone,
   getUserPlan,
 } from './data/auth.js';
+import {
+  subscribeToNotifications,
+  registerNotificationServiceWorker,
+} from './services/pushNotificationService.js';
 import { submitFeedback } from './data/feedback.js';
 
 const NAV_KEY = 'gzt_nav';
@@ -125,6 +129,25 @@ export default function App() {
   const [doneMap, setDoneMap] = useState({});
   // { lessonId, lessonTitle } while the post-lesson feedback prompt is open, else null.
   const [feedbackPrompt, setFeedbackPrompt] = useState(null);
+  const [globalNotifToast, setGlobalNotifToast] = useState(null);
+
+  // Register push notification service worker on mount
+  useEffect(() => {
+    registerNotificationServiceWorker();
+  }, []);
+
+  // Site-wide real-time live trading signal notification stream
+  useEffect(() => {
+    if (!user) return;
+    const unsubscribe = subscribeToNotifications((notif) => {
+      setGlobalNotifToast(notif);
+      const timer = setTimeout(() => {
+        setGlobalNotifToast(null);
+      }, 9000);
+      return () => clearTimeout(timer);
+    });
+    return () => unsubscribe();
+  }, [user?.uid]);
   // Once opened, the gold chart section stays mounted (just hidden via the
   // .view/.view.active CSS toggle) instead of being unmounted on every
   // navigation away — TradingView's embedded widget has no account/session
@@ -638,6 +661,34 @@ export default function App() {
           onSubmit={handleFeedbackSubmit}
           onSkip={() => setFeedbackPrompt(null)}
         />
+      )}
+
+      {/* ── GLOBAL LIVE SIGNAL ALERT TOAST ── */}
+      {globalNotifToast && (
+        <div
+          className={`notif-toast-banner ${globalNotifToast.direction === 'sell' ? 'sell' : 'buy'}`}
+          onClick={() => {
+            setSection('ai-trading');
+            setGlobalNotifToast(null);
+          }}
+          style={{ cursor: 'pointer', zIndex: 99999 }}
+        >
+          <span className="notif-toast-icon">⚡</span>
+          <div className="notif-toast-text">
+            <strong>{globalNotifToast.title}</strong>
+            <span>{globalNotifToast.body}</span>
+          </div>
+          <button
+            className="notif-toast-close"
+            onClick={(e) => {
+              e.stopPropagation();
+              setGlobalNotifToast(null);
+            }}
+            aria-label="Close notification"
+          >
+            ✕
+          </button>
+        </div>
       )}
     </>
   );

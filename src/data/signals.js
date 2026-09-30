@@ -104,6 +104,7 @@ export async function publishSignal({
     reason: reason.trim(),
     status: status || 'active',
     createdAt: serverTimestamp(),
+    publishedAt: Date.now(),
   };
 
   await setDoc(docRef, data);

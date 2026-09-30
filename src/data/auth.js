@@ -382,31 +382,34 @@ export async function deleteUserAsAdmin(uid) {
  */
 export function getUserPlan(user) {
   if (!user) return 'free';
-  const candidates = [user.plan, user.tier, user.subscription, user.membership];
-  for (const c of candidates) {
-    if (typeof c === 'string' && c.trim()) {
-      const s = c.trim().toLowerCase();
-      if (s.includes('elite')) return 'elite';
-      if (s.includes('pro')) return 'pro';
-      if (s.includes('starter')) return 'starter';
-    }
-  }
-  if (user.tier === 'vip') return 'starter';
+  const candidates = [user.plan, user.tier, user.subscription, user.membership]
+    .filter((c) => typeof c === 'string' && c.trim())
+    .map((c) => c.trim().toLowerCase());
+
+  // 1. Highest tier takes precedence (Elite > Pro > Starter)
+  if (candidates.some((s) => s.includes('elite'))) return 'elite';
+  if (candidates.some((s) => s.includes('pro'))) return 'pro';
+  if (candidates.some((s) => s.includes('starter'))) return 'starter';
+  if (candidates.some((s) => s === 'vip')) return 'starter';
+
   return 'free';
 }
 
 // Updates user plan ('free' | 'starter' | 'pro' | 'elite') and keeps 'tier' synced.
 export async function setUserPlan(uid, plan) {
   const normalizedPlan = (plan || 'free').toLowerCase();
-  // Store plan in 'plan', and also set 'tier' to the plan so that even if
-  // remote firestore.rules hasn't allowed 'plan' yet, tier preserves the exact plan!
   const tier = normalizedPlan === 'free' ? 'member' : normalizedPlan;
   try {
     await updateDoc(doc(db, 'users', uid), { plan: normalizedPlan, tier });
   } catch (err) {
     console.warn('Direct plan update failed, falling back to tier update:', err);
-    // Remote firestore.rules allows updating 'tier' without error
-    await updateDoc(doc(db, 'users', uid), { tier });
+    try {
+      await updateDoc(doc(db, 'users', uid), { tier });
+    } catch (fallbackErr) {
+      console.warn('Tier-only update failed, trying legacy tier:', fallbackErr);
+      const legacyTier = normalizedPlan === 'free' ? 'member' : 'vip';
+      await updateDoc(doc(db, 'users', uid), { tier: legacyTier });
+    }
   }
 }
 

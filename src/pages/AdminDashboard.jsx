@@ -32,7 +32,7 @@ import {
   subscribeLiveTicks,
   formatSpotPrice,
 } from '../services/marketPriceService.js';
-import { broadcastSignalNotification } from '../services/pushNotificationService.js';
+import { broadcastSignalNotification, triggerTestNotification } from '../services/pushNotificationService.js';
 import GoldChart from '../components/GoldChart.jsx';
 import ThemeToggle from '../components/ThemeToggle.jsx';
 
@@ -1373,13 +1373,51 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
                 />
               </div>
 
-              <button
-                type="submit"
-                className="admin-btn-drop-signal"
-                disabled={isDroppingSignal}
-              >
-                {isDroppingSignal ? 'Dropping to Website...' : '🚀 Drop Signal to Website (Live)'}
-              </button>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'stretch' }}>
+                <button
+                  type="submit"
+                  className="admin-btn-drop-signal"
+                  disabled={isDroppingSignal}
+                  style={{ flex: 1 }}
+                >
+                  {isDroppingSignal ? 'Dropping to Website...' : '🚀 Drop Signal to Website (Live)'}
+                </button>
+                <button
+                  type="button"
+                  title="Test browser Web Push Notification and audio chime"
+                  onClick={async () => {
+                    try {
+                      const res = await triggerTestNotification();
+                      const permGranted = res?.perm === 'granted';
+                      setSignalSuccess(
+                        `🔔 Test alert fired! ${permGranted ? '✅ Native OS Web Push + Chime + Toast active!' : '⚠️ Audio Chime + Toast fired. Click "Allow" on the browser notification prompt to see native desktop popups.'}`
+                      );
+                    } catch (err) {
+                      console.error('Test notification error:', err);
+                      setSignalError('Could not trigger test alert: ' + (err?.message || err));
+                    }
+                  }}
+                  style={{
+                    padding: '0 18px',
+                    minHeight: 46,
+                    background: 'rgba(46,124,246,0.14)',
+                    border: '1px solid rgba(46,124,246,0.4)',
+                    color: '#6FA8FF',
+                    borderRadius: 10,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    fontSize: '0.86rem',
+                    whiteSpace: 'nowrap',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  🔔 Test Alert
+                </button>
+              </div>
             </form>
           </div>
         </div>
