@@ -1,14 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
 import { askPipCoach } from '../../services/pipAiService.js';
 
-const INITIAL_MESSAGES = [
-  {
-    id: 1,
+function createInitialMessages() {
+  const createdAt = Date.now();
+  return [{
+    id: createdAt,
+    createdAt,
     sender: 'bot',
     text: "Hello Trader! I'm Pip, your GenZ Trader Coach taught directly by GenZ to help all traders succeed. In this chat, we strictly talk about trading! Ask me about ICT SMC concepts (FVG, Order Blocks, Liquidity Sweeps, Killzones), lot sizing on Gold (XAUUSD), or upload a chart screenshot for instant price action analysis!",
-    time: 'Just now',
-  },
-];
+  }];
+}
 
 const PRESET_QUESTIONS = [
   'How do I calculate lot size for a $1,000 account?',
@@ -35,6 +36,19 @@ function formatSessionDate(timestamp) {
   const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   if (isToday) return `Today, ${timeStr}`;
   return `${date.toLocaleDateString([], { month: 'short', day: 'numeric' })} • ${timeStr}`;
+}
+
+function formatMessageTime(message, now) {
+  const timestamp = Number(message.createdAt || message.id);
+  if (!Number.isFinite(timestamp) || timestamp < 100_000_000_000) {
+    return message.time && message.time.toLowerCase() !== 'just now' ? message.time : 'Recently';
+  }
+  const elapsed = Math.max(0, now - timestamp);
+  if (elapsed < 60_000) return 'Just now';
+  if (elapsed < 60 * 60_000) return `${Math.floor(elapsed / 60_000)}m ago`;
+  if (elapsed < 24 * 60 * 60_000) return `${Math.floor(elapsed / (60 * 60_000))}h ago`;
+  if (elapsed < 7 * 24 * 60 * 60_000) return `${Math.floor(elapsed / (24 * 60 * 60_000))}d ago`;
+  return new Date(timestamp).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
 export default function MemberPipCoach({ user }) {
@@ -76,7 +90,8 @@ export default function MemberPipCoach({ user }) {
 
   // Always start a brand new fresh chat on page load/comeback as requested!
   const [activeSessionId, setActiveSessionId] = useState(() => 'sess_' + Date.now());
-  const [messages, setMessages] = useState(INITIAL_MESSAGES);
+  const [messages, setMessages] = useState(createInitialMessages);
+  const [clockNow, setClockNow] = useState(Date.now);
   const [showHistory, setShowHistory] = useState(false);
 
   const [input, setInput] = useState('');
@@ -84,6 +99,11 @@ export default function MemberPipCoach({ user }) {
   const [attachedImage, setAttachedImage] = useState(null);
   const fileInputRef = useRef(null);
   const endRef = useRef(null);
+
+  useEffect(() => {
+    const timer = setInterval(() => setClockNow(Date.now()), 30_000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Auto-scroll to latest message
   useEffect(() => {
@@ -101,7 +121,7 @@ export default function MemberPipCoach({ user }) {
 
   function startNewChat() {
     setActiveSessionId('sess_' + Date.now());
-    setMessages(INITIAL_MESSAGES);
+    setMessages(createInitialMessages());
     setInput('');
     setAttachedImage(null);
   }
@@ -198,6 +218,7 @@ export default function MemberPipCoach({ user }) {
     const currentImg = attachedImage;
     const userMsg = {
       id: Date.now(),
+      createdAt: Date.now(),
       sender: 'user',
       text: text || '(Attached Chart Screenshot for analysis)',
       image: currentImg,
@@ -220,6 +241,7 @@ export default function MemberPipCoach({ user }) {
       );
       const botMsg = {
         id: Date.now() + 1,
+        createdAt: Date.now(),
         sender: 'bot',
         text: response,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -230,6 +252,7 @@ export default function MemberPipCoach({ user }) {
     } catch (err) {
       const errorMsg = {
         id: Date.now() + 1,
+        createdAt: Date.now(),
         sender: 'bot',
         text: `⚠️ An error occurred while generating a response: ${err.message}`,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -244,8 +267,9 @@ export default function MemberPipCoach({ user }) {
 
   function clearCurrentChat() {
     if (window.confirm('Reset this conversation?')) {
-      setMessages(INITIAL_MESSAGES);
-      saveMessageToSession(INITIAL_MESSAGES);
+      const initialMessages = createInitialMessages();
+      setMessages(initialMessages);
+      saveMessageToSession(initialMessages);
     }
   }
 
@@ -371,7 +395,7 @@ export default function MemberPipCoach({ user }) {
                     </div>
                   )}
                   <div className="pip-msg-text">{m.text}</div>
-                  <div className="pip-msg-time">{m.time}</div>
+                  <div className="pip-msg-time">{formatMessageTime(m, clockNow)}</div>
                 </div>
                 {m.sender === 'user' && (
                   <div className="pip-avatar-user" title={user?.name || user?.email || 'You'}>
