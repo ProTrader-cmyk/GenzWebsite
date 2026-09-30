@@ -438,26 +438,6 @@ export default function MemberArea({ user, doneMap, onExit, initialView = 'dashb
         </footer>
       </main>
 
-      {/* MOBILE BOTTOM NAVIGATION BAR */}
-      <nav className="terminal-mobile-tabbar" aria-label="Mobile Member Navigation">
-        {NAV_ITEMS.map((item) => (
-          <button
-            key={item.key}
-            type="button"
-            className={`terminal-tab-item${view === item.key ? ' active' : ''}`}
-            onClick={() => {
-              setView(item.key);
-              setMobileDrawerOpen(false);
-            }}
-          >
-            <div className="tab-icon-wrap">
-              <item.Icon width={19} height={19} />
-              {item.badge === 'Live' && <span className="tab-dot-live" />}
-            </div>
-            <span className="tab-label">{item.shortLabel || item.label.split(' ')[0]}</span>
-          </button>
-        ))}
-      </nav>
     </div>
   );
 }
