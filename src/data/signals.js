@@ -12,7 +12,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase.js';
 import { getPipApiKey } from '../services/pipAiService.js';
-import { fetchLivePrice } from '../services/marketPriceService.js';
+import { fetchLivePrice, formatSpotPrice } from '../services/marketPriceService.js';
 
 const SIGNALS_COLLECTION = 'signals';
 
@@ -170,7 +170,10 @@ export async function generateAiSignal({
     }
   }
 
-  const spotPriceStr = activePrice ? String(activePrice) : '';
+  if (!Number.isFinite(activePrice) || activePrice <= 0) {
+    throw new Error('Pip cannot verify the chart entry because the live OANDA price is unavailable. Refresh the chart and try again.');
+  }
+  const spotPriceStr = formatSpotPrice(normPair, activePrice);
 
   const systemInstruction = `You are Pip, an evidence-first ICT/SMC signal analyst. Never invent chart evidence or force a trade.
 You receive exactly two screenshots in order: image 1 is HTF (1H/4H), image 2 is LTF (15m/5m). If either chart, timeframe, price scale, swing points, or required evidence is unreadable, set tradeAllowed=false and explain why. Treat admin notes as hypotheses, not proof.
@@ -180,11 +183,11 @@ Before allowing a signal, assess every check:
 2. Liquidity: identify BSL/SSL and a visible sweep/reclaim. An ordinary touch is not a sweep.
 3. PD array: identify a visible, unmitigated, directionally aligned FVG/iFVG, order block, breaker, or mitigation block; estimate its exact low/high from the chart scale.
 4. Fibonacci: anchor the retracement to the actual displacement swing low/high. For a bullish impulse measure low-to-high and retracement down from the high; for bearish measure high-to-low and retracement up from the low. Report both swing prices and retracement percent. Require 61.8%-79% OTE and overlap between the OTE price and the selected PD-array zone.
-5. LTF execution: require a direction-aligned MSS/BOS with displacement after the liquidity event, and entry inside the PD-array/OTE overlap. Reject if price has already invalidated the setup or reached its target.
+5. LTF execution: require a direction-aligned MSS/BOS with displacement after the liquidity event. Entry MUST equal the supplied live chart quote at the quote's displayed precision, and that exact price must be inside the PD-array/OTE overlap. If the quote is not in the overlap, set tradeAllowed=false; never substitute another entry.
 6. Risk: SL must be beyond structural invalidation, TP at a logical opposing liquidity target, and the setup must support 1:2 R:R.
 
 Set tradeAllowed=true only when HTF bias, liquidity sweep, valid PD array, independently consistent Fibonacci OTE overlap, and LTF structure confirmation are all clearly visible. If any are missing, unclear, or conflict, set tradeAllowed=false. Never fill gaps with assumptions.
-${spotPriceStr ? `Current live price for ${normPair}: ${spotPriceStr}. Use it to check whether the chart setup is still current; do not force entry to equal spot.` : 'Live spot is unavailable; be extra cautious about whether the chart setup is still actionable.'}
+Current live OANDA chart quote for ${normPair}: ${spotPriceStr}. Return this exact value as entry only if it is inside the verified confluence; otherwise return tradeAllowed=false.
 
 Return only raw JSON with these keys:
 {
@@ -316,6 +319,14 @@ Use actual visible price-scale values and do not fabricate precision. Return tra
       entry <= 0 || sl <= 0 || tp <= 0 || pdLow <= 0 || pdHigh <= pdLow || swingLow <= 0 || swingRange <= 0) {
     throw new Error('Pip returned incomplete or invalid price levels. Please retry with readable chart scales.');
   }
+
+  const chartQuote = Number(spotPriceStr);
+  const quoteDecimals = spotPriceStr.includes('.') ? spotPriceStr.split('.')[1].length : 0;
+  const entryAtChartPrecision = Number(entry.toFixed(quoteDecimals));
+  if (entryAtChartPrecision !== chartQuote) {
+    throw new Error(`NO TRADE: Pip's entry ${entry} does not exactly match the live chart quote ${spotPriceStr}. Refresh both screenshots and generate again.`);
+  }
+  entry = chartQuote;
 
   const fibPercent = direction === 'buy'
     ? ((swingHigh - entry) / swingRange) * 100

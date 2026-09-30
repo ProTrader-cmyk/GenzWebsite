@@ -308,13 +308,8 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
     }
     setAiGenerating(true);
     try {
-      let currentSpot = livePrices[aiPair];
-      if (!currentSpot) {
-        currentSpot = await fetchLivePrice(aiPair);
-        if (currentSpot) {
-          setLivePrices((prev) => ({ ...prev, [aiPair]: currentSpot }));
-        }
-      }
+      const currentSpot = await fetchLivePrice(aiPair);
+      if (currentSpot) setLivePrices((prev) => ({ ...prev, [aiPair]: currentSpot }));
 
       const base64Images = [aiHtfImage, aiLtfImage].filter(Boolean);
       const res = await generateAiSignal({
@@ -360,6 +355,13 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
 
     setIsDroppingSignal(true);
     try {
+      const quote = await fetchLivePrice(signalDraft.pair || aiPair);
+      if (!quote) throw new Error('Cannot verify the entry because the live OANDA chart quote is unavailable.');
+      const chartQuote = formatSpotPrice(signalDraft.pair || aiPair, quote);
+      if (Number(signalDraft.entry) !== Number(chartQuote)) {
+        throw new Error(`Entry ${signalDraft.entry} no longer matches the live chart quote ${chartQuote}. Refresh both screenshots and generate the setup again before publishing.`);
+      }
+
       if (getNotificationPermission() === 'default') {
         try { await requestNotificationPermission(); } catch {}
       }
@@ -397,7 +399,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
       setAiLtfImage(null);
     } catch (err) {
       console.error('Error dropping signal:', err);
-      setSignalError('Failed to publish signal. Check Firestore rules / admin access.');
+      setSignalError(err.message || 'Failed to publish signal. Check Firestore rules / admin access.');
     } finally {
       setIsDroppingSignal(false);
     }
