@@ -30,7 +30,32 @@ export default function MemberDashboard({ user, onNavigate }) {
   }, []);
 
   const activeSignals = signals.filter((s) => s.status === 'active');
-  const recentWinners = signals.filter((s) => s.status === 'tp').slice(0, 2);
+  const tpSignals = signals.filter((s) => s.status === 'tp');
+  const slSignals = signals.filter((s) => s.status === 'sl');
+  const closedSignals = signals.filter((s) => s.status === 'tp' || s.status === 'sl');
+  const recentClosed = closedSignals.slice(0, 3);
+
+  // Dynamic Win Rate calculation based on real trade outcomes
+  const totalClosed = closedSignals.length;
+  const winRateNum = totalClosed > 0 ? (tpSignals.length / totalClosed) * 100 : 0;
+  const winRateDisplay = totalClosed > 0 ? `${winRateNum.toFixed(1)}%` : '0.0%';
+
+  // Standard Target R:R (1:2 setup rule)
+  const avgRrDisplay = '1:2 R';
+
+  // Dynamic Profit Factor calculation: Gross Wins (in R) / Gross Losses (in R, each SL = 1.0R)
+  const grossProfitR = tpSignals.reduce((acc, s) => acc + (parseFloat(s.rr) || 2.0), 0);
+  const grossLossR = slSignals.length * 1.0;
+  let profitFactorDisplay = '0.00';
+  if (grossLossR > 0 && grossProfitR > 0) {
+    profitFactorDisplay = (grossProfitR / grossLossR).toFixed(2);
+  } else if (grossLossR === 0 && grossProfitR > 0) {
+    profitFactorDisplay = grossProfitR.toFixed(2);
+  } else if (grossLossR > 0 && grossProfitR === 0) {
+    profitFactorDisplay = '0.00';
+  } else {
+    profitFactorDisplay = '0.00';
+  }
 
   // Quick Account Compound Calculator
   const [calcCap, setCalcCap] = useState(1000);
@@ -89,42 +114,64 @@ export default function MemberDashboard({ user, onNavigate }) {
         </div>
       </div>
 
-      {/* METRIC STRIP */}
+      {/* METRIC STRIP (DYNAMICALLY CALCULATED FROM REAL SIGNALS) */}
       <div className="terminal-metric-grid">
         <div className="metric-box">
           <div className="metric-header">
             <span className="metric-label">MONTHLY WIN RATE</span>
-            <span className="metric-tag up">Verified</span>
+            <span className={`metric-tag ${totalClosed === 0 ? 'brand' : winRateNum >= 50 ? 'up' : 'dn'}`}>
+              {totalClosed === 0 ? 'Standby' : winRateNum >= 50 ? 'Verified' : `${tpSignals.length}W - ${slSignals.length}L`}
+            </span>
           </div>
-          <div className="metric-num">78.4%</div>
-          <div className="metric-foot">Based on ICT A+ Confluence setups</div>
+          <div className="metric-num">{winRateDisplay}</div>
+          <div className="metric-foot">
+            {totalClosed === 0
+              ? 'Awaiting first closed setup'
+              : `${tpSignals.length} win${tpSignals.length === 1 ? '' : 's'} / ${totalClosed} total closed setup${totalClosed === 1 ? '' : 's'}`}
+          </div>
         </div>
 
         <div className="metric-box">
           <div className="metric-header">
             <span className="metric-label">AVG RISK : REWARD</span>
-            <span className="metric-tag brand">Min 2R Rule</span>
+            <span className="metric-tag brand">1:2 Setup</span>
           </div>
-          <div className="metric-num">2.41R</div>
-          <div className="metric-foot">High asymmetric payout on wins</div>
+          <div className="metric-num">{avgRrDisplay}</div>
+          <div className="metric-foot">Strict 1:2 Risk to Reward standard</div>
         </div>
 
         <div className="metric-box">
           <div className="metric-header">
             <span className="metric-label">ACTIVE SIGNALS</span>
-            <span className="metric-tag warn">Live</span>
+            <span className={`metric-tag ${activeSignals.length > 0 ? 'warn' : 'brand'}`}>
+              {activeSignals.length > 0 ? 'Live' : 'Standby'}
+            </span>
           </div>
           <div className="metric-num">{activeSignals.length}</div>
-          <div className="metric-foot">Gold (XAU/USD) institutional setups</div>
+          <div className="metric-foot">
+            {activeSignals.length > 0
+              ? 'Gold (XAU/USD) institutional setups'
+              : 'Waiting for next Killzone setup'}
+          </div>
         </div>
 
         <div className="metric-box">
           <div className="metric-header">
             <span className="metric-label">PROFIT FACTOR</span>
-            <span className="metric-tag up">Top 5%</span>
+            <span className={`metric-tag ${grossLossR > 0 && grossProfitR === 0 ? 'dn' : parseFloat(profitFactorDisplay) >= 1.5 ? 'up' : 'brand'}`}>
+              {grossLossR > 0 && grossProfitR === 0
+                ? `-${grossLossR.toFixed(1)}R`
+                : parseFloat(profitFactorDisplay) >= 1.5
+                ? 'Profitable'
+                : 'Live Sync'}
+            </span>
           </div>
-          <div className="metric-num">2.85</div>
-          <div className="metric-foot">Gross profits vs gross losses ratio</div>
+          <div className="metric-num">{profitFactorDisplay}</div>
+          <div className="metric-foot">
+            {totalClosed > 0
+              ? `${tpSignals.length} TP hit • ${slSignals.length} SL hit (-${grossLossR.toFixed(1)}R)`
+              : 'Gross profits vs gross losses ratio'}
+          </div>
         </div>
       </div>
 
@@ -147,7 +194,7 @@ export default function MemberDashboard({ user, onNavigate }) {
           </div>
 
           <div className="panel-signals-list">
-            {activeSignals.length === 0 && recentWinners.length === 0 ? (
+            {activeSignals.length === 0 && recentClosed.length === 0 ? (
               <div style={{ padding: '36px 16px', textAlign: 'center', color: 'var(--mute)', fontSize: '13px' }}>
                 <div style={{ fontSize: '24px', marginBottom: '8px' }}>⚡</div>
                 <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>No Active Signals Right Now</div>
@@ -155,15 +202,16 @@ export default function MemberDashboard({ user, onNavigate }) {
               </div>
             ) : (
               <>
+                {/* ACTIVE LIVE TRADES */}
                 {activeSignals.map((s) => (
                   <div key={s.id} className="radar-signal-card active">
                     <div className="radar-card-top">
                       <div className="radar-tag-row">
                         <span className={`signal-dir-tag ${s.direction}`}>
-                          {s.direction === 'buy' ? 'BUY' : 'SELL'}
+                          {s.direction === 'buy' ? '▲ BUY' : '▼ SELL'}
                         </span>
                         <span className="radar-pair">{s.pair}</span>
-                        <span className="radar-target-rr">{s.rr}R</span>
+                        <span className="radar-target-rr">1:2 R:R</span>
                       </div>
                       <span className="radar-live-tag">LIVE NOW</span>
                     </div>
@@ -183,38 +231,47 @@ export default function MemberDashboard({ user, onNavigate }) {
                       </div>
                     </div>
 
-                    <p className="radar-reason">{s.reason}</p>
+                    {s.reason && <p className="radar-reason">{s.reason}</p>}
                   </div>
                 ))}
 
-                {recentWinners.map((s) => (
-                  <div key={s.id} className="radar-signal-card tp-hit">
-                    <div className="radar-card-top">
-                      <div className="radar-tag-row">
-                        <span className={`signal-dir-tag ${s.direction}`}>
-                          {s.direction === 'buy' ? 'BUY' : 'SELL'}
+                {/* RECENT CLOSED TRADES (TP WINNERS & SL STOPS) */}
+                {recentClosed.map((s) => {
+                  const isTp = s.status === 'tp';
+                  return (
+                    <div key={s.id} className={`radar-signal-card ${isTp ? 'tp-hit' : 'sl-hit'}`}>
+                      <div className="radar-card-top">
+                        <div className="radar-tag-row">
+                          <span className={`signal-dir-tag ${s.direction}`}>
+                            {s.direction === 'buy' ? '▲ BUY' : '▼ SELL'}
+                          </span>
+                          <span className="radar-pair">{s.pair}</span>
+                          <span className="radar-target-rr">{isTp ? `+${s.rr || 2.0}R` : '-1.0R'}</span>
+                        </div>
+                        <span className={isTp ? 'radar-win-tag' : 'radar-sl-tag'}>
+                          {isTp ? '✓ TP HIT' : '✕ HIT SL'}
                         </span>
-                        <span className="radar-pair">{s.pair}</span>
-                        <span className="radar-target-rr">+{s.rr}R</span>
                       </div>
-                      <span className="radar-win-tag">✓ TP HIT</span>
+                      <div className="radar-levels-row">
+                        <div>
+                          <span className="r-label">ENTRY</span>
+                          <span className="r-val">{s.entry}</span>
+                        </div>
+                        <div>
+                          <span className="r-label">{isTp ? 'TP HIT' : 'STOPPED'}</span>
+                          <span className={`r-val ${isTp ? 'tp' : 'sl'}`}>{isTp ? s.tp : s.sl}</span>
+                        </div>
+                        <div>
+                          <span className="r-label">{isTp ? 'CLOSED' : 'OUTCOME'}</span>
+                          <span className={`r-val ${isTp ? 'tp' : 'sl'}`}>
+                            {isTp ? `+${s.rr || 2.0}R` : '-1.0R'}
+                          </span>
+                        </div>
+                      </div>
+                      {s.reason && <p className="radar-reason">{s.reason}</p>}
                     </div>
-                    <div className="radar-levels-row">
-                      <div>
-                        <span className="r-label">ENTRY</span>
-                        <span className="r-val">{s.entry}</span>
-                      </div>
-                      <div>
-                        <span className="r-label">TP HIT</span>
-                        <span className="r-val tp">{s.tp}</span>
-                      </div>
-                      <div>
-                        <span className="r-label">CLOSED</span>
-                        <span className="r-val">{formatRelativeTime(s.minutesAgo)}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </>
             )}
           </div>

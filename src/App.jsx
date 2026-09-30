@@ -216,7 +216,7 @@ export default function App() {
     // Seed the baseline from what's already loaded — we only ever want to
     // alert on a change detected *after* this listener attaches, never on
     // its first snapshot (which just reflects what they already had).
-    prevAccessRef.current = { status: user.status, tier: user.tier };
+    prevAccessRef.current = { status: user.status, tier: user.tier, plan: user.plan };
 
     const unsubscribe = onSnapshot(doc(db, 'users', user.uid), (snap) => {
       if (!snap.exists()) return;
@@ -224,11 +224,14 @@ export default function App() {
       const prev = prevAccessRef.current;
 
       const gotApproved = prev.status !== 'approved' && data.status === 'approved';
-      const gotVip = prev.status === 'approved' && prev.tier !== 'vip' && data.tier === 'vip';
+      const gotVip = (prev.status === 'approved' || data.status === 'approved') && (
+        (prev.tier !== 'vip' && data.tier === 'vip') ||
+        (prev.plan !== data.plan && data.plan && data.plan !== 'free')
+      );
       if (gotApproved) setAccessAlert('approved');
       else if (gotVip) setAccessAlert('vip');
 
-      prevAccessRef.current = { status: data.status, tier: data.tier };
+      prevAccessRef.current = { status: data.status, tier: data.tier, plan: data.plan };
 
       setUser((current) => {
         if (!current) return current;
@@ -432,21 +435,21 @@ export default function App() {
   // Firestore. An admin or dev browsing the site gets full access regardless
   // of their own status.
   const approved = user.status === 'approved' || user.role === 'admin' || user.role === 'dev';
+  const isAdmin = user.role === 'admin' || user.role === 'dev';
 
   // VIP is a separate tier from approved/admin — it only gates VIP-only
   // tracks (e.g. Advanced), set via Admin Dashboard's per-user Role dropdown
   // (data/auth.js: setUserAccess). An admin or dev always counts as VIP too.
-  const isVip = user.tier === 'vip' || user.role === 'admin' || user.role === 'dev';
+  const isVip = user.tier === 'vip' || isAdmin;
 
-  // Not-yet-approved accounts go straight into the category picker like
-  // everyone else — every track stays locked (isLessonLocked below) and
-  // CategoryHome shows its own "contact admin" modal automatically.
-
-  // An admin can grant a specific list of lesson ids per user (Admin
-  // Dashboard "Permissions"), overriding the default approved/pending rule
-  // entirely for that account — across both tracks. Absent (not an array)
-  // means "no override", so the default rule below applies as before.
-  const isAdmin = user.role === 'admin' || user.role === 'dev';
+  // Users with an active VIP subscription plan ('starter', 'pro', 'elite'),
+  // or assigned VIP tier, or admin/dev accounts skip the pricing/payment section
+  // and go directly into the VIP Member Terminal.
+  const hasActivePlan = Boolean(
+    isAdmin ||
+    user?.tier === 'vip' ||
+    (user?.plan && user.plan !== 'free')
+  );
   // An admin/dev account ignores allowedLessons entirely — that override
   // exists to restrict/grant lessons for regular accounts, and should never
   // end up locking out an admin or dev themselves.
@@ -514,7 +517,7 @@ export default function App() {
         onNavAdmin={() => setAdminViewingSite(false)}
         approved={approved}
       />
-      <div className={`wrap${(section === 'member-preview' || (section === 'ai-trading' && isAdmin)) ? ' wrap-terminal' : ''}`}>
+      <div className={`wrap${(section === 'member-preview' || (section === 'ai-trading' && hasActivePlan)) ? ' wrap-terminal' : ''}`}>
         {section === 'categories' && (
           <CategoryHome
             onSelectCategory={selectCategory}
@@ -525,20 +528,21 @@ export default function App() {
         )}
         {section === 'news' && <NewsPage onBack={backToCategories} />}
         {section === 'ai-trading' && (
-          isAdmin ? (
+          hasActivePlan ? (
             <Suspense fallback={<BootScreen />}>
               <MemberArea
                 user={user}
                 doneMap={doneMap}
                 onExit={backToCategories}
                 onViewProfile={() => setSection('profile')}
+                initialView={user?.plan === 'starter' ? 'dashboard' : 'pip'}
               />
             </Suspense>
           ) : (
             <AITradingPage onBack={backToCategories} />
           )
         )}
-        {section === 'member-preview' && isAdmin && (
+        {section === 'member-preview' && (isAdmin || hasActivePlan) && (
           <Suspense fallback={<BootScreen />}>
             <MemberArea
               user={user}

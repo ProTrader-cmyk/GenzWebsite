@@ -3,6 +3,8 @@ import {
   fetchAllUsers,
   setUserStatus,
   setUserAccess,
+  setUserPlan,
+  setUserRole,
   setUserLessonAccess,
   createUserAsAdmin,
   deleteUserAsAdmin,
@@ -29,6 +31,7 @@ import {
   subscribeLiveTicks,
   formatSpotPrice,
 } from '../services/marketPriceService.js';
+import { broadcastSignalNotification } from '../services/pushNotificationService.js';
 import GoldChart from '../components/GoldChart.jsx';
 import ThemeToggle from '../components/ThemeToggle.jsx';
 
@@ -72,6 +75,20 @@ function toDateKey(date) {
   return `${y}-${m}-${d}`;
 }
 
+function formatSignalAge(mins) {
+  if (mins == null) return 'Just now';
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  const remainingMins = mins % 60;
+  if (hours < 24) {
+    return remainingMins > 0 ? `${hours}h ${remainingMins}m ago` : `${hours}h ago`;
+  }
+  const days = Math.floor(hours / 24);
+  const remHours = hours % 24;
+  return remHours > 0 ? `${days}d ${remHours}h ago` : `${days}d ago`;
+}
+
 export default function AdminDashboard({ admin, onLogout, onViewSite }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -92,7 +109,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
   const [savingKey, setSavingKey] = useState(null);
   const [videoError, setVideoError] = useState('');
   const [showAddUser, setShowAddUser] = useState(false);
-  const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'user', status: 'pending', tier: 'member' });
+  const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'user', status: 'pending', tier: 'member', plan: 'free' });
   const [addUserSaving, setAddUserSaving] = useState(false);
   const [addUserError, setAddUserError] = useState('');
   const [feedback, setFeedback] = useState([]);
@@ -126,6 +143,20 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
   const [signalError, setSignalError] = useState('');
   const [signalSuccess, setSignalSuccess] = useState('');
   const [updatingSignalId, setUpdatingSignalId] = useState(null);
+  const [signalTab, setSignalTab] = useState('all'); // 'all' | 'active' | 'tp' | 'sl'
+
+  const signalCounts = useMemo(() => {
+    const total = signals.length;
+    const active = signals.filter((s) => s.status === 'active').length;
+    const tp = signals.filter((s) => s.status === 'tp').length;
+    const sl = signals.filter((s) => s.status === 'sl').length;
+    return { total, active, tp, sl };
+  }, [signals]);
+
+  const filteredSignals = useMemo(() => {
+    if (signalTab === 'all') return signals;
+    return signals.filter((s) => s.status === signalTab);
+  }, [signals, signalTab]);
 
   // Live Market Prices & Automated TP/SL State
   const [livePrices, setLivePrices] = useState({});
@@ -139,6 +170,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
   const [aiHtfImage, setAiHtfImage] = useState(null); // Chart 1: HTF 1H/4H
   const [aiLtfImage, setAiLtfImage] = useState(null); // Chart 2: LTF 15m/5m
   const [aiGenerating, setAiGenerating] = useState(false);
+  const [showChartUpload, setShowChartUpload] = useState(false);
   const [showAdminChart, setShowAdminChart] = useState(true);
 
   // Draft Signal Form State
@@ -148,7 +180,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
     entry: '',
     sl: '',
     tp: '',
-    rr: '2.0',
+    rr: '1:2',
     session: 'London Killzone',
     reason: '',
     status: 'active',
@@ -166,7 +198,8 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
           const risk = Math.abs(e - s);
           const reward = Math.abs(t - e);
           if (risk > 0) {
-            next.rr = (Math.round((reward / risk) * 10) / 10).toFixed(1);
+            const ratio = Math.round((reward / risk) * 10) / 10;
+            next.rr = ratio === 2 ? '1:2' : `1:${ratio}`;
           }
         }
       }
@@ -174,28 +207,90 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
     });
   }
 
-  function handleHtfImageUpload(e) {
-    const file = e.target.files?.[0];
+  function processImageFile(file, slot = 'htf') {
     if (!file) return;
-    if (file.size > 4 * 1024 * 1024) {
-      setSignalError('HTF chart screenshot must be smaller than 4MB.');
+    if (!file.type || !file.type.startsWith('image/')) {
+      setSignalError('Only screenshot images (PNG, JPG, WebP) are supported.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setSignalError('Chart screenshot must be smaller than 5MB.');
       return;
     }
     const reader = new FileReader();
-    reader.onload = () => setAiHtfImage(reader.result);
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      setShowChartUpload(true);
+      if (slot === 'htf') {
+        setAiHtfImage(dataUrl);
+        setSignalSuccess('📋 Pasted screenshot into Chart 1: 1H / 4H HTF (Bias)!');
+      } else {
+        setAiLtfImage(dataUrl);
+        setSignalSuccess('📋 Pasted screenshot into Chart 2: 15m / 5m LTF (Entry)!');
+      }
+      setTimeout(() => setSignalSuccess(''), 3500);
+    };
     reader.readAsDataURL(file);
+  }
+
+  function extractImageFromClipboard(e) {
+    const clipboardData = e.clipboardData || window.clipboardData;
+    if (!clipboardData) return null;
+    const items = clipboardData.items;
+    if (items) {
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type && items[i].type.startsWith('image/')) {
+          return items[i].getAsFile();
+        }
+      }
+    }
+    const files = clipboardData.files;
+    if (files && files.length > 0) {
+      for (let i = 0; i < files.length; i++) {
+        if (files[i].type && files[i].type.startsWith('image/')) {
+          return files[i];
+        }
+      }
+    }
+    return null;
+  }
+
+  function handleSlotPaste(e, slot) {
+    const imageFile = extractImageFromClipboard(e);
+    if (imageFile) {
+      e.preventDefault();
+      e.stopPropagation();
+      processImageFile(imageFile, slot);
+    }
+  }
+
+  function handleAiBoxPaste(e) {
+    const imageFile = extractImageFromClipboard(e);
+    if (imageFile) {
+      e.preventDefault();
+      // If Chart 1 is empty, assign to Chart 1; otherwise assign to Chart 2
+      const targetSlot = !aiHtfImage ? 'htf' : 'ltf';
+      processImageFile(imageFile, targetSlot);
+    }
+  }
+
+  function handleSlotDrop(e, slot) {
+    e.preventDefault();
+    e.stopPropagation();
+    const file = e.dataTransfer?.files?.[0];
+    if (file) {
+      processImageFile(file, slot);
+    }
+  }
+
+  function handleHtfImageUpload(e) {
+    const file = e.target.files?.[0];
+    if (file) processImageFile(file, 'htf');
   }
 
   function handleLtfImageUpload(e) {
     const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 4 * 1024 * 1024) {
-      setSignalError('LTF chart screenshot must be smaller than 4MB.');
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => setAiLtfImage(reader.result);
-    reader.readAsDataURL(file);
+    if (file) processImageFile(file, 'ltf');
   }
 
   async function handleAiGenerate() {
@@ -203,11 +298,20 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
     setSignalSuccess('');
     setAiGenerating(true);
     try {
+      let currentSpot = livePrices[aiPair];
+      if (!currentSpot) {
+        currentSpot = await fetchLivePrice(aiPair);
+        if (currentSpot) {
+          setLivePrices((prev) => ({ ...prev, [aiPair]: currentSpot }));
+        }
+      }
+
       const base64Images = [aiHtfImage, aiLtfImage].filter(Boolean);
       const res = await generateAiSignal({
         notes: aiNotes,
         pair: aiPair,
         base64Images,
+        currentPrice: currentSpot,
       });
 
       setSignalDraft({
@@ -216,18 +320,18 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
         entry: res.entry ? String(res.entry) : '',
         sl: res.sl ? String(res.sl) : '',
         tp: res.tp ? String(res.tp) : '',
-        rr: res.rr ? String(res.rr) : '2.0',
+        rr: '1:2',
         session: res.session || 'London Killzone',
         reason: res.reason || '',
         status: 'active',
       });
-      setSignalSuccess('✨ Gemini analyzed both timeframes and auto-filled your setup! Review or edit levels below before publishing.');
+      setSignalSuccess('✨ Pip analyzed live market price & setup and auto-filled the parameters! Review or edit levels below before publishing.');
       setTimeout(() => {
         document.getElementById('signal-review-box')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }, 100);
     } catch (err) {
-      console.error('AI Signal generation error:', err);
-      setSignalError(err.message || 'Failed to generate signal with Gemini AI.');
+      console.error('Pip AI Signal generation error:', err);
+      setSignalError(err.message || 'Failed to generate signal with Pip AI.');
     } finally {
       setAiGenerating(false);
     }
@@ -246,6 +350,12 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
     setIsDroppingSignal(true);
     try {
       await publishSignal(signalDraft);
+
+      // 🔔 Push notification — broadcast to all subscribed member clients
+      broadcastSignalNotification(signalDraft).catch((err) =>
+        console.warn('Notification broadcast failed (non-blocking):', err)
+      );
+
       setSignalSuccess(`🚀 Dropped ${signalDraft.pair} ${signalDraft.direction.toUpperCase()} signal live to website!`);
       setSignalDraft((prev) => ({
         ...prev,
@@ -490,23 +600,38 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
     setUpdatingUid(null);
   }
 
-  // One dropdown covering both role and tier — Member/VIP set role: 'user'
-  // with tier: 'member'/'vip'; Admin/Dev set role and leave tier untouched.
-  function accessValue(u) {
+  function roleValue(u) {
     if (u.role === 'admin') return 'admin';
     if (u.role === 'dev') return 'dev';
-    return u.tier === 'vip' ? 'vip' : 'member';
+    return 'user';
   }
 
-  async function handleAccessChange(uid, value) {
-    const role = value === 'admin' || value === 'dev' ? value : 'user';
-    const tier = value === 'vip' ? 'vip' : 'member';
+  async function handleRoleChange(uid, role) {
     setUpdatingUid(uid);
     try {
-      await setUserAccess(uid, { role, tier });
-      setUsers((prev) => prev.map((u) => (u.uid === uid ? { ...u, role, tier } : u)));
+      await setUserRole(uid, role);
+      setUsers((prev) => prev.map((u) => (u.uid === uid ? { ...u, role } : u)));
     } catch {
       setError('Failed to update role. Check Firestore rules / your admin access.');
+    }
+    setUpdatingUid(null);
+  }
+
+  function userPlan(u) {
+    if (u.plan) return u.plan;
+    if (u.tier === 'vip') return 'starter';
+    return 'free';
+  }
+
+  async function handlePlanChange(uid, plan) {
+    const tier = plan === 'free' ? 'member' : 'vip';
+    setUpdatingUid(uid);
+    try {
+      await setUserPlan(uid, plan);
+      setUsers((prev) => prev.map((u) => (u.uid === uid ? { ...u, plan, tier } : u)));
+    } catch (err) {
+      console.error('Plan update failed:', err);
+      setError('Failed to update user plan. Check Firestore rules / your admin access.');
     }
     setUpdatingUid(null);
   }
@@ -561,7 +686,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
   }
 
   function openAddUser() {
-    setNewUser({ name: '', email: '', password: '', role: 'user', status: 'pending', tier: 'member' });
+    setNewUser({ name: '', email: '', password: '', role: 'user', status: 'pending', tier: 'member', plan: 'free' });
     setAddUserError('');
     setShowAddUser(true);
   }
@@ -767,23 +892,30 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
                 <td>{formatJoined(u.createdAt)}</td>
                 <td>
                   <select
-                    className={`tier-select${accessValue(u) === 'vip' ? ' tier-vip' : ''}${accessValue(u) === 'admin' || accessValue(u) === 'dev' ? ' role-admin' : ''}${accessValue(u) === 'member' ? ' role-member' : ''}`}
-                    value={accessValue(u)}
+                    className={`tier-select${roleValue(u) === 'admin' || roleValue(u) === 'dev' ? ' role-admin' : ' role-member'}`}
+                    value={roleValue(u)}
                     disabled={updatingUid === u.uid || u.status !== 'approved'}
                     title={u.status !== 'approved' ? 'Approve this user first to change their role' : undefined}
-                    onChange={(e) => handleAccessChange(u.uid, e.target.value)}
+                    onChange={(e) => handleRoleChange(u.uid, e.target.value)}
                   >
-                    <option value="member">Member</option>
-                    <option value="vip">VIP</option>
+                    <option value="user">User</option>
                     <option value="admin">Admin</option>
                     <option value="dev">Dev</option>
                   </select>
                 </td>
                 <td>
-                  {/* No real AI Trading subscription data exists yet (see
-                      AITradingPage.jsx) -- every account just shows "Free"
-                      here until real plan purchases are wired up. */}
-                  <span className="plan-badge">Free</span>
+                  <select
+                    className={`plan-select plan-${userPlan(u)}`}
+                    value={userPlan(u)}
+                    disabled={updatingUid === u.uid || u.status !== 'approved'}
+                    title={u.status !== 'approved' ? 'Approve this user first to change their plan' : 'Change user subscription plan'}
+                    onChange={(e) => handlePlanChange(u.uid, e.target.value)}
+                  >
+                    <option value="free">Free</option>
+                    <option value="starter">Starter VIP</option>
+                    <option value="pro">Pro VIP</option>
+                    <option value="elite">Elite VIP</option>
+                  </select>
                 </td>
                 <td>
                   <span className={`status-pill status-${u.status}`}>{STATUS_LABELS[u.status] ?? u.status}</span>
@@ -855,7 +987,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
           </div>
         </div>
         <p className="admin-section-sub">
-          Generate high-probability ICT Smart Money Concept (SMC) setups with Google Gemini AI or craft them manually,
+          Generate high-probability ICT Smart Money Concept (SMC) setups with Pip AI or craft them manually,
           review the confluence, and drop them directly to the VIP Member Terminal with one click.
         </p>
 
@@ -906,17 +1038,33 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
 
         {/* 2-COLUMN WORKBENCH */}
         <div className="signal-workbench-grid">
-          {/* LEFT: GEMINI AI GENERATOR */}
-          <div className="signal-box ai-generator-box">
+          {/* LEFT: PIP AI GENERATOR (WITH SCREENSHOT CLIPBOARD PASTE SUPPORT) */}
+          <div
+            className="signal-box ai-generator-box"
+            onPaste={handleAiBoxPaste}
+            tabIndex={0}
+            title="Tip: You can paste screenshots directly here using Ctrl + V!"
+          >
             <div className="signal-box-header">
               <div className="signal-box-title">
                 <span className="sparkle-icon">✨</span> Step 1: AI Setup Generator
               </div>
-              <span className="gemini-tag">Gemini Flash</span>
+              <span className="gemini-tag" style={{ background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(59, 130, 246, 0.2))', color: '#DDD6FE', border: '1px solid rgba(139, 92, 246, 0.45)' }}>
+                🤖 Pip AI (Live Feed)
+              </span>
             </div>
 
             <div className="signal-form-group">
-              <label className="signal-form-label">SELECT ASSET</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <label className="signal-form-label" style={{ margin: 0 }}>SELECT ASSET</label>
+                {livePrices[aiPair] && (
+                  <div className="live-spot-sync-badge" title="Live real-time spot price synced from TradingView OANDA feed">
+                    <span className="spot-sync-pulse" />
+                    <span>LIVE SPOT:</span>
+                    <strong>${formatSpotPrice(aiPair, livePrices[aiPair])}</strong>
+                  </div>
+                )}
+              </div>
               <div className="asset-pills">
                 {['XAUUSD', 'EURUSD', 'GBPUSD', 'BTCUSD', 'US30'].map((p) => (
                   <button
@@ -935,106 +1083,148 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
             </div>
 
             <div className="signal-form-group">
-              <label className="signal-form-label">
-                MARKET CONTEXT / OBSERVATIONS (OPTIONAL)
-              </label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <label className="signal-form-label" style={{ margin: 0 }}>
+                  MARKET CONTEXT / OBSERVATIONS (OPTIONAL)
+                </label>
+                <span style={{ fontSize: '10.5px', color: 'var(--mute)' }}>ICT Confluence Notes</span>
+              </div>
               <textarea
                 className="signal-textarea"
-                placeholder="e.g. Gold at 2685 swept Asian low (SSL), 5m bullish displacement with FVG, expecting continuation towards Asian high 2698 during London Killzone..."
+                placeholder="e.g. Swept session low into bullish FVG, 15m MSS displacement confirmed, targeting liquidity pools..."
                 rows={3}
                 value={aiNotes}
                 onChange={(e) => setAiNotes(e.target.value)}
+                onPaste={handleAiBoxPaste}
               />
+              <div className="quick-bias-tags">
+                {['Swept Asian Low', 'London Judas Swing', '15m Bullish FVG', 'Bearish Order Block', 'Targeting Equal Highs'].map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    className="quick-bias-chip"
+                    onClick={() => setAiNotes((prev) => (prev ? `${prev}, ${tag}` : tag))}
+                  >
+                    + {tag}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div className="signal-form-group">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <label className="signal-form-label" style={{ margin: 0 }}>
-                  DUAL-TIMEFRAME CHARTS (OPTION B)
-                </label>
-                <span style={{ fontSize: '11px', color: 'var(--brand2)', fontWeight: 700 }}>
-                  1H Bias + 15m Entry
-                </span>
-              </div>
-              <div style={{ fontSize: '11.5px', color: 'var(--mute)', marginBottom: '10px', lineHeight: '1.4' }}>
-                Upload <strong>Chart 1 (1H/4H HTF)</strong> for overall orderflow & liquidity, and <strong>Chart 2 (15m/5m LTF)</strong> for the execution sweep & FVG entry (or 1 dual split-screen screenshot).
-              </div>
-
-              <div className="dual-charts-grid">
-                {/* CHART 1: HTF 1H/4H */}
-                <div className="chart-upload-col">
-                  <div className="chart-slot-label">
-                    <span>📊</span> Chart 1: 1H / 4H HTF (Bias)
-                  </div>
-                  {aiHtfImage ? (
-                    <div className="chart-preview-wrap">
-                      <img src={aiHtfImage} alt="HTF Chart" className="chart-preview-img" />
-                      <button
-                        type="button"
-                        className="chart-remove-btn"
-                        onClick={() => setAiHtfImage(null)}
-                      >
-                        ✕ Remove
-                      </button>
+            {/* EXPANDABLE CHART SCREENSHOT ATTACHMENT */}
+            <div className="chart-upload-expandable-box">
+              <div
+                className="chart-toggle-summary-bar"
+                onClick={() => setShowChartUpload((v) => !v)}
+                role="button"
+                tabIndex={0}
+              >
+                <div className="chart-summary-left">
+                  <span className="chart-camera-icon">📸</span>
+                  <div>
+                    <div className="chart-summary-title">Attach Chart Screenshots (Optional)</div>
+                    <div className="chart-summary-sub">
+                      {aiHtfImage || aiLtfImage
+                        ? `${[aiHtfImage && 'Chart 1 (HTF)', aiLtfImage && 'Chart 2 (LTF)'].filter(Boolean).join(' + ')} attached`
+                        : 'Ctrl + V to paste or click to expand upload slots'}
                     </div>
-                  ) : (
-                    <label className="chart-upload-dropzone">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleHtfImageUpload}
-                        style={{ display: 'none' }}
-                      />
-                      <div className="chart-dropzone-content">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                          <circle cx="8.5" cy="8.5" r="1.5"/>
-                          <polyline points="21 15 16 10 5 21"/>
-                        </svg>
-                        <span>Drop 1H/4H Chart</span>
-                        <span className="dropzone-sub">Higher Timeframe Bias</span>
-                      </div>
-                    </label>
-                  )}
+                  </div>
                 </div>
-
-                {/* CHART 2: LTF 15m/5m */}
-                <div className="chart-upload-col">
-                  <div className="chart-slot-label">
-                    <span>⚡</span> Chart 2: 15m / 5m LTF (Entry)
-                  </div>
-                  {aiLtfImage ? (
-                    <div className="chart-preview-wrap">
-                      <img src={aiLtfImage} alt="LTF Chart" className="chart-preview-img" />
-                      <button
-                        type="button"
-                        className="chart-remove-btn"
-                        onClick={() => setAiLtfImage(null)}
-                      >
-                        ✕ Remove
-                      </button>
-                    </div>
-                  ) : (
-                    <label className="chart-upload-dropzone">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleLtfImageUpload}
-                        style={{ display: 'none' }}
-                      />
-                      <div className="chart-dropzone-content">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                          <circle cx="8.5" cy="8.5" r="1.5"/>
-                          <polyline points="21 15 16 10 5 21"/>
-                        </svg>
-                        <span>Drop 15m/5m Chart</span>
-                        <span className="dropzone-sub">Session Sweep & FVG</span>
-                      </div>
-                    </label>
-                  )}
+                <div className="chart-summary-right">
+                  <span className="chart-paste-pill">📋 Paste (Ctrl+V)</span>
+                  <span className="chart-toggle-arrow">{showChartUpload || aiHtfImage || aiLtfImage ? '▲' : '▼'}</span>
                 </div>
               </div>
+
+              {(showChartUpload || aiHtfImage || aiLtfImage) && (
+                <div className="dual-charts-grid" style={{ marginTop: '12px' }}>
+                  {/* CHART 1: HTF 1H/4H */}
+                  <div
+                    className="chart-upload-col"
+                    onPaste={(e) => handleSlotPaste(e, 'htf')}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => handleSlotDrop(e, 'htf')}
+                    tabIndex={0}
+                  >
+                    <div className="chart-slot-label">
+                      <span>📊</span> Chart 1: 1H / 4H HTF (Bias)
+                    </div>
+                    {aiHtfImage ? (
+                      <div className="chart-preview-wrap">
+                        <img src={aiHtfImage} alt="HTF Chart" className="chart-preview-img" />
+                        <button
+                          type="button"
+                          className="chart-remove-btn"
+                          onClick={() => setAiHtfImage(null)}
+                        >
+                          ✕ Remove
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="chart-upload-dropzone" title="Click to browse or press Ctrl+V to paste screenshot">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleHtfImageUpload}
+                          style={{ display: 'none' }}
+                        />
+                        <div className="chart-dropzone-content">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                            <circle cx="8.5" cy="8.5" r="1.5"/>
+                            <polyline points="21 15 16 10 5 21"/>
+                          </svg>
+                          <span>Drop 1H/4H Chart</span>
+                          <span className="dropzone-sub">Higher Timeframe Bias</span>
+                        </div>
+                      </label>
+                    )}
+                  </div>
+
+                  {/* CHART 2: LTF 15m/5m */}
+                  <div
+                    className="chart-upload-col"
+                    onPaste={(e) => handleSlotPaste(e, 'ltf')}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => handleSlotDrop(e, 'ltf')}
+                    tabIndex={0}
+                  >
+                    <div className="chart-slot-label">
+                      <span>⚡</span> Chart 2: 15m / 5m LTF (Entry)
+                    </div>
+                    {aiLtfImage ? (
+                      <div className="chart-preview-wrap">
+                        <img src={aiLtfImage} alt="LTF Chart" className="chart-preview-img" />
+                        <button
+                          type="button"
+                          className="chart-remove-btn"
+                          onClick={() => setAiLtfImage(null)}
+                        >
+                          ✕ Remove
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="chart-upload-dropzone" title="Click to browse or press Ctrl+V to paste screenshot">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleLtfImageUpload}
+                          style={{ display: 'none' }}
+                        />
+                        <div className="chart-dropzone-content">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                            <circle cx="8.5" cy="8.5" r="1.5"/>
+                            <polyline points="21 15 16 10 5 21"/>
+                          </svg>
+                          <span>Drop 15m/5m Chart</span>
+                          <span className="dropzone-sub">Session Sweep & FVG</span>
+                        </div>
+                      </label>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             <button
@@ -1046,11 +1236,11 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
               {aiGenerating ? (
                 <>
                   <span className="spinner-ai" />
-                  <span>Gemini Correlating HTF + LTF Structure...</span>
+                  <span>Pip AI Analyzing Market Price & Structure...</span>
                 </>
               ) : (
                 <>
-                  <span>⚡ Generate Dual-Timeframe Setup with Gemini</span>
+                  <span>⚡ Generate High-Probability Setup with Pip</span>
                 </>
               )}
             </button>
@@ -1065,14 +1255,14 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 {signalDraft.entry ? (
                   <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '100px', background: 'rgba(34, 197, 94, 0.15)', color: '#4ade80', border: '1px solid rgba(34, 197, 94, 0.3)' }}>
-                    ✨ Auto-filled by AI
+                    ✨ Auto-filled by Pip
                   </span>
                 ) : null}
                 <span className="drop-target-tag">VIP Member Terminal</span>
               </div>
             </div>
             <div style={{ fontSize: '12px', color: 'var(--mute)', marginBottom: '14px', lineHeight: '1.5' }}>
-              Auto-filled by Gemini AI. You have 100% full control to review or modify any price levels and notes below before publishing live to VIP members.
+              Auto-filled by Pip AI. You have 100% full control to review or modify any price levels and notes below before publishing live to VIP members.
             </div>
 
             <form onSubmit={handlePublishSignal}>
@@ -1116,7 +1306,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
                     type="number"
                     step="any"
                     className="signal-input highlight-entry"
-                    placeholder="e.g. 2685.50"
+                    placeholder={livePrices[signalDraft.pair || aiPair] ? `e.g. ${formatSpotPrice(signalDraft.pair || aiPair, livePrices[signalDraft.pair || aiPair])}` : 'e.g. Entry'}
                     value={signalDraft.entry}
                     onChange={(e) => updateDraftField('entry', e.target.value)}
                     required
@@ -1128,7 +1318,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
                     type="number"
                     step="any"
                     className="signal-input highlight-sl"
-                    placeholder="e.g. 2679.00"
+                    placeholder="e.g. Stop Loss"
                     value={signalDraft.sl}
                     onChange={(e) => updateDraftField('sl', e.target.value)}
                     required
@@ -1140,7 +1330,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
                     type="number"
                     step="any"
                     className="signal-input highlight-tp"
-                    placeholder="e.g. 2698.50"
+                    placeholder="e.g. Take Profit"
                     value={signalDraft.tp}
                     onChange={(e) => updateDraftField('tp', e.target.value)}
                     required
@@ -1154,8 +1344,8 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
                   <input
                     type="text"
                     className="signal-input"
-                    value={signalDraft.rr ? `${signalDraft.rr}R` : '2.0R'}
-                    onChange={(e) => updateDraftField('rr', e.target.value.replace('R', ''))}
+                    value={signalDraft.rr ? (signalDraft.rr.includes(':') ? signalDraft.rr : `1:${signalDraft.rr}`) : '1:2'}
+                    onChange={(e) => updateDraftField('rr', e.target.value)}
                   />
                 </div>
                 <div className="signal-field-col">
@@ -1198,11 +1388,60 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
         {/* BOTTOM: LIVE SIGNALS LIST ON WEBSITE */}
         <div className="live-signals-manager">
           <div className="live-signals-head">
-            <div className="live-signals-title">
-              📡 Published Signals on Website ({signals.length})
+            <div className="live-signals-head-left">
+              <div className="live-signals-icon-bubble">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9" />
+                  <path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5" />
+                  <circle cx="12" cy="12" r="2" />
+                  <path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5" />
+                  <path d="M19.1 4.9C23 8.8 23 15.2 19.1 19.1" />
+                </svg>
+              </div>
+              <div>
+                <div className="live-signals-title">
+                  <span>Published Signals on Website</span>
+                  <span className="live-signals-count-pill">{signals.length}</span>
+                </div>
+                <div className="live-signals-sub">
+                  Live trade setups synced with the member dashboard. Track real-time market movements, auto-trigger outcomes, and manage active orders.
+                </div>
+              </div>
             </div>
-            <div className="live-signals-sub">
-              Manage live setups, update trade outcomes (Take Profit / Stop Loss), or remove expired signals.
+
+            {/* Quick Filter Tabs */}
+            <div className="live-signals-filter-tabs">
+              <button
+                type="button"
+                className={`sig-tab-btn ${signalTab === 'all' ? 'active' : ''}`}
+                onClick={() => setSignalTab('all')}
+              >
+                All ({signals.length})
+              </button>
+              <button
+                type="button"
+                className={`sig-tab-btn active-tab ${signalTab === 'active' ? 'active' : ''}`}
+                onClick={() => setSignalTab('active')}
+              >
+                <span className="sig-tab-dot active" />
+                Active ({signalCounts.active})
+              </button>
+              <button
+                type="button"
+                className={`sig-tab-btn tp-tab ${signalTab === 'tp' ? 'active' : ''}`}
+                onClick={() => setSignalTab('tp')}
+              >
+                <span className="sig-tab-dot tp" />
+                Hit TP ({signalCounts.tp})
+              </button>
+              <button
+                type="button"
+                className={`sig-tab-btn sl-tab ${signalTab === 'sl' ? 'active' : ''}`}
+                onClick={() => setSignalTab('sl')}
+              >
+                <span className="sig-tab-dot sl" />
+                Hit SL ({signalCounts.sl})
+              </button>
             </div>
           </div>
 
@@ -1210,138 +1449,297 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
           <div className="price-tracker-bar">
             <div className="tracker-bar-left">
               <div className="tracker-pulse-badge">
-                <span className="pulse-dot" /> LIVE MARKET FEED
+                <span className="pulse-dot" />
+                <span className="pulse-text">LIVE MARKET FEED</span>
               </div>
               <div className="tracker-rates-row">
                 {Object.entries(livePrices).map(([pair, price]) => (
-                  <span key={pair} className="tracker-price-pill">
-                    <strong>{pair}:</strong> ${price}
-                  </span>
+                  <div key={pair} className="tracker-price-pill">
+                    <span className="tracker-pair-tag">{pair}:</span>
+                    <strong className="tracker-price-num">${price}</strong>
+                  </div>
                 ))}
               </div>
               {lastCheckedTime && (
-                <span className="tracker-last-sync">Synced: {lastCheckedTime}</span>
+                <div className="tracker-last-sync">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                  <span>Synced {lastCheckedTime}</span>
+                </div>
               )}
             </div>
 
             <div className="tracker-bar-right">
-              <label className="auto-toggle-wrap" title="Auto-detect when price touches TP or SL">
-                <input
-                  type="checkbox"
-                  checked={autoTrackingEnabled}
-                  onChange={(e) => setAutoTrackingEnabled(e.target.checked)}
-                />
-                <span>Auto-Trigger TP/SL ({autoTrackingEnabled ? 'Active' : 'Off'})</span>
-              </label>
+              <div className="auto-toggle-box">
+                <span className="auto-toggle-label">Auto-Trigger TP/SL</span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={autoTrackingEnabled}
+                  className={`modern-toggle-switch ${autoTrackingEnabled ? 'is-active' : ''}`}
+                  onClick={() => setAutoTrackingEnabled((prev) => !prev)}
+                  title="Auto-detect when live price crosses Take Profit or Stop Loss"
+                >
+                  <span className="toggle-slider-knob" />
+                </button>
+                <span className={`auto-status-text ${autoTrackingEnabled ? 'active' : 'off'}`}>
+                  {autoTrackingEnabled ? 'Active' : 'Off'}
+                </span>
+              </div>
+
               <button
                 type="button"
-                className="btn-check-now"
+                className={`btn-check-now ${isCheckingPrices ? 'is-checking' : ''}`}
                 onClick={() => runPriceCheck()}
                 disabled={isCheckingPrices}
               >
-                {isCheckingPrices ? 'Checking...' : '🔄 Check Price'}
+                <svg
+                  className={`btn-refresh-icon ${isCheckingPrices ? 'spin' : ''}`}
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+                </svg>
+                <span>{isCheckingPrices ? 'Checking...' : 'Check Price'}</span>
               </button>
             </div>
           </div>
 
           {signalsLoading ? (
-            <div className="admin-empty">Loading live signals...</div>
-          ) : signals.length === 0 ? (
-            <div className="admin-empty">No signals published yet. Use the generator above to drop your first signal!</div>
+            <div className="admin-signals-loading">
+              <div className="admin-spinner-dot" />
+              <span>Loading live website signals...</span>
+            </div>
+          ) : filteredSignals.length === 0 ? (
+            <div className="admin-signals-empty-card">
+              <div className="empty-radar-glow">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 2a10 10 0 0 1 10 10" />
+                  <path d="m4.93 4.93 4.24 4.24" />
+                  <path d="m14.83 9.17 4.24-4.24" />
+                  <circle cx="12" cy="12" r="2" />
+                </svg>
+              </div>
+              <h4>No {signalTab === 'all' ? '' : signalTab.toUpperCase() + ' '}Signals Found</h4>
+              <p>
+                {signalTab === 'all'
+                  ? 'No signals published yet. Use the generator above to drop your first live setup!'
+                  : `There are currently no signals marked with "${signalTab}". Select another tab to see all setups.`}
+              </p>
+            </div>
           ) : (
             <div className="admin-signals-table-wrap">
-              <table className="admin-table">
+              <table className="admin-table signals-data-table">
                 <thead>
                   <tr>
                     <th>Asset</th>
                     <th>Direction</th>
                     <th>Entry</th>
-                    <th>Live Price</th>
+                    <th>Live Price / PnL</th>
                     <th>SL</th>
                     <th>TP</th>
                     <th>R:R</th>
                     <th>Session</th>
-                    <th>Status</th>
+                    <th>Status Outcome</th>
                     <th>Created</th>
                     <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {signals.map((s) => (
-                    <tr key={s.id}>
-                      <td>
-                        <strong>{s.pair}</strong>
-                      </td>
-                      <td>
-                        <span className={`signal-dir-pill ${s.direction}`}>
-                          {s.direction === 'buy' ? '▲ BUY' : '▼ SELL'}
-                        </span>
-                      </td>
-                      <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{s.entry}</td>
-                      <td>
-                        {livePrices[s.pair] ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                            <div style={{ fontFamily: 'monospace', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px' }}>
-                              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
-                              ${livePrices[s.pair]}
+                  {filteredSignals.map((s) => {
+                    const livePrice = livePrices[s.pair];
+                    const isBuy = String(s.direction).toLowerCase() === 'buy';
+                    const entryNum = parseFloat(s.entry);
+                    const priceNum = livePrice ? parseFloat(livePrice) : null;
+                    const isGold = (s.pair || '').toUpperCase().includes('XAU') || (s.pair || '').toUpperCase().includes('GOLD');
+                    const pipMultiplier = isGold ? 10 : 10000;
+                    
+                    let floatingPips = null;
+                    let isProfit = false;
+                    let progressData = null;
+                    if (entryNum && priceNum) {
+                      floatingPips = isBuy ? (priceNum - entryNum) * pipMultiplier : (entryNum - priceNum) * pipMultiplier;
+                      isProfit = floatingPips >= 0;
+                      progressData = calcTradeProgress(s, priceNum);
+                    }
+
+                    return (
+                      <tr key={s.id} className={`signal-table-row status-${s.status}`}>
+                        {/* ASSET */}
+                        <td>
+                          <div className="signal-asset-cell">
+                            <div className={`signal-asset-avatar ${isGold ? 'gold-avatar' : 'fx-avatar'}`}>
+                              {isGold ? (
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                                  <polyline points="2 17 12 22 22 17" />
+                                  <polyline points="2 12 12 17 22 12" />
+                                </svg>
+                              ) : (
+                                <span className="fx-symbol">$</span>
+                              )}
                             </div>
-                            {s.status === 'active' && (
-                              <span style={{ fontSize: '10.5px', color: 'var(--brand2)', fontWeight: 600 }}>
-                                {calcTradeProgress(s, livePrices[s.pair]).pipsToTp} pips to TP
-                              </span>
-                            )}
+                            <div className="signal-asset-meta">
+                              <span className="signal-pair-name">{s.pair}</span>
+                              <span className="signal-pair-type">{isGold ? 'Spot Gold' : 'Forex'}</span>
+                            </div>
                           </div>
-                        ) : (
-                          <span style={{ color: 'var(--mute)', fontSize: '11.5px' }}>Connecting...</span>
-                        )}
-                      </td>
-                      <td style={{ fontFamily: 'monospace', color: 'var(--down)' }}>{s.sl}</td>
-                      <td style={{ fontFamily: 'monospace', color: 'var(--up)' }}>{s.tp}</td>
-                      <td>{s.rr}R</td>
-                      <td style={{ fontSize: '12px', color: 'var(--mute)' }}>{s.session || '—'}</td>
-                      <td>
-                        <div className="status-selector-row">
+                        </td>
+
+                        {/* DIRECTION */}
+                        <td>
+                          <span className={`signal-dir-pill ${s.direction}`}>
+                            {isBuy ? (
+                              <>
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="18 15 12 9 6 15" />
+                                </svg>
+                                BUY
+                              </>
+                            ) : (
+                              <>
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="6 9 12 15 18 9" />
+                                </svg>
+                                SELL
+                              </>
+                            )}
+                          </span>
+                        </td>
+
+                        {/* ENTRY */}
+                        <td>
+                          <span className="signal-price-num entry-val">{s.entry}</span>
+                        </td>
+
+                        {/* LIVE PRICE & PNL TRACKING */}
+                        <td>
+                          {priceNum != null ? (
+                            <div className="signal-live-cell">
+                              <div className="signal-live-price-line">
+                                <span className="live-spot-dot" />
+                                <span className="live-spot-price">${livePrice}</span>
+                              </div>
+                              {s.status === 'active' && floatingPips != null ? (
+                                <div className="signal-live-sub">
+                                  <span className={`signal-pnl-chip ${isProfit ? 'pos' : 'neg'}`}>
+                                    {isProfit ? '+' : ''}{floatingPips.toFixed(1)} pips
+                                  </span>
+                                  {progressData && (
+                                    <span className="signal-tp-dist">
+                                      {progressData.pipsToTp} to TP
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className={`signal-final-outcome-chip ${s.status}`}>
+                                  {s.status === 'tp' ? '🎯 Target Hit' : s.status === 'sl' ? '❌ Stopped Out' : 'Active'}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="signal-connecting-pulse">Connecting...</span>
+                          )}
+                        </td>
+
+                        {/* SL */}
+                        <td>
+                          <div className="signal-target-val sl">
+                            <span className="target-prefix">SL</span>
+                            <span className="target-num">{s.sl}</span>
+                          </div>
+                        </td>
+
+                        {/* TP */}
+                        <td>
+                          <div className="signal-target-val tp">
+                            <span className="target-prefix">TP</span>
+                            <span className="target-num">{s.tp}</span>
+                          </div>
+                        </td>
+
+                        {/* R:R */}
+                        <td>
+                          <span className="signal-rr-pill">{String(s.rr).includes(':') ? s.rr : `1:${s.rr}`}</span>
+                        </td>
+
+                        {/* SESSION */}
+                        <td>
+                          <span className="signal-session-pill">
+                            {s.session || 'London KZ'}
+                          </span>
+                        </td>
+
+                        {/* STATUS SELECTOR */}
+                        <td>
+                          <div className="signal-segmented-control" role="group" aria-label="Trade Outcome">
+                            <button
+                              type="button"
+                              className={`signal-seg-btn active${s.status === 'active' ? ' selected' : ''}`}
+                              onClick={() => handleUpdateSignalStatus(s.id, 'active')}
+                              disabled={updatingSignalId === s.id}
+                              title="Set status to Active"
+                            >
+                              <span className="status-seg-dot" />
+                              Active
+                            </button>
+                            <button
+                              type="button"
+                              className={`signal-seg-btn tp${s.status === 'tp' ? ' selected' : ''}`}
+                              onClick={() => handleUpdateSignalStatus(s.id, 'tp')}
+                              disabled={updatingSignalId === s.id}
+                              title="Set status to Hit TP"
+                            >
+                              🎯 Hit TP
+                            </button>
+                            <button
+                              type="button"
+                              className={`signal-seg-btn sl${s.status === 'sl' ? ' selected' : ''}`}
+                              onClick={() => handleUpdateSignalStatus(s.id, 'sl')}
+                              disabled={updatingSignalId === s.id}
+                              title="Set status to Hit SL"
+                            >
+                              ❌ Hit SL
+                            </button>
+                          </div>
+                        </td>
+
+                        {/* CREATED */}
+                        <td>
+                          <span className="signal-created-time">
+                            {formatSignalAge(s.minutesAgo)}
+                          </span>
+                        </td>
+
+                        {/* ACTIONS */}
+                        <td style={{ textAlign: 'right' }}>
                           <button
                             type="button"
-                            className={`status-btn-pill active${s.status === 'active' ? ' current' : ''}`}
-                            onClick={() => handleUpdateSignalStatus(s.id, 'active')}
-                            disabled={updatingSignalId === s.id}
+                            className="signal-action-delete-btn"
+                            onClick={() => handleDeleteSignal(s.id, s.pair)}
+                            title={`Delete ${s.pair} Signal`}
+                            aria-label={`Delete ${s.pair} Signal`}
                           >
-                            Active
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              <line x1="10" y1="11" x2="10" y2="17" />
+                              <line x1="14" y1="11" x2="14" y2="17" />
+                            </svg>
                           </button>
-                          <button
-                            type="button"
-                            className={`status-btn-pill tp${s.status === 'tp' ? ' current' : ''}`}
-                            onClick={() => handleUpdateSignalStatus(s.id, 'tp')}
-                            disabled={updatingSignalId === s.id}
-                          >
-                            🎯 Hit TP
-                          </button>
-                          <button
-                            type="button"
-                            className={`status-btn-pill sl${s.status === 'sl' ? ' current' : ''}`}
-                            onClick={() => handleUpdateSignalStatus(s.id, 'sl')}
-                            disabled={updatingSignalId === s.id}
-                          >
-                            ❌ Hit SL
-                          </button>
-                        </div>
-                      </td>
-                      <td style={{ fontSize: '11px', color: 'var(--mute)' }}>
-                        {s.minutesAgo != null ? `${s.minutesAgo}m ago` : 'Just now'}
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <button
-                          type="button"
-                          className="action-btn reject"
-                          onClick={() => handleDeleteSignal(s.id, s.pair)}
-                          title="Delete Signal"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1360,7 +1758,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
                 <span className="config-card-icon">🤖</span>
                 <div>
                   <div className="config-card-title">AI Signal Engine</div>
-                  <div className="config-card-sub">Google Gemini 1.5 Flash (Dual-Timeframe Vision)</div>
+                  <div className="config-card-sub">Pip AI Vision (Dual-Timeframe Analysis)</div>
                 </div>
               </div>
               <div className="config-card-status">
@@ -1693,19 +2091,25 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
                   </select>
                 </div>
                 <div>
-                  <label className="auth-label" htmlFor="au-tier" style={{ textAlign: 'left' }}>
-                    Tier
+                  <label className="auth-label" htmlFor="au-plan" style={{ textAlign: 'left' }}>
+                    Plan
                   </label>
                   <select
-                    id="au-tier"
-                    className={`tier-select${newUser.tier === 'vip' ? ' tier-vip' : ''}`}
-                    value={newUser.tier}
+                    id="au-plan"
+                    className={`plan-select plan-${newUser.plan || 'free'}`}
+                    value={newUser.plan || 'free'}
                     disabled={newUser.status !== 'approved'}
-                    title={newUser.status !== 'approved' ? 'Approve this user first to set their tier' : undefined}
-                    onChange={(e) => setNewUser((p) => ({ ...p, tier: e.target.value }))}
+                    title={newUser.status !== 'approved' ? 'Approve this user first to set their plan' : undefined}
+                    onChange={(e) => {
+                      const plan = e.target.value;
+                      const tier = plan === 'free' ? 'member' : 'vip';
+                      setNewUser((p) => ({ ...p, plan, tier }));
+                    }}
                   >
-                    <option value="member">Member</option>
-                    <option value="vip">VIP</option>
+                    <option value="free">Free</option>
+                    <option value="starter">Starter VIP</option>
+                    <option value="pro">Pro VIP</option>
+                    <option value="elite">Elite VIP</option>
                   </select>
                 </div>
               </div>

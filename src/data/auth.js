@@ -332,17 +332,17 @@ export async function fetchAllUsers() {
   return snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
 }
 
-// Admin-only: creates a brand-new account with a chosen role/status/tier.
+// Admin-only: creates a brand-new account with a chosen role/status/tier/plan.
 // Goes through the backend (Admin SDK) instead of createUserWithEmailAndPassword
 // here in the browser, because that client-side call would sign this admin
 // browser tab in AS the new user, ending the admin's own session.
-export async function createUserAsAdmin({ name, email, password, role, status, tier }) {
+export async function createUserAsAdmin({ name, email, password, role, status, tier, plan }) {
   try {
     const idToken = await auth.currentUser.getIdToken();
     const res = await fetch(`${NEWS_API_URL}/api/admin/create-user`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
-      body: JSON.stringify({ name, email, password, role, status, tier }),
+      body: JSON.stringify({ name, email, password, role, status, tier, plan }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { ok: false, error: data.error || 'Failed to create user.' };
@@ -375,12 +375,37 @@ export async function deleteUserAsAdmin(uid) {
   }
 }
 
+// Updates user plan ('free' | 'starter' | 'pro' | 'elite') and keeps 'tier' synced.
+export async function setUserPlan(uid, plan) {
+  const tier = plan === 'free' ? 'member' : 'vip';
+  try {
+    await updateDoc(doc(db, 'users', uid), { plan, tier });
+  } catch (err) {
+    // If remote firestore.rules hasn't added 'plan' yet, fallback to updating 'tier'
+    if (err?.code === 'permission-denied') {
+      await updateDoc(doc(db, 'users', uid), { tier });
+    } else {
+      throw err;
+    }
+  }
+}
+
+// Updates user role ('user' | 'admin' | 'dev')
+export async function setUserRole(uid, role) {
+  await updateDoc(doc(db, 'users', uid), { role });
+}
+
 // role: 'user' | 'admin' | 'dev' — gates admin-dashboard access. tier:
 // 'member' | 'vip' — separate axis, unlocks VIP-only tracks (e.g. Advanced).
-// The Admin Dashboard's per-user select sets both together as one
-// Member/VIP/Admin/Dev choice.
-export async function setUserAccess(uid, { role, tier }) {
-  await updateDoc(doc(db, 'users', uid), { role, tier });
+export async function setUserAccess(uid, { role, tier, plan }) {
+  const updates = {};
+  if (role !== undefined) updates.role = role;
+  if (tier !== undefined) updates.tier = tier;
+  if (plan !== undefined) {
+    updates.plan = plan;
+    updates.tier = plan === 'free' ? 'member' : 'vip';
+  }
+  await updateDoc(doc(db, 'users', uid), updates);
 }
 
 // lessonIds: array of lesson ids (e.g. ['l1','l3','a2']) this user is

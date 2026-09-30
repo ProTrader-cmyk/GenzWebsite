@@ -1,10 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { TrendUpIcon } from '../components/ui/CategoryIcons.jsx';
 import MemberDashboard from './member/MemberDashboard.jsx';
 import MemberSignals from './member/MemberSignals.jsx';
 import MemberPipCoach from './member/MemberPipCoach.jsx';
 import MemberPerks from './member/MemberPerks.jsx';
 import MemberTierLocked from './member/MemberTierLocked.jsx';
+import {
+  getNotificationPermission,
+  requestNotificationPermission,
+  subscribeToNotifications,
+  registerNotificationServiceWorker,
+} from '../services/pushNotificationService.js';
 
 const common = { width: 19, height: 19, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' };
 
@@ -38,10 +44,10 @@ function BotIcon(props) {
 }
 
 const NAV_ITEMS = [
-  { key: 'dashboard', label: 'Terminal Overview', Icon: TerminalIcon },
-  { key: 'signals', label: 'VIP Signals Stream', Icon: TrendUpIcon, badge: 'Live' },
-  { key: 'pip', label: 'Pip Trading Coach', Icon: BotIcon, badge: 'PRO', proOnly: true },
-  { key: 'perks', label: 'VIP Perks & Playbooks', Icon: DiamondIcon, badge: 'PRO+', proOnly: true },
+  { key: 'dashboard', label: 'Terminal Overview', shortLabel: 'Overview', Icon: TerminalIcon },
+  { key: 'signals', label: 'VIP Signals Stream', shortLabel: 'Signals', Icon: TrendUpIcon, badge: 'Live' },
+  { key: 'pip', label: 'Pip Trading Coach', shortLabel: 'Pip AI', Icon: BotIcon, badge: 'PRO', proOnly: true },
+  { key: 'perks', label: 'VIP Perks & Playbooks', shortLabel: 'Perks', Icon: DiamondIcon, badge: 'PRO+', proOnly: true },
 ];
 
 const PLAN_OPTIONS = [
@@ -50,9 +56,33 @@ const PLAN_OPTIONS = [
   { key: 'elite', label: 'Elite VIP' },
 ];
 
-export default function MemberArea({ user, doneMap, onExit }) {
-  const [view, setView] = useState('dashboard');
-  const [previewPlan, setPreviewPlan] = useState('elite');
+export default function MemberArea({ user, doneMap, onExit, initialView = 'dashboard' }) {
+  const [view, setView] = useState(initialView);
+
+  const isAdmin = user?.role === 'admin' || user?.role === 'dev';
+  // Actual plan assigned by admin: 'starter' | 'pro' | 'elite' | 'free'
+  const userPlan = user?.plan || (user?.tier === 'vip' ? 'starter' : 'free');
+
+  // Admins can preview any tier ('starter', 'pro', 'elite'); members always use their actual assigned plan
+  const [previewPlan, setPreviewPlan] = useState(() => (isAdmin ? 'elite' : userPlan));
+
+  // Sync state if user's plan is updated in real-time by admin
+  useEffect(() => {
+    if (!isAdmin && userPlan) {
+      setPreviewPlan(userPlan);
+    }
+  }, [isAdmin, userPlan]);
+
+  // Keep view in sync if initialView prop changes
+  useEffect(() => {
+    if (initialView) {
+      setView(initialView);
+    }
+  }, [initialView]);
+
+  const activePlan = isAdmin ? previewPlan : userPlan;
+  const isProOrElite = activePlan === 'pro' || activePlan === 'elite';
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try {
@@ -86,12 +116,103 @@ export default function MemberArea({ user, doneMap, onExit }) {
     } catch {}
   }
 
-  const isProOrElite = previewPlan === 'pro' || previewPlan === 'elite';
+  // ── Push Notifications ──────────────────────────────────────────────
+  const [notifPermission, setNotifPermission] = useState(() => getNotificationPermission());
+  const [showNotifPrompt, setShowNotifPrompt] = useState(false);
+  const [notifToast, setNotifToast] = useState(null); // { title, body }
+
+  // On mount: register service worker + subscribe to notification stream
+  useEffect(() => {
+    registerNotificationServiceWorker();
+
+    // Show the permission prompt if not yet decided
+    if (getNotificationPermission() === 'default') {
+      const timer = setTimeout(() => setShowNotifPrompt(true), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  // Subscribe to Firestore notification stream (only when permission granted)
+  useEffect(() => {
+    if (notifPermission !== 'granted' && notifPermission !== 'default') return;
+
+    const unsubscribe = subscribeToNotifications((data) => {
+      // Show in-app toast
+      setNotifToast({ title: data.title, body: data.body, pair: data.pair, direction: data.direction });
+      // Auto-dismiss after 8 seconds
+      setTimeout(() => setNotifToast(null), 8000);
+    });
+
+    return () => unsubscribe();
+  }, [notifPermission]);
+
+  const handleEnableNotifications = useCallback(async () => {
+    const result = await requestNotificationPermission();
+    setNotifPermission(result);
+    setShowNotifPrompt(false);
+  }, []);
+
+  const handleDismissNotifPrompt = useCallback(() => {
+    setShowNotifPrompt(false);
+  }, []);
 
   return (
     <div className="terminal-shell">
-      {/* SIDEBAR NAVIGATION */}
-      <aside className={`terminal-sidebar${sidebarCollapsed ? ' collapsed' : ''}`}>
+      {/* ── NOTIFICATION PERMISSION PROMPT ── */}
+      {showNotifPrompt && (
+        <div className="notif-permission-banner">
+          <div className="notif-permission-content">
+            <span className="notif-permission-icon">🔔</span>
+            <div className="notif-permission-text">
+              <strong>Enable Signal Alerts</strong>
+              <span>Get instant notifications when new trading signals drop.</span>
+            </div>
+          </div>
+          <div className="notif-permission-actions">
+            <button className="notif-enable-btn" onClick={handleEnableNotifications}>Enable</button>
+            <button className="notif-dismiss-btn" onClick={handleDismissNotifPrompt}>Later</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── IN-APP NOTIFICATION TOAST ── */}
+      {notifToast && (
+        <div className={`notif-toast-banner ${notifToast.direction === 'sell' ? 'sell' : 'buy'}`} onClick={() => { setView('signals'); setNotifToast(null); }}>
+          <span className="notif-toast-icon">⚡</span>
+          <div className="notif-toast-text">
+            <strong>{notifToast.title}</strong>
+            <span>{notifToast.body}</span>
+          </div>
+          <button className="notif-toast-close" onClick={(e) => { e.stopPropagation(); setNotifToast(null); }}>✕</button>
+        </div>
+      )}
+      {/* MOBILE DRAWER BACKDROP */}
+      {mobileDrawerOpen && (
+        <div
+          className="terminal-drawer-backdrop"
+          onClick={() => setMobileDrawerOpen(false)}
+          aria-label="Close menu backdrop"
+        />
+      )}
+
+      {/* SIDEBAR NAVIGATION (Docked on Laptop/Desktop, Slide-in Drawer on Mobile) */}
+      <aside className={`terminal-sidebar${sidebarCollapsed ? ' collapsed' : ''}${mobileDrawerOpen ? ' mobile-open' : ''}`}>
+        {/* MOBILE DRAWER CLOSE HEADER (VISIBLE ON MOBILE ONLY) */}
+        <div className="terminal-drawer-header">
+          <div className="drawer-header-left">
+            <span className="drawer-header-dot" />
+            <span className="drawer-header-title">GENZ VIP PORTAL</span>
+          </div>
+          <button
+            type="button"
+            className="terminal-drawer-close-btn"
+            onClick={() => setMobileDrawerOpen(false)}
+            aria-label="Close drawer"
+          >
+            ✕
+          </button>
+        </div>
+
         {/* USER PROFILE BADGE CARD (HIDEABLE) */}
         {!hideProfileCard && (
           <div className="terminal-user-badge-card">
@@ -104,7 +225,7 @@ export default function MemberArea({ user, doneMap, onExit }) {
             </div>
             <div className="terminal-user-meta">
               <div className="terminal-user-name">{user?.name || user?.email?.split('@')[0] || 'VIP Member'}</div>
-              <div className="terminal-plan-tag">👑 {previewPlan.toUpperCase()} MEMBER</div>
+              <div className="terminal-plan-tag">👑 {activePlan.toUpperCase()} MEMBER</div>
             </div>
             <button
               type="button"
@@ -126,7 +247,10 @@ export default function MemberArea({ user, doneMap, onExit }) {
                 key={item.key}
                 type="button"
                 className={`terminal-nav-btn${view === item.key ? ' active' : ''}${isGated ? ' gated' : ''}`}
-                onClick={() => setView(item.key)}
+                onClick={() => {
+                  setView(item.key);
+                  setMobileDrawerOpen(false);
+                }}
               >
                 <item.Icon className="nav-icon" />
                 <span className="nav-label">{item.label}</span>
@@ -140,25 +264,34 @@ export default function MemberArea({ user, doneMap, onExit }) {
           })}
         </nav>
 
-        {/* TIER PREVIEW SWITCHER */}
+        {/* TIER PREVIEW SWITCHER (ADMIN ONLY) */}
         <div className="terminal-sidebar-bottom">
-          <div className="tier-switcher-box">
-            <div className="tier-switcher-label">View As Plan Tier:</div>
-            <div className="tier-switcher-pills">
-              {PLAN_OPTIONS.map((p) => (
-                <button
-                  key={p.key}
-                  type="button"
-                  className={`tier-pill-btn${previewPlan === p.key ? ' active' : ''}`}
-                  onClick={() => setPreviewPlan(p.key)}
-                >
-                  {p.label.split(' ')[0]}
-                </button>
-              ))}
+          {isAdmin && (
+            <div className="tier-switcher-box">
+              <div className="tier-switcher-label">View As Plan Tier:</div>
+              <div className="tier-switcher-pills">
+                {PLAN_OPTIONS.map((p) => (
+                  <button
+                    key={p.key}
+                    type="button"
+                    className={`tier-pill-btn${previewPlan === p.key ? ' active' : ''}`}
+                    onClick={() => setPreviewPlan(p.key)}
+                  >
+                    {p.label.split(' ')[0]}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
-          <button type="button" className="terminal-exit-btn" onClick={onExit}>
+          <button
+            type="button"
+            className="terminal-exit-btn"
+            onClick={() => {
+              setMobileDrawerOpen(false);
+              onExit();
+            }}
+          >
             ← Return to Website
           </button>
         </div>
@@ -170,18 +303,34 @@ export default function MemberArea({ user, doneMap, onExit }) {
         <header className="terminal-topbar">
           <div className="topbar-left">
             <div className="topbar-heading-row">
+              {/* MOBILE HAMBURGER BUTTON */}
+              <button
+                type="button"
+                className="terminal-mobile-menu-btn"
+                onClick={() => setMobileDrawerOpen(true)}
+                aria-label="Open Navigation Menu"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="3" y1="6" x2="21" y2="6" />
+                  <line x1="3" y1="12" x2="21" y2="12" />
+                  <line x1="3" y1="18" x2="21" y2="18" />
+                </svg>
+              </button>
+
+              {/* DESKTOP/LAPTOP SIDEBAR TOGGLE BUTTON */}
               <button
                 type="button"
                 className={`terminal-sidebar-toggle-btn${sidebarCollapsed ? ' is-collapsed' : ''}`}
                 onClick={() => toggleSidebar()}
                 title={sidebarCollapsed ? "Show Sidebar Menu" : "Hide Sidebar"}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="3" width="18" height="18" rx="2" />
                   <path d="M9 3v18" />
                 </svg>
                 <span>{sidebarCollapsed ? "Show Menu" : "Hide Menu"}</span>
               </button>
+
               <h2 className="topbar-section-title">
                 {NAV_ITEMS.find((n) => n.key === view)?.label}
               </h2>
@@ -194,11 +343,31 @@ export default function MemberArea({ user, doneMap, onExit }) {
           <div className="topbar-right">
             <div className="topbar-live-status">
               <span className="live-pulse-beacon" />
-              <span>MARKET LIVE (ICT UTC+7)</span>
+              <span className="live-status-full">MARKET LIVE (ICT UTC+7)</span>
+              <span className="live-status-mobile">LIVE</span>
             </div>
-            <div className="topbar-plan-pill">
-              <span>★ {previewPlan.toUpperCase()} TIER</span>
+
+            <div
+              className="topbar-plan-pill"
+              onClick={() => setMobileDrawerOpen(true)}
+              title="Click to view plan settings"
+            >
+              <span>★ {activePlan.toUpperCase()}</span>
             </div>
+
+            <button
+              type="button"
+              className="terminal-topbar-exit-btn"
+              onClick={onExit}
+              title="Return to Website"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+              <span>Exit</span>
+            </button>
           </div>
         </header>
 
@@ -208,24 +377,26 @@ export default function MemberArea({ user, doneMap, onExit }) {
             <MemberDashboard
               user={user}
               doneMap={doneMap}
-              previewPlan={previewPlan}
+              previewPlan={activePlan}
               onNavigate={setView}
             />
           )}
 
           {view === 'signals' && (
             <MemberSignals
-              previewPlan={previewPlan}
+              previewPlan={activePlan}
               onNavigate={setView}
             />
           )}
-
 
           {view === 'pip' && (
             !isProOrElite ? (
               <MemberTierLocked
                 feature="pip"
-                onUpgrade={() => setPreviewPlan('pro')}
+                isAdmin={isAdmin}
+                onUpgrade={() => {
+                  if (isAdmin) setPreviewPlan('pro');
+                }}
                 onNavigate={setView}
               />
             ) : (
@@ -237,7 +408,10 @@ export default function MemberArea({ user, doneMap, onExit }) {
             !isProOrElite ? (
               <MemberTierLocked
                 feature="perks"
-                onUpgrade={() => setPreviewPlan('pro')}
+                isAdmin={isAdmin}
+                onUpgrade={() => {
+                  if (isAdmin) setPreviewPlan('pro');
+                }}
                 onNavigate={setView}
               />
             ) : (
@@ -253,16 +427,22 @@ export default function MemberArea({ user, doneMap, onExit }) {
       </main>
 
       {/* MOBILE BOTTOM NAVIGATION BAR */}
-      <nav className="terminal-mobile-tabbar">
+      <nav className="terminal-mobile-tabbar" aria-label="Mobile Member Navigation">
         {NAV_ITEMS.map((item) => (
           <button
             key={item.key}
             type="button"
             className={`terminal-tab-item${view === item.key ? ' active' : ''}`}
-            onClick={() => setView(item.key)}
+            onClick={() => {
+              setView(item.key);
+              setMobileDrawerOpen(false);
+            }}
           >
-            <item.Icon width={18} height={18} />
-            <span>{item.label.split(' ')[0]}</span>
+            <div className="tab-icon-wrap">
+              <item.Icon width={19} height={19} />
+              {item.badge === 'Live' && <span className="tab-dot-live" />}
+            </div>
+            <span className="tab-label">{item.shortLabel || item.label.split(' ')[0]}</span>
           </button>
         ))}
       </nav>

@@ -84,35 +84,54 @@ export default function GoldChart({ initialSymbol = 'gold', defaultTimeframe = '
 
     loadTradingViewScript().then(() => {
       if (cancelled || !tvContainerRef.current) return;
-      tvContainerRef.current.innerHTML = ''; // clear any previous widget instance before re-creating
-      tvWidgetRef.current = new window.TradingView.widget({
-        autosize: true,
-        symbol: symbol.symbol,
-        interval: timeframe,
-        timezone: 'Asia/Bangkok', // GMT+7 Cambodia Time
-        theme: theme === 'light' ? 'light' : 'dark',
-        style: '1',
-        locale: TV_LOCALE,
-        toolbar_bg: cssVar('--bg1'),
-        enable_publishing: false,
-        allow_symbol_change: true,
-        hide_side_toolbar: false,
-        withdateranges: true,
-        details: true,
-        hotlist: true,
-        calendar: true,
-        container_id: tvContainerId,
-        overrides: {
-          'mainSeriesProperties.showCountdown': true,
-          'paneProperties.legendProperties.showSeriesTitle': true,
-          'scalesProperties.showSeriesLastValue': true,
-        },
-      });
+      try {
+        if (tvContainerRef.current) {
+          tvContainerRef.current.innerHTML = ''; // clear any previous widget instance before re-creating
+        }
+        if (window.TradingView && window.TradingView.widget) {
+          tvWidgetRef.current = new window.TradingView.widget({
+            autosize: true,
+            symbol: symbol.symbol,
+            interval: timeframe,
+            timezone: 'Asia/Bangkok', // GMT+7 Cambodia Time
+            theme: theme === 'light' ? 'light' : 'dark',
+            style: '1',
+            locale: TV_LOCALE,
+            toolbar_bg: cssVar('--bg1'),
+            enable_publishing: false,
+            allow_symbol_change: true,
+            hide_side_toolbar: false,
+            withdateranges: true,
+            details: true,
+            hotlist: true,
+            calendar: true,
+            container_id: tvContainerId,
+            overrides: {
+              'mainSeriesProperties.showCountdown': true,
+              'paneProperties.legendProperties.showSeriesTitle': true,
+              'scalesProperties.showSeriesLastValue': true,
+            },
+          });
+        }
+      } catch (err) {
+        console.warn('TradingView initialization error:', err);
+      }
+    }).catch((err) => {
+      console.warn('TradingView script load error:', err);
     });
 
     return () => {
       cancelled = true;
-      tvWidgetRef.current?.remove?.();
+      try {
+        if (tvWidgetRef.current) {
+          const el = document.getElementById(tvContainerId);
+          if (el && el.parentNode && typeof tvWidgetRef.current.remove === 'function') {
+            tvWidgetRef.current.remove();
+          }
+        }
+      } catch {
+        // Suppress TradingView DOM cleanup errors during unmount
+      }
       tvWidgetRef.current = null;
     };
   }, [theme, symbol.symbol, timeframe, tvContainerId]);

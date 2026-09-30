@@ -1,4 +1,4 @@
-export default function MemberTierLocked({ feature, onUpgrade, onNavigate }) {
+export default function MemberTierLocked({ feature, onUpgrade, onNavigate, isAdmin = false }) {
   const isPip = feature === 'pip';
 
   return (
@@ -39,7 +39,7 @@ export default function MemberTierLocked({ feature, onUpgrade, onNavigate }) {
         <div className="tier-locked-matrix">
           <div className="tier-matrix-col starter">
             <div className="matrix-tier-tag">STARTER VIP</div>
-            <div className="matrix-status-text">Your Current Preview</div>
+            <div className="matrix-status-text">{isAdmin ? 'Your Current Preview' : 'Your Current Plan'}</div>
             <ul className="matrix-features-list">
               <li>✓ Basic Signals Feed</li>
               <li>✓ Academy Tracker</li>
@@ -62,13 +62,25 @@ export default function MemberTierLocked({ feature, onUpgrade, onNavigate }) {
 
         {/* ACTION BUTTONS */}
         <div className="tier-locked-actions">
-          <button
-            type="button"
-            className="tier-upgrade-btn"
-            onClick={onUpgrade}
-          >
-            👑 Switch to Pro Preview &amp; Unlock
-          </button>
+          {isAdmin ? (
+            <button
+              type="button"
+              className="tier-upgrade-btn"
+              onClick={onUpgrade}
+            >
+              👑 Switch to Pro Preview &amp; Unlock
+            </button>
+          ) : (
+            <a
+              href="https://t.me/Sunhour_S"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="tier-upgrade-btn"
+              style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              👑 Upgrade to Pro VIP on Telegram
+            </a>
+          )}
           <button
             type="button"
             className="tier-back-btn"

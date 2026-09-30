@@ -16,6 +16,9 @@ const PAIR_TO_TV_SYMBOL = {
   GBPUSD: 'OANDA:GBPUSD',
   USDJPY: 'OANDA:USDJPY',
   AUDUSD: 'OANDA:AUDUSD',
+  US30: 'OANDA:US30USD',
+  DJ30: 'OANDA:US30USD',
+  DJI: 'OANDA:US30USD',
 };
 
 const TV_SYMBOL_TO_PAIR = {
@@ -25,6 +28,7 @@ const TV_SYMBOL_TO_PAIR = {
   'OANDA:GBPUSD': 'GBPUSD',
   'OANDA:USDJPY': 'USDJPY',
   'OANDA:AUDUSD': 'AUDUSD',
+  'OANDA:US30USD': 'US30',
 };
 
 /**
@@ -270,6 +274,14 @@ export async function fetchLivePrice(pair = 'XAUUSD') {
       }
     }
 
+    if (norm === 'US30' || norm === 'DJ30' || norm === 'DJI') {
+      const price = await fetchTradingViewOandaPrice('OANDA:US30USD');
+      if (price) {
+        cache[norm] = { price, timestamp: now };
+        return price;
+      }
+    }
+
     // Forex pairs via open exchange rate API
     const forexPrice = await fetchForexPrice(norm);
     if (forexPrice) {
@@ -288,8 +300,8 @@ export async function fetchLivePrice(pair = 'XAUUSD') {
  * This guarantees the live spot price matches the OANDA chart on screen 1:1.
  */
 async function fetchTradingViewOandaPrice(symbol) {
-  // If Gold / Silver, use CFD scanner
-  if (symbol === 'OANDA:XAUUSD' || symbol === 'OANDA:XAGUSD') {
+  // If Gold / Silver / Indices, use CFD scanner
+  if (symbol === 'OANDA:XAUUSD' || symbol === 'OANDA:XAGUSD' || symbol === 'OANDA:US30USD') {
     try {
       const res = await fetch('https://scanner.tradingview.com/cfd/scan', {
         method: 'POST',

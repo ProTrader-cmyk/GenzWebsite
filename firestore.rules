@@ -55,13 +55,14 @@ service cloud.firestore {
           && request.resource.data.status == resource.data.status
           && request.resource.data.role == resource.data.role
           && request.resource.data.get('tier', null) == resource.data.get('tier', null)
+          && request.resource.data.get('plan', null) == resource.data.get('plan', null)
           && request.resource.data.name == resource.data.name
           && request.resource.data.email == resource.data.email
           && request.resource.data.get('allowedLessons', null) == resource.data.get('allowedLessons', null))
         ||
         ((isAdmin() || isDev())
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'role', 'tier', 'allowedLessons'])
-          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['tier']) || resource.data.status == 'approved'))
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'role', 'tier', 'plan', 'allowedLessons'])
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['tier', 'plan']) || resource.data.status == 'approved'))
       );
 
       allow delete: if false;
@@ -133,6 +134,14 @@ service cloud.firestore {
     // Any signed-in user may read the signals feed; only admin/dev can publish
     // or update signal statuses (active -> tp -> sl).
     match /signals/{signalId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin() || isDev();
+    }
+
+    // Push notification broadcast docs (src/services/pushNotificationService.js)
+    // Written by admin when a signal is published; read by all authenticated
+    // member clients via onSnapshot to trigger browser notifications.
+    match /notifications/{notifId} {
       allow read: if request.auth != null;
       allow write: if isAdmin() || isDev();
     }
