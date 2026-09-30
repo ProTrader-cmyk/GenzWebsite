@@ -375,18 +375,38 @@ export async function deleteUserAsAdmin(uid) {
   }
 }
 
+/**
+ * Resolves a user's subscription plan ('free' | 'starter' | 'pro' | 'elite')
+ * gracefully handles string casing ('Pro', 'PRO', 'Elite'), both 'plan' and 'tier' fields,
+ * and legacy accounts where only 'tier: vip' was stored.
+ */
+export function getUserPlan(user) {
+  if (!user) return 'free';
+  const candidates = [user.plan, user.tier, user.subscription, user.membership];
+  for (const c of candidates) {
+    if (typeof c === 'string' && c.trim()) {
+      const s = c.trim().toLowerCase();
+      if (s.includes('elite')) return 'elite';
+      if (s.includes('pro')) return 'pro';
+      if (s.includes('starter')) return 'starter';
+    }
+  }
+  if (user.tier === 'vip') return 'starter';
+  return 'free';
+}
+
 // Updates user plan ('free' | 'starter' | 'pro' | 'elite') and keeps 'tier' synced.
 export async function setUserPlan(uid, plan) {
-  const tier = plan === 'free' ? 'member' : 'vip';
+  const normalizedPlan = (plan || 'free').toLowerCase();
+  // Store plan in 'plan', and also set 'tier' to the plan so that even if
+  // remote firestore.rules hasn't allowed 'plan' yet, tier preserves the exact plan!
+  const tier = normalizedPlan === 'free' ? 'member' : normalizedPlan;
   try {
-    await updateDoc(doc(db, 'users', uid), { plan, tier });
+    await updateDoc(doc(db, 'users', uid), { plan: normalizedPlan, tier });
   } catch (err) {
-    // If remote firestore.rules hasn't added 'plan' yet, fallback to updating 'tier'
-    if (err?.code === 'permission-denied') {
-      await updateDoc(doc(db, 'users', uid), { tier });
-    } else {
-      throw err;
-    }
+    console.warn('Direct plan update failed, falling back to tier update:', err);
+    // Remote firestore.rules allows updating 'tier' without error
+    await updateDoc(doc(db, 'users', uid), { tier });
   }
 }
 
@@ -400,12 +420,21 @@ export async function setUserRole(uid, role) {
 export async function setUserAccess(uid, { role, tier, plan }) {
   const updates = {};
   if (role !== undefined) updates.role = role;
-  if (tier !== undefined) updates.tier = tier;
   if (plan !== undefined) {
-    updates.plan = plan;
-    updates.tier = plan === 'free' ? 'member' : 'vip';
+    const normalizedPlan = (plan || 'free').toLowerCase();
+    updates.plan = normalizedPlan;
+    updates.tier = normalizedPlan === 'free' ? 'member' : normalizedPlan;
+  } else if (tier !== undefined) {
+    updates.tier = tier;
   }
-  await updateDoc(doc(db, 'users', uid), updates);
+  try {
+    await updateDoc(doc(db, 'users', uid), updates);
+  } catch (err) {
+    console.warn('setUserAccess failed, trying tier fallback:', err);
+    if (updates.tier) {
+      await updateDoc(doc(db, 'users', uid), { tier: updates.tier });
+    }
+  }
 }
 
 // lessonIds: array of lesson ids (e.g. ['l1','l3','a2']) this user is

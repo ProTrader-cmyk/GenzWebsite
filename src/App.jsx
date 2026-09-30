@@ -32,6 +32,7 @@ import {
   clearSession,
   logoutUser,
   markLessonDone,
+  getUserPlan,
 } from './data/auth.js';
 import { submitFeedback } from './data/feedback.js';
 
@@ -440,7 +441,8 @@ export default function App() {
   // VIP is a separate tier from approved/admin — it only gates VIP-only
   // tracks (e.g. Advanced), set via Admin Dashboard's per-user Role dropdown
   // (data/auth.js: setUserAccess). An admin or dev always counts as VIP too.
-  const isVip = user.tier === 'vip' || isAdmin;
+  const userPlan = getUserPlan(user);
+  const isVip = user.tier === 'vip' || userPlan !== 'free' || isAdmin;
 
   // Users with an active VIP subscription plan ('starter', 'pro', 'elite'),
   // or assigned VIP tier, or admin/dev accounts skip the pricing/payment section
@@ -448,7 +450,7 @@ export default function App() {
   const hasActivePlan = Boolean(
     isAdmin ||
     user?.tier === 'vip' ||
-    (user?.plan && user.plan !== 'free')
+    userPlan !== 'free'
   );
   // An admin/dev account ignores allowedLessons entirely — that override
   // exists to restrict/grant lessons for regular accounts, and should never
@@ -535,7 +537,7 @@ export default function App() {
                 doneMap={doneMap}
                 onExit={backToCategories}
                 onViewProfile={() => setSection('profile')}
-                initialView={user?.plan === 'starter' ? 'dashboard' : 'pip'}
+                initialView={userPlan === 'starter' ? 'dashboard' : 'pip'}
               />
             </Suspense>
           ) : (

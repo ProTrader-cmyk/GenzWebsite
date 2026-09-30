@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import Footer from './Footer.jsx';
 import { fetchMonthEntries, fetchRangeEntries, saveDayEntry, deleteDayEntry, dateKey, daysInMonth } from '../data/journal.js';
 import { uploadProfilePhoto } from '../data/avatar.js';
+import { getUserPlan } from '../data/auth.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
 import { DollarIcon, TrendUpIcon, StarIcon, CameraIcon } from './ui/CategoryIcons.jsx';
@@ -81,7 +82,7 @@ export default function Profile({ onBack, uid, user, hideFooter = false, doneMap
   const locale = LOCALE_BY_LANG[lang] || 'en-US';
   const gradientId = useId();
 
-  const isVip = user.tier === 'vip';
+  const isVip = user.tier === 'vip' || getUserPlan(user) !== 'free';
 
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoError, setPhotoError] = useState('');

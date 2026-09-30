@@ -11,6 +11,7 @@ import {
   subscribeToNotifications,
   registerNotificationServiceWorker,
 } from '../services/pushNotificationService.js';
+import { getUserPlan } from '../data/auth.js';
 
 const common = { width: 19, height: 19, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' };
 
@@ -57,14 +58,15 @@ const PLAN_OPTIONS = [
 ];
 
 export default function MemberArea({ user, doneMap, onExit, initialView = 'dashboard' }) {
-  const [view, setView] = useState(initialView);
-
   const isAdmin = user?.role === 'admin' || user?.role === 'dev';
   // Actual plan assigned by admin: 'starter' | 'pro' | 'elite' | 'free'
-  const userPlan = user?.plan || (user?.tier === 'vip' ? 'starter' : 'free');
+  const userPlan = getUserPlan(user);
 
   // Admins can preview any tier ('starter', 'pro', 'elite'); members always use their actual assigned plan
   const [previewPlan, setPreviewPlan] = useState(() => (isAdmin ? 'elite' : userPlan));
+
+  const activePlan = isAdmin ? previewPlan : userPlan;
+  const isProOrElite = activePlan === 'pro' || activePlan === 'elite';
 
   // Sync state if user's plan is updated in real-time by admin
   useEffect(() => {
@@ -73,15 +75,23 @@ export default function MemberArea({ user, doneMap, onExit, initialView = 'dashb
     }
   }, [isAdmin, userPlan]);
 
+  const [view, setView] = useState(() => {
+    if (initialView === 'pip' && !isProOrElite && !isAdmin) {
+      return 'dashboard';
+    }
+    return initialView;
+  });
+
   // Keep view in sync if initialView prop changes
   useEffect(() => {
     if (initialView) {
-      setView(initialView);
+      if (initialView === 'pip' && !isProOrElite && !isAdmin) {
+        setView('dashboard');
+      } else {
+        setView(initialView);
+      }
     }
-  }, [initialView]);
-
-  const activePlan = isAdmin ? previewPlan : userPlan;
-  const isProOrElite = activePlan === 'pro' || activePlan === 'elite';
+  }, [initialView, isProOrElite, isAdmin]);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {

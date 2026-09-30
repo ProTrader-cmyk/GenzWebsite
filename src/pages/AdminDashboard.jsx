@@ -8,6 +8,7 @@ import {
   setUserLessonAccess,
   createUserAsAdmin,
   deleteUserAsAdmin,
+  getUserPlan,
 } from '../data/auth.js';
 import { lessons } from '../data/lessons.js';
 import { appsLessons } from '../data/appsLessons.js';
@@ -618,13 +619,11 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
   }
 
   function userPlan(u) {
-    if (u.plan) return u.plan;
-    if (u.tier === 'vip') return 'starter';
-    return 'free';
+    return getUserPlan(u);
   }
 
   async function handlePlanChange(uid, plan) {
-    const tier = plan === 'free' ? 'member' : 'vip';
+    const tier = plan === 'free' ? 'member' : plan;
     setUpdatingUid(uid);
     try {
       await setUserPlan(uid, plan);

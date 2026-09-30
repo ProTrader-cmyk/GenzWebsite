@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
 import { PersonIcon } from './ui/CategoryIcons.jsx';
+import { getUserPlan } from '../data/auth.js';
 
 function initials(name, email) {
   const source = (name || email || '?').trim();
@@ -24,7 +25,7 @@ export function ProfileDetails({ user, onViewProfile }) {
   const t = getStrings(lang).profile;
   const status = user.status === 'approved' || user.status === 'rejected' ? user.status : 'pending';
   const statusLabel = { pending: t.statusPending, approved: t.statusApproved, rejected: t.statusRejected }[status];
-  const isVip = user.tier === 'vip';
+  const isVip = user.tier === 'vip' || getUserPlan(user) !== 'free';
 
   return (
     <>
