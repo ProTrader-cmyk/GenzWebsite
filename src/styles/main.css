@@ -1254,7 +1254,7 @@ h3 .bar{width:3px;height:18px;border-radius:2px;background:var(--gold);flex:none
 /* TABLET & MOBILE PHONES (< 960px) */
 @media(max-width:960px){
   .wrap.wrap-terminal{padding:10px 12px 76px;}
-  .terminal-shell{border-radius:14px;min-height:auto;border:none;background:transparent;box-shadow:none;}
+  .terminal-shell{flex-direction:column;border-radius:14px;min-height:auto;border:none;background:transparent;box-shadow:none;overflow:visible;}
   .terminal-main-viewport{background:#0A0D14;border:1px solid rgba(255,255,255,0.08);border-radius:16px;overflow:hidden;}
 
   /* Desktop sidebar toggle hidden on mobile, replaced by mobile hamburger button */
@@ -1327,11 +1327,10 @@ h3 .bar{width:3px;height:18px;border-radius:2px;background:var(--gold);flex:none
   /* MOBILE BOTTOM TAB BAR */
   .terminal-mobile-tabbar{
     display:flex;
-    position:fixed;
+    position:sticky;
     bottom:0;
-    left:0;
-    right:0;
     z-index:95;
+    flex:none;
     background:rgba(13,17,26,0.96);
     backdrop-filter:blur(12px);
     -webkit-backdrop-filter:blur(12px);
