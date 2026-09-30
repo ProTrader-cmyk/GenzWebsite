@@ -152,6 +152,13 @@ export async function generateAiSignal({
   }
 
   const normPair = (pair || 'XAUUSD').toUpperCase().replace('/', '').trim();
+  const allImages = [
+    ...(Array.isArray(base64Images) ? base64Images : []),
+    ...(base64Image ? [base64Image] : []),
+  ].filter(Boolean);
+  if (allImages.length < 2) {
+    throw new Error('Attach both a readable HTF (1H/4H) chart and LTF (15m/5m) chart before asking Pip to create a signal.');
+  }
 
   // Obtain the true real-time spot price
   let activePrice = currentPrice ? parseFloat(currentPrice) : null;
@@ -165,56 +172,47 @@ export async function generateAiSignal({
 
   const spotPriceStr = activePrice ? String(activePrice) : '';
 
-  const systemInstruction = `You are Pip, the GenZ Trader Institutional ICT Signal Engine.
-You specialize in Gold (XAU/USD), Forex pairs, Crypto, and Indices using Inner Circle Trader (ICT) Smart Money Concepts (SMC) with Top-Down Dual-Timeframe Analysis:
-- Higher Timeframe (HTF - 1H/4H): Identify overall orderflow, Dealing Range, HTF Liquidity (BSL/SSL pools), and major PD Arrays (Daily/4H/1H FVG, Order Blocks).
-- Lower Timeframe (LTF - 15m/5m): Identify session high/low liquidity sweeps during London (14:00-17:00 GMT+7) or New York (19:00-22:00 GMT+7), Market Structure Shift (MSS) with displacement body, and execution entry inside the FVG / OTE (62%-79%).
-- Mandatory Risk-to-Reward: Strict 1:2 Risk to Reward ratio (Reward = 2.0 * Risk).
-${spotPriceStr ? `- CRITICAL REAL-TIME SPOT PRICE: The current live market spot price for ${normPair} is ${spotPriceStr}. All generated levels (Entry, Stop Loss, Take Profit) MUST be anchored around this exact live price (${spotPriceStr}). Never hallucinate outdated prices (e.g. 2600-2750 for Gold).` : ''}
+  const systemInstruction = `You are Pip, an evidence-first ICT/SMC signal analyst. Never invent chart evidence or force a trade.
+You receive exactly two screenshots in order: image 1 is HTF (1H/4H), image 2 is LTF (15m/5m). If either chart, timeframe, price scale, swing points, or required evidence is unreadable, set tradeAllowed=false and explain why. Treat admin notes as hypotheses, not proof.
 
-Return ONLY a valid, raw JSON object (without markdown code fences, no extra commentary) matching this exact format:
+Before allowing a signal, assess every check:
+1. HTF structure: identify the latest meaningful swing high/low and bullish or bearish bias using visible BOS/CHoCH/MSS price action.
+2. Liquidity: identify BSL/SSL and a visible sweep/reclaim. An ordinary touch is not a sweep.
+3. PD array: identify a visible, unmitigated, directionally aligned FVG/iFVG, order block, breaker, or mitigation block; estimate its exact low/high from the chart scale.
+4. Fibonacci: anchor the retracement to the actual displacement swing low/high. For a bullish impulse measure low-to-high and retracement down from the high; for bearish measure high-to-low and retracement up from the low. Report both swing prices and retracement percent. Require 61.8%-79% OTE and overlap between the OTE price and the selected PD-array zone.
+5. LTF execution: require a direction-aligned MSS/BOS with displacement after the liquidity event, and entry inside the PD-array/OTE overlap. Reject if price has already invalidated the setup or reached its target.
+6. Risk: SL must be beyond structural invalidation, TP at a logical opposing liquidity target, and the setup must support 1:2 R:R.
+
+Set tradeAllowed=true only when HTF bias, liquidity sweep, valid PD array, independently consistent Fibonacci OTE overlap, and LTF structure confirmation are all clearly visible. If any are missing, unclear, or conflict, set tradeAllowed=false. Never fill gaps with assumptions.
+${spotPriceStr ? `Current live price for ${normPair}: ${spotPriceStr}. Use it to check whether the chart setup is still current; do not force entry to equal spot.` : 'Live spot is unavailable; be extra cautious about whether the chart setup is still actionable.'}
+
+Return only raw JSON with these keys:
 {
+  "tradeAllowed": boolean,
   "pair": "${normPair}",
   "direction": "buy" or "sell",
-  "entry": ${spotPriceStr || '4174.00'},
+  "htfBias": "bullish" or "bearish",
+  "htfStructureEvidence": "string",
+  "liquidityEvidence": "string",
+  "ltfStructureEvidence": "string",
+  "pdArrayType": "FVG, iFVG, order block, breaker, or mitigation block",
+  "pdArrayLow": number,
+  "pdArrayHigh": number,
+  "fibSwingLow": number,
+  "fibSwingHigh": number,
+  "fibRetracementPercent": number,
+  "entry": number,
   "sl": number,
   "tp": number,
   "rr": 2.0,
-  "session": "London Killzone" or "New York AM Killzone",
-  "reason": "Detailed institutional ICT narrative citing the liquidity sweep, MSS displacement, and FVG entry anchored to current price ${spotPriceStr || ''}."
+  "session": "London Killzone" or "New York AM Killzone" or "Other",
+  "reason": "Concise setup rationale or specific reason there is no valid trade."
 }`;
 
-  const allImages = [
-    ...(Array.isArray(base64Images) ? base64Images : []),
-    ...(base64Image ? [base64Image] : []),
-  ].filter(Boolean);
-
-  let userPrompt = '';
-  if (allImages.length >= 2) {
-    userPrompt = `Perform Top-Down Dual-Timeframe ICT Analysis for ${normPair}.
-The screenshots contain:
-- Higher Timeframe (HTF 1H/4H): Establish market bias, dealing range, and draw on liquidity.
-- Lower Timeframe (LTF 15m/5m): Locate liquidity sweep, MSS displacement, and precision FVG entry.
-${spotPriceStr ? `The current live market spot price is ${spotPriceStr}. Anchor all levels around this current price.` : ''}
-${notes.trim() ? `Trader Context Notes: "${notes.trim()}".` : ''}
-Provide an institutional ICT setup with exact numeric entry, sl, and tp (strict 1:2 R:R) adhering strictly to the HTF bias.`;
-  } else if (allImages.length === 1) {
-    userPrompt = `Perform Top-Down Dual-Timeframe / ICT Analysis for ${normPair} using this chart screenshot.
-If the chart shows a dual split-screen layout (e.g. 1H on left and 15m on right), correlate both timeframes top-down: establish bias from 1H and pinpoint execution entry from 15m.
-${spotPriceStr ? `The current live market spot price is ${spotPriceStr}. Anchor all levels around this current price.` : ''}
-${notes.trim() ? `Trader Context Notes: "${notes.trim()}".` : ''}
-Provide an institutional ICT setup with specific entry, sl, and tp with strict 1:2 R:R.`;
-  } else {
-    userPrompt = `The trader requested an institutional ICT Smart Money Concept (SMC) setup for ${normPair} without uploading chart screenshots.
-${spotPriceStr ? `CRITICAL - CURRENT LIVE MARKET SPOT PRICE: ${spotPriceStr}.` : ''}
-MANDATORY RULES:
-1. Generate an institutional setup based strictly on the current live market price of ${normPair} (${spotPriceStr || 'live spot price'}).
-2. Entry price MUST be positioned at or very close to the live spot price (within a tight retest or immediate execution).
-3. If BUY: Entry = ${spotPriceStr || 'current price'}, Stop Loss strictly below Entry, Take Profit strictly above Entry, with strict 1:2 R:R (|TP - Entry| = 2.0 * |Entry - SL|).
-4. If SELL: Entry = ${spotPriceStr || 'current price'}, Stop Loss strictly above Entry, Take Profit strictly below Entry, with strict 1:2 R:R (|Entry - TP| = 2.0 * |SL - Entry|).
-${notes.trim() ? `Trader Context Notes: "${notes.trim()}".` : ''}
-Return ONLY valid JSON with keys: pair, direction, entry, sl, tp, rr, session, reason.`;
-  }
+  const userPrompt = `Analyze ${normPair} using the attached HTF (image 1) and LTF (image 2) charts. Apply every evidence and no-trade rule.
+${spotPriceStr ? `Live price: ${spotPriceStr}.` : ''}
+${notes.trim() ? `Admin observations (verify against chart; do not assume true): "${notes.trim()}".` : ''}
+Use actual visible price-scale values and do not fabricate precision. Return tradeAllowed=false if required evidence is unclear or absent.`;
 
   const contents = [];
   const currentParts = [];
@@ -239,7 +237,7 @@ Return ONLY valid JSON with keys: pair, direction, entry, sl, tp, rr, session, r
     contents,
     generationConfig: {
       temperature: 0.25,
-      maxOutputTokens: 1000,
+      maxOutputTokens: 1400,
     },
   };
 
@@ -289,61 +287,75 @@ Return ONLY valid JSON with keys: pair, direction, entry, sl, tp, rr, session, r
   }
   const parsed = JSON.parse(jsonMatch[0]);
 
-  let entry = parseFloat(parsed.entry) || 0;
-  let sl = parseFloat(parsed.sl) || 0;
-  let tp = parseFloat(parsed.tp) || 0;
-  const rawDir = String(parsed.direction || 'buy').toLowerCase();
-  const direction = (rawDir === 'sell' || rawDir === 'short') ? 'sell' : 'buy';
-
-  // 1. Sanity-check entry price against live market spot price
-  if (activePrice && (entry <= 0 || Math.abs(entry - activePrice) / activePrice > 0.08)) {
-    console.warn(`[Pip AI] Generated entry ${entry} deviates from live price ${activePrice}. Re-anchoring to live price.`);
-    entry = activePrice;
-  } else if (!entry && activePrice) {
-    entry = activePrice;
+  if (parsed.tradeAllowed !== true) {
+    throw new Error(`Pip found no confirmed setup. ${parsed.reason || 'Wait for all structure, liquidity, PD-array, and Fibonacci checks to align.'}`);
   }
 
-  // 2. Set realistic risk defaults and precision per asset
-  let defaultRisk = 6.0;
-  let decimals = 2;
-
-  if (normPair.includes('EUR') || normPair.includes('GBP') || normPair.includes('AUD')) {
-    defaultRisk = 0.00200; // 20 pips
-    decimals = 5;
-  } else if (normPair.includes('JPY')) {
-    defaultRisk = 0.250;
-    decimals = 3;
-  } else if (normPair.includes('BTC')) {
-    defaultRisk = Math.round(entry * 0.008) || 600;
-    decimals = 1;
-  } else if (normPair.includes('US30')) {
-    defaultRisk = 120;
-    decimals = 1;
-  } else if (normPair.includes('XAU') || normPair.includes('GOLD')) {
-    defaultRisk = 6.0; // $6 move on Gold
-    decimals = 2;
+  const rawDir = String(parsed.direction || '').toLowerCase();
+  if (rawDir !== 'buy' && rawDir !== 'sell') throw new Error('Pip returned an invalid trade direction.');
+  const direction = rawDir;
+  const htfBias = String(parsed.htfBias || '').toLowerCase();
+  const evidenceFields = ['htfStructureEvidence', 'liquidityEvidence', 'ltfStructureEvidence', 'pdArrayType'];
+  if (evidenceFields.some((key) => typeof parsed[key] !== 'string' || !parsed[key].trim())) {
+    throw new Error('Pip did not provide all required market-structure and PD-array evidence. Please retry with clearer charts.');
+  }
+  if ((direction === 'buy' && htfBias !== 'bullish') || (direction === 'sell' && htfBias !== 'bearish')) {
+    throw new Error('Pip signal direction does not match the higher-timeframe market bias.');
   }
 
-  // 3. Guarantee valid SL, TP, and strict 1:2 Risk to Reward
-  if (direction === 'buy') {
-    let risk = (sl > 0 && sl < entry) ? (entry - sl) : defaultRisk;
-    if (risk < defaultRisk * 0.2 || risk > defaultRisk * 3) {
-      risk = defaultRisk;
-    }
-    sl = Number((entry - risk).toFixed(decimals));
-    tp = Number((entry + risk * 2).toFixed(decimals));
-  } else {
-    // SELL
-    let risk = (sl > 0 && sl > entry) ? (sl - entry) : defaultRisk;
-    if (risk < defaultRisk * 0.2 || risk > defaultRisk * 3) {
-      risk = defaultRisk;
-    }
-    sl = Number((entry + risk).toFixed(decimals));
-    tp = Number((entry - risk * 2).toFixed(decimals));
+  let entry = Number(parsed.entry);
+  let sl = Number(parsed.sl);
+  let tp = Number(parsed.tp);
+  const pdLow = Number(parsed.pdArrayLow);
+  const pdHigh = Number(parsed.pdArrayHigh);
+  const swingLow = Number(parsed.fibSwingLow);
+  const swingHigh = Number(parsed.fibSwingHigh);
+  const statedFibPercent = Number(parsed.fibRetracementPercent);
+  const swingRange = swingHigh - swingLow;
+  if (![entry, sl, tp, pdLow, pdHigh, swingLow, swingHigh, statedFibPercent].every(Number.isFinite) ||
+      entry <= 0 || sl <= 0 || tp <= 0 || pdLow <= 0 || pdHigh <= pdLow || swingLow <= 0 || swingRange <= 0) {
+    throw new Error('Pip returned incomplete or invalid price levels. Please retry with readable chart scales.');
   }
 
-  const roundFactor = Math.pow(10, decimals);
+  const fibPercent = direction === 'buy'
+    ? ((swingHigh - entry) / swingRange) * 100
+    : ((entry - swingLow) / swingRange) * 100;
+  const fibBandLow = direction === 'buy'
+    ? swingHigh - swingRange * 0.79
+    : swingLow + swingRange * 0.618;
+  const fibBandHigh = direction === 'buy'
+    ? swingHigh - swingRange * 0.618
+    : swingLow + swingRange * 0.79;
+  const priceTolerance = swingRange * 0.015;
+  const arraysOverlapFib = pdHigh >= fibBandLow - priceTolerance && pdLow <= fibBandHigh + priceTolerance;
+  const entryInPdArray = entry >= pdLow - priceTolerance && entry <= pdHigh + priceTolerance;
+  const entryInOte = entry >= fibBandLow - priceTolerance && entry <= fibBandHigh + priceTolerance;
+  if (statedFibPercent < 61.8 || statedFibPercent > 79 || fibPercent < 61.8 - 1.5 || fibPercent > 79 + 1.5 ||
+      Math.abs(statedFibPercent - fibPercent) > 3 || !arraysOverlapFib || !entryInPdArray || !entryInOte) {
+    throw new Error('Pip could not verify that the entry overlaps both the PD array and the 61.8%-79% Fibonacci OTE zone. No signal was created.');
+  }
+
+  const decimals = normPair.includes('EUR') || normPair.includes('GBP') || normPair.includes('AUD') ? 5
+    : normPair.includes('JPY') ? 3
+      : normPair.includes('BTC') || normPair.includes('US30') ? 1 : 2;
+  const roundFactor = 10 ** decimals;
   entry = Math.round(entry * roundFactor) / roundFactor;
+  sl = Math.round(sl * roundFactor) / roundFactor;
+  tp = Math.round(tp * roundFactor) / roundFactor;
+  const risk = direction === 'buy' ? entry - sl : sl - entry;
+  const reward = direction === 'buy' ? tp - entry : entry - tp;
+  if (risk <= 0 || reward <= 0) throw new Error('Pip stop loss or target is on the wrong side of the entry.');
+  const proposedRr = reward / risk;
+  if (Math.abs(proposedRr - 2) > 0.3) throw new Error('Pip setup does not meet the required 1:2 risk-to-reward ratio.');
+  if (activePrice && (direction === 'buy' ? activePrice <= sl || activePrice >= tp : activePrice >= sl || activePrice <= tp)) {
+    throw new Error('The live price has already invalidated or completed this setup. Refresh both charts and analyze again.');
+  }
+
+  // Keep Pip's structural entry and invalidation level. Normalize only the
+  // target to the app's strict 1:2 convention after checking its proposed RR.
+  tp = Number((direction === 'buy' ? entry + risk * 2 : entry - risk * 2).toFixed(decimals));
+  const otePercent = fibPercent.toFixed(1);
+  const structuralSummary = `HTF ${htfBias}: ${parsed.htfStructureEvidence}. Liquidity: ${parsed.liquidityEvidence}. LTF: ${parsed.ltfStructureEvidence}. PD array: ${parsed.pdArrayType} ${pdLow}-${pdHigh}; ${otePercent}% OTE from swing ${swingLow}-${swingHigh}, overlapping at entry ${entry}.`;
 
   return {
     pair: normPair,
@@ -352,7 +364,7 @@ Return ONLY valid JSON with keys: pair, direction, entry, sl, tp, rr, session, r
     sl,
     tp,
     rr: 2.0,
-    session: parsed.session || 'London Killzone',
-    reason: parsed.reason || `Confluence of ICT Fair Value Gap (FVG) and liquidity sweep around ${entry}.`,
+    session: parsed.session || 'Other',
+    reason: `${parsed.reason || 'Structure, liquidity, PD array, and Fibonacci confluence confirmed.'} ${structuralSummary}`,
   };
 }

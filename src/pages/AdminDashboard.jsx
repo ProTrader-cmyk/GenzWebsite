@@ -302,6 +302,10 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
   async function handleAiGenerate() {
     setSignalError('');
     setSignalSuccess('');
+    if (!aiHtfImage || !aiLtfImage) {
+      setSignalError('Pip needs both charts: upload a readable HTF 1H/4H screenshot and LTF 15m/5m screenshot to verify structure, PD-array, and Fibonacci confluence.');
+      return;
+    }
     setAiGenerating(true);
     try {
       let currentSpot = livePrices[aiPair];
@@ -1143,11 +1147,11 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
                 <div className="chart-summary-left">
                   <span className="chart-camera-icon">📸</span>
                   <div>
-                    <div className="chart-summary-title">Attach Chart Screenshots (Optional)</div>
+                    <div className="chart-summary-title">Attach Both Charts (Required for Pip Analysis)</div>
                     <div className="chart-summary-sub">
                       {aiHtfImage || aiLtfImage
                         ? `${[aiHtfImage && 'Chart 1 (HTF)', aiLtfImage && 'Chart 2 (LTF)'].filter(Boolean).join(' + ')} attached`
-                        : 'Ctrl + V to paste or click to expand upload slots'}
+                        : 'Upload an HTF 1H/4H chart and an LTF 15m/5m chart'}
                     </div>
                   </div>
                 </div>
