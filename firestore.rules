@@ -74,6 +74,28 @@ service cloud.firestore {
       match /journal/{dateId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
+
+      // FCM Web Push registration is private to the signed-in account and
+      // only paid members (plus admin/dev) may register a device token.
+      match /notificationTokens/{tokenId} {
+        function canRegisterPush() {
+          let profile = get(/databases/$(database)/documents/users/$(userId)).data;
+          return request.auth != null && request.auth.uid == userId && (
+            profile.role in ['admin', 'dev'] ||
+            profile.get('plan', '') in ['starter', 'pro', 'elite'] ||
+            profile.get('tier', '') in ['starter', 'pro', 'elite', 'vip'] ||
+            profile.get('subscription', '') in ['starter', 'pro', 'elite'] ||
+            profile.get('membership', '') in ['starter', 'pro', 'elite']
+          );
+        }
+
+        allow create, update: if canRegisterPush()
+          && request.resource.data.keys().hasOnly(['token', 'updatedAt'])
+          && request.resource.data.token is string
+          && request.resource.data.updatedAt is timestamp;
+        allow delete: if request.auth != null && request.auth.uid == userId;
+        allow read: if false;
+      }
     }
 
     // One-time OTP codes, keyed by uid. Only the owning (just-created) user

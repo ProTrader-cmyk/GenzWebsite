@@ -8,6 +8,7 @@ import MemberTierLocked from './member/MemberTierLocked.jsx';
 import {
   getNotificationPermission,
   requestNotificationPermission,
+  registerForSignalPush,
 } from '../services/pushNotificationService.js';
 import { getUserPlan } from '../data/auth.js';
 
@@ -130,6 +131,7 @@ export default function MemberArea({ user, doneMap, onExit, initialView = 'dashb
   // ── Push Notifications Permission Prompt ───────────────────────────
   const [notifPermission, setNotifPermission] = useState(() => getNotificationPermission());
   const [showNotifPrompt, setShowNotifPrompt] = useState(false);
+  const [pushSetupMessage, setPushSetupMessage] = useState('');
 
   useEffect(() => {
     // Show the permission prompt if not yet decided
@@ -139,10 +141,32 @@ export default function MemberArea({ user, doneMap, onExit, initialView = 'dashb
     }
   }, []);
 
+  useEffect(() => {
+    if (notifPermission !== 'granted') return undefined;
+    let active = true;
+    registerForSignalPush(user.uid).then((result) => {
+      if (!active || result.ok) return;
+      const messages = {
+        'missing-vapid-key': 'Push alerts need to be configured for this website.',
+        unsupported: 'This browser does not support push alerts. On iPhone, add the site to your Home Screen and open it there.',
+        'service-worker-failed': 'The notification service could not start. Reload the site and try again.',
+      };
+      setPushSetupMessage(messages[result.reason] || 'Could not register this device for signal alerts.');
+    });
+    return () => { active = false; };
+  }, [notifPermission, user.uid]);
+
   const handleEnableNotifications = useCallback(async () => {
     const result = await requestNotificationPermission();
     setNotifPermission(result);
     setShowNotifPrompt(false);
+    if (result === 'denied') {
+      setPushSetupMessage('Notifications are blocked for this site. Allow them in your browser or Home Screen app settings, then reload.');
+    } else if (result === 'unsupported') {
+      setPushSetupMessage('This browser does not support push alerts. On iPhone, add the site to your Home Screen and open it there.');
+    } else {
+      setPushSetupMessage('');
+    }
   }, []);
 
   const handleDismissNotifPrompt = useCallback(() => {
@@ -164,6 +188,13 @@ export default function MemberArea({ user, doneMap, onExit, initialView = 'dashb
           <div className="notif-permission-actions">
             <button className="notif-enable-btn" onClick={handleEnableNotifications}>Enable</button>
             <button className="notif-dismiss-btn" onClick={handleDismissNotifPrompt}>Later</button>
+          </div>
+        </div>
+      )}
+      {pushSetupMessage && (
+        <div className="notif-permission-banner" role="status">
+          <div className="notif-permission-content">
+            <span className="notif-permission-text">{pushSetupMessage}</span>
           </div>
         </div>
       )}

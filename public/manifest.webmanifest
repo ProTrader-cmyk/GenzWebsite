@@ -1,0 +1,16 @@
+{
+  "name": "GenZ Trader | Private Mentor",
+  "short_name": "GenZ Trader",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0C0C0F",
+  "theme_color": "#0C0C0F",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "any",
+      "type": "image/png"
+    }
+  ]
+}

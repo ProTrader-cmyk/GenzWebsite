@@ -19,7 +19,7 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const targetUrl = event.notification.data?.url || '/member';
+  const targetUrl = event.notification.data?.url || '/';
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
@@ -36,3 +36,21 @@ self.addEventListener('notificationclick', (event) => {
     })
   );
 });
+
+// Firebase Cloud Messaging handles background delivery through this worker.
+// Keep the config aligned with src/firebase.js (the site uses these defaults).
+importScripts('https://www.gstatic.com/firebasejs/12.18.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/12.18.0/firebase-messaging-compat.js');
+
+firebase.initializeApp({
+  apiKey: 'AIzaSyAU6johl9ow1M5MPu-nJzE5yPak9EOwbuc',
+  authDomain: 'genzdatabase-7f05b.firebaseapp.com',
+  projectId: 'genzdatabase-7f05b',
+  storageBucket: 'genzdatabase-7f05b.firebasestorage.app',
+  messagingSenderId: '905323072379',
+  appId: '1:905323072379:web:4ad1ef3306f6508b010bde',
+});
+
+// Notification payloads are displayed automatically by Firebase in the
+// background. Initialize messaging here so this custom worker can receive them.
+firebase.messaging();

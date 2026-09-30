@@ -12,14 +12,20 @@
 
 import {
   collection,
+  doc,
   onSnapshot,
   query,
   orderBy,
   limit,
+  serverTimestamp,
+  setDoc,
 } from 'firebase/firestore';
-import { db } from '../firebase.js';
+import { getMessaging, getToken, isSupported } from 'firebase/messaging';
+import { app, db } from '../firebase.js';
 
 const SIGNALS_COLLECTION = 'signals';
+const SIGNAL_NOTIFICATION_TITLE = '⚡ New Signal';
+const SIGNAL_NOTIFICATION_BODY = 'A new signal structure is in the market. Check it out.';
 
 // ---------------------------------------------------------------------------
 // 1. PERMISSION — query & request user consent for browser notifications
@@ -48,6 +54,36 @@ export async function requestNotificationPermission() {
   } catch (err) {
     console.error('[PushNotification] Error requesting permission:', err);
     return 'default';
+  }
+}
+
+/** Registers this paid member's browser/device for server-sent signal alerts. */
+export async function registerForSignalPush(uid) {
+  if (!uid) return { ok: false, reason: 'signed-out' };
+  if (getNotificationPermission() !== 'granted') return { ok: false, reason: 'permission-required' };
+
+  const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY;
+  if (!vapidKey) return { ok: false, reason: 'missing-vapid-key' };
+
+  try {
+    if (!(await isSupported())) return { ok: false, reason: 'unsupported' };
+    const registration = await registerNotificationServiceWorker();
+    if (!registration) return { ok: false, reason: 'service-worker-failed' };
+
+    const messaging = getMessaging(app);
+    const token = await getToken(messaging, { vapidKey, serviceWorkerRegistration: registration });
+    if (!token) return { ok: false, reason: 'token-unavailable' };
+
+    const tokenId = btoa(token).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+    await setDoc(doc(db, 'users', uid, 'notificationTokens', tokenId), {
+      token,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+
+    return { ok: true };
+  } catch (err) {
+    console.warn('[PushNotification] Could not register this device for signal push:', err);
+    return { ok: false, reason: 'registration-failed' };
   }
 }
 
@@ -127,17 +163,16 @@ export async function showBrowserNotification(data) {
   if (typeof window === 'undefined' || !('Notification' in window)) return;
   if (Notification.permission !== 'granted') return;
 
-  const title = data.title || `⚡ New Signal: ${data.pair || 'XAUUSD'}`;
-  const dirUpper = (data.direction || 'BUY').toUpperCase();
+  const title = data.title || SIGNAL_NOTIFICATION_TITLE;
   const options = {
-    body: data.body || `${data.pair} ${dirUpper} | Entry: ${data.entry} | SL: ${data.sl} | TP: ${data.tp}`,
+    body: data.body || SIGNAL_NOTIFICATION_BODY,
     icon: '/favicon.png',
     badge: '/favicon.png',
     tag: `signal-${data.id || Date.now()}`,
     renotify: true,
     requireInteraction: true,
     data: {
-      url: '/member',
+      url: '/',
       pair: data.pair,
       direction: data.direction,
     },
@@ -231,11 +266,10 @@ export function subscribeToNotifications(onNotification) {
             continue; // Created before we opened the session
           }
 
-          const dirLabel = (data.direction || '').toUpperCase() === 'SELL' ? '🔴 SELL' : '🟢 BUY';
           const notifPayload = {
             id: change.doc.id,
-            title: `⚡ New Signal: ${data.pair || 'XAUUSD'} ${dirLabel}`,
-            body: `Entry: ${data.entry} | SL: ${data.sl} | TP: ${data.tp} (1:2 R:R)`,
+            title: SIGNAL_NOTIFICATION_TITLE,
+            body: SIGNAL_NOTIFICATION_BODY,
             pair: data.pair || 'XAUUSD',
             direction: (data.direction || 'buy').toLowerCase(),
             entry: data.entry,
@@ -285,8 +319,8 @@ export async function triggerTestNotification(onNotification) {
 
   const testPayload = {
     id: `test-${Date.now()}`,
-    title: '⚡ TEST SIGNAL: XAUUSD 🟢 BUY',
-    body: 'Entry: 4174.50 | SL: 4168.50 | TP: 4186.50 (1:2 R:R)',
+    title: SIGNAL_NOTIFICATION_TITLE,
+    body: SIGNAL_NOTIFICATION_BODY,
     pair: 'XAUUSD',
     direction: 'buy',
     entry: '4174.50',
@@ -318,11 +352,10 @@ export async function triggerTestNotification(onNotification) {
 // ---------------------------------------------------------------------------
 
 export async function broadcastSignalNotification(signal) {
-  const dirLabel = (signal.direction || '').toUpperCase() === 'SELL' ? '🔴 SELL' : '🟢 BUY';
   const payload = {
     id: `local-sig-${Date.now()}`,
-    title: `⚡ Live Signal: ${signal.pair || 'XAUUSD'} ${dirLabel}`,
-    body: `Entry: ${signal.entry} | SL: ${signal.sl} | TP: ${signal.tp} (1:2 R:R)`,
+    title: SIGNAL_NOTIFICATION_TITLE,
+    body: SIGNAL_NOTIFICATION_BODY,
     pair: signal.pair || 'XAUUSD',
     direction: (signal.direction || 'buy').toLowerCase(),
     entry: signal.entry,
