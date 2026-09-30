@@ -149,8 +149,15 @@ export default function App() {
 
   // Site-wide real-time live trading signal notification stream + local custom event listener
   useEffect(() => {
+    const canReceiveSignalNotifications = Boolean(
+      user &&
+      (user.role === 'admin' || user.role === 'dev' || getUserPlan(user) !== 'free')
+    );
+
     function handleCustomAlert(e) {
       if (e?.detail) {
+        // News alerts remain available to everyone; signal alerts are paid-only.
+        if (e.detail.type !== 'news' && !canReceiveSignalNotifications) return;
         setGlobalNotifToast(e.detail);
         const timer = setTimeout(() => setGlobalNotifToast(null), 9000);
         return () => clearTimeout(timer);
@@ -158,7 +165,7 @@ export default function App() {
     }
     window.addEventListener('genz_signal_notification', handleCustomAlert);
 
-    if (!user) {
+    if (!canReceiveSignalNotifications) {
       return () => window.removeEventListener('genz_signal_notification', handleCustomAlert);
     }
 
@@ -174,7 +181,7 @@ export default function App() {
       window.removeEventListener('genz_signal_notification', handleCustomAlert);
       unsubscribe();
     };
-  }, [user?.uid]);
+  }, [user?.uid, user?.role, user?.plan, user?.tier, user?.subscription, user?.membership]);
   // Once opened, the gold chart section stays mounted (just hidden via the
   // .view/.view.active CSS toggle) instead of being unmounted on every
   // navigation away — TradingView's embedded widget has no account/session
@@ -467,15 +474,58 @@ export default function App() {
     );
   }
 
+  const isAdmin = user.role === 'admin' || user.role === 'dev';
+
+  const renderGlobalToast = () => {
+    if (!globalNotifToast) return null;
+    return (
+      <div
+        className={`notif-toast-banner ${globalNotifToast.type === 'news' ? 'news' : globalNotifToast.direction === 'sell' ? 'sell' : 'buy'}`}
+        onClick={() => {
+          if (globalNotifToast.type === 'news') {
+            if (isAdmin && !adminViewingSite) setAdminViewingSite(true);
+            setSection('news');
+          } else if (isAdmin) {
+            if (!adminViewingSite) setAdminViewingSite(true);
+            setSection('ai-trading');
+          } else {
+            setSection('categories');
+          }
+          setGlobalNotifToast(null);
+        }}
+        style={{ cursor: 'pointer', zIndex: 99999 }}
+      >
+        <span className="notif-toast-icon">
+          {globalNotifToast.type === 'news' ? '📰' : '⚡'}
+        </span>
+        <div className="notif-toast-text">
+          <strong>{globalNotifToast.title}</strong>
+          <span>{globalNotifToast.body}</span>
+        </div>
+        <button
+          className="notif-toast-close"
+          onClick={(e) => {
+            e.stopPropagation();
+            setGlobalNotifToast(null);
+          }}
+          aria-label="Close notification"
+        >
+          ✕
+        </button>
+      </div>
+    );
+  };
+
   // Same login for everyone — an admin (or dev) account goes straight to the
   // dashboard instead of the lesson site, unless they've clicked through to
   // browse the site (adminViewingSite). Admin and dev see the same
   // dashboard; only dev additionally gets the Videos panel (see isDev in
   // AdminDashboard.jsx).
-  if ((user.role === 'admin' || user.role === 'dev') && !adminViewingSite) {
+  if (isAdmin && !adminViewingSite) {
     return (
       <Suspense fallback={<BootScreen />}>
         <AdminDashboard admin={user} onLogout={handleLogout} onViewSite={() => setAdminViewingSite(true)} />
+        {renderGlobalToast()}
       </Suspense>
     );
   }
@@ -486,7 +536,7 @@ export default function App() {
   // Firestore. An admin or dev browsing the site gets full access regardless
   // of their own status.
   const approved = user.status === 'approved' || user.role === 'admin' || user.role === 'dev';
-  const isAdmin = user.role === 'admin' || user.role === 'dev';
+
 
   // VIP is a separate tier from approved/admin — it only gates VIP-only
   // tracks (e.g. Advanced), set via Admin Dashboard's per-user Role dropdown
@@ -566,6 +616,7 @@ export default function App() {
         user={user}
         onLogout={handleLogout}
         isAdmin={user.role === 'admin' || user.role === 'dev'}
+        canAccessAITrading={hasActivePlan}
         onNavAdmin={() => setAdminViewingSite(false)}
         approved={approved}
       />

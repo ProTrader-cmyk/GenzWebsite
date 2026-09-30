@@ -333,8 +333,13 @@ export async function broadcastSignalNotification(signal) {
 
   playNotificationSound();
 
-  if (getNotificationPermission() === 'granted') {
-    showBrowserNotification(payload);
+  let perm = getNotificationPermission();
+  if (perm === 'default') {
+    perm = await requestNotificationPermission();
+  }
+
+  if (perm === 'granted') {
+    await showBrowserNotification(payload);
   }
 
   if (typeof window !== 'undefined') {

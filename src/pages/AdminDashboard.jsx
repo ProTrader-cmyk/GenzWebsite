@@ -32,7 +32,11 @@ import {
   subscribeLiveTicks,
   formatSpotPrice,
 } from '../services/marketPriceService.js';
-import { broadcastSignalNotification } from '../services/pushNotificationService.js';
+import {
+  broadcastSignalNotification,
+  getNotificationPermission,
+  requestNotificationPermission,
+} from '../services/pushNotificationService.js';
 import GoldChart from '../components/GoldChart.jsx';
 import ThemeToggle from '../components/ThemeToggle.jsx';
 
@@ -350,12 +354,18 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
 
     setIsDroppingSignal(true);
     try {
+      if (getNotificationPermission() === 'default') {
+        try { await requestNotificationPermission(); } catch {}
+      }
+
       await publishSignal(signalDraft);
 
-      // 🔔 Push notification — broadcast to all subscribed member clients
-      broadcastSignalNotification(signalDraft).catch((err) =>
-        console.warn('Notification broadcast failed (non-blocking):', err)
-      );
+      // 🔔 Push notification — broadcast to all subscribed member clients & local tab
+      try {
+        await broadcastSignalNotification(signalDraft);
+      } catch (broadcastErr) {
+        console.warn('Notification broadcast notice:', broadcastErr);
+      }
 
       setSignalSuccess(`🚀 Dropped ${signalDraft.pair} ${signalDraft.direction.toUpperCase()} signal live to website!`);
       setSignalDraft((prev) => ({

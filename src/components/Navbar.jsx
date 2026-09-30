@@ -18,6 +18,7 @@ export default function Navbar({
   user,
   onLogout,
   isAdmin,
+  canAccessAITrading = false,
   onNavAdmin,
   onNavMemberPreview,
   showNavLinks = true,
@@ -61,13 +62,15 @@ export default function Navbar({
               {!approved && <LockIcon />}
               {t.news}
             </button>
-            <button
-              type="button"
-              className={`nav-link${activeSection === 'ai-trading' ? ' active' : ''}`}
-              onClick={onNavAITrading}
-            >
-              {t.aiTrading}
-            </button>
+            {canAccessAITrading && (
+              <button
+                type="button"
+                className={`nav-link${activeSection === 'ai-trading' ? ' active' : ''}`}
+                onClick={onNavAITrading}
+              >
+                {t.aiTrading}
+              </button>
+            )}
             <button
               type="button"
               className={`nav-link${activeSection === 'contact' ? ' active' : ''}`}
@@ -130,13 +133,15 @@ export default function Navbar({
                 {!approved && <LockIcon />}
                 {t.news}
               </button>
-              <button
-                type="button"
-                className={`nav-mobile-link${activeSection === 'ai-trading' ? ' active' : ''}`}
-                onClick={() => handleNav(onNavAITrading)}
-              >
-                {t.aiTrading}
-              </button>
+              {canAccessAITrading && (
+                <button
+                  type="button"
+                  className={`nav-mobile-link${activeSection === 'ai-trading' ? ' active' : ''}`}
+                  onClick={() => handleNav(onNavAITrading)}
+                >
+                  {t.aiTrading}
+                </button>
+              )}
               <button
                 type="button"
                 className={`nav-mobile-link${activeSection === 'contact' ? ' active' : ''}`}
