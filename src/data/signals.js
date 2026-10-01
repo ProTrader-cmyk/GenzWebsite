@@ -1,62 +1,52 @@
 import {
   collection,
   doc,
-  getDocs,
   setDoc,
   updateDoc,
   deleteDoc,
-  query,
-  orderBy,
-  onSnapshot,
   serverTimestamp,
 } from 'firebase/firestore';
-import { db } from '../firebase.js';
+import { auth, db } from '../firebase.js';
 import { getPipApiKey } from '../services/pipAiService.js';
 import { fetchLivePrice, formatSpotPrice } from '../services/marketPriceService.js';
 
 const SIGNALS_COLLECTION = 'signals';
 
 /**
- * Subscribes to real-time signals from Firestore.
+ * Polls the authenticated signal endpoint. The server filters the daily feed
+ * by plan; regular members must not query the full Firestore collection.
  * @param {Function} callback - (signals: Array) => void
  * @returns {Function} unsubscribe function
  */
 export function subscribeSignals(callback) {
-  try {
-    const q = query(collection(db, SIGNALS_COLLECTION), orderBy('createdAt', 'desc'));
-    return onSnapshot(
-      q,
-      (snapshot) => {
-        if (snapshot.empty) {
-          callback([]);
-        } else {
-          const list = snapshot.docs.map((docSnap) => {
-            const data = docSnap.data();
-            const createdAtMs = data.createdAt?.toMillis
-              ? data.createdAt.toMillis()
-              : data.createdAt?.seconds
-              ? data.createdAt.seconds * 1000
-              : Date.now();
-            const minutesAgo = Math.max(0, Math.floor((Date.now() - createdAtMs) / 60000));
-            return {
-              id: docSnap.id,
-              ...data,
-              minutesAgo,
-            };
-          });
-          callback(list);
-        }
-      },
-      (err) => {
-        console.warn('Could not subscribe to signals:', err);
-        callback([]);
-      }
-    );
-  } catch (err) {
-    console.warn('Error setting up signals subscription:', err);
-    callback([]);
-    return () => {};
-  }
+  let active = true;
+  let inFlight = false;
+  const backendUrl = import.meta.env.VITE_NEWS_API_URL || 'https://genzapi-production.up.railway.app';
+  const refresh = async () => {
+    if (!active || inFlight) return;
+    inFlight = true;
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      if (!idToken) throw new Error('Sign in to view trading signals.');
+      const response = await fetch(`${backendUrl.replace(/\/+$/, '')}/api/member/signals`, {
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'Could not load signals.');
+      if (active) callback(Array.isArray(result.signals) ? result.signals : []);
+    } catch (error) {
+      console.warn('Could not load plan-filtered signals:', error);
+      if (active) callback([]);
+    } finally {
+      inFlight = false;
+    }
+  };
+  refresh();
+  const interval = setInterval(refresh, 15_000);
+  return () => {
+    active = false;
+    clearInterval(interval);
+  };
 }
 
 /**

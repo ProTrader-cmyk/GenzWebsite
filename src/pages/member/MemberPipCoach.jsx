@@ -96,6 +96,7 @@ export default function MemberPipCoach({ user }) {
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [attachedImage, setAttachedImage] = useState(null);
+  const [imageQuota, setImageQuota] = useState(null);
   const fileInputRef = useRef(null);
   const endRef = useRef(null);
 
@@ -233,13 +234,15 @@ export default function MemberPipCoach({ user }) {
     setIsTyping(true);
 
     try {
-      const defaultImgPrompt = 'Please analyze this chart and provide an estimated signal with Entry, Stop Loss (SL), Take Profit (TP), and key confluence.';
+      const defaultImgPrompt = 'Please analyze this 15-minute chart and provide an estimated signal with Entry, Stop Loss (SL), Take Profit (TP), and key confluence. If the screenshot is not a 15-minute chart or the timeframe is unclear, say so before analyzing.';
       const promptToSend = text || defaultImgPrompt;
-      const response = await askPipCoach(
+      const result = await askPipCoach(
         updatedWithUser,
         promptToSend,
         currentImg
       );
+      const response = typeof result === 'string' ? result : result.reply;
+      if (result?.quota) setImageQuota(result.quota);
       const botMsg = {
         id: Date.now() + 1,
         createdAt: Date.now(),
@@ -251,6 +254,7 @@ export default function MemberPipCoach({ user }) {
       setMessages(finalMessages);
       saveMessageToSession(finalMessages, text);
     } catch (err) {
+      if (err.quota) setImageQuota(err.quota);
       const errorMsg = {
         id: Date.now() + 1,
         createdAt: Date.now(),
@@ -321,6 +325,12 @@ export default function MemberPipCoach({ user }) {
           </button>
         </div>
       </div>
+      {imageQuota && (
+        <div style={{ padding: '7px 16px', color: 'var(--text-muted, #9ca3af)', fontSize: 12 }}>
+          15-minute chart signal requests: {imageQuota.unlimited ? 'Unlimited' : `${imageQuota.remaining} of ${imageQuota.limit} available in each 24-hour window`}
+          {!imageQuota.unlimited && imageQuota.resetsAt && ` • Next request available ${new Date(imageQuota.resetsAt).toLocaleString()}`}
+        </div>
+      )}
 
       {/* 2-PANEL BODY: HISTORY SIDEBAR + MAIN CHAT */}
       <div className="pip-terminal-body">
@@ -428,7 +438,11 @@ export default function MemberPipCoach({ user }) {
               <img src={attachedImage} alt="Attachment" className="pip-attached-thumb" />
               <div className="pip-attached-info">
                 <span className="pip-attached-title">Chart Attached</span>
-                <span className="pip-attached-sub">Ready for Pip's ICT analysis</span>
+                <span className="pip-attached-sub">
+                  Ready for Pip's 15-minute chart analysis
+                  {imageQuota && !imageQuota.unlimited && ` • ${imageQuota.remaining} of ${imageQuota.limit} requests available per 24 hours`}
+                  {imageQuota?.unlimited && ' • Unlimited signal requests'}
+                </span>
               </div>
               <button
                 type="button"

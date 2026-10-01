@@ -377,6 +377,7 @@ export default function App() {
       id === 'apps' ||
       id === 'backtest' ||
       id === 'psychology' ||
+      id === 'ai-trading' ||
       id === 'new-product' ||
       id === 'advanced'
     ) {
@@ -550,6 +551,8 @@ export default function App() {
   // tracks (e.g. Advanced), set via Admin Dashboard's per-user Role dropdown
   // (data/auth.js: setUserAccess). An admin or dev always counts as VIP too.
   const userPlan = getUserPlan(user);
+  const hasPaidAiTradingPlan = !subscriptionExpired && ['starter', 'pro', 'elite'].includes(userPlan);
+  const canAccessAITrading = isAdmin || hasPaidAiTradingPlan;
   const isVip = (user.tier === 'vip' || userPlan !== 'free') && !subscriptionExpired || isAdmin;
 
   // Users with an active VIP subscription plan ('starter', 'pro', 'elite'),
@@ -616,20 +619,20 @@ export default function App() {
                 setPendingNoticeTick((n) => n + 1);
               }
         }
-        onNavAITrading={isAdmin ? () => setSection('ai-trading') : undefined}
+        onNavAITrading={canAccessAITrading ? () => setSection('ai-trading') : undefined}
         onNavMemberPreview={() => setSection('member-preview')}
         onNavContact={() => setSection('contact')}
         onNavProfile={() => setSection('profile')}
         user={user}
         onLogout={handleLogout}
         isAdmin={user.role === 'admin' || user.role === 'dev'}
-        canAccessAITrading={isAdmin}
+        canAccessAITrading={canAccessAITrading}
         hasActivePlan={hasActivePlan}
         onNavAdmin={() => setAdminViewingSite(false)}
         approved={approved}
       />
-      <div className={`wrap${(section === 'member-preview' || (isAdmin && section === 'ai-trading' && hasActivePlan)) ? ' wrap-terminal' : ''}`}>
-        {(section === 'categories' || (!approved && ['news', 'ai-trading', 'new-product', 'member-preview'].includes(section)) || (!isAdmin && section === 'ai-trading')) && (
+      <div className={`wrap${(section === 'member-preview' || (canAccessAITrading && section === 'ai-trading' && hasActivePlan)) ? ' wrap-terminal' : ''}`}>
+        {(section === 'categories' || (!approved && ['news', 'new-product', 'member-preview'].includes(section))) && (
           <CategoryHome
             onSelectCategory={selectCategory}
             approved={approved}
@@ -638,7 +641,7 @@ export default function App() {
           />
         )}
         {approved && section === 'news' && <NewsPage onBack={backToCategories} />}
-        {isAdmin && section === 'ai-trading' && (
+        {section === 'ai-trading' && (
           hasActivePlan ? (
             <Suspense fallback={<BootScreen />}>
               <MemberArea

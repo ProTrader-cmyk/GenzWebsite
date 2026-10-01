@@ -1,4 +1,5 @@
 // Pip Coach Service — GenZ Trader ICT System Prompt
+import { auth } from '../firebase.js';
 
 const SYSTEM_PROMPT = `You are Pip, the official Trading Coach for GenZ Trader.
 You were taught directly by GenZ Trader to help traders master financial markets, ICT (Inner Circle Trader) Smart Money Concepts (SMC), and algorithmic price delivery for Forex, Crypto, and Gold (XAU/USD).
@@ -108,9 +109,14 @@ export async function askPipCoach(history, prompt, base64Image = null) {
   if (backendUrl) {
     try {
       const endpoint = `${backendUrl.replace(/\/+$/, '')}/api/pip/chat`;
+      const idToken = base64Image ? await auth.currentUser?.getIdToken() : null;
+      if (base64Image && !idToken) throw new Error('Sign in again before requesting chart analysis.');
       const res = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+        },
         body: JSON.stringify({
           history,
           prompt,
@@ -121,13 +127,20 @@ export async function askPipCoach(history, prompt, base64Image = null) {
       if (res.ok) {
         const data = await res.json();
         if (data?.reply) {
-          return data.reply;
+          return { reply: data.reply, quota: data.quota || null };
         }
+        if (base64Image) throw new Error('Pip returned no chart analysis. Please try again.');
       } else {
         const errJson = await res.json().catch(() => ({}));
         console.warn('Backend Pip API returned status:', res.status, errJson);
+        if (base64Image) {
+          const error = new Error(errJson.error || 'Pip could not analyze this chart. Please try again.');
+          error.quota = errJson.quota || null;
+          throw error;
+        }
       }
     } catch (backendErr) {
+      if (base64Image) throw backendErr;
       console.warn('Could not reach backend Pip API, falling back to client mode:', backendErr);
     }
   }

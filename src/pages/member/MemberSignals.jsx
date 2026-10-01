@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { formatRelativeTime } from '../../data/mockSignals.js';
+import { formatRelativeTime, PLAN_SIGNAL_ACCESS } from '../../data/mockSignals.js';
 import { subscribeSignals, updateSignalStatus } from '../../data/signals.js';
 import {
   fetchLivePrice,
@@ -188,7 +188,7 @@ function SignalCard({ signal, livePrice }) {
   );
 }
 
-export default function MemberSignals() {
+export default function MemberSignals({ plan = 'elite' }) {
   const [signals, setSignals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
@@ -249,6 +249,7 @@ export default function MemberSignals() {
 
   const sorted = [...signals].sort((a, b) => (a.minutesAgo ?? 0) - (b.minutesAgo ?? 0));
   const filtered = sorted.filter((s) => statusFilter === 'all' || s.status === statusFilter);
+  const visibilityPercent = Math.round((PLAN_SIGNAL_ACCESS[plan] ?? 1) * 100);
 
   function handleSignalCopy(pair) {
     setToast(`Copied ${pair} setup to clipboard! Ready to paste into MetaTrader.`);
@@ -292,6 +293,11 @@ export default function MemberSignals() {
 
       {/* SIGNALS LIST */}
       <div className="terminal-signal-feed">
+        {visibilityPercent < 100 && !loading && (
+          <div style={{ gridColumn: '1 / -1', color: 'var(--mute)', fontSize: 12, textAlign: 'right' }}>
+            {plan === 'starter' ? 'Starter' : 'Pro'} members see {visibilityPercent}% of signals published each day.
+          </div>
+        )}
         {loading ? (
           <div className="admin-empty" style={{ gridColumn: '1 / -1', padding: '60px 20px', textAlign: 'center' }}>
             <div style={{ fontSize: '26px', marginBottom: '8px' }}>📡</div>

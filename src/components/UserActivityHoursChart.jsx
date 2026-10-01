@@ -22,13 +22,26 @@ function setStoredSeconds(uid, key, seconds) {
   }
 }
 
+function localDateString(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export default function UserActivityHoursChart({ uid }) {
   const [rangeType, setRangeType] = useState('7d'); // '7d' (default) | '14d' | '30d' | 'custom'
-  const today = useMemo(() => new Date(), []);
-  const todayDateStr = useMemo(() => today.toISOString().split('T')[0], [today]);
+  const [today, setToday] = useState(() => new Date());
+  const todayDateStr = useMemo(() => localDateString(today), [today]);
   const [customDate, setCustomDate] = useState(todayDateStr);
   const [hoveredBarIndex, setHoveredBarIndex] = useState(null);
   const [liveSeconds, setLiveSeconds] = useState(0);
+
+  // Keep the chart on the user's local calendar date, including across midnight.
+  useEffect(() => {
+    const interval = setInterval(() => setToday(new Date()), 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Real heartbeat active time tracking while page is open & focused
   useEffect(() => {

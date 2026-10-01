@@ -24,15 +24,33 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'dev';
     }
 
+    // Backward-compatible entitlement for approved users whose plan was set
+    // from the Admin Dashboard before a subscription document was created.
+    function hasPlanSignalAccess(userId) {
+      let subscriptionPath = /databases/$(database)/documents/subscriptions/$(userId);
+      let profile = get(/databases/$(database)/documents/users/$(userId)).data;
+      let plan = profile.get('plan', '');
+      let tier = profile.get('tier', '');
+      let expiry = profile.get('subscriptionExpiresAt', null);
+      return !exists(subscriptionPath)
+        && profile.status == 'approved'
+        && (plan in ['starter', 'pro', 'elite', 'vip'] || tier in ['starter', 'pro', 'elite', 'vip'])
+        && (expiry == null || expiry > request.time.toMillis());
+    }
+
     function hasActiveSubscription(userId) {
-      let subscription = get(/databases/$(database)/documents/subscriptions/$(userId)).data;
-      return subscription.status == 'active' && subscription.expiryDate > request.time;
+      let subscriptionPath = /databases/$(database)/documents/subscriptions/$(userId);
+      let subscription = get(subscriptionPath).data;
+      return (exists(subscriptionPath) && subscription.status == 'active' && subscription.expiryDate > request.time)
+        || hasPlanSignalAccess(userId);
     }
 
     function hasFeature(userId, featureId) {
-      let subscription = get(/databases/$(database)/documents/subscriptions/$(userId)).data;
-      return subscription.status == 'active' && subscription.expiryDate > request.time
-        && featureId in subscription.features;
+      let subscriptionPath = /databases/$(database)/documents/subscriptions/$(userId);
+      let subscription = get(subscriptionPath).data;
+      return (exists(subscriptionPath) && subscription.status == 'active' && subscription.expiryDate > request.time
+        && featureId in subscription.features
+        ) || (featureId == 'vip_signals' && hasPlanSignalAccess(userId));
     }
 
     match /users/{userId} {
@@ -173,7 +191,7 @@ service cloud.firestore {
     // or update signal statuses (active -> tp -> sl).
     match /signals/{signalId} {
       allow read: if request.auth != null &&
-        ((get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'dev']) || hasFeature(request.auth.uid, 'vip_signals'));
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'dev'];
       allow write: if isAdmin() || isDev();
     }
 

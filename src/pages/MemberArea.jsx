@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { TrendUpIcon } from '../components/ui/CategoryIcons.jsx';
+import ThemeToggle from '../components/ThemeToggle.jsx';
 import MemberDashboard from './member/MemberDashboard.jsx';
 import MemberSignals from './member/MemberSignals.jsx';
 import MemberPipCoach from './member/MemberPipCoach.jsx';
@@ -46,7 +47,7 @@ function BotIcon(props) {
 const NAV_ITEMS = [
   { key: 'dashboard', label: 'Terminal Overview', shortLabel: 'Overview', Icon: TerminalIcon },
   { key: 'signals', label: 'VIP Signals Stream', shortLabel: 'Signals', Icon: TrendUpIcon, badge: 'Live' },
-  { key: 'pip', label: 'Pip Trading Coach', shortLabel: 'Pip AI', Icon: BotIcon, badge: 'PRO', proOnly: true },
+  { key: 'pip', label: 'Pip Trading Coach', shortLabel: 'Pip AI', Icon: BotIcon, badge: 'STARTER+', proOnly: true },
   { key: 'perks', label: 'VIP Perks & Playbooks', shortLabel: 'Perks', Icon: DiamondIcon, badge: 'PRO+', proOnly: true },
 ];
 
@@ -69,6 +70,7 @@ export default function MemberArea({ user, doneMap, onExit, initialView = 'dashb
 
   const activePlan = isAdmin ? previewPlan : userPlan;
   const isProOrElite = activePlan === 'pro' || activePlan === 'elite';
+  const hasPipAccess = ['starter', 'pro', 'elite'].includes(activePlan);
 
   // Sync state if user's plan is updated in real-time
   useEffect(() => {
@@ -78,7 +80,7 @@ export default function MemberArea({ user, doneMap, onExit, initialView = 'dashb
   }, [userPlan]);
 
   const [view, setView] = useState(() => {
-    if (initialView === 'pip' && !isProOrElite && !isAdmin) {
+    if (initialView === 'pip' && !hasPipAccess && !isAdmin) {
       return 'dashboard';
     }
     return initialView;
@@ -87,13 +89,13 @@ export default function MemberArea({ user, doneMap, onExit, initialView = 'dashb
   // Keep view in sync if initialView prop changes
   useEffect(() => {
     if (initialView) {
-      if (initialView === 'pip' && !isProOrElite && !isAdmin) {
+      if (initialView === 'pip' && !hasPipAccess && !isAdmin) {
         setView('dashboard');
       } else {
         setView(initialView);
       }
     }
-  }, [initialView, isProOrElite, isAdmin]);
+  }, [initialView, hasPipAccess, isAdmin]);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -253,7 +255,7 @@ export default function MemberArea({ user, doneMap, onExit, initialView = 'dashb
 
         <nav className="terminal-nav-list">
           {NAV_ITEMS.map((item) => {
-            const isGated = item.proOnly && !isProOrElite;
+            const isGated = item.key === 'pip' ? !hasPipAccess : item.proOnly && !isProOrElite;
             return (
               <button
                 key={item.key}
@@ -353,6 +355,7 @@ export default function MemberArea({ user, doneMap, onExit, initialView = 'dashb
           </div>
 
           <div className="topbar-right">
+            <ThemeToggle />
             <div className="topbar-live-status">
               <span className="live-pulse-beacon" />
               <span className="live-status-full">MARKET LIVE (ICT UTC+7)</span>
@@ -396,13 +399,14 @@ export default function MemberArea({ user, doneMap, onExit, initialView = 'dashb
 
           {view === 'signals' && (
             <MemberSignals
+              plan={activePlan}
               previewPlan={activePlan}
               onNavigate={setView}
             />
           )}
 
           {view === 'pip' && (
-            !isProOrElite ? (
+            !hasPipAccess ? (
               <MemberTierLocked
                 feature="pip"
                 isAdmin={isAdmin}

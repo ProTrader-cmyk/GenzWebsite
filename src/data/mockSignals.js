@@ -1,22 +1,11 @@
-// Mock data for the Member Area preview (Dashboard + Signals pages) — see
-// MemberArea.jsx. There is no real signals/bot backend yet, so this whole
-// area is gated to admin/dev accounts only (App.jsx checks isAdmin before
-// rendering it) specifically so a real paying member can never see these
-// fabricated numbers presented as real results.
-//
-// TO CONNECT A REAL API: replace MOCK_SIGNALS with a fetch from your
-// signals backend (shape: { id, pair, direction, entry, sl, tp, rr,
-// minutesAgo, status, reason }), and MOCK_ACCOUNT with the signed-in user's
-// real account balance/risk setting once that's collected during
-// onboarding (deferred — see MemberArea.jsx).
+// Shared helpers for the member trading dashboard and live signal feed.
+// Signals themselves are published to Firestore by the admin dashboard.
 
-// Every plan trades XAU/USD (Gold) only. Plans differ by how much of each
-// day's signal feed they unlock: Starter sees 40%, Pro sees 70%, Elite
-// sees 100%. See getUnlockedSignalIds() below for how that split is
-// applied (simplified for the demo as a share of the whole mock feed,
-// rather than literally recomputed per calendar day).
+// Plans differ by how much of each day's live signal feed they unlock:
+// Starter sees 50%, Pro sees 75%, and Elite sees 100%. The member signal
+// stream applies this share separately to each Phnom Penh calendar day.
 export const PAIR = 'XAUUSD';
-export const PLAN_SIGNAL_ACCESS = { starter: 0.4, pro: 0.7, elite: 1 };
+export const PLAN_SIGNAL_ACCESS = { starter: 0.5, pro: 0.75, elite: 1 };
 
 // A single example account used only to demo the lot-size calculator —
 // real account size/risk % will come from the onboarding wizard once built.
@@ -64,17 +53,28 @@ export function deriveSignalStats(signals) {
   };
 }
 
-// Ids of the signals a given plan can see -- the most recent share of the
-// feed, sized by PLAN_SIGNAL_ACCESS (40% / 70% / 100%). Everything outside
-// that share renders blurred/locked with an "Upgrade" prompt (see
-// MemberSignals.jsx / MemberDashboard.jsx).
+// Ids of the signals a given plan can see: the most recent share of each
+// day's feed, sized by PLAN_SIGNAL_ACCESS.
 export function getUnlockedSignalIds(signals, plan) {
   const share = PLAN_SIGNAL_ACCESS[plan] ?? 1;
-  const count = Math.ceil(signals.length * share);
-  return new Set(
-    [...signals]
-      .sort((a, b) => a.minutesAgo - b.minutesAgo)
-      .slice(0, count)
-      .map((s) => s.id)
-  );
+  const byDay = new Map();
+  const getPublishedTime = (signal) => signal.createdAt?.toMillis?.()
+    ?? signal.createdAt?.toDate?.()?.getTime?.()
+    ?? signal.publishedAt
+    ?? (Date.now() - (signal.minutesAgo || 0) * 60_000);
+  for (const signal of signals) {
+    const day = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Phnom_Penh', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(new Date(getPublishedTime(signal)));
+    if (!byDay.has(day)) byDay.set(day, []);
+    byDay.get(day).push(signal);
+  }
+
+  const unlocked = new Set();
+  for (const daySignals of byDay.values()) {
+    daySignals.sort((a, b) => getPublishedTime(b) - getPublishedTime(a));
+    const count = Math.ceil(daySignals.length * share);
+    daySignals.slice(0, count).forEach((signal) => unlocked.add(signal.id));
+  }
+  return unlocked;
 }

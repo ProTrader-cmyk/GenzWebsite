@@ -1514,6 +1514,56 @@ h3 .bar{width:3px;height:18px;border-radius:2px;background:var(--gold);flex:none
 .theme-toggle-knob{position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--brand2));box-shadow:0 2px 6px rgba(0,0,0,.35);transition:transform .25s cubic-bezier(.4,0,.2,1);}
 .theme-toggle.is-light .theme-toggle-knob{transform:translateX(24px);}
 
+/* The member terminal has its own dark palette, so explicitly connect it to
+   the site theme tokens when Light mode is selected. */
+:root[data-theme='light'] .terminal-shell{background:var(--bg1);color:var(--text);border-color:var(--faint);box-shadow:0 18px 48px rgba(23,23,26,.08);}
+:root[data-theme='light'] .terminal-sidebar,
+:root[data-theme='light'] .terminal-topbar,
+:root[data-theme='light'] .terminal-disclaimer,
+:root[data-theme='light'] .pip-input-form{background:var(--bg1);border-color:var(--faint);}
+:root[data-theme='light'] .terminal-main-viewport,
+:root[data-theme='light'] .pip-history-sidebar{background:var(--bg);border-color:var(--faint);}
+:root[data-theme='light'] .terminal-user-badge-card,
+:root[data-theme='light'] .terminal-panel,
+:root[data-theme='light'] .terminal-signal-card,
+:root[data-theme='light'] .pip-terminal-wrapper,
+:root[data-theme='light'] .pip-main-chat-area,
+:root[data-theme='light'] .pip-msg-row.bot .pip-bubble{background:var(--bg1);border-color:var(--faint);color:var(--text);}
+:root[data-theme='light'] .terminal-hero-card{background:linear-gradient(135deg,#F0F8F6,#E8F4F1);border-color:var(--faint);}
+:root[data-theme='light'] .terminal-greeting,
+:root[data-theme='light'] .terminal-logo-title,
+:root[data-theme='light'] .terminal-user-name,
+:root[data-theme='light'] .topbar-section-title,
+:root[data-theme='light'] .terminal-nav-btn.active,
+:root[data-theme='light'] .terminal-nav-btn:hover,
+:root[data-theme='light'] .pip-bot-badge,
+:root[data-theme='light'] .pip-history-item-title,
+:root[data-theme='light'] .pip-attached-title{color:var(--text);}
+:root[data-theme='light'] .terminal-shell :is(h1,h2,h3,h4,p,[class*='title'],[class*='label'],[class*='name'],[class*='value'],[class*='heading']){color:var(--text);}
+:root[data-theme='light'] .terminal-sub,
+:root[data-theme='light'] .terminal-nav-btn,
+:root[data-theme='light'] .terminal-topbar-exit-btn,
+:root[data-theme='light'] .terminal-sidebar-toggle-btn,
+:root[data-theme='light'] .terminal-session-pill,
+:root[data-theme='light'] .pip-active-session-title,
+:root[data-theme='light'] .pip-history-toggle-btn,
+:root[data-theme='light'] .pip-clear-btn,
+:root[data-theme='light'] .pip-preset-btn,
+:root[data-theme='light'] .pip-attached-sub{color:var(--mute);}
+:root[data-theme='light'] .terminal-nav-btn:hover,
+:root[data-theme='light'] .pip-history-item,
+:root[data-theme='light'] .pip-terminal-input{background:var(--bg2);}
+:root[data-theme='light'] .terminal-shell .terminal-mobile-menu-btn,
+:root[data-theme='light'] .terminal-shell .terminal-sidebar-toggle-btn,
+:root[data-theme='light'] .terminal-shell .terminal-topbar-exit-btn,
+:root[data-theme='light'] .pip-history-toggle-btn,
+:root[data-theme='light'] .pip-clear-btn,
+:root[data-theme='light'] .pip-attach-btn,
+:root[data-theme='light'] .pip-preset-btn,
+:root[data-theme='light'] .pip-terminal-input{border-color:var(--faint);}
+:root[data-theme='light'] .pip-terminal-input{color:var(--text);}
+:root[data-theme='light'] .pip-terminal-input::placeholder{color:var(--mute);}
+
 /* ===== TIER LOCK & GATED NAV BADGE STYLES ===== */
 .terminal-nav-btn .nav-badge.locked{background:rgba(245,158,11,0.18);color:#FBBF24;border:1px solid rgba(245,158,11,0.4);}
 .terminal-nav-btn .nav-badge.pro{background:rgba(59,130,246,0.18);color:#60A5FA;border:1px solid rgba(59,130,246,0.4);}
