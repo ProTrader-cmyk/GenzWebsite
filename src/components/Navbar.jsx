@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import logo from '../assets/Fav.png';
+import { useTheme } from '../theme/ThemeContext.jsx';
 import LanguageDropdown from './LanguageDropdown.jsx';
 import ThemeToggle from './ThemeToggle.jsx';
 import ProfileMenu, { ProfileDetails } from './ProfileMenu.jsx';
@@ -26,6 +27,7 @@ export default function Navbar({
   approved = true,
 }) {
   const { lang } = useLanguage();
+  const { theme } = useTheme();
   const t = getStrings(lang).nav;
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -41,7 +43,12 @@ export default function Navbar({
     : '💳 Packages & Payment';
 
   return (
-    <nav className="nav">
+    <nav
+      className="nav"
+      style={theme === 'light'
+        ? { background: 'rgba(255,255,255,0.94)', boxShadow: '0 12px 30px -18px rgba(23,23,26,0.10)' }
+        : { background: 'rgba(12,12,15,0.88)', boxShadow: '0 12px 30px -18px rgba(0,0,0,0.6)' }}
+    >
       <div className="nav-in">
         <div className="logo" onClick={onLogoClick}>
           <div className="logo-icon">

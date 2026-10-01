@@ -1104,9 +1104,6 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
         <button className="admin-refresh" onClick={load} disabled={loading}>
           {loading ? 'Loading...' : 'Refresh'}
         </button>
-        <button className="admin-btn-primary admin-add-user-btn" onClick={openAddUser}>
-          + Add User
-        </button>
       </div>
 
       {error && <div className="admin-error admin-error-block">{error}</div>}
