@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useLayoutEffect, useState } from 'react';
 
 const THEME_KEY = 'gzt_theme';
 // Matches --bg in main.css for each theme — mobile browsers color their own
@@ -7,8 +7,24 @@ const THEME_KEY = 'gzt_theme';
 const BG_BY_THEME = { dark: '#0C0C0F', light: '#FAF9F7' };
 
 function loadTheme() {
-  const saved = typeof window !== 'undefined' ? localStorage.getItem(THEME_KEY) : null;
+  let saved = null;
+  try {
+    saved = typeof window !== 'undefined' ? window.localStorage.getItem(THEME_KEY) : null;
+  } catch {
+    // Theme switching still works for this page if storage is unavailable.
+  }
   return saved === 'light' ? 'light' : 'dark';
+}
+
+function applyTheme(theme) {
+  if (typeof document === 'undefined') return;
+  document.documentElement.dataset.theme = theme;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', BG_BY_THEME[theme]);
+  try {
+    window.localStorage.setItem(THEME_KEY, theme);
+  } catch {
+    // Keep the selected theme for this session even if it cannot be persisted.
+  }
 }
 
 const ThemeContext = createContext(null);
@@ -16,14 +32,14 @@ const ThemeContext = createContext(null);
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(loadTheme);
 
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    localStorage.setItem(THEME_KEY, theme);
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', BG_BY_THEME[theme]);
+  useLayoutEffect(() => {
+    applyTheme(theme);
   }, [theme]);
 
   function toggleTheme() {
-    setTheme((t) => (t === 'light' ? 'dark' : 'light'));
+    const nextTheme = theme === 'light' ? 'dark' : 'light';
+    applyTheme(nextTheme);
+    setTheme(nextTheme);
   }
 
   return <ThemeContext.Provider value={{ theme, toggleTheme }}>{children}</ThemeContext.Provider>;
