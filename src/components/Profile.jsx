@@ -86,6 +86,7 @@ export default function Profile({ onBack, uid, user, hideFooter = false, doneMap
   const gradientId = useId();
 
   const isVip = user.tier === 'vip' || getUserPlan(user) !== 'free';
+  const canManagePlans = user.role === 'admin' || user.role === 'dev';
 
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoError, setPhotoError] = useState('');
@@ -427,7 +428,7 @@ export default function Profile({ onBack, uid, user, hideFooter = false, doneMap
                 {isVip ? (getUserPlan(user) !== 'free' ? getUserPlan(user).toUpperCase() + ' VIP' : t.vip) : t.member}
               </span>
               {user.emailVerified && <span className="pf-verified">{t.verifiedLabel} ✓</span>}
-              {onSelectCategory && (
+              {canManagePlans && onSelectCategory && (
                 <button
                   type="button"
                   className="pf-upgrade-btn"
@@ -456,7 +457,7 @@ export default function Profile({ onBack, uid, user, hideFooter = false, doneMap
         </div>
       </div>
 
-      <section className="plan-card" aria-labelledby="subscription-heading" style={{ margin: '22px 0' }}>
+      {canManagePlans && <section className="plan-card" aria-labelledby="subscription-heading" style={{ margin: '22px 0' }}>
         <h2 id="subscription-heading">My Subscription</h2>
         <div className="bakong-summary-row"><span>Current package</span><strong>{subscription?.packageName || 'No active package'}</strong></div>
         <div className="bakong-summary-row"><span>Payment status</span><strong>{subscription?.paymentStatus || '—'}</strong></div>
@@ -468,7 +469,7 @@ export default function Profile({ onBack, uid, user, hideFooter = false, doneMap
         {subscriptionActive && Object.entries(subscription.limits || {}).map(([key, limit]) => (
           <div className="bakong-summary-row" key={key}><span>{key}</span><strong>{limit === -1 ? 'Unlimited' : `${Math.max(0, limit - (subscription.usage?.[key] || 0))} remaining`}</strong></div>
         ))}
-      </section>
+      </section>}
       {photoError && <div className="auth-error">{photoError}</div>}
       </>}
 
