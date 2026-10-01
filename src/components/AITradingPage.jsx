@@ -1,20 +1,18 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Footer from './Footer.jsx';
-import { LockIcon, TelegramIcon } from './ui/CategoryIcons.jsx';
+import BakongPaymentModal from './BakongPaymentModal.jsx';
+import { TelegramIcon } from './ui/CategoryIcons.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
+import { getPackages } from '../data/payments.js';
 
-// Same Telegram contact used elsewhere (ContactPage.jsx, CategoryHome.jsx's
-// lock modals) — this page has no real payment backend yet (see
-// AskUserQuestion decision: UI-only for now), so "Choose Plan" opens this
-// same "message us to reserve your spot" modal instead of a fake checkout.
 const TELEGRAM_URL = 'https://t.me/Vengsopheagenz?direct';
 
 // PLACEHOLDER — replace with the real, public Myfxbook (or equivalent)
 // verified track-record link before launch.
 const MYFXBOOK_URL = 'https://www.myfxbook.com/';
 
-const PAYMENT_LOGOS = ['ABA Pay', 'KHQR', 'Visa', 'Mastercard'];
+const PAYMENT_LOGOS = ['Bakong KHQR', 'ABA Mobile', 'ACLEDA', 'Wing Bank', 'Canadia'];
 
 // Hidden for now -- the track record link, testimonials, and payment logos
 // are still all placeholders (see the "Placeholders to replace" list).
@@ -89,13 +87,31 @@ function buildTestimonials(t) {
   ];
 }
 
-export default function AITradingPage({ onBack }) {
+export default function AITradingPage({ onBack, user, onActivated }) {
   const { lang } = useLanguage();
   const t = getStrings(lang).aiTrading;
-  const tp = getStrings(lang).pending;
   const [billing, setBilling] = useState('monthly'); // 'monthly' | 'yearly'
   const [selectedPlan, setSelectedPlan] = useState(null); // plan object while its modal is open
   const [openFaq, setOpenFaq] = useState(null); // index of the open FAQ item, or null
+  const [packageCatalog, setPackageCatalog] = useState({});
+  const [catalogLoaded, setCatalogLoaded] = useState(false);
+  const [catalogError, setCatalogError] = useState('');
+  async function loadPackageCatalog() {
+    setCatalogLoaded(false);
+    setCatalogError('');
+    try {
+      const { packages } = await getPackages();
+      setPackageCatalog(Object.fromEntries(packages.map((item) => [item.id, item])));
+    } catch (error) {
+      setPackageCatalog({});
+      setCatalogError(error.message || 'Could not load packages.');
+    } finally {
+      setCatalogLoaded(true);
+    }
+  }
+  useEffect(() => {
+    loadPackageCatalog();
+  }, []);
   const plans = buildPlans(t);
   const faqItems = buildFaqItems(t);
   const testimonials = buildTestimonials(t);
@@ -141,7 +157,9 @@ export default function AITradingPage({ onBack }) {
             <div className="plan-name">{plan.name}</div>
             <div className="plan-audience">{plan.audience}</div>
             <div className="plan-price">
-              {billing === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice}
+              {packageCatalog[plan.id]
+                ? `$${Number(packageCatalog[plan.id].billing[billing].amount).toFixed(2)}`
+                : (billing === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice)}
               <span className="plan-period">{period}</span>
             </div>
             <ul className="plan-features">
@@ -152,6 +170,7 @@ export default function AITradingPage({ onBack }) {
             <button
               type="button"
               className={`plan-cta-btn${plan.popular ? ' plan-cta-primary' : ''}`}
+              disabled={!catalogLoaded || !packageCatalog[plan.id]?.billing?.[billing]}
               onClick={() => setSelectedPlan(plan)}
             >
               {plan.cta}
@@ -159,7 +178,23 @@ export default function AITradingPage({ onBack }) {
           </div>
         ))}
       </div>
+      {catalogError && (
+        <div className="bakong-error-text" role="alert" style={{ textAlign: 'center', marginTop: 16 }}>
+          <p>Packages could not load: {catalogError}</p>
+          <button type="button" className="plan-cta-btn" onClick={loadPackageCatalog}>Retry</button>
+        </div>
+      )}
       <p className="plan-cancel-note">{t.cancelNote}</p>
+
+      {/* ===== BAKONG KHQR ACCEPTANCE STRIP ===== */}
+      <div className="payment-logos-row" style={{ marginTop: 20, marginBottom: 16 }}>
+        <span className="payment-logos-label">{t.paymentLogosLabel || 'We accept:'}</span>
+        {PAYMENT_LOGOS.map((logo) => (
+          <span key={logo} className="payment-badge">
+            {logo}
+          </span>
+        ))}
+      </div>
 
       {/* ===== PROOF STRIP ===== */}
       {SHOW_PROOF_STRIP && (
@@ -221,27 +256,15 @@ export default function AITradingPage({ onBack }) {
       <Footer />
 
       {selectedPlan && (
-        <div className="modal-overlay" onClick={() => setSelectedPlan(null)}>
-          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-            <button
-              type="button"
-              className="modal-close-btn"
-              aria-label={tp.close}
-              onClick={() => setSelectedPlan(null)}
-            >
-              ×
-            </button>
-            <div className="modal-lock">
-              <LockIcon width="20" height="20" />
-            </div>
-            <h3 className="modal-title">{t.comingSoonTitle}</h3>
-            <p className="modal-text">{t.comingSoonBody.replace('{plan}', selectedPlan.name)}</p>
-            <a href={TELEGRAM_URL} target="_blank" rel="noopener noreferrer" className="modal-telegram-link">
-              <TelegramIcon width="16" height="16" />
-              {tp.telegramLinkLabel}
-            </a>
-          </div>
-        </div>
+        <BakongPaymentModal
+          plan={selectedPlan}
+          billing={billing}
+          user={user}
+          onClose={() => setSelectedPlan(null)}
+          onActivated={(plan) => {
+            if (onActivated) onActivated(plan);
+          }}
+        />
       )}
     </div>
   );

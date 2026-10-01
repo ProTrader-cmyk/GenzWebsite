@@ -231,6 +231,17 @@ export default function CategoryHome({ onSelectCategory, approved, isVip, notice
             </div>
             <h3 className="modal-title">{tp.vipModalTitle}</h3>
             <p className="modal-text">{tp.vipModalText}</p>
+            <button
+              type="button"
+              className="modal-btn"
+              style={{ marginBottom: 14, width: '100%' }}
+              onClick={() => {
+                setShowVipModal(false);
+                onSelectCategory('ai-trading');
+              }}
+            >
+              💳 {lang === 'km' ? 'ជ្រើសរើសកញ្ចប់ VIP & Payment' : 'Choose VIP Package & Pay'}
+            </button>
             <a href={TELEGRAM_URL} target="_blank" rel="noopener noreferrer" className="modal-telegram-link">
               <TelegramIcon width="16" height="16" />
               {tp.telegramLinkLabel}

@@ -19,6 +19,7 @@ export default function Navbar({
   onLogout,
   isAdmin,
   canAccessAITrading = false,
+  hasActivePlan = false,
   onNavAdmin,
   onNavMemberPreview,
   showNavLinks = true,
@@ -32,6 +33,12 @@ export default function Navbar({
     setMenuOpen(false);
     fn();
   }
+
+  const paymentLabel = hasActivePlan
+    ? t.aiTrading
+    : lang === 'km'
+    ? '💳 កញ្ចប់ VIP & Payment'
+    : '💳 Packages & Payment';
 
   return (
     <nav className="nav">
@@ -68,7 +75,7 @@ export default function Navbar({
                 className={`nav-link${activeSection === 'ai-trading' ? ' active' : ''}`}
                 onClick={onNavAITrading}
               >
-                {t.aiTrading}
+                {paymentLabel}
               </button>
             )}
             <button
@@ -94,7 +101,13 @@ export default function Navbar({
         </button>
 
         <ThemeToggle />
-        {user && <ProfileMenu user={user} onViewProfile={onNavProfile} />}
+        {user && (
+          <ProfileMenu
+            user={user}
+            onViewProfile={onNavProfile}
+            onViewPricing={onNavAITrading}
+          />
+        )}
         <LanguageDropdown />
 
         {isAdmin && (
@@ -113,7 +126,11 @@ export default function Navbar({
         <div className="nav-mobile-menu">
           {user && (
             <div className="profile-menu-mobile-details">
-              <ProfileDetails user={user} onViewProfile={onNavProfile && (() => handleNav(onNavProfile))} />
+              <ProfileDetails
+                user={user}
+                onViewProfile={onNavProfile && (() => handleNav(onNavProfile))}
+                onViewPricing={onNavAITrading && (() => handleNav(onNavAITrading))}
+              />
             </div>
           )}
           {showNavLinks && (
@@ -139,7 +156,7 @@ export default function Navbar({
                   className={`nav-mobile-link${activeSection === 'ai-trading' ? ' active' : ''}`}
                   onClick={() => handleNav(onNavAITrading)}
                 >
-                  {t.aiTrading}
+                  {paymentLabel}
                 </button>
               )}
               <button

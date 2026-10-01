@@ -16,16 +16,14 @@ function AvatarContent({ user }) {
   return initials(user.name, user.email);
 }
 
-// The actual profile content — shared between the desktop dropdown panel
-// below and the always-open mobile burger menu (Navbar.jsx), since a
-// click-to-toggle dropdown doesn't make sense nested inside an already-open
-// mobile menu.
-export function ProfileDetails({ user, onViewProfile }) {
+// The actual profile content — shared between desktop dropdown and mobile menu
+export function ProfileDetails({ user, onViewProfile, onViewPricing }) {
   const { lang } = useLanguage();
   const t = getStrings(lang).profile;
   const status = user.status === 'approved' || user.status === 'rejected' ? user.status : 'pending';
   const statusLabel = { pending: t.statusPending, approved: t.statusApproved, rejected: t.statusRejected }[status];
-  const isVip = user.tier === 'vip' || getUserPlan(user) !== 'free';
+  const userPlan = getUserPlan(user);
+  const isVip = user.tier === 'vip' || userPlan !== 'free';
 
   return (
     <>
@@ -46,7 +44,29 @@ export function ProfileDetails({ user, onViewProfile }) {
         </div>
         <div className="profile-menu-row">
           <span>{t.tierLabel}</span>
-          <span className={`tier-pill${isVip ? ' tier-pill-vip' : ''}`}>{isVip ? t.vip : t.member}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span className={`tier-pill${isVip ? ' tier-pill-vip' : ''}`}>
+              {isVip ? (userPlan !== 'free' ? userPlan.toUpperCase() + ' VIP' : t.vip) : t.member}
+            </span>
+            {onViewPricing && (
+              <button
+                type="button"
+                onClick={onViewPricing}
+                style={{
+                  background: 'rgba(225, 29, 72, 0.15)',
+                  color: '#F43F5E',
+                  border: '1px solid rgba(225, 29, 72, 0.35)',
+                  borderRadius: '6px',
+                  padding: '2px 7px',
+                  fontSize: '10.5px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                }}
+              >
+                💳 {isVip ? 'Plan' : 'Upgrade'}
+              </button>
+            )}
+          </div>
         </div>
         <div className="profile-menu-row">
           <span>{t.verifiedLabel}</span>
@@ -63,10 +83,8 @@ export function ProfileDetails({ user, onViewProfile }) {
   );
 }
 
-// Desktop/tablet: an avatar button in the top bar that toggles a dropdown
-// panel. Hidden below 640px (see main.css) — ProfileDetails is shown inline
-// in the mobile burger menu instead, same as nav-logout/nav-mobile-logout.
-export default function ProfileMenu({ user, onViewProfile }) {
+// Desktop/tablet avatar dropdown panel
+export default function ProfileMenu({ user, onViewProfile, onViewPricing }) {
   const { lang } = useLanguage();
   const t = getStrings(lang).profile;
   const [open, setOpen] = useState(false);
@@ -102,6 +120,13 @@ export default function ProfileMenu({ user, onViewProfile }) {
               (() => {
                 setOpen(false);
                 onViewProfile();
+              })
+            }
+            onViewPricing={
+              onViewPricing &&
+              (() => {
+                setOpen(false);
+                onViewPricing();
               })
             }
           />

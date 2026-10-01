@@ -4,6 +4,30 @@
 const TELEGRAM_CONFIG_KEY = 'genz_telegram_config';
 
 /**
+ * Escapes special HTML characters so Telegram HTML parse_mode never fails.
+ */
+function escapeHtml(str = '') {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+/**
+ * Normalizes user-entered channel IDs (stripping URL prefixes, ensuring valid format).
+ */
+export function normalizeChatId(raw = '') {
+  let cleaned = String(raw).trim();
+  if (!cleaned) return '';
+  cleaned = cleaned.replace(/^https?:\/\/t\.me\//i, '').replace(/^t\.me\//i, '');
+  // If it's alphanumeric without @ or -, and not purely digits, prepend @
+  if (!cleaned.startsWith('@') && !cleaned.startsWith('-') && !/^-?\d+$/.test(cleaned)) {
+    cleaned = '@' + cleaned;
+  }
+  return cleaned;
+}
+
+/**
  * Retrieves the current Telegram configuration from localStorage or environment variables.
  */
 export function getTelegramConfig() {
@@ -28,9 +52,60 @@ export function getTelegramConfig() {
  */
 export function saveTelegramConfig(config) {
   try {
-    localStorage.setItem(TELEGRAM_CONFIG_KEY, JSON.stringify(config));
+    const normalized = {
+      ...config,
+      chatId: normalizeChatId(config.chatId),
+    };
+    localStorage.setItem(TELEGRAM_CONFIG_KEY, JSON.stringify(normalized));
   } catch (err) {
     console.error('Failed to save telegram config:', err);
+  }
+}
+
+/**
+ * Auto-detects the channel ID and administrator permissions directly from the Bot's Telegram updates.
+ */
+export async function detectTelegramChannel(botToken) {
+  if (!botToken || !botToken.trim()) {
+    return { ok: false, error: 'Please enter your Bot API Token first.' };
+  }
+
+  const token = botToken.trim();
+  try {
+    const url = `https://api.telegram.org/bot${token}/getUpdates`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      return { ok: false, error: data.description || 'Failed to fetch bot updates.' };
+    }
+
+    const updates = data.result || [];
+    for (let i = updates.length - 1; i >= 0; i--) {
+      const u = updates[i];
+      if (u.my_chat_member?.chat) {
+        const chat = u.my_chat_member.chat;
+        const newMember = u.my_chat_member.new_chat_member;
+        const isChannel = chat.type === 'channel' || chat.type === 'supergroup' || chat.type === 'group';
+        if (isChannel && newMember?.status === 'administrator') {
+          return {
+            ok: true,
+            chatId: String(chat.id),
+            title: chat.title || 'VIP Channel',
+            type: chat.type,
+            canPost: Boolean(newMember.can_post_messages),
+            botUsername: newMember.user?.username || '',
+          };
+        }
+      }
+    }
+
+    return {
+      ok: false,
+      notFound: true,
+      error: 'No channel detected yet. Make sure you add the bot as an Administrator in your Telegram channel first!',
+    };
+  } catch (err) {
+    return { ok: false, error: err.message || 'Network error while checking Telegram.' };
   }
 }
 
@@ -38,37 +113,32 @@ export function saveTelegramConfig(config) {
  * Formats a signal into a clean, institutional Telegram VIP message with HTML formatting.
  */
 export function formatTelegramMessage(signal) {
-  const pair = (signal.pair || 'XAUUSD').toUpperCase();
-  const type = (signal.type || 'BUY').toUpperCase();
-  const entry = signal.entry || 'Market';
-  const sl = signal.sl || 'N/A';
-  const tp = signal.tp || 'N/A';
-  const rr = signal.rr || '1:2';
-  const timeframe = signal.timeframe || '15m';
-  const session = signal.session || 'London / NY Killzone';
-  const reasoning = signal.reasoning || signal.setup || 'Institutional SMC Order Block & Liquidity Sweep';
+  const pair = escapeHtml((signal.pair || 'XAUUSD').toUpperCase());
+  const type = escapeHtml((signal.type || 'BUY').toUpperCase());
+  const entry = escapeHtml(signal.entry || 'Market');
+  const sl = escapeHtml(signal.sl || 'N/A');
+  const tp = escapeHtml(signal.tp || 'N/A');
+  const rr = escapeHtml(signal.rr || '1:2');
+  const timeframe = escapeHtml(signal.timeframe || '15m');
+  const session = escapeHtml(signal.session || 'London / NY Killzone');
+  const reasoning = escapeHtml(signal.reasoning || signal.setup || 'Institutional SMC Order Block & Liquidity Sweep');
 
-  const typeEmoji = type === 'BUY' ? '🟢' : '🔴';
-  const title = `🚨 <b>NEW VIP SIGNAL ALERT</b> 🚨`;
+  const actionEmoji = type.includes('BUY') ? '🟢' : '🔴';
 
   return [
-    title,
-    `━━━━━━━━━━━━━━━━━━━━`,
-    `<b>Pair:</b> #${pair}`,
-    `<b>Direction:</b> ${typeEmoji} <b>${type}</b>`,
-    `<b>Timeframe:</b> ${timeframe} | <b>Session:</b> ${session}`,
-    `━━━━━━━━━━━━━━━━━━━━`,
-    `📍 <b>Entry:</b> <code>${entry}</code>`,
-    `🛑 <b>Stop Loss (SL):</b> <code>${sl}</code>`,
-    `🎯 <b>Take Profit (TP):</b> <code>${tp}</code>`,
-    `⚖️ <b>Risk to Reward:</b> <code>${rr}</code>`,
-    `━━━━━━━━━━━━━━━━━━━━`,
-    `💡 <b>Setup Logic (ICT/SMC):</b>`,
+    `🎯 <b>#${pair}</b> ┃ ${actionEmoji} <b>${type} ${entry}</b>`,
+    ``,
+    `🔹 <b>Take Profit (TP)</b> — <code>${tp}</code>`,
+    `🔸 <b>Stop Loss (SL)</b> — <code>${sl}</code>`,
+    `⚖️ <b>Risk to Reward</b> — <code>${rr}</code> (${timeframe} • ${session})`,
+    ``,
+    `💡 <b>Setup Rationale:</b>`,
     `<i>${reasoning}</i>`,
     ``,
-    `⚠️ <b>Risk Notice:</b> Take your own risk. Risk only 1% - 2% per trade.`,
-    `━━━━━━━━━━━━━━━━━━━━`,
-    `⚡ <i>Powered by GenZ Trader AI</i>`,
+    `🛡️ <b>Strict Risk Protocol:</b>`,
+    `Risk only 1%–2% per trade. Apply proper risk management ‼️‼️`,
+    ``,
+    `⚡ <i>GenZ Trader VIP Signals</i>`,
   ].join('\n');
 }
 
@@ -81,19 +151,22 @@ export async function sendTelegramSignal(signal) {
     return { ok: false, skipped: true, reason: 'Telegram sync disabled in settings.' };
   }
 
-  if (!config.botToken || !config.chatId) {
+  const token = (config.botToken || '').trim();
+  const chatId = normalizeChatId(config.chatId);
+
+  if (!token || !chatId) {
     return { ok: false, skipped: true, reason: 'Missing botToken or chatId.' };
   }
 
   const messageText = formatTelegramMessage(signal);
-  const url = `https://api.telegram.org/bot${config.botToken.trim()}/sendMessage`;
+  const url = `https://api.telegram.org/bot${token}/sendMessage`;
 
   try {
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        chat_id: config.chatId.trim(),
+        chat_id: chatId,
         text: messageText,
         parse_mode: 'HTML',
         disable_web_page_preview: true,
@@ -106,11 +179,11 @@ export async function sendTelegramSignal(signal) {
       const desc = data.description || 'Failed to send message to Telegram.';
       let friendly = desc;
       if (desc.includes('need administrator rights')) {
-        friendly = 'Bot is not an Administrator yet! In Telegram, open your Channel Settings → Administrators → Add Administrator → search your bot username and enable "Post Messages" permission.';
+        friendly = '⚠️ Action Required: Bot is in your channel, but "Post Messages" permission is turned OFF! In Telegram: Manage Channel → Administrators → tap your Bot → Turn ON "Post Messages" → Save.';
       } else if (desc.includes('chat not found')) {
-        friendly = 'Channel or Chat not found! Make sure the Channel ID (e.g. @your_channel or -100...) is correct and that the bot has been added to it.';
+        friendly = `⚠️ Channel "${chatId}" not found! Make sure the bot is added as an administrator to that channel, or use the Channel ID (e.g. -1003949395464).`;
       } else if (desc.includes('Unauthorized') || desc.includes('token')) {
-        friendly = 'Invalid Bot Token! Please copy the exact API token sent by @BotFather.';
+        friendly = '⚠️ Invalid Bot Token! Please copy the exact API token sent by @BotFather.';
       }
       return { ok: false, error: friendly, rawError: desc };
     }
@@ -134,15 +207,14 @@ export async function testTelegramNotification() {
   const testSignal = {
     pair: 'XAUUSD',
     type: 'BUY',
-    entry: '2680.50 - 2682.00',
-    sl: '2675.00',
-    tp: '2695.00',
+    entry: '4180.905 - 4173.208',
+    sl: '4173.208',
+    tp: '4195.210',
     rr: '1:2.5',
     timeframe: '15m',
     session: 'London Killzone',
-    reasoning: 'Test Broadcast: Liquidity Sweep of Asian Low + 15m Bullish FVG displacement confirmation.',
+    reasoning: 'Institutional Liquidity Sweep & 15m Bullish Displacement',
   };
 
   return sendTelegramSignal(testSignal);
 }
-

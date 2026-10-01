@@ -542,22 +542,22 @@ export default function App() {
   // until an admin approves the account / flips status to 'approved' in
   // Firestore. An admin or dev browsing the site gets full access regardless
   // of their own status.
-  const approved = user.status === 'approved' || user.role === 'admin' || user.role === 'dev';
+  const subscriptionExpired = Number.isFinite(user.subscriptionExpiresAt) && user.subscriptionExpiresAt <= Date.now();
+  const approved = (user.status === 'approved' && !subscriptionExpired) || user.role === 'admin' || user.role === 'dev';
 
 
   // VIP is a separate tier from approved/admin — it only gates VIP-only
   // tracks (e.g. Advanced), set via Admin Dashboard's per-user Role dropdown
   // (data/auth.js: setUserAccess). An admin or dev always counts as VIP too.
   const userPlan = getUserPlan(user);
-  const isVip = user.tier === 'vip' || userPlan !== 'free' || isAdmin;
+  const isVip = (user.tier === 'vip' || userPlan !== 'free') && !subscriptionExpired || isAdmin;
 
   // Users with an active VIP subscription plan ('starter', 'pro', 'elite'),
   // or assigned VIP tier, or admin/dev accounts skip the pricing/payment section
   // and go directly into the VIP Member Terminal.
   const hasActivePlan = Boolean(
     isAdmin ||
-    user?.tier === 'vip' ||
-    userPlan !== 'free'
+    (!subscriptionExpired && (user?.tier === 'vip' || userPlan !== 'free'))
   );
   // An admin/dev account ignores allowedLessons entirely — that override
   // exists to restrict/grant lessons for regular accounts, and should never
@@ -616,7 +616,7 @@ export default function App() {
                 setPendingNoticeTick((n) => n + 1);
               }
         }
-        onNavAITrading={() => setSection('ai-trading')}
+        onNavAITrading={isAdmin ? () => setSection('ai-trading') : undefined}
         onNavMemberPreview={() => setSection('member-preview')}
         onNavContact={() => setSection('contact')}
         onNavProfile={() => setSection('profile')}
@@ -624,11 +624,12 @@ export default function App() {
         onLogout={handleLogout}
         isAdmin={user.role === 'admin' || user.role === 'dev'}
         canAccessAITrading={isAdmin}
+        hasActivePlan={hasActivePlan}
         onNavAdmin={() => setAdminViewingSite(false)}
         approved={approved}
       />
-      <div className={`wrap${(section === 'member-preview' || (section === 'ai-trading' && hasActivePlan)) ? ' wrap-terminal' : ''}`}>
-        {section === 'categories' && (
+      <div className={`wrap${(section === 'member-preview' || (isAdmin && section === 'ai-trading' && hasActivePlan)) ? ' wrap-terminal' : ''}`}>
+        {(section === 'categories' || (!approved && ['news', 'ai-trading', 'new-product', 'member-preview'].includes(section)) || (!isAdmin && section === 'ai-trading')) && (
           <CategoryHome
             onSelectCategory={selectCategory}
             approved={approved}
@@ -636,8 +637,8 @@ export default function App() {
             noticeTick={pendingNoticeTick}
           />
         )}
-        {section === 'news' && <NewsPage onBack={backToCategories} />}
-        {section === 'ai-trading' && isAdmin && (
+        {approved && section === 'news' && <NewsPage onBack={backToCategories} />}
+        {isAdmin && section === 'ai-trading' && (
           hasActivePlan ? (
             <Suspense fallback={<BootScreen />}>
               <MemberArea
@@ -649,7 +650,11 @@ export default function App() {
               />
             </Suspense>
           ) : (
-            <AITradingPage onBack={backToCategories} />
+            <AITradingPage
+              onBack={backToCategories}
+              user={user}
+              onActivated={() => { /* The verified backend write updates the live user profile. */ }}
+            />
           )
         )}
         {section === 'member-preview' && (isAdmin || hasActivePlan) && (
@@ -663,7 +668,7 @@ export default function App() {
           </Suspense>
         )}
         {section === 'contact' && <ContactPage onBack={backToCategories} />}
-        {hasVisitedNewProduct && (
+        {approved && hasVisitedNewProduct && (
           <NewProductHome onBack={backToCategories} isActive={section === 'new-product'} />
         )}
         {section === 'profile' && (
@@ -673,7 +678,9 @@ export default function App() {
               uid={user.uid}
               user={user}
               doneMap={doneMap}
-              onSelectCategory={selectCategory}
+              onSelectCategory={approved ? selectCategory : undefined}
+              calendarOnly={!approved}
+              hideFooter={!approved}
             />
           </Suspense>
         )}

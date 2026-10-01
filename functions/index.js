@@ -3,6 +3,7 @@ const { onRequest } = require('firebase-functions/v2/https');
 const { defineSecret } = require('firebase-functions/params');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
 
 initializeApp();
 const db = getFirestore();
@@ -74,4 +75,35 @@ exports.createSignal = onRequest({ secrets: [SIGNAL_API_KEY], cors: false }, asy
     console.error('createSignal failed', err);
     res.status(500).json({ ok: false, error: 'Internal error' });
   }
+});
+
+// Expired subscriptions are revoked in the trusted backend, including the
+// legacy user profile fields still consumed by older parts of the UI.
+exports.expireSubscriptions = onSchedule('every 15 minutes', async () => {
+  const now = new Date();
+  const stalePayments = await db.collection('payments')
+    .where('paymentStatus', '==', 'pending')
+    .where('expiresAt', '<=', now)
+    .limit(400)
+    .get();
+  for (let offset = 0; offset < stalePayments.docs.length; offset += 400) {
+    const paymentBatch = db.batch();
+    stalePayments.docs.slice(offset, offset + 400).forEach((payment) => {
+      paymentBatch.update(payment.ref, { paymentStatus: 'expired', updatedAt: FieldValue.serverTimestamp() });
+    });
+    await paymentBatch.commit();
+  }
+  const expired = await db.collection('subscriptions')
+    .where('status', '==', 'active')
+    .where('expiryDate', '<=', now)
+    .limit(200)
+    .get();
+  const batch = db.batch();
+  for (const subscription of expired.docs) {
+    const data = subscription.data();
+    batch.update(subscription.ref, { status: 'expired', features: [], updatedAt: FieldValue.serverTimestamp() });
+    const userRef = db.collection('users').doc(data.userId);
+    batch.set(userRef, { plan: 'free', tier: FieldValue.delete(), subscriptionExpiresAt: FieldValue.delete(), activeSubscriptionId: FieldValue.delete() }, { merge: true });
+  }
+  if (!expired.empty) await batch.commit();
 });

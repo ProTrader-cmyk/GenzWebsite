@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { db } from '../firebase.js';
 import {
   fetchAllUsers,
   setUserStatus,
@@ -43,6 +45,7 @@ import {
   getTelegramConfig,
   saveTelegramConfig,
   testTelegramNotification,
+  detectTelegramChannel,
 } from '../services/telegramService.js';
 import GoldChart from '../components/GoldChart.jsx';
 import ThemeToggle from '../components/ThemeToggle.jsx';
@@ -128,7 +131,12 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
   const [feedbackLoading, setFeedbackLoading] = useState(true);
   const [feedbackError, setFeedbackError] = useState('');
   const [showFeedback, setShowFeedback] = useState(false);
-  const [adminSection, setAdminSection] = useState('members'); // 'members' | 'signals' | 'configure'
+  const [adminSection, setAdminSection] = useState('members'); // 'members' | 'signals' | 'configure' | 'payments'
+  const [payments, setPayments] = useState([]);
+  const [paymentsLoading, setPaymentsLoading] = useState(true);
+  const [paymentFilter, setPaymentFilter] = useState('all'); // 'all' | 'pending' | 'approved' | 'rejected'
+  const [paymentSearch, setPaymentSearch] = useState('');
+  const [processingPaymentId, setProcessingPaymentId] = useState(null);
   const [hideMembers, setHideMembers] = useState(() => {
     try {
       return localStorage.getItem('admin_hide_members') === 'true';
@@ -170,6 +178,30 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
     return signals.filter((s) => s.status === signalTab);
   }, [signals, signalTab]);
 
+  const filteredPayments = useMemo(() => {
+    let list = payments;
+    if (paymentFilter !== 'all') {
+      list = list.filter((p) => p.status === paymentFilter);
+    }
+    if (paymentSearch.trim()) {
+      const q = paymentSearch.toLowerCase().trim();
+      list = list.filter(
+        (p) =>
+          (p.userEmail && p.userEmail.toLowerCase().includes(q)) ||
+          (p.userName && p.userName.toLowerCase().includes(q)) ||
+          (p.planName && p.planName.toLowerCase().includes(q)) ||
+          (p.transactionId && p.transactionId.toLowerCase().includes(q)) ||
+          (p.uid && p.uid.toLowerCase().includes(q))
+      );
+    }
+    return list;
+  }, [payments, paymentFilter, paymentSearch]);
+
+  const pendingPaymentsCount = useMemo(
+    () => payments.filter((p) => p.status === 'pending').length,
+    [payments]
+  );
+
   // Live Market Prices & Automated TP/SL State
   const [livePrices, setLivePrices] = useState({});
   const [autoTrackingEnabled, setAutoTrackingEnabled] = useState(true);
@@ -207,6 +239,8 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
   const [showTgToken, setShowTgToken] = useState(false);
   const [showTgPreview, setShowTgPreview] = useState(false);
 
+  const [tgDetecting, setTgDetecting] = useState(false);
+
   function handleSaveTelegram() {
     setTgSaving(true);
     saveTelegramConfig(tgConfig);
@@ -230,6 +264,29 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
       setTgMsg('⚠️ ' + (e?.message || 'Network error'));
     } finally {
       setTgTesting(false);
+    }
+  }
+
+  async function handleDetectChannel() {
+    if (!tgConfig.botToken) {
+      setTgMsg('⚠️ Please enter your Bot API Token first.');
+      return;
+    }
+    setTgDetecting(true);
+    setTgMsg('🔍 Scanning Telegram for connected channels...');
+    const res = await detectTelegramChannel(tgConfig.botToken);
+    setTgDetecting(false);
+    if (res.ok) {
+      const updated = { ...tgConfig, chatId: res.chatId };
+      setTgConfig(updated);
+      saveTelegramConfig(updated);
+      if (res.canPost) {
+        setTgMsg(`✅ Detected "${res.title}" (${res.chatId})! Permissions are verified and ready.`);
+      } else {
+        setTgMsg(`⚠️ Connected to "${res.title}" (${res.chatId}), but "Post Messages" permission is OFF! In Telegram: Channel Settings → Administrators → @${res.botUsername || 'bot'} → Turn ON "Post Messages" → Save.`);
+      }
+    } else {
+      setTgMsg(`⚠️ ${res.error || 'Could not detect channel.'}`);
     }
   }
 
@@ -388,19 +445,26 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
     setSignalError('');
     setSignalSuccess('');
 
-    if (!signalDraft.entry || !signalDraft.sl || !signalDraft.tp) {
-      setSignalError('Please fill in Entry, Stop Loss, and Take Profit levels before dropping signal.');
+    const targetPair = signalDraft.pair || aiPair || 'XAUUSD';
+    const currentSpot = livePrices[targetPair]
+      ? formatSpotPrice(targetPair, livePrices[targetPair])
+      : signalDraft.entry;
+
+    if (!currentSpot && !signalDraft.entry) {
+      setSignalError('Waiting for live spot price. Please verify market feed is connected.');
+      return;
+    }
+
+    if (!signalDraft.sl || !signalDraft.tp) {
+      setSignalError('Please fill in Stop Loss and Take Profit levels before dropping signal.');
       return;
     }
 
     setIsDroppingSignal(true);
     try {
-      const quote = await fetchLivePrice(signalDraft.pair || aiPair);
-      if (!quote) throw new Error('Cannot verify the entry because the live OANDA chart quote is unavailable.');
-      const chartQuote = formatSpotPrice(signalDraft.pair || aiPair, quote);
-      if (Number(signalDraft.entry) !== Number(chartQuote)) {
-        throw new Error(`Entry ${signalDraft.entry} no longer matches the live chart quote ${chartQuote}. Refresh both screenshots and generate the setup again before publishing.`);
-      }
+      const quote = await fetchLivePrice(targetPair);
+      const chartQuote = quote ? formatSpotPrice(targetPair, quote) : currentSpot;
+      signalDraft.entry = String(chartQuote);
 
       if (getNotificationPermission() === 'default') {
         try { await requestNotificationPermission(); } catch {}
@@ -549,6 +613,31 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
     };
   }, [signals, autoTrackingEnabled]);
 
+  // Automatically lock draft entry to live spot price
+  useEffect(() => {
+    const pair = signalDraft.pair || aiPair || 'XAUUSD';
+    const spot = livePrices[pair];
+    if (spot) {
+      const formatted = formatSpotPrice(pair, spot);
+      setSignalDraft((prev) => {
+        if (prev.entry === formatted) return prev;
+        const next = { ...prev, entry: formatted };
+        const e = parseFloat(formatted);
+        const s = parseFloat(prev.sl);
+        const t = parseFloat(prev.tp);
+        if (e && s && t) {
+          const risk = Math.abs(e - s);
+          const reward = Math.abs(t - e);
+          if (risk > 0) {
+            const ratio = Math.round((reward / risk) * 10) / 10;
+            next.rr = ratio === 2 ? '1:2' : `1:${ratio}`;
+          }
+        }
+        return next;
+      });
+    }
+  }, [livePrices, signalDraft.pair, aiPair]);
+
   async function load() {
     setLoading(true);
     setError('');
@@ -592,8 +681,67 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
       setSignals(list);
       setSignalsLoading(false);
     });
-    return () => unsubSignals();
+
+    const qPayments = query(collection(db, 'paymentRequests'), orderBy('createdAt', 'desc'));
+    const unsubPayments = onSnapshot(
+      qPayments,
+      (snapshot) => {
+        setPayments(snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })));
+        setPaymentsLoading(false);
+      },
+      (err) => {
+        console.warn('paymentRequests listener warning:', err);
+        setPaymentsLoading(false);
+      }
+    );
+
+    return () => {
+      unsubSignals();
+      unsubPayments();
+    };
   }, []);
+
+  async function handleApprovePayment(paymentReq) {
+    if (!paymentReq || processingPaymentId) return;
+    setProcessingPaymentId(paymentReq.id);
+    try {
+      await updateDoc(doc(db, 'paymentRequests', paymentReq.id), {
+        status: 'approved',
+        reviewedAt: new Date(),
+      });
+      if (paymentReq.uid && !paymentReq.uid.startsWith('guest_')) {
+        await setUserPlan(paymentReq.uid, paymentReq.planId);
+        await setUserStatus(paymentReq.uid, 'approved');
+        await setUserAccess(paymentReq.uid, 'vip');
+        setUsers((prev) =>
+          prev.map((u) =>
+            u.uid === paymentReq.uid
+              ? { ...u, plan: paymentReq.planId, status: 'approved', tier: 'vip' }
+              : u
+          )
+        );
+      }
+    } catch (err) {
+      console.error('Failed to approve payment:', err);
+    } finally {
+      setProcessingPaymentId(null);
+    }
+  }
+
+  async function handleRejectPayment(paymentReq) {
+    if (!paymentReq || processingPaymentId) return;
+    setProcessingPaymentId(paymentReq.id);
+    try {
+      await updateDoc(doc(db, 'paymentRequests', paymentReq.id), {
+        status: 'rejected',
+        reviewedAt: new Date(),
+      });
+    } catch (err) {
+      console.error('Failed to reject payment:', err);
+    } finally {
+      setProcessingPaymentId(null);
+    }
+  }
 
   function startEditing(key) {
     setEditingKey(key);
@@ -851,6 +999,20 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
           <span className="admin-nav-tab-text">Configure</span>
           {feedback.length > 0 && (
             <span className="admin-nav-tab-pill blue-pill">{feedback.length}</span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          className={`admin-nav-tab-btn${adminSection === 'payments' ? ' active' : ''}`}
+          onClick={() => setAdminSection('payments')}
+        >
+          <span className="admin-nav-tab-icon">💳</span>
+          <span className="admin-nav-tab-text">KHQR Payments</span>
+          {pendingPaymentsCount > 0 ? (
+            <span className="admin-nav-tab-pill red-pill">{pendingPaymentsCount} Pending</span>
+          ) : (
+            <span className="admin-nav-tab-pill">{payments.length}</span>
           )}
         </button>
       </div>
@@ -1387,15 +1549,28 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
 
               <div className="signal-fields-triple">
                 <div className="signal-field-col">
-                  <label className="signal-form-label">ENTRY LEVEL</label>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <label className="signal-form-label" style={{ margin: 0 }}>ENTRY LEVEL</label>
+                    <span style={{ fontSize: '10px', color: '#10B981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span className="pulse-dot live" style={{ width: '6px', height: '6px' }} />
+                      LIVE SPOT
+                    </span>
+                  </div>
                   <input
-                    type="number"
-                    step="any"
+                    type="text"
                     className="signal-input highlight-entry"
-                    placeholder={livePrices[signalDraft.pair || aiPair] ? `e.g. ${formatSpotPrice(signalDraft.pair || aiPair, livePrices[signalDraft.pair || aiPair])}` : 'e.g. Entry'}
-                    value={signalDraft.entry}
-                    onChange={(e) => updateDraftField('entry', e.target.value)}
-                    required
+                    style={{
+                      background: 'rgba(16, 185, 129, 0.08)',
+                      borderColor: 'rgba(16, 185, 129, 0.35)',
+                      color: '#34d399',
+                      fontWeight: 700,
+                      cursor: 'not-allowed',
+                      userSelect: 'none'
+                    }}
+                    value={signalDraft.entry || (livePrices[signalDraft.pair || aiPair] ? formatSpotPrice(signalDraft.pair || aiPair, livePrices[signalDraft.pair || aiPair]) : 'Connecting...')}
+                    readOnly
+                    disabled
+                    title="Entry level is locked to live market spot price"
                   />
                 </div>
                 <div className="signal-field-col">
@@ -2037,7 +2212,16 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
               <div className="tg-field-card">
                 <div className="tg-field-top">
                   <span className="tg-field-label">📢 VIP Channel or Group ID</span>
-                  <span style={{ fontSize: '11px', color: '#64748b' }}>Public or Private</span>
+                  <button
+                    type="button"
+                    className="tg-field-sublink"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                    onClick={handleDetectChannel}
+                    disabled={tgDetecting}
+                    title="Automatically scan Telegram to find your VIP channel ID"
+                  >
+                    {tgDetecting ? '🔍 Detecting...' : '🔍 Auto-Detect Channel ID'}
+                  </button>
                 </div>
                 <div className="tg-input-wrapper">
                   <input
@@ -2108,25 +2292,24 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
                     <span>GenZ Trader VIP Signals</span>
                     <span style={{ fontSize: '12px' }}>✓</span>
                   </div>
-                  <div>🚨 <strong>NEW VIP SIGNAL ALERT</strong> 🚨</div>
-                  <div style={{ color: 'rgba(255,255,255,0.3)', margin: '4px 0' }}>━━━━━━━━━━━━━━━━━━━━</div>
-                  <div><strong>Pair:</strong> #XAUUSD</div>
-                  <div><strong>Direction:</strong> 🟢 <strong>BUY</strong></div>
-                  <div><strong>Timeframe:</strong> 15m | <strong>Session:</strong> London Killzone</div>
-                  <div style={{ color: 'rgba(255,255,255,0.3)', margin: '4px 0' }}>━━━━━━━━━━━━━━━━━━━━</div>
-                  <div>📍 <strong>Entry:</strong> <code>2680.50 - 2682.00</code></div>
-                  <div>🛑 <strong>Stop Loss (SL):</strong> <code>2675.00</code></div>
-                  <div>🎯 <strong>Take Profit (TP):</strong> <code>2695.00</code></div>
-                  <div>⚖️ <strong>Risk to Reward:</strong> <code>1:2.5</code></div>
-                  <div style={{ color: 'rgba(255,255,255,0.3)', margin: '4px 0' }}>━━━━━━━━━━━━━━━━━━━━</div>
-                  <div>💡 <strong>Setup Logic (ICT/SMC):</strong></div>
-                  <div style={{ fontStyle: 'italic', color: '#cbd5e1', marginTop: '2px' }}>
-                    Liquidity sweep of Asian Low + 15m displacement into Bullish Fair Value Gap.
+                  <div style={{ fontSize: '14.5px', fontWeight: 700, color: '#fff', marginBottom: '8px' }}>
+                    🎯 <strong>#XAUUSD</strong> ┃ 🟢 <strong>BUY <code>4180.905 – 4173.208</code></strong>
                   </div>
-                  <div style={{ marginTop: '8px', color: '#f59e0b', fontSize: '11.5px' }}>
-                    ⚠️ <strong>Risk Notice:</strong> Take your own risk. Risk only 1% - 2% per trade.
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', margin: '8px 0' }}>
+                    <div>🔹 <strong>Take Profit (TP)</strong> — <code>4195.210</code></div>
+                    <div>🔸 <strong>Stop Loss (SL)</strong> — <code>4173.208</code></div>
+                    <div style={{ color: '#94a3b8', fontSize: '12px' }}>⚖️ <strong>Risk to Reward</strong> — <code>1:2.5</code> (15m • London Killzone)</div>
                   </div>
-                  <div style={{ color: 'rgba(255,255,255,0.3)', margin: '4px 0' }}>━━━━━━━━━━━━━━━━━━━━</div>
+                  <div style={{ margin: '8px 0', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '6px' }}>
+                    <div style={{ fontSize: '11.5px', color: '#38bdf8', fontWeight: 600 }}>💡 Setup Rationale:</div>
+                    <div style={{ fontStyle: 'italic', color: '#cbd5e1', fontSize: '12px', marginTop: '2px' }}>
+                      Institutional Liquidity Sweep & 15m Displacement confirmation.
+                    </div>
+                  </div>
+                  <div style={{ marginTop: '8px', padding: '6px 10px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '6px', color: '#fca5a5', fontSize: '11.5px' }}>
+                    🛡️ <strong>Strict Risk Protocol:</strong><br />
+                    Risk only 1%–2% per trade. Apply proper risk management ‼️‼️
+                  </div>
                   <div style={{ fontSize: '11px', color: '#94a3b8', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
                     <span>⚡ Powered by GenZ Trader AI</span>
                     <span style={{ color: '#38bdf8' }}>10:45 AM ✓✓</span>
@@ -2214,6 +2397,258 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
               })}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ===== KHQR PAYMENTS SECTION ===== */}
+      {adminSection === 'payments' && (
+        <div className="admin-payments-section">
+          {/* Top Banner & Stats */}
+          <div className="admin-section-bar">
+            <div>
+              <div className="admin-section-title" style={{ margin: 0 }}>
+                Bakong KHQR Payments & Subscriptions
+              </div>
+              <p style={{ margin: '4px 0 0', color: 'var(--mute)', fontSize: '13px' }}>
+                Verify and manage incoming KHQR payments for account <strong>sunhour_lim@bkrt</strong>
+              </p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(200, 16, 46, 0.12)', border: '1px solid rgba(200, 16, 46, 0.3)', padding: '6px 14px', borderRadius: '999px', fontSize: '12px' }}>
+              <span className="pulse-dot live" style={{ background: '#C8102E' }} />
+              <span style={{ color: 'var(--text)' }}>Bakong Account: <strong style={{ color: '#E11D48' }}>sunhour_lim@bkrt</strong></span>
+            </div>
+          </div>
+
+          {/* Stats Grid */}
+          <div className="admin-stats-grid" style={{ marginTop: '16px', marginBottom: '20px' }}>
+            <div className="admin-stat-card">
+              <div className="stat-label">Total Submissions</div>
+              <div className="stat-value">{payments.length}</div>
+            </div>
+            <div className="admin-stat-card" style={{ borderColor: 'rgba(245, 158, 11, 0.4)' }}>
+              <div className="stat-label">Pending Review</div>
+              <div className="stat-value" style={{ color: '#F59E0B' }}>{pendingPaymentsCount}</div>
+            </div>
+            <div className="admin-stat-card" style={{ borderColor: 'rgba(16, 185, 129, 0.4)' }}>
+              <div className="stat-label">Approved & Active</div>
+              <div className="stat-value" style={{ color: '#10B981' }}>
+                {payments.filter((p) => p.status === 'approved').length}
+              </div>
+            </div>
+            <div className="admin-stat-card" style={{ borderColor: 'rgba(0, 166, 244, 0.4)' }}>
+              <div className="stat-label">Total Verified Revenue</div>
+              <div className="stat-value" style={{ color: 'var(--brand2)' }}>
+                ${payments
+                  .filter((p) => p.status === 'approved')
+                  .reduce((sum, p) => sum + (Number(p.amount) || 0), 0)
+                  .toFixed(2)}{' '}
+                USD
+              </div>
+            </div>
+          </div>
+
+          {/* Filter Bar & Search */}
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              {['all', 'pending', 'approved', 'rejected'].map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => setPaymentFilter(f)}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    fontSize: '12.5px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    background: paymentFilter === f ? 'var(--bg2)' : 'transparent',
+                    border: '1px solid ' + (paymentFilter === f ? 'var(--brandline)' : 'var(--faint)'),
+                    color: paymentFilter === f ? 'var(--text)' : 'var(--mute)',
+                    textTransform: 'capitalize'
+                  }}
+                >
+                  {f} {f === 'pending' && pendingPaymentsCount > 0 ? `(${pendingPaymentsCount})` : ''}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ marginLeft: 'auto', minWidth: '240px' }}>
+              <input
+                type="text"
+                placeholder="Search email, name, ref..."
+                value={paymentSearch}
+                onChange={(e) => setPaymentSearch(e.target.value)}
+                style={{
+                  width: '100%',
+                  background: 'var(--bg1)',
+                  border: '1px solid var(--faint)',
+                  borderRadius: '8px',
+                  padding: '7px 12px',
+                  color: 'var(--text)',
+                  fontSize: '13px'
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Payments Table */}
+          {paymentsLoading ? (
+            <div className="admin-empty">Loading payment requests...</div>
+          ) : filteredPayments.length === 0 ? (
+            <div className="admin-empty">No payment requests found matching your filter.</div>
+          ) : (
+            <div className="admin-table-wrap">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>User / Account</th>
+                    <th>Plan & Cycle</th>
+                    <th>Amount</th>
+                    <th>Ref / Note</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredPayments.map((p) => {
+                    const isProcessing = processingPaymentId === p.id;
+                    const dateStr = p.createdAt?.toDate ? p.createdAt.toDate().toLocaleString() : formatDate(p.createdAt);
+                    return (
+                      <tr key={p.id}>
+                        <td style={{ fontSize: '12px', color: 'var(--mute)', whiteSpace: 'nowrap' }}>
+                          {dateStr}
+                        </td>
+                        <td>
+                          <div style={{ fontWeight: 600, color: 'var(--text)' }}>
+                            {p.userName || p.userEmail || 'Anonymous'}
+                          </div>
+                          <div style={{ fontSize: '11px', color: 'var(--mute)' }}>
+                            {p.userEmail}
+                          </div>
+                        </td>
+                        <td>
+                          <span style={{ fontWeight: 700, color: 'var(--text)' }}>
+                            {p.planName || p.planId}
+                          </span>
+                          <span style={{ fontSize: '11px', color: 'var(--mute)', marginLeft: '6px' }}>
+                            ({p.billing || 'monthly'})
+                          </span>
+                        </td>
+                        <td>
+                          <strong style={{ color: '#10B981', fontSize: '14px' }}>
+                            ${Number(p.amount || 0).toFixed(2)} USD
+                          </strong>
+                        </td>
+                        <td>
+                          {p.transactionId ? (
+                            <code style={{ fontSize: '11.5px', background: 'var(--bg2)', padding: '2px 6px', borderRadius: '4px' }}>
+                              {p.transactionId}
+                            </code>
+                          ) : (
+                            <span style={{ color: 'var(--mute)', fontSize: '12px' }}>—</span>
+                          )}
+                          {p.note && (
+                            <div style={{ fontSize: '11px', color: 'var(--mute)', marginTop: '2px' }}>
+                              {p.note}
+                            </div>
+                          )}
+                        </td>
+                        <td>
+                          <span
+                            style={{
+                              display: 'inline-block',
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              textTransform: 'uppercase',
+                              background:
+                                p.status === 'approved'
+                                  ? 'rgba(16, 185, 129, 0.15)'
+                                  : p.status === 'rejected'
+                                  ? 'rgba(239, 68, 68, 0.15)'
+                                  : 'rgba(245, 158, 11, 0.15)',
+                              color:
+                                p.status === 'approved'
+                                  ? '#10B981'
+                                  : p.status === 'rejected'
+                                  ? '#EF4444'
+                                  : '#F59E0B',
+                              border:
+                                '1px solid ' +
+                                (p.status === 'approved'
+                                  ? 'rgba(16, 185, 129, 0.3)'
+                                  : p.status === 'rejected'
+                                  ? 'rgba(239, 68, 68, 0.3)'
+                                  : 'rgba(245, 158, 11, 0.3)'),
+                            }}
+                          >
+                            {p.status}
+                          </span>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                            {p.status !== 'approved' && (
+                              <button
+                                type="button"
+                                disabled={isProcessing}
+                                onClick={() => handleApprovePayment(p)}
+                                style={{
+                                  background: 'rgba(16, 185, 129, 0.2)',
+                                  color: '#10B981',
+                                  border: '1px solid rgba(16, 185, 129, 0.4)',
+                                  padding: '4px 10px',
+                                  fontSize: '11.5px',
+                                  borderRadius: '6px',
+                                  fontWeight: 600,
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                {isProcessing ? '...' : '✓ Approve & Grant Plan'}
+                              </button>
+                            )}
+                            {p.status === 'pending' && (
+                              <button
+                                type="button"
+                                disabled={isProcessing}
+                                onClick={() => handleRejectPayment(p)}
+                                style={{
+                                  background: 'rgba(239, 68, 68, 0.15)',
+                                  color: '#EF4444',
+                                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                                  padding: '4px 10px',
+                                  fontSize: '11.5px',
+                                  borderRadius: '6px',
+                                  fontWeight: 600,
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                {isProcessing ? '...' : '✕ Reject'}
+                              </button>
+                            )}
+                            <a
+                              href="https://t.me/Vengsopheagenz"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                color: 'var(--brand2)',
+                                fontSize: '11.5px',
+                                textDecoration: 'none',
+                                padding: '4px 8px'
+                              }}
+                            >
+                              Telegram
+                            </a>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 

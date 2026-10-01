@@ -24,6 +24,17 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'dev';
     }
 
+    function hasActiveSubscription(userId) {
+      let subscription = get(/databases/$(database)/documents/subscriptions/$(userId)).data;
+      return subscription.status == 'active' && subscription.expiryDate > request.time;
+    }
+
+    function hasFeature(userId, featureId) {
+      let subscription = get(/databases/$(database)/documents/subscriptions/$(userId)).data;
+      return subscription.status == 'active' && subscription.expiryDate > request.time
+        && featureId in subscription.features;
+    }
+
     match /users/{userId} {
       allow read: if request.auth != null &&
         (request.auth.uid == userId || isAdmin() || isDev());
@@ -33,36 +44,29 @@ service cloud.firestore {
       // pre-approved or as an admin.
       allow create: if request.auth != null
         && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(['name', 'email', 'status', 'role', 'tier', 'emailVerified', 'createdAt'])
         && request.resource.data.status == 'pending'
         && request.resource.data.emailVerified == false
         && request.resource.data.role == 'user';
 
-      // A regular user may only ever flip emailVerified (via OTP
-      // confirmation) — 'status', 'role', 'tier', and 'allowedLessons' never
-      // change through their own write. Without pinning these here too, a
-      // signed-in user could call updateDoc on their own profile from the
-      // browser console and grant themselves every paid lesson (or VIP
-      // access) directly — they must only ever be settable by an admin. An
-      // admin may only ever change 'status', 'role', 'tier', and/or
-      // 'allowedLessons' (per-user lesson permissions) on someone else's
-      // doc — nothing else about the profile. 'tier' is 'member' or 'vip',
-      // separate from 'role' (which only ever gates admin-dashboard access).
-      // Tier can only be changed once the account is already approved (the
-      // Admin Dashboard also disables the Tier dropdown until then) — VIP is
-      // an upgrade on top of a paid/approved account, not a substitute for it.
+      // Users may update ordinary profile/progress fields only. Package,
+      // payment, and expiry fields are exclusively written by the payment API.
       allow update: if request.auth != null && (
         (request.auth.uid == userId
-          && request.resource.data.status == resource.data.status
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['emailVerified', 'progress', 'photoURL'])
           && request.resource.data.role == resource.data.role
-          && request.resource.data.get('tier', null) == resource.data.get('tier', null)
-          && request.resource.data.get('plan', null) == resource.data.get('plan', null)
           && request.resource.data.name == resource.data.name
           && request.resource.data.email == resource.data.email
-          && request.resource.data.get('allowedLessons', null) == resource.data.get('allowedLessons', null))
+          && request.resource.data.get('allowedLessons', null) == resource.data.get('allowedLessons', null)
+          && request.resource.data.status == resource.data.status
+          && request.resource.data.get('tier', null) == resource.data.get('tier', null)
+          && request.resource.data.get('plan', null) == resource.data.get('plan', null)
+          && request.resource.data.get('subscriptionExpiresAt', null) == resource.data.get('subscriptionExpiresAt', null)
+          && request.resource.data.get('activeSubscriptionId', null) == resource.data.get('activeSubscriptionId', null))
         ||
         ((isAdmin() || isDev())
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'role', 'tier', 'plan', 'allowedLessons'])
-          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['tier', 'plan']) || resource.data.status == 'approved'))
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'role', 'tier', 'allowedLessons'])
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['tier']) || resource.data.status == 'approved'))
       );
 
       allow delete: if false;
@@ -80,13 +84,8 @@ service cloud.firestore {
       match /notificationTokens/{tokenId} {
         function canRegisterPush() {
           let profile = get(/databases/$(database)/documents/users/$(userId)).data;
-          return request.auth != null && request.auth.uid == userId && (
-            profile.role in ['admin', 'dev'] ||
-            profile.get('plan', '') in ['starter', 'pro', 'elite'] ||
-            profile.get('tier', '') in ['starter', 'pro', 'elite', 'vip'] ||
-            profile.get('subscription', '') in ['starter', 'pro', 'elite'] ||
-            profile.get('membership', '') in ['starter', 'pro', 'elite']
-          );
+          return request.auth != null && request.auth.uid == userId &&
+            (profile.role in ['admin', 'dev'] || hasActiveSubscription(userId));
         }
 
         allow create, update: if canRegisterPush()
@@ -96,6 +95,23 @@ service cloud.firestore {
         allow delete: if request.auth != null && request.auth.uid == userId;
         allow read: if false;
       }
+    }
+
+    match /packages/{packageId} {
+      allow read: if true;
+      allow write: if isAdmin() || isDev();
+    }
+
+    match /payments/{paymentId} {
+      allow read: if request.auth != null &&
+        (resource.data.userId == request.auth.uid || isAdmin() || isDev());
+      allow create, update, delete: if false;
+    }
+
+    match /subscriptions/{userId} {
+      allow read: if request.auth != null &&
+        (request.auth.uid == userId || isAdmin() || isDev());
+      allow create, update, delete: if false;
     }
 
     // One-time OTP codes, keyed by uid. Only the owning (just-created) user
@@ -156,7 +172,8 @@ service cloud.firestore {
     // Any signed-in user may read the signals feed; only admin/dev can publish
     // or update signal statuses (active -> tp -> sl).
     match /signals/{signalId} {
-      allow read: if request.auth != null;
+      allow read: if request.auth != null &&
+        ((get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'dev']) || hasFeature(request.auth.uid, 'vip_signals'));
       allow write: if isAdmin() || isDev();
     }
 
@@ -164,8 +181,33 @@ service cloud.firestore {
     // Written by admin when a signal is published; read by all authenticated
     // member clients via onSnapshot to trigger browser notifications.
     match /notifications/{notifId} {
-      allow read: if request.auth != null;
+      allow read: if request.auth != null &&
+        ((get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'dev']) || hasFeature(request.auth.uid, 'vip_signals'));
       allow write: if isAdmin() || isDev();
+    }
+
+    // KHQR / Bakong payment requests for subscription plans (src/data/payments.js).
+    // Users create requests for their own account in 'pending' status;
+    // regular users cannot modify or delete submitted requests.
+    // Admins and devs can read all requests and approve/reject or delete them.
+    match /paymentRequests/{paymentId} {
+      function isValidPaymentRequest() {
+        let data = request.resource.data;
+        return data.uid == request.auth.uid
+          && (data.amount is int || data.amount is float)
+          && data.amount > 0
+          && data.planId is string
+          && data.planId.size() > 0
+          && data.planId.size() <= 100
+          && data.status == 'pending'
+          && (data.createdAt == request.time || (data.createdAt is timestamp && data.createdAt <= request.time));
+      }
+
+      allow read: if request.auth != null &&
+        (request.auth.uid == resource.data.uid || isAdmin() || isDev());
+      // Legacy paymentRequests cannot activate subscriptions. All new orders
+      // are created and verified by the trusted payment API in /payments.
+      allow create, update, delete: if false;
     }
   }
 }

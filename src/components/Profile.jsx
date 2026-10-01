@@ -5,8 +5,11 @@ import { uploadProfilePhoto } from '../data/avatar.js';
 import { getUserPlan } from '../data/auth.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase.js';
 import { DollarIcon, TrendUpIcon, StarIcon, CameraIcon } from './ui/CategoryIcons.jsx';
 import MemberAcademy from '../pages/member/MemberAcademy.jsx';
+import UserActivityHoursChart from './UserActivityHoursChart.jsx';
 
 const LOCALE_BY_LANG = { kh: 'km-KH', en: 'en-US' };
 const PERIOD_DAYS = { '1w': 7, '1m': 30, '3m': 90 };
@@ -75,7 +78,7 @@ function smoothPath(points) {
   return d;
 }
 
-export default function Profile({ onBack, uid, user, hideFooter = false, doneMap = {}, onSelectCategory }) {
+export default function Profile({ onBack, uid, user, hideFooter = false, doneMap = {}, onSelectCategory, calendarOnly = false }) {
   const { lang } = useLanguage();
   const t = getStrings(lang).profile;
   const tj = getStrings(lang).journal;
@@ -87,6 +90,14 @@ export default function Profile({ onBack, uid, user, hideFooter = false, doneMap
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoError, setPhotoError] = useState('');
   const photoInputRef = useRef(null);
+  const [subscription, setSubscription] = useState(null);
+  useEffect(() => {
+    if (!uid) return undefined;
+    return onSnapshot(doc(db, 'subscriptions', uid), (snap) => setSubscription(snap.exists() ? snap.data() : null));
+  }, [uid]);
+  const subscriptionExpiry = subscription?.expiryDate?.toDate?.() || null;
+  const subscriptionActive = subscription?.status === 'active' && subscriptionExpiry > new Date();
+  const remainingDays = subscriptionExpiry ? Math.max(0, Math.ceil((subscriptionExpiry.getTime() - Date.now()) / 86400000)) : 0;
 
   async function handlePhotoChange(e) {
     const file = e.target.files?.[0];
@@ -375,10 +386,9 @@ export default function Profile({ onBack, uid, user, hideFooter = false, doneMap
 
   return (
     <div className="view active" id="v-profile">
-      <button className="back" onClick={onBack}>
-        {t.back}
-      </button>
+      {!calendarOnly && <button className="back" onClick={onBack}>{t.back}</button>}
 
+      {!calendarOnly && <>
       <div className="pf-header-card">
         <div className="pf-header-cover" />
         <div className="pf-header-body">
@@ -413,13 +423,54 @@ export default function Profile({ onBack, uid, user, hideFooter = false, doneMap
             </div>
             <div className="pf-email">{user.email}</div>
             <div className="pf-header-badges">
-              <span className={`tier-pill${isVip ? ' tier-pill-vip' : ''}`}>{isVip ? t.vip : t.member}</span>
+              <span className={`tier-pill${isVip ? ' tier-pill-vip' : ''}`}>
+                {isVip ? (getUserPlan(user) !== 'free' ? getUserPlan(user).toUpperCase() + ' VIP' : t.vip) : t.member}
+              </span>
               {user.emailVerified && <span className="pf-verified">{t.verifiedLabel} ✓</span>}
+              {onSelectCategory && (
+                <button
+                  type="button"
+                  className="pf-upgrade-btn"
+                  onClick={() => onSelectCategory('ai-trading')}
+                  style={{
+                    background: 'linear-gradient(135deg, #E11D48, #C8102E)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '20px',
+                    padding: '3px 12px',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    boxShadow: '0 2px 8px rgba(200, 16, 46, 0.35)',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  💳 {isVip ? (lang === 'km' ? 'គ្រប់គ្រងកញ្ចប់' : 'Manage Plan') : (lang === 'km' ? 'ដំឡើងកញ្ចប់ / Payment' : 'Upgrade Plan / Payment')}
+                </button>
+              )}
             </div>
           </div>
         </div>
       </div>
+
+      <section className="plan-card" aria-labelledby="subscription-heading" style={{ margin: '22px 0' }}>
+        <h2 id="subscription-heading">My Subscription</h2>
+        <div className="bakong-summary-row"><span>Current package</span><strong>{subscription?.packageName || 'No active package'}</strong></div>
+        <div className="bakong-summary-row"><span>Payment status</span><strong>{subscription?.paymentStatus || '—'}</strong></div>
+        <div className="bakong-summary-row"><span>Subscription status</span><strong>{subscriptionActive ? 'Active' : subscription?.status || 'Inactive'}</strong></div>
+        <div className="bakong-summary-row"><span>Start date</span><strong>{subscription?.startDate?.toDate?.().toLocaleDateString() || '—'}</strong></div>
+        <div className="bakong-summary-row"><span>Expiry date</span><strong>{subscriptionExpiry?.toLocaleDateString() || '—'}</strong></div>
+        <div className="bakong-summary-row"><span>Remaining days</span><strong>{subscriptionActive ? remainingDays : 0}</strong></div>
+        <div className="bakong-summary-row"><span>Features and limits</span><strong>{subscriptionActive ? (subscription.features || []).join(', ') || 'None' : 'No package features available'}</strong></div>
+        {subscriptionActive && Object.entries(subscription.limits || {}).map(([key, limit]) => (
+          <div className="bakong-summary-row" key={key}><span>{key}</span><strong>{limit === -1 ? 'Unlimited' : `${Math.max(0, limit - (subscription.usage?.[key] || 0))} remaining`}</strong></div>
+        ))}
+      </section>
       {photoError && <div className="auth-error">{photoError}</div>}
+      </>}
 
       <h3 className="pf-section-title">{t.overviewTitle}</h3>
       <div className="pf-stats-row">
@@ -628,11 +679,13 @@ export default function Profile({ onBack, uid, user, hideFooter = false, doneMap
         )}
       </div>
 
-      <MemberAcademy
+      {!calendarOnly && <UserActivityHoursChart uid={uid} user={user} />}
+
+      {!calendarOnly && <MemberAcademy
         doneMap={doneMap}
         onExit={onBack}
         onSelectCategory={onSelectCategory}
-      />
+      />}
 
       {!hideFooter && <Footer />}
 
