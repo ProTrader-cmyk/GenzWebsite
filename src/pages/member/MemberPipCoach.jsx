@@ -7,16 +7,15 @@ function createInitialMessages() {
     id: createdAt,
     createdAt,
     sender: 'bot',
-    text: "Hello Trader! I'm Pip, your GenZ Trader Coach taught directly by GenZ to help all traders succeed. In this chat, we strictly talk about trading! Ask me about ICT SMC concepts (FVG, Order Blocks, Liquidity Sweeps, Killzones), lot sizing on Gold (XAUUSD), or upload a chart screenshot for instant price action analysis!",
+    text: "Hey Trader! I'm Pip, your AI Trading Coach. Upload or paste a chart screenshot, or tell me the asset you're watching, and I'll give you an estimated signal with Entry, TP, and SL. What setup are we analyzing?",
   }];
 }
 
 const PRESET_QUESTIONS = [
-  'How do I calculate lot size for a $1,000 account?',
+  'Estimate a signal for XAUUSD (Gold) right now',
   'What is the difference between BOS and CHoCH?',
-  'Why is the London-NY overlap so volatile?',
+  'How do I calculate lot size for a $1,000 account?',
   'What is an Inverse FVG (IFVG) and how do I trade it?',
-  'How do I avoid entering too early before a sweep?',
 ];
 
 function CameraIcon() {
@@ -234,9 +233,11 @@ export default function MemberPipCoach({ user }) {
     setIsTyping(true);
 
     try {
+      const defaultImgPrompt = 'Please analyze this chart and provide an estimated signal with Entry, Stop Loss (SL), Take Profit (TP), and key confluence.';
+      const promptToSend = text || defaultImgPrompt;
       const response = await askPipCoach(
         updatedWithUser,
-        text || 'Please analyze this trading chart according to ICT concepts.',
+        promptToSend,
         currentImg
       );
       const botMsg = {

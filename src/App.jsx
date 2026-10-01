@@ -623,7 +623,7 @@ export default function App() {
         user={user}
         onLogout={handleLogout}
         isAdmin={user.role === 'admin' || user.role === 'dev'}
-        canAccessAITrading={hasActivePlan}
+        canAccessAITrading={isAdmin}
         onNavAdmin={() => setAdminViewingSite(false)}
         approved={approved}
       />
@@ -637,7 +637,7 @@ export default function App() {
           />
         )}
         {section === 'news' && <NewsPage onBack={backToCategories} />}
-        {section === 'ai-trading' && (
+        {section === 'ai-trading' && isAdmin && (
           hasActivePlan ? (
             <Suspense fallback={<BootScreen />}>
               <MemberArea
