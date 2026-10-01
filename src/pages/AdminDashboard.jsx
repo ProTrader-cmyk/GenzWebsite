@@ -38,6 +38,12 @@ import {
   getNotificationPermission,
   requestNotificationPermission,
 } from '../services/pushNotificationService.js';
+import {
+  sendTelegramSignal,
+  getTelegramConfig,
+  saveTelegramConfig,
+  testTelegramNotification,
+} from '../services/telegramService.js';
 import GoldChart from '../components/GoldChart.jsx';
 import ThemeToggle from '../components/ThemeToggle.jsx';
 
@@ -192,6 +198,38 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
     status: 'active',
   });
   const [isDroppingSignal, setIsDroppingSignal] = useState(false);
+
+  // Telegram VIP Signal Sync State
+  const [tgConfig, setTgConfig] = useState(() => getTelegramConfig());
+  const [tgSaving, setTgSaving] = useState(false);
+  const [tgTesting, setTgTesting] = useState(false);
+  const [tgMsg, setTgMsg] = useState('');
+
+  function handleSaveTelegram() {
+    setTgSaving(true);
+    saveTelegramConfig(tgConfig);
+    setTgMsg('✅ Telegram configuration saved!');
+    setTimeout(() => setTgMsg(''), 4000);
+    setTgSaving(false);
+  }
+
+  async function handleTestTelegram() {
+    setTgTesting(true);
+    setTgMsg('');
+    try {
+      saveTelegramConfig(tgConfig);
+      const res = await testTelegramNotification();
+      if (res.ok) {
+        setTgMsg('✅ Test message sent to your Telegram channel!');
+      } else {
+        setTgMsg('⚠️ Telegram error: ' + (res.error || 'Failed to send'));
+      }
+    } catch (e) {
+      setTgMsg('⚠️ ' + (e?.message || 'Network error'));
+    } finally {
+      setTgTesting(false);
+    }
+  }
 
   function updateDraftField(field, value) {
     setSignalDraft((prev) => {
@@ -386,7 +424,20 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
         console.warn('Notification broadcast notice:', broadcastErr);
       }
 
-      setSignalSuccess(`🚀 Dropped ${signalDraft.pair} ${signalDraft.direction.toUpperCase()} signal live to website!${pushStatus}`);
+      // 📲 Telegram VIP Channel Broadcast
+      let tgStatus = '';
+      try {
+        const tgRes = await sendTelegramSignal(signalDraft);
+        if (tgRes.ok) {
+          tgStatus = ' 📲 Synced to Telegram VIP!';
+        } else if (tgRes.error && !tgRes.error.includes('disabled')) {
+          console.warn('Telegram sync notice:', tgRes.error);
+        }
+      } catch (tgErr) {
+        console.warn('Telegram sync notice:', tgErr);
+      }
+
+      setSignalSuccess(`🚀 Dropped ${signalDraft.pair} ${signalDraft.direction.toUpperCase()} signal live to website!${pushStatus}${tgStatus}`);
       setSignalDraft((prev) => ({
         ...prev,
         entry: '',
@@ -1407,6 +1458,13 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
                 />
               </div>
 
+              {tgConfig.enabled && tgConfig.botToken && tgConfig.chatId ? (
+                <div style={{ fontSize: '11.5px', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, fontWeight: 500 }}>
+                  <span>📲</span>
+                  <span>Auto-syncing live to Telegram VIP ({tgConfig.chatId})</span>
+                </div>
+              ) : null}
+
               <div style={{ display: 'flex', gap: 12, alignItems: 'stretch' }}>
                 <button
                   type="submit"
@@ -1835,6 +1893,107 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
               >
                 View Feedback Inbox ({feedback.length})
               </button>
+            </div>
+
+            <div className="config-card">
+              <div className="config-card-header">
+                <span className="config-card-icon">✈️</span>
+                <div>
+                  <div className="config-card-title">Telegram VIP Channel Sync</div>
+                  <div className="config-card-sub">{tgConfig.enabled ? (tgConfig.chatId ? 'Active: ' + tgConfig.chatId : 'Active') : 'Disabled / Paused'}</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                className={`config-toggle-btn${tgConfig.enabled ? ' active' : ''}`}
+                onClick={() => {
+                  const updated = { ...tgConfig, enabled: !tgConfig.enabled };
+                  setTgConfig(updated);
+                  saveTelegramConfig(updated);
+                  setTgMsg(updated.enabled ? 'Telegram sync turned ON' : 'Telegram sync turned OFF');
+                  setTimeout(() => setTgMsg(''), 3000);
+                }}
+              >
+                {tgConfig.enabled ? '✓ Telegram Sync Active' : '✕ Telegram Sync Paused'}
+              </button>
+            </div>
+          </div>
+
+          {/* TELEGRAM VIP CHANNEL CONFIGURATION */}
+          <div className="admin-videos-section" style={{ marginTop: '12px' }}>
+            <div className="admin-section-bar">
+              <div className="admin-section-title" style={{ margin: 0 }}>
+                ✈️ Telegram VIP Channel Broadcast Settings
+              </div>
+              <span className={`signals-count-tag ${tgConfig.enabled ? 'status-tp' : ''}`}>
+                {tgConfig.enabled ? '● Auto-Sync ON' : '○ Disabled'}
+              </span>
+            </div>
+            <p className="admin-section-sub">
+              Automatically broadcast every published signal to your private Telegram VIP channel or group. 
+              The bot sends pair, bias, entry, stop loss, take profit targets, R:R ratio, and ICT institutional setup notes in real time.
+            </p>
+
+            {tgMsg && (
+              <div
+                className={`admin-success-block ${tgMsg.includes('⚠️') ? 'admin-error-block' : ''}`}
+                style={{ marginBottom: '12px' }}
+              >
+                {tgMsg}
+              </div>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px', background: '#0a0d14', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted, #8e9bb0)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Bot API Token (from @BotFather)
+                </label>
+                <input
+                  type="password"
+                  className="admin-date-input video-url-input"
+                  style={{ width: '100%', boxSizing: 'border-box' }}
+                  placeholder="e.g. 123456789:ABCdefGHIjklMNOpqrSTUvxyz"
+                  value={tgConfig.botToken || ''}
+                  onChange={(e) => setTgConfig((prev) => ({ ...prev, botToken: e.target.value }))}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted, #8e9bb0)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  VIP Channel or Group ID (e.g. @your_channel or -100xxxxxxxxxx)
+                </label>
+                <input
+                  type="text"
+                  className="admin-date-input video-url-input"
+                  style={{ width: '100%', boxSizing: 'border-box' }}
+                  placeholder="e.g. -1001234567890 or @genz_vip_signals"
+                  value={tgConfig.chatId || ''}
+                  onChange={(e) => setTgConfig((prev) => ({ ...prev, chatId: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <button
+                type="button"
+                className="admin-btn-primary"
+                onClick={handleSaveTelegram}
+                disabled={tgSaving}
+              >
+                {tgSaving ? 'Saving...' : '💾 Save Telegram Settings'}
+              </button>
+              <button
+                type="button"
+                className="admin-btn-secondary"
+                onClick={handleTestTelegram}
+                disabled={tgTesting || !tgConfig.botToken || !tgConfig.chatId}
+                title="Send a sample signal test to your channel"
+              >
+                {tgTesting ? '📡 Sending Test...' : '✈️ Send Test Broadcast'}
+              </button>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted, #8e9bb0)' }}>
+                💡 Tip: Add your bot as an <strong>Administrator</strong> in your Telegram VIP Channel with permission to post messages.
+              </span>
             </div>
           </div>
 

@@ -12,10 +12,10 @@ function createInitialMessages() {
 }
 
 const PRESET_QUESTIONS = [
-  'Estimate a signal for XAUUSD (Gold) right now',
+  '📋 Run 5-Point ICT Audit & Signal on this chart',
+  '🎯 Estimate a signal for XAUUSD (Gold) right now',
   'What is the difference between BOS and CHoCH?',
   'How do I calculate lot size for a $1,000 account?',
-  'What is an Inverse FVG (IFVG) and how do I trade it?',
 ];
 
 function CameraIcon() {
