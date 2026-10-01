@@ -469,8 +469,10 @@ async function fetchForexPrice(pair) {
  * @param {number} currentPrice
  * @returns {'tp' | 'sl' | 'active'}
  */
-export function evaluateSignalOutcome(signal, currentPrice) {
-  if (!signal || !currentPrice || signal.status !== 'active') {
+export function evaluateSignalOutcome(signal, currentPrice, previousPrice) {
+  // A price already beyond a target when the signal is first observed is not
+  // evidence that this signal hit it. Require a live tick to cross the level.
+  if (!signal || !currentPrice || !previousPrice || signal.status !== 'active') {
     return signal?.status || 'active';
   }
 
@@ -482,11 +484,11 @@ export function evaluateSignalOutcome(signal, currentPrice) {
   if (!tp || !sl) return 'active';
 
   if (isBuy) {
-    if (currentPrice >= tp) return 'tp';
-    if (currentPrice <= sl) return 'sl';
+    if (previousPrice < tp && currentPrice >= tp) return 'tp';
+    if (previousPrice > sl && currentPrice <= sl) return 'sl';
   } else if (isSell) {
-    if (currentPrice <= tp) return 'tp';
-    if (currentPrice >= sl) return 'sl';
+    if (previousPrice > tp && currentPrice <= tp) return 'tp';
+    if (previousPrice < sl && currentPrice >= sl) return 'sl';
   }
 
   return 'active';

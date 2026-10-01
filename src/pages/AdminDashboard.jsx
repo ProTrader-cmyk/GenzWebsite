@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { collection, query, orderBy, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase.js';
 import {
@@ -204,6 +204,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
 
   // Live Market Prices & Automated TP/SL State
   const [livePrices, setLivePrices] = useState({});
+  const lastObservedPrices = useRef({});
   const [autoTrackingEnabled, setAutoTrackingEnabled] = useState(true);
   const [isCheckingPrices, setIsCheckingPrices] = useState(false);
   const [lastCheckedTime, setLastCheckedTime] = useState(null);
@@ -464,13 +465,13 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
     try {
       const quote = await fetchLivePrice(targetPair);
       const chartQuote = quote ? formatSpotPrice(targetPair, quote) : currentSpot;
-      signalDraft.entry = String(chartQuote);
+      const signalToPublish = { ...signalDraft, entry: String(chartQuote) };
 
       if (getNotificationPermission() === 'default') {
         try { await requestNotificationPermission(); } catch {}
       }
 
-      const publishedSignal = await publishSignal(signalDraft);
+      const publishedSignal = await publishSignal(signalToPublish);
 
       let pushStatus = '';
       try {
@@ -480,12 +481,12 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
           : ` No paid member devices received the push (${pushResult.registeredCount} registered, ${pushResult.failedCount} failed).`;
       } catch (pushErr) {
         console.warn('Server push notification notice:', pushErr);
-        pushStatus = ' Signal published, but push sending failed. Check the API service logs.';
+        pushStatus = ` Push delivery failed: ${pushErr.message || 'Check the API service logs.'}`;
       }
 
       // 🔔 Push notification — broadcast to all subscribed member clients & local tab
       try {
-        await broadcastSignalNotification(signalDraft);
+        await broadcastSignalNotification(signalToPublish);
       } catch (broadcastErr) {
         console.warn('Notification broadcast notice:', broadcastErr);
       }
@@ -493,17 +494,21 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
       // 📲 Telegram VIP Channel Broadcast
       let tgStatus = '';
       try {
-        const tgRes = await sendTelegramSignal(signalDraft);
+        const tgRes = await sendTelegramSignal(signalToPublish);
         if (tgRes.ok) {
           tgStatus = ' 📲 Synced to Telegram VIP!';
-        } else if (tgRes.error && !tgRes.error.includes('disabled')) {
-          console.warn('Telegram sync notice:', tgRes.error);
+        } else if (tgRes.skipped) {
+          tgStatus = ` Telegram not sent: ${tgRes.reason || 'Telegram sync is disabled.'}`;
+        } else {
+          tgStatus = ` Telegram delivery failed: ${tgRes.error || tgRes.reason || 'Unknown error.'}`;
+          console.warn('Telegram sync notice:', tgStatus);
         }
       } catch (tgErr) {
         console.warn('Telegram sync notice:', tgErr);
+        tgStatus = ` Telegram delivery failed: ${tgErr.message || 'Unknown error.'}`;
       }
 
-      setSignalSuccess(`🚀 Dropped ${signalDraft.pair} ${signalDraft.direction.toUpperCase()} signal live to website!${pushStatus}${tgStatus}`);
+      setSignalSuccess(`🚀 Dropped ${signalToPublish.pair} ${signalToPublish.direction.toUpperCase()} signal live to website!${pushStatus}${tgStatus}`);
       setSignalDraft((prev) => ({
         ...prev,
         entry: '',
@@ -556,6 +561,8 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
         const price = await fetchLivePrice(p);
         if (price) newPrices[p] = price;
       }
+      const previousPrices = lastObservedPrices.current;
+      lastObservedPrices.current = { ...previousPrices, ...newPrices };
       setLivePrices(newPrices);
       setLastCheckedTime(new Date().toLocaleTimeString());
 
@@ -564,7 +571,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
           const currentPrice = newPrices[s.pair || 'XAUUSD'];
           if (!currentPrice) continue;
 
-          const outcome = evaluateSignalOutcome(s, currentPrice);
+          const outcome = evaluateSignalOutcome(s, currentPrice, previousPrices[s.pair || 'XAUUSD']);
           if (outcome === 'tp' || outcome === 'sl') {
             await updateSignalStatus(s.id, outcome);
             const isTp = outcome === 'tp';
@@ -585,6 +592,8 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
     runPriceCheck(signals);
     const pairs = Array.from(new Set(['XAUUSD', ...signals.map((s) => s.pair || 'XAUUSD')]));
     const unsubTicks = subscribeLiveTicks(pairs, (incoming) => {
+      const previousPrices = lastObservedPrices.current;
+      lastObservedPrices.current = { ...previousPrices, ...incoming };
       setLivePrices((prev) => ({ ...prev, ...incoming }));
       setLastCheckedTime(new Date().toLocaleTimeString());
       if (autoTrackingEnabled) {
@@ -592,7 +601,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
         for (const s of activeList) {
           const currentPrice = incoming[s.pair || 'XAUUSD'];
           if (!currentPrice) continue;
-          const outcome = evaluateSignalOutcome(s, currentPrice);
+          const outcome = evaluateSignalOutcome(s, currentPrice, previousPrices[s.pair || 'XAUUSD']);
           if (outcome === 'tp' || outcome === 'sl') {
             updateSignalStatus(s.id, outcome);
             const isTp = outcome === 'tp';
