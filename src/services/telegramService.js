@@ -103,7 +103,16 @@ export async function sendTelegramSignal(signal) {
     const data = await res.json();
     if (!res.ok || !data.ok) {
       console.warn('Telegram API error response:', data);
-      return { ok: false, error: data.description || 'Failed to send message to Telegram.' };
+      const desc = data.description || 'Failed to send message to Telegram.';
+      let friendly = desc;
+      if (desc.includes('need administrator rights')) {
+        friendly = 'Bot is not an Administrator yet! In Telegram, open your Channel Settings → Administrators → Add Administrator → search your bot username and enable "Post Messages" permission.';
+      } else if (desc.includes('chat not found')) {
+        friendly = 'Channel or Chat not found! Make sure the Channel ID (e.g. @your_channel or -100...) is correct and that the bot has been added to it.';
+      } else if (desc.includes('Unauthorized') || desc.includes('token')) {
+        friendly = 'Invalid Bot Token! Please copy the exact API token sent by @BotFather.';
+      }
+      return { ok: false, error: friendly, rawError: desc };
     }
 
     return { ok: true, messageId: data.result?.message_id };
