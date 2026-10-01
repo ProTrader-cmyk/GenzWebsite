@@ -204,6 +204,8 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
   const [tgSaving, setTgSaving] = useState(false);
   const [tgTesting, setTgTesting] = useState(false);
   const [tgMsg, setTgMsg] = useState('');
+  const [showTgToken, setShowTgToken] = useState(false);
+  const [showTgPreview, setShowTgPreview] = useState(false);
 
   function handleSaveTelegram() {
     setTgSaving(true);
@@ -1919,82 +1921,219 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
             </div>
           </div>
 
-          {/* TELEGRAM VIP CHANNEL CONFIGURATION */}
-          <div className="admin-videos-section" style={{ marginTop: '12px' }}>
-            <div className="admin-section-bar">
-              <div className="admin-section-title" style={{ margin: 0 }}>
-                ✈️ Telegram VIP Channel Broadcast Settings
+          {/* TELEGRAM VIP CHANNEL CONFIGURATION (REDESIGNED) */}
+          <div className="tg-broadcast-card">
+            <div className="tg-header-flex">
+              <div className="tg-brand-wrap">
+                <div className="tg-icon-circle">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13" />
+                    <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                  </svg>
+                </div>
+                <div className="tg-title-group">
+                  <h3>
+                    Telegram VIP Signal Sync
+                    <span className="tg-version-tag">Live Engine</span>
+                  </h3>
+                  <div className="tg-title-sub">
+                    Automatically broadcast every published signal to your private Telegram VIP channel in real-time.
+                  </div>
+                </div>
               </div>
-              <span className={`signals-count-tag ${tgConfig.enabled ? 'status-tp' : ''}`}>
-                {tgConfig.enabled ? '● Auto-Sync ON' : '○ Disabled'}
-              </span>
+
+              <div className="tg-status-switch-wrap">
+                <span className={`tg-status-pill ${tgConfig.enabled ? 'active' : 'paused'}`}>
+                  {tgConfig.enabled ? (
+                    <>
+                      <span className="pulse-dot live" />
+                      Auto-Broadcast Active
+                    </>
+                  ) : (
+                    '○ Broadcast Paused'
+                  )}
+                </span>
+                <label className="tg-toggle-switch" title="Toggle Telegram broadcast on/off">
+                  <input
+                    type="checkbox"
+                    checked={!!tgConfig.enabled}
+                    onChange={(e) => {
+                      const updated = { ...tgConfig, enabled: e.target.checked };
+                      setTgConfig(updated);
+                      saveTelegramConfig(updated);
+                      setTgMsg(updated.enabled ? '✅ Telegram sync activated!' : '⏸️ Telegram sync paused.');
+                      setTimeout(() => setTgMsg(''), 3500);
+                    }}
+                  />
+                  <span className="tg-toggle-slider" />
+                </label>
+              </div>
             </div>
-            <p className="admin-section-sub">
-              Automatically broadcast every published signal to your private Telegram VIP channel or group. 
-              The bot sends pair, bias, entry, stop loss, take profit targets, R:R ratio, and ICT institutional setup notes in real time.
-            </p>
+
+            {/* 3-STEP QUICK SETUP GUIDE */}
+            <div className="tg-steps-grid">
+              <div className="tg-step-box">
+                <div className="tg-step-num">1</div>
+                <div className="tg-step-text">
+                  Create a bot with <a href="https://t.me/botfather" target="_blank" rel="noreferrer">@BotFather</a> and copy the API Token.
+                </div>
+              </div>
+              <div className="tg-step-box">
+                <div className="tg-step-num">2</div>
+                <div className="tg-step-text">
+                  Add your bot as an <strong>Administrator</strong> in your VIP Channel with <em>Post Messages</em> permission.
+                </div>
+              </div>
+              <div className="tg-step-box">
+                <div className="tg-step-num">3</div>
+                <div className="tg-step-text">
+                  Paste credentials below, click <strong>Save</strong>, and verify with <strong>Send Test Broadcast</strong>.
+                </div>
+              </div>
+            </div>
 
             {tgMsg && (
               <div
                 className={`admin-success-block ${tgMsg.includes('⚠️') ? 'admin-error-block' : ''}`}
-                style={{ marginBottom: '12px' }}
+                style={{ marginBottom: '16px' }}
               >
                 {tgMsg}
               </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px', background: '#0a0d14', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '16px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted, #8e9bb0)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Bot API Token (from @BotFather)
-                </label>
-                <input
-                  type="password"
-                  className="admin-date-input video-url-input"
-                  style={{ width: '100%', boxSizing: 'border-box' }}
-                  placeholder="e.g. 123456789:ABCdefGHIjklMNOpqrSTUvxyz"
-                  value={tgConfig.botToken || ''}
-                  onChange={(e) => setTgConfig((prev) => ({ ...prev, botToken: e.target.value }))}
-                />
+            {/* CREDENTIALS FORM INPUTS */}
+            <div className="tg-inputs-row">
+              <div className="tg-field-card">
+                <div className="tg-field-top">
+                  <span className="tg-field-label">🔑 Bot API Token</span>
+                  <a
+                    href="https://t.me/botfather"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="tg-field-sublink"
+                  >
+                    Open @BotFather ↗
+                  </a>
+                </div>
+                <div className="tg-input-wrapper">
+                  <input
+                    type={showTgToken ? 'text' : 'password'}
+                    className="tg-input-box"
+                    placeholder="e.g. 123456789:ABCdefGHIjklMNOpqrSTUvxyz"
+                    value={tgConfig.botToken || ''}
+                    onChange={(e) => setTgConfig((prev) => ({ ...prev, botToken: e.target.value }))}
+                  />
+                  <button
+                    type="button"
+                    className="tg-token-toggle"
+                    title={showTgToken ? 'Hide token' : 'Show token'}
+                    onClick={() => setShowTgToken((v) => !v)}
+                  >
+                    {showTgToken ? '🙈' : '👁️'}
+                  </button>
+                </div>
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted, #8e9bb0)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  VIP Channel or Group ID (e.g. @your_channel or -100xxxxxxxxxx)
-                </label>
-                <input
-                  type="text"
-                  className="admin-date-input video-url-input"
-                  style={{ width: '100%', boxSizing: 'border-box' }}
-                  placeholder="e.g. -1001234567890 or @genz_vip_signals"
-                  value={tgConfig.chatId || ''}
-                  onChange={(e) => setTgConfig((prev) => ({ ...prev, chatId: e.target.value }))}
-                />
+              <div className="tg-field-card">
+                <div className="tg-field-top">
+                  <span className="tg-field-label">📢 VIP Channel or Group ID</span>
+                  <span style={{ fontSize: '11px', color: '#64748b' }}>Public or Private</span>
+                </div>
+                <div className="tg-input-wrapper">
+                  <input
+                    type="text"
+                    className="tg-input-box"
+                    placeholder="e.g. @genz_vip_signals or -1001234567890"
+                    value={tgConfig.chatId || ''}
+                    onChange={(e) => setTgConfig((prev) => ({ ...prev, chatId: e.target.value }))}
+                  />
+                </div>
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', marginTop: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
-              <button
-                type="button"
-                className="admin-btn-primary"
-                onClick={handleSaveTelegram}
-                disabled={tgSaving}
-              >
-                {tgSaving ? 'Saving...' : '💾 Save Telegram Settings'}
-              </button>
-              <button
-                type="button"
-                className="admin-btn-secondary"
-                onClick={handleTestTelegram}
-                disabled={tgTesting || !tgConfig.botToken || !tgConfig.chatId}
-                title="Send a sample signal test to your channel"
-              >
-                {tgTesting ? '📡 Sending Test...' : '✈️ Send Test Broadcast'}
-              </button>
-              <span style={{ fontSize: '12px', color: 'var(--text-muted, #8e9bb0)' }}>
-                💡 Tip: Add your bot as an <strong>Administrator</strong> in your Telegram VIP Channel with permission to post messages.
+            {/* ACTION BUTTONS & PREVIEW TOGGLE */}
+            <div className="tg-actions-row">
+              <div className="tg-btns-group">
+                <button
+                  type="button"
+                  className="tg-btn-primary"
+                  onClick={handleSaveTelegram}
+                  disabled={tgSaving}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                    <polyline points="17 21 17 13 7 13 7 21" />
+                    <polyline points="7 3 7 8 15 8" />
+                  </svg>
+                  {tgSaving ? 'Saving...' : 'Save Configuration'}
+                </button>
+
+                <button
+                  type="button"
+                  className="tg-btn-secondary"
+                  onClick={handleTestTelegram}
+                  disabled={tgTesting || !tgConfig.botToken || !tgConfig.chatId}
+                  title="Dispatch a test institutional signal to your channel"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13" />
+                    <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                  </svg>
+                  {tgTesting ? '📡 Sending Test...' : 'Send Test Broadcast'}
+                </button>
+
+                <button
+                  type="button"
+                  className="tg-btn-ghost"
+                  onClick={() => setShowTgPreview((v) => !v)}
+                >
+                  {showTgPreview ? '✕ Hide Post Preview' : '👁️ View Message Format'}
+                </button>
+              </div>
+
+              <span style={{ fontSize: '11.5px', color: '#64748b' }}>
+                💡 Tip: Add the bot as an <strong>Administrator</strong> so it can post.
               </span>
             </div>
+
+            {/* INTERACTIVE MOCK TELEGRAM PREVIEW */}
+            {showTgPreview && (
+              <div className="tg-preview-container">
+                <div style={{ fontSize: '11px', fontWeight: 700, color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>📱 Live Telegram Channel Post Preview</span>
+                  <span style={{ fontSize: '10px', background: 'rgba(56, 189, 248, 0.15)', padding: '2px 6px', borderRadius: '4px' }}>HTML Formatted</span>
+                </div>
+                <div className="tg-preview-bubble">
+                  <div style={{ fontWeight: 700, color: '#38bdf8', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span>GenZ Trader VIP Signals</span>
+                    <span style={{ fontSize: '12px' }}>✓</span>
+                  </div>
+                  <div>🚨 <strong>NEW VIP SIGNAL ALERT</strong> 🚨</div>
+                  <div style={{ color: 'rgba(255,255,255,0.3)', margin: '4px 0' }}>━━━━━━━━━━━━━━━━━━━━</div>
+                  <div><strong>Pair:</strong> #XAUUSD</div>
+                  <div><strong>Direction:</strong> 🟢 <strong>BUY</strong></div>
+                  <div><strong>Timeframe:</strong> 15m | <strong>Session:</strong> London Killzone</div>
+                  <div style={{ color: 'rgba(255,255,255,0.3)', margin: '4px 0' }}>━━━━━━━━━━━━━━━━━━━━</div>
+                  <div>📍 <strong>Entry:</strong> <code>2680.50 - 2682.00</code></div>
+                  <div>🛑 <strong>Stop Loss (SL):</strong> <code>2675.00</code></div>
+                  <div>🎯 <strong>Take Profit (TP):</strong> <code>2695.00</code></div>
+                  <div>⚖️ <strong>Risk to Reward:</strong> <code>1:2.5</code></div>
+                  <div style={{ color: 'rgba(255,255,255,0.3)', margin: '4px 0' }}>━━━━━━━━━━━━━━━━━━━━</div>
+                  <div>💡 <strong>Setup Logic (ICT/SMC):</strong></div>
+                  <div style={{ fontStyle: 'italic', color: '#cbd5e1', marginTop: '2px' }}>
+                    Liquidity sweep of Asian Low + 15m displacement into Bullish Fair Value Gap.
+                  </div>
+                  <div style={{ marginTop: '8px', color: '#f59e0b', fontSize: '11.5px' }}>
+                    ⚠️ <strong>Risk Notice:</strong> Take your own risk. Risk only 1% - 2% per trade.
+                  </div>
+                  <div style={{ color: 'rgba(255,255,255,0.3)', margin: '4px 0' }}>━━━━━━━━━━━━━━━━━━━━</div>
+                  <div style={{ fontSize: '11px', color: '#94a3b8', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                    <span>⚡ Powered by GenZ Trader AI</span>
+                    <span style={{ color: '#38bdf8' }}>10:45 AM ✓✓</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* COURSE LESSON VIDEOS CONFIGURATION */}
