@@ -7,15 +7,15 @@ function createInitialMessages() {
     id: createdAt,
     createdAt,
     sender: 'bot',
-    text: "Hey Trader! I'm Pip, your AI Trading Coach. Upload or paste a chart screenshot, or tell me the asset you're watching, and I'll give you an estimated signal with Entry, TP, and SL. What setup are we analyzing?",
+    text: "Hey Trader! I'm Pip, your AI Trading Coach. Upload or paste a chart screenshot, and I'll run Pip's 5-Point ICT Audit to estimate an Entry, TP, and SL directly from your chart. What setup are we analyzing today?",
   }];
 }
 
 const PRESET_QUESTIONS = [
-  '📋 Run 5-Point ICT Audit & Signal on this chart',
-  '🎯 Estimate a signal for XAUUSD (Gold) right now',
+  '📷 Upload chart for 5-Point ICT Audit & Signal',
   'What is the difference between BOS and CHoCH?',
-  'How do I calculate lot size for a $1,000 account?',
+  'How do I identify a valid Fair Value Gap (FVG)?',
+  'What are the high-probability Killzone hours?',
 ];
 
 function CameraIcon() {
@@ -449,7 +449,17 @@ export default function MemberPipCoach({ user }) {
                   key={idx}
                   type="button"
                   className="pip-preset-btn"
-                  onClick={() => handleSend(q)}
+                  onClick={() => {
+                    if (q.includes('Upload chart')) {
+                      if (!attachedImage) {
+                        fileInputRef.current?.click();
+                        return;
+                      }
+                      handleSend('Please run Pip\'s 5-Point ICT Audit and Estimated Signal on this attached chart.');
+                      return;
+                    }
+                    handleSend(q);
+                  }}
                 >
                   {q}
                 </button>
