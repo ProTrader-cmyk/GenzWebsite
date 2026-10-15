@@ -52,20 +52,31 @@ export function subscribeSignals(callback) {
 /**
  * Publishes a new signal to Firestore.
  */
-export async function publishSignal({
-  pair = 'XAUUSD',
-  direction = 'buy',
-  entry,
-  sl,
-  tp,
-  rr,
-  session = 'London Killzone',
-  reason = '',
-  status = 'active',
-}) {
-  const numEntry = parseFloat(entry);
-  const numSl = parseFloat(sl);
-  const numTp = parseFloat(tp);
+export async function publishSignal(signalData = {}) {
+  const {
+    id: customId,
+    pair = 'XAUUSD',
+    direction = 'buy',
+    entry,
+    sl,
+    tp,
+    rr,
+    session = 'London Killzone',
+    reason = '',
+    status = 'active',
+    ...extra
+  } = signalData;
+
+  const cleanNum = (val) => {
+    if (typeof val === 'number') return val;
+    if (!val) return 0;
+    const num = parseFloat(String(val).replace(/,/g, '').trim());
+    return isNaN(num) ? 0 : num;
+  };
+
+  const numEntry = cleanNum(entry ?? extra.entry_price ?? extra.entryPrice);
+  const numSl = cleanNum(sl ?? extra.stop_loss ?? extra.stopLoss);
+  const numTp = cleanNum(tp ?? extra.take_profit ?? extra.takeProfit);
 
   let calculatedRr = 2.0;
   if (typeof rr === 'string' && rr.includes(':')) {
@@ -81,23 +92,30 @@ export async function publishSignal({
     }
   }
 
-  const id = `sig-${Date.now()}`;
+  const id = customId || `sig-${Date.now()}`;
   const docRef = doc(db, SIGNALS_COLLECTION, id);
   const data = {
+    ...extra,
     pair: pair.toUpperCase().replace('/', '').trim(),
     direction: direction.toLowerCase() === 'sell' ? 'sell' : 'buy',
     entry: numEntry,
+    entry_price: numEntry,
+    entryPrice: numEntry,
     sl: numSl,
+    stop_loss: numSl,
+    stopLoss: numSl,
     tp: numTp,
+    take_profit: numTp,
+    takeProfit: numTp,
     rr: calculatedRr,
     session: session || 'London Killzone',
-    reason: reason.trim(),
+    reason: (reason || (Array.isArray(extra.confluences) ? extra.confluences.join('; ') : '')).trim(),
     status: status || 'active',
     createdAt: serverTimestamp(),
-    publishedAt: Date.now(),
+    publishedAt: extra.publishedAt || extra.generatedAt || Date.now(),
   };
 
-  await setDoc(docRef, data);
+  await setDoc(docRef, data, { merge: true });
   return { id, ...data };
 }
 
@@ -174,7 +192,14 @@ Before allowing a signal, assess every check:
 3. PD array: identify a visible, unmitigated, directionally aligned FVG/iFVG, order block, breaker, or mitigation block; estimate its exact low/high from the chart scale.
 4. Fibonacci: anchor the retracement to the actual displacement swing low/high. For a bullish impulse measure low-to-high and retracement down from the high; for bearish measure high-to-low and retracement up from the low. Report both swing prices and retracement percent. Require 61.8%-79% OTE and overlap between the OTE price and the selected PD-array zone.
 5. LTF execution: require a direction-aligned MSS/BOS with displacement after the liquidity event. Entry MUST equal the supplied live chart quote at the quote's displayed precision, and that exact price must be inside the PD-array/OTE overlap. If the quote is not in the overlap, set tradeAllowed=false; never substitute another entry.
-6. Risk: SL must be beyond structural invalidation, TP at a logical opposing liquidity target, and the setup must support 1:2 R:R.
+6. Risk & Gold CRT Model:
+   For Gold (XAUUSD) Day Trade, apply the 3-Candle CRT Liquidation Model:
+   - Identify HTF 1H/4H Reference Candle mitigating a POI; record High (BSL) and Low (SSL).
+   - Detect Liquidation: Active candle sweeps Reference Low (Bullish) or High (Bearish).
+   - 5M Confirmation: 5M body closes back inside HTF range + MSS displacement + FVG. Limit order at proximal edge or Consequent Encroachment (50%).
+   - Stop Loss (SL): Strictly locked to 1000 points ($10.00) from entry. If structural sweep invalidation requires >1000 points, set tradeAllowed=false.
+   - Take Profit (TP): Full TP at strict 1:2 R:R (2000 points / $20.00 move on Gold).
+   - Break-Even Rule: At 1:1 R:R (+1000 points / $10.00 profit), move SL to entry price (0 risk).
 
 Set tradeAllowed=true only when HTF bias, liquidity sweep, valid PD array, independently consistent Fibonacci OTE overlap, and LTF structure confirmation are all clearly visible. If any are missing, unclear, or conflict, set tradeAllowed=false. Never fill gaps with assumptions.
 Current live OANDA chart quote for ${normPair}: ${spotPriceStr}. Return this exact value as entry only if it is inside the verified confluence; otherwise return tradeAllowed=false.
@@ -184,6 +209,10 @@ Return only raw JSON with these keys:
   "tradeAllowed": boolean,
   "pair": "${normPair}",
   "direction": "buy" or "sell",
+  "timeframe": "5m",
+  "model": "3-Candle CRT Liquidation Model",
+  "refCandleHigh": number,
+  "refCandleLow": number,
   "htfBias": "bullish" or "bearish",
   "htfStructureEvidence": "string",
   "liquidityEvidence": "string",
@@ -197,6 +226,7 @@ Return only raw JSON with these keys:
   "entry": number,
   "sl": number,
   "tp": number,
+  "beTrigger": number,
   "rr": 2.0,
   "session": "London Killzone" or "New York AM Killzone" or "Other",
   "reason": "Concise setup rationale or specific reason there is no valid trade."

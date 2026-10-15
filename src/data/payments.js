@@ -2,15 +2,19 @@ import { auth } from '../firebase.js';
 
 const API_URL = import.meta.env.VITE_NEWS_API_URL || '';
 
-async function paymentRequest(path, body) {
+async function paymentRequest(path, body, { requireAuth = true } = {}) {
   const user = auth.currentUser;
-  if (!user) throw new Error('Please sign in before starting a payment.');
-  const token = await user.getIdToken();
+  if (requireAuth && !user) throw new Error('Please sign in before starting a payment.');
+  const token = requireAuth ? await user.getIdToken() : null;
+  const headers = {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(body ? { 'Content-Type': 'application/json' } : {}),
+  };
   let response;
   try {
     response = await fetch(`${API_URL}${path}`, {
       method: body ? 'POST' : 'GET',
-      headers: { Authorization: `Bearer ${token}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+      headers,
       ...(body ? { body: JSON.stringify(body) } : {}),
       signal: AbortSignal.timeout(12000),
     });
@@ -34,5 +38,5 @@ export async function verifyPayment(paymentId) {
 }
 
 export async function getPackages() {
-  return paymentRequest('/api/packages');
+  return paymentRequest('/api/packages', undefined, { requireAuth: false });
 }

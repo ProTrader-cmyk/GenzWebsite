@@ -48,24 +48,6 @@ export function ProfileDetails({ user, onViewProfile, onViewPricing }) {
             <span className={`tier-pill${isVip ? ' tier-pill-vip' : ''}`}>
               {isVip ? (userPlan !== 'free' ? userPlan.toUpperCase() + ' VIP' : t.vip) : t.member}
             </span>
-            {onViewPricing && (
-              <button
-                type="button"
-                onClick={onViewPricing}
-                style={{
-                  background: 'rgba(225, 29, 72, 0.15)',
-                  color: '#F43F5E',
-                  border: '1px solid rgba(225, 29, 72, 0.35)',
-                  borderRadius: '6px',
-                  padding: '2px 7px',
-                  fontSize: '10.5px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                }}
-              >
-                💳 {isVip ? 'Plan' : 'Upgrade'}
-              </button>
-            )}
           </div>
         </div>
         <div className="profile-menu-row">

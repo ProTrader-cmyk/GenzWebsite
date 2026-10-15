@@ -205,7 +205,7 @@ export default function MemberSignals({ plan = 'elite' }) {
 
   useEffect(() => {
     let cancelled = false;
-    const activePairs = Array.from(new Set(['XAUUSD', ...signals.map((s) => s.pair || 'XAUUSD')]));
+    const activePairs = ['XAUUSD'];
 
     // 1. Initial snapshot fetch
     async function loadSnapshot() {
@@ -247,7 +247,7 @@ export default function MemberSignals({ plan = 'elite' }) {
     };
   }, [signals]);
 
-  const sorted = [...signals].sort((a, b) => (a.minutesAgo ?? 0) - (b.minutesAgo ?? 0));
+  const sorted = signals.filter((s) => /XAU|GOLD/i.test(s.pair || '')).sort((a, b) => (a.minutesAgo ?? 0) - (b.minutesAgo ?? 0));
   const filtered = sorted.filter((s) => statusFilter === 'all' || s.status === statusFilter);
   const visibilityPercent = Math.round((PLAN_SIGNAL_ACCESS[plan] ?? 1) * 100);
 

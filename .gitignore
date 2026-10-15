@@ -10,3 +10,5 @@ dist
 *.MOV
 *.mkv
 *.mp4
+*.log
+firebase-debug.log*

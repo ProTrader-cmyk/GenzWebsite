@@ -12,10 +12,13 @@ export default function Navbar({
   onLogoClick,
   activeSection,
   onNavHome,
+  onNavLessons,
   onNavNews,
   onNavAITrading,
   onNavContact,
   onNavProfile,
+  onLoginClick,
+  onSignupClick,
   user,
   onLogout,
   isAdmin,
@@ -33,14 +36,10 @@ export default function Navbar({
 
   function handleNav(fn) {
     setMenuOpen(false);
-    fn();
+    if (fn) fn();
   }
 
-  const paymentLabel = hasActivePlan
-    ? t.aiTrading
-    : lang === 'km'
-    ? '💳 កញ្ចប់ VIP & Payment'
-    : '💳 Packages & Payment';
+  const paymentLabel = t.aiTrading;
 
   return (
     <nav
@@ -50,7 +49,7 @@ export default function Navbar({
         : { background: 'rgba(12,12,15,0.88)', boxShadow: '0 12px 30px -18px rgba(0,0,0,0.6)' }}
     >
       <div className="nav-in">
-        <div className="logo" onClick={onLogoClick}>
+        <div className="logo" onClick={onLogoClick} style={{ cursor: 'pointer' }}>
           <div className="logo-icon">
             <img src={logo} alt="GenZ Trader" />
           </div>
@@ -63,28 +62,46 @@ export default function Navbar({
           <div className="nav-links">
             <button
               type="button"
-              className={`nav-link${activeSection === 'categories' ? ' active' : ''}`}
+              className={`nav-link${activeSection === 'home' ? ' active' : ''}`}
               onClick={onNavHome}
             >
               {t.home}
             </button>
             <button
               type="button"
+              className={`nav-link${activeSection === 'categories' || activeSection === 'technical' ? ' active' : ''}`}
+              onClick={onNavLessons || onNavHome}
+            >
+              {t.lessons}
+            </button>
+            <button
+              type="button"
               className={`nav-link${activeSection === 'news' ? ' active' : ''}`}
               onClick={onNavNews}
             >
-              {!approved && <LockIcon />}
+              {!approved && user && <LockIcon />}
               {t.news}
             </button>
-            {canAccessAITrading && (
+            {(canAccessAITrading || !user) && (
               <button
                 type="button"
                 className={`nav-link${activeSection === 'ai-trading' ? ' active' : ''}`}
                 onClick={onNavAITrading}
               >
                 {paymentLabel}
+                {!hasActivePlan && user && (
+                  <span className="ait-nav-vip-pill">VIP</span>
+                )}
               </button>
             )}
+            <button
+              type="button"
+              className={`nav-link${activeSection === 'member-preview' ? ' active' : ''}`}
+              onClick={onNavMemberPreview}
+            >
+              <span>{t.memberArea || 'Member Area'}</span>
+              <span className="ait-nav-vip-pill" style={{ marginLeft: '8px', background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>SOON</span>
+            </button>
             <button
               type="button"
               className={`nav-link${activeSection === 'contact' ? ' active' : ''}`}
@@ -117,6 +134,22 @@ export default function Navbar({
         )}
         <LanguageDropdown />
 
+        {/* Auth Buttons for Unauthenticated Visitors (Just like screenshot) */}
+        {!user && (
+          <div className="nav-auth-btns">
+            {onLoginClick && (
+              <button type="button" className="nav-auth-login-btn" onClick={onLoginClick}>
+                {t.login}
+              </button>
+            )}
+            {onSignupClick && (
+              <button type="button" className="nav-auth-start-btn" onClick={onSignupClick}>
+                {t.signup}
+              </button>
+            )}
+          </div>
+        )}
+
         {isAdmin && (
           <button type="button" className="nav-link nav-admin-link" onClick={onNavAdmin}>
             {t.admin}
@@ -144,28 +177,46 @@ export default function Navbar({
             <>
               <button
                 type="button"
-                className={`nav-mobile-link${activeSection === 'categories' ? ' active' : ''}`}
+                className={`nav-mobile-link${activeSection === 'home' ? ' active' : ''}`}
                 onClick={() => handleNav(onNavHome)}
               >
                 {t.home}
               </button>
               <button
                 type="button"
+                className={`nav-mobile-link${activeSection === 'categories' || activeSection === 'technical' ? ' active' : ''}`}
+                onClick={() => handleNav(onNavLessons || onNavHome)}
+              >
+                {t.lessons}
+              </button>
+              <button
+                type="button"
                 className={`nav-mobile-link${activeSection === 'news' ? ' active' : ''}`}
                 onClick={() => handleNav(onNavNews)}
               >
-                {!approved && <LockIcon />}
+                {!approved && user && <LockIcon />}
                 {t.news}
               </button>
-              {canAccessAITrading && (
+              {(canAccessAITrading || !user) && (
                 <button
                   type="button"
                   className={`nav-mobile-link${activeSection === 'ai-trading' ? ' active' : ''}`}
                   onClick={() => handleNav(onNavAITrading)}
                 >
                   {paymentLabel}
+                  {!hasActivePlan && user && (
+                    <span className="ait-nav-vip-pill">VIP</span>
+                  )}
                 </button>
               )}
+              <button
+                type="button"
+                className={`nav-mobile-link${activeSection === 'member-preview' ? ' active' : ''}`}
+                onClick={() => handleNav(onNavMemberPreview)}
+              >
+                <span>{t.memberArea || 'Member Area'}</span>
+                <span className="ait-nav-vip-pill" style={{ marginLeft: '8px', background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>SOON</span>
+              </button>
               <button
                 type="button"
                 className={`nav-mobile-link${activeSection === 'contact' ? ' active' : ''}`}
@@ -175,6 +226,22 @@ export default function Navbar({
               </button>
             </>
           )}
+
+          {!user && (
+            <div className="nav-mobile-auth-row">
+              {onLoginClick && (
+                <button type="button" className="nav-auth-login-btn" onClick={() => handleNav(onLoginClick)}>
+                  {t.login}
+                </button>
+              )}
+              {onSignupClick && (
+                <button type="button" className="nav-auth-start-btn" onClick={() => handleNav(onSignupClick)}>
+                  {t.signup}
+                </button>
+              )}
+            </div>
+          )}
+
           {isAdmin && (
             <button type="button" className="nav-mobile-link" onClick={() => handleNav(onNavAdmin)}>
               {t.admin}

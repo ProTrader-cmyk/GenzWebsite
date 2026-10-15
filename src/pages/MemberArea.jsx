@@ -6,6 +6,7 @@ import MemberSignals from './member/MemberSignals.jsx';
 import MemberPipCoach from './member/MemberPipCoach.jsx';
 import MemberPerks from './member/MemberPerks.jsx';
 import MemberTierLocked from './member/MemberTierLocked.jsx';
+import MemberComingSoon from './member/MemberComingSoon.jsx';
 import {
   getNotificationPermission,
   requestNotificationPermission,
@@ -57,8 +58,22 @@ const PLAN_OPTIONS = [
   { key: 'elite', label: 'Elite VIP' },
 ];
 
-export default function MemberArea({ user, doneMap, onExit, initialView = 'dashboard' }) {
+export default function MemberArea({ user, doneMap, onExit, initialView = 'dashboard', onExploreAI }) {
   const isAdmin = user?.role === 'admin' || user?.role === 'dev';
+  const [showComingSoon, setShowComingSoon] = useState(true);
+
+  if (showComingSoon) {
+    return (
+      <MemberComingSoon
+        user={user}
+        onExit={onExit}
+        onExploreAI={onExploreAI}
+        isAdmin={isAdmin}
+        onToggleDevTerminal={() => setShowComingSoon(false)}
+      />
+    );
+  }
+
   // Actual plan assigned by admin: 'starter' | 'pro' | 'elite' | 'free'
   const userPlan = getUserPlan(user);
 
@@ -369,6 +384,16 @@ export default function MemberArea({ user, doneMap, onExit, initialView = 'dashb
             >
               <span>★ {activePlan.toUpperCase()}</span>
             </div>
+
+            <button
+              type="button"
+              className="terminal-topbar-exit-btn"
+              onClick={() => setShowComingSoon(true)}
+              title="Return to Coming Soon view"
+              style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', borderColor: 'rgba(245, 158, 11, 0.3)' }}
+            >
+              <span>🔒 Coming Soon View</span>
+            </button>
 
             <button
               type="button"

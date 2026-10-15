@@ -113,33 +113,50 @@ export async function detectTelegramChannel(botToken) {
  * Formats a signal into a clean, institutional Telegram VIP message with HTML formatting.
  */
 export function formatTelegramMessage(signal) {
-  const pair = escapeHtml((signal.pair || 'XAUUSD').toUpperCase());
-  const type = escapeHtml((signal.type || 'BUY').toUpperCase());
-  const entry = escapeHtml(signal.entry || 'Market');
-  const sl = escapeHtml(signal.sl || 'N/A');
-  const tp = escapeHtml(signal.tp || 'N/A');
+  const pair = escapeHtml((signal.pair || signal.symbol || 'XAUUSD').toUpperCase());
+  const type = escapeHtml((signal.direction || signal.type || 'BUY').toUpperCase());
+  const entry = escapeHtml(signal.entry || signal.entry_price || signal.entryPrice || 'Market');
+  const sl = escapeHtml(signal.sl || signal.stop_loss || signal.stopLoss || 'N/A');
+  const tp = escapeHtml(signal.tp || signal.take_profit || signal.takeProfit || 'N/A');
+  const be = signal.beTrigger || signal.breakEvenTrigger;
   const rr = escapeHtml(signal.rr || '1:2');
   const timeframe = escapeHtml(signal.timeframe || '15m');
   const session = escapeHtml(signal.session || 'London / NY Killzone');
-  const reasoning = escapeHtml(signal.reasoning || signal.setup || 'Institutional SMC Order Block & Liquidity Sweep');
+  const model = escapeHtml(signal.model || (signal.style === 'scalping' ? 'ICT M1-M5 Scalp' : '3-Candle CRT Liquidation Model'));
+  const reasoning = escapeHtml(
+    signal.reasoning ||
+    signal.reason ||
+    signal.setup ||
+    (Array.isArray(signal.confluences) ? signal.confluences.slice(0, 3).join('\n• ') : 'Institutional SMC Order Block & Liquidity Sweep')
+  );
 
   const actionEmoji = type.includes('BUY') ? '🟢' : '🔴';
 
-  return [
+  const lines = [
     `🎯 <b>#${pair}</b> ┃ ${actionEmoji} <b>${type} ${entry}</b>`,
     ``,
     `🔹 <b>Take Profit (TP)</b> — <code>${tp}</code>`,
     `🔸 <b>Stop Loss (SL)</b> — <code>${sl}</code>`,
+  ];
+
+  if (be) {
+    lines.push(`🟡 <b>Break-Even (BE)</b> — <code>${escapeHtml(be)}</code> (+1000 pts / 1:1 RR)`);
+  }
+
+  lines.push(
     `⚖️ <b>Risk to Reward</b> — <code>${rr}</code> (${timeframe} • ${session})`,
+    `📐 <b>Strategy Model:</b> <i>${model}</i>`,
     ``,
     `💡 <b>Setup Rationale:</b>`,
     `<i>${reasoning}</i>`,
     ``,
     `🛡️ <b>Strict Risk Protocol:</b>`,
-    `Risk only 1%–2% per trade. Apply proper risk management ‼️‼️`,
+    `Risk strictly 1% per trade. Move SL to Break-Even at 1:1 RR ‼️`,
     ``,
-    `⚡ <i>GenZ Trader VIP Signals</i>`,
-  ].join('\n');
+    `⚡ <i>GenZ Trader VIP Signals</i>`
+  );
+
+  return lines.join('\n');
 }
 
 /**

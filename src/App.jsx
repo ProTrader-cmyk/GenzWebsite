@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import Navbar from './components/Navbar.jsx';
+import LandingHome from './components/LandingHome.jsx';
 import CategoryHome from './components/CategoryHome.jsx';
 import Home from './components/Home.jsx';
 import AppsHome from './components/AppsHome.jsx';
@@ -78,12 +79,12 @@ function loadNav() {
   } catch {
     // ignore malformed value
   }
-  return { section: 'categories', view: 'home' };
+  return { section: 'home', view: 'home' };
 }
 
 export default function App() {
   const [user, setUser] = useState(() => loadSession());
-  const [authView, setAuthView] = useState('login'); // 'login' | 'signup'
+  const [authView, setAuthView] = useState(() => (new URLSearchParams(window.location.search).get('mode') === 'resetPassword' ? 'login' : null)); // null | 'login' | 'signup'
   const [pendingVerification, setPendingVerification] = useState(null); // { uid, email, name }
   // { email, token } when the URL is a password-reset email link
   // (?mode=resetPassword&token=&email=) — checked once on first mount,
@@ -223,6 +224,7 @@ export default function App() {
   // category picker (where switching `section` to 'categories' again is a
   // no-op and wouldn't otherwise remount/re-trigger it).
   const [pendingNoticeTick, setPendingNoticeTick] = useState(0);
+  const [aiTradingReferralTick, setAiTradingReferralTick] = useState(0);
   // 'approved' | 'vip' | null — set by the live listener below the instant
   // an admin grants access while this tab is open (or on next visit if it
   // wasn't); AccessGrantedModal renders it.
@@ -333,7 +335,7 @@ export default function App() {
   // browser session.
   function markDone(id) {
     setDoneMap((prev) => ({ ...prev, [id]: true }));
-    markLessonDone(user.uid, id).catch(() => {});
+    if (user?.uid) markLessonDone(user.uid, id).catch(() => {});
     const next = id.startsWith('bt')
       ? getNextBacktestLessonId(id)
       : id.startsWith('psy')
@@ -353,7 +355,7 @@ export default function App() {
   }
 
   function handleFeedbackSubmit(rating, comment) {
-    if (feedbackPrompt) {
+    if (feedbackPrompt && user) {
       submitFeedback({
         uid: user.uid,
         name: user.name,
@@ -422,8 +424,8 @@ export default function App() {
     await logoutUser();
     setUser(null);
     setPendingVerification(null);
-    setAuthView('login');
-    setSection('categories');
+    setAuthView(null);
+    setSection('home');
     setView('home');
     setAdminViewingSite(false);
     setAccessAlert(null);
@@ -465,24 +467,30 @@ export default function App() {
     );
   }
 
-  if (!user) {
-    return authView === 'login' ? (
+  if (!user && authView === 'login') {
+    return (
       <Login
         onLogin={handleAuthSuccess}
         onAuthStart={beginManualAuth}
         onAuthCancel={cancelManualAuth}
         onNeedVerification={handleNeedVerification}
         onSwitchToSignup={() => setAuthView('signup')}
-      />
-    ) : (
-      <Signup
-        onNeedVerification={handleNeedVerification}
-        onSwitchToLogin={() => setAuthView('login')}
+        onBackToHome={() => setAuthView(null)}
       />
     );
   }
 
-  const isAdmin = user.role === 'admin' || user.role === 'dev';
+  if (!user && authView === 'signup') {
+    return (
+      <Signup
+        onNeedVerification={handleNeedVerification}
+        onSwitchToLogin={() => setAuthView('login')}
+        onBackToHome={() => setAuthView(null)}
+      />
+    );
+  }
+
+  const isAdmin = Boolean(user && (user.role === 'admin' || user.role === 'dev'));
 
   const renderGlobalToast = () => {
     if (!globalNotifToast) return null;
@@ -543,17 +551,21 @@ export default function App() {
   // until an admin approves the account / flips status to 'approved' in
   // Firestore. An admin or dev browsing the site gets full access regardless
   // of their own status.
-  const subscriptionExpired = Number.isFinite(user.subscriptionExpiresAt) && user.subscriptionExpiresAt <= Date.now();
-  const approved = (user.status === 'approved' && !subscriptionExpired) || user.role === 'admin' || user.role === 'dev';
-
+  const subscriptionExpired = Boolean(
+    user && Number.isFinite(user.subscriptionExpiresAt) && user.subscriptionExpiresAt <= Date.now()
+  );
+  const approved = Boolean(
+    user && (((user.status === 'approved' && !subscriptionExpired) || user.role === 'admin' || user.role === 'dev'))
+  );
 
   // VIP is a separate tier from approved/admin — it only gates VIP-only
   // tracks (e.g. Advanced), set via Admin Dashboard's per-user Role dropdown
   // (data/auth.js: setUserAccess). An admin or dev always counts as VIP too.
   const userPlan = getUserPlan(user);
-  const hasPaidAiTradingPlan = !subscriptionExpired && ['starter', 'pro', 'elite'].includes(userPlan);
-  const canAccessAITrading = isAdmin || hasPaidAiTradingPlan;
-  const isVip = (user.tier === 'vip' || userPlan !== 'free') && !subscriptionExpired || isAdmin;
+  // Every signed-in user can open the AI Trading tab and view the plans;
+  // the paid member terminal remains gated by hasActivePlan below.
+  const canAccessAITrading = true;
+  const isVip = Boolean(user && ((user.tier === 'vip' || userPlan !== 'free') && !subscriptionExpired)) || isAdmin;
 
   // Users with an active VIP subscription plan ('starter', 'pro', 'elite'),
   // or assigned VIP tier, or admin/dev accounts skip the pricing/payment section
@@ -565,7 +577,7 @@ export default function App() {
   // An admin/dev account ignores allowedLessons entirely — that override
   // exists to restrict/grant lessons for regular accounts, and should never
   // end up locking out an admin or dev themselves.
-  const allowedLessons = !isAdmin && Array.isArray(user.allowedLessons) ? user.allowedLessons : null;
+  const allowedLessons = !isAdmin && user && Array.isArray(user.allowedLessons) ? user.allowedLessons : null;
 
   // Lessons within a track unlock one at a time in order (lesson N+1 needs
   // lesson N done) — except for an admin/dev, who always sees every lesson
@@ -608,65 +620,137 @@ export default function App() {
   return (
     <>
       <Navbar
-        onLogoClick={backToCategories}
+        onLogoClick={() => {
+          setSection('home');
+          setView('home');
+        }}
         activeSection={section}
-        onNavHome={backToCategories}
+        onNavHome={() => {
+          setSection('home');
+          setView('home');
+        }}
+        onNavLessons={() => {
+          setSection('categories');
+          setView('home');
+        }}
         onNavNews={
           approved
             ? () => setSection('news')
             : () => {
-                backToCategories();
-                setPendingNoticeTick((n) => n + 1);
+                if (!user) {
+                  setAuthView('signup');
+                } else {
+                  backToCategories();
+                  setPendingNoticeTick((n) => n + 1);
+                }
               }
         }
-        onNavAITrading={canAccessAITrading ? () => setSection('ai-trading') : undefined}
+        onNavAITrading={() => {
+          if (!user) {
+            setAuthView('signup');
+          } else {
+            setSection('ai-trading');
+            if (!hasActivePlan) {
+              setAiTradingReferralTick((n) => n + 1);
+            }
+          }
+        }}
         onNavMemberPreview={() => setSection('member-preview')}
         onNavContact={() => setSection('contact')}
-        onNavProfile={() => setSection('profile')}
+        onNavProfile={user ? () => setSection('profile') : undefined}
+        onLoginClick={() => setAuthView('login')}
+        onSignupClick={() => setAuthView('signup')}
         user={user}
         onLogout={handleLogout}
-        isAdmin={user.role === 'admin' || user.role === 'dev'}
+        isAdmin={isAdmin}
         canAccessAITrading={canAccessAITrading}
         hasActivePlan={hasActivePlan}
         onNavAdmin={() => setAdminViewingSite(false)}
         approved={approved}
       />
-      <div className={`wrap${(section === 'member-preview' || (canAccessAITrading && section === 'ai-trading' && hasActivePlan)) ? ' wrap-terminal' : ''}`}>
-        {(section === 'categories' || (!approved && ['news', 'new-product', 'member-preview'].includes(section))) && (
+      {section === 'home' ? (
+        <LandingHome
+          onGetStarted={() => setAuthView('signup')}
+          onLogin={() => setAuthView('login')}
+          onExploreLessons={() => {
+            setSection('categories');
+            setView('home');
+          }}
+          onNavNews={() => {
+            if (!user) {
+              setAuthView('signup');
+            } else if (approved) {
+              setSection('news');
+            } else {
+              setSection('categories');
+              setPendingNoticeTick((n) => n + 1);
+            }
+          }}
+          onNavPricing={() => {
+            if (!user) {
+              setAuthView('signup');
+            } else {
+              setSection('ai-trading');
+              if (!hasActivePlan) {
+                setAiTradingReferralTick((n) => n + 1);
+              }
+            }
+          }}
+          user={user}
+        />
+      ) : (
+        <div className={`wrap${(section === 'member-preview' || (canAccessAITrading && section === 'ai-trading')) ? ' wrap-terminal' : ''}`}>
+        {section === 'categories' && (
           <CategoryHome
             onSelectCategory={selectCategory}
             approved={approved}
             isVip={isVip}
             noticeTick={pendingNoticeTick}
+            user={user}
+            onRequireAuth={() => setAuthView('signup')}
+          />
+        )}
+        {!approved && user && ['news', 'new-product'].includes(section) && (
+          <CategoryHome
+            onSelectCategory={selectCategory}
+            approved={approved}
+            isVip={isVip}
+            noticeTick={pendingNoticeTick}
+            user={user}
+            onRequireAuth={() => setAuthView('signup')}
           />
         )}
         {approved && section === 'news' && <NewsPage onBack={backToCategories} />}
         {section === 'ai-trading' && (
-          hasActivePlan ? (
-            <Suspense fallback={<BootScreen />}>
-              <MemberArea
-                user={user}
-                doneMap={doneMap}
-                onExit={backToCategories}
-                onViewProfile={() => setSection('profile')}
-                initialView={userPlan === 'starter' ? 'dashboard' : 'pip'}
-              />
-            </Suspense>
-          ) : (
-            <AITradingPage
-              onBack={backToCategories}
-              user={user}
-              onActivated={() => { /* The verified backend write updates the live user profile. */ }}
-            />
-          )
+          <AITradingPage
+            onBack={() => {
+              setSection('home');
+              setView('home');
+            }}
+            user={user}
+            hasActivePlan={hasActivePlan}
+            referralNoticeTick={aiTradingReferralTick}
+            onOpenTerminal={() => setSection('member-preview')}
+            onActivated={(activatedPlan) => {
+              if (user && activatedPlan) {
+                setUser((prev) => ({
+                  ...prev,
+                  plan: activatedPlan?.id || activatedPlan,
+                  tier: 'vip',
+                  status: 'approved',
+                }));
+              }
+            }}
+          />
         )}
-        {section === 'member-preview' && (isAdmin || hasActivePlan) && (
+        {section === 'member-preview' && (
           <Suspense fallback={<BootScreen />}>
             <MemberArea
               user={user}
               doneMap={doneMap}
               onExit={backToCategories}
               onViewProfile={() => setSection('profile')}
+              onExploreAI={() => setSection('ai-trading')}
             />
           </Suspense>
         )}
@@ -674,7 +758,7 @@ export default function App() {
         {approved && hasVisitedNewProduct && (
           <NewProductHome onBack={backToCategories} isActive={section === 'new-product'} />
         )}
-        {section === 'profile' && (
+        {user && section === 'profile' && (
           <Suspense fallback={<BootScreen />}>
             <Profile
               onBack={backToCategories}
@@ -747,7 +831,8 @@ export default function App() {
               <CurrentLesson onNavigate={navigate} onDone={() => markDone(view)} />
             </Suspense>
           )}
-      </div>
+        </div>
+      )}
 
       <AccessGrantedModal kind={accessAlert} onClose={() => setAccessAlert(null)} />
       {feedbackPrompt && (

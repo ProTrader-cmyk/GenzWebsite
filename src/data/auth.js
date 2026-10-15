@@ -62,9 +62,9 @@ async function clearLoginAttempts(email) {
   await deleteDoc(doc(db, LOGIN_ATTEMPTS_COLLECTION, email));
 }
 
-const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID || 'service_x5a3ylf';
-const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'template_48lnomi';
-const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'skTsXl_YXN2PxAgcQ';
+const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID || 'service_9q9ebg9';
+const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'template_ggdfya4';
+const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'sromfJQSH_S0KZ4Go';
 
 function authErrorMessage(code, lang) {
   const t = getStrings(lang).auth;

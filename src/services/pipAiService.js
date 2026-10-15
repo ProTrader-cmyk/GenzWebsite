@@ -72,7 +72,8 @@ const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/
  * Gets the active Gemini API key from environment variable or localStorage.
  */
 export function getPipApiKey() {
-  const envKey = import.meta.env.VITE_GEMINI_API_KEY;
+  const env = (typeof import.meta !== 'undefined' && import.meta?.env) || (typeof process !== 'undefined' && process?.env) || {};
+  const envKey = env.VITE_GEMINI_API_KEY;
   if (envKey && envKey.trim()) return envKey.trim();
   try {
     return localStorage.getItem('genz_gemini_api_key') || '';
@@ -105,7 +106,8 @@ export function savePipApiKey(key) {
  */
 export async function askPipCoach(history, prompt, base64Image = null) {
   // 1. Try our secure Railway backend first (works seamlessly on ALL devices & live sites)
-  const backendUrl = import.meta.env.VITE_NEWS_API_URL || 'https://genzapi-production.up.railway.app';
+  const env = (typeof import.meta !== 'undefined' && import.meta?.env) || (typeof process !== 'undefined' && process?.env) || {};
+  const backendUrl = env.VITE_NEWS_API_URL || 'https://genzapi-production.up.railway.app';
   if (backendUrl) {
     try {
       const endpoint = `${backendUrl.replace(/\/+$/, '')}/api/pip/chat`;

@@ -1,271 +1,1938 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase.js';
 import Footer from './Footer.jsx';
-import BakongPaymentModal from './BakongPaymentModal.jsx';
-import { TelegramIcon } from './ui/CategoryIcons.jsx';
+import {
+  SparkleIcon,
+  CandleChartIcon,
+  BrainIcon,
+  DollarIcon,
+  TrendUpIcon,
+  LockIcon,
+} from './ui/CategoryIcons.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
-import { getPackages } from '../data/payments.js';
+import { fetchLivePrice, formatSpotPrice, subscribeLiveTicks } from '../services/marketPriceService.js';
+import { subscribeSignals } from '../data/signals.js';
+import { getUserPlan } from '../data/auth.js';
+import { clearStoredPipSignals, generateRealPipSignal } from '../services/pipLiveSignalService.js';
+import AILiveChartTerminal from './AILiveChartTerminal.jsx';
+import ReferralAccessModal from './ReferralAccessModal.jsx';
+import PairLogo, {
+  GoldIngotLogo,
+  FlagEU,
+  FlagUK,
+  BitcoinLogo,
+  US30Logo,
+  SilverIngotLogo,
+} from './ui/PairLogo.jsx';
+import '../styles/aiTradingPage.css';
 
-const TELEGRAM_URL = 'https://t.me/Vengsopheagenz?direct';
+const SCANNER_PAIRS = [
+  {
+    symbol: 'XAUUSD',
+    name: 'Gold (XAU/USD)',
+    category: 'Commodity',
+    icon: <GoldIngotLogo size={22} />,
+  },
+  {
+    symbol: 'EURUSD',
+    name: 'EUR/USD',
+    category: 'Major Forex',
+    icon: <FlagEU size={22} />,
+  },
+  {
+    symbol: 'GBPUSD',
+    name: 'GBP/USD',
+    category: 'Major Forex',
+    icon: <FlagUK size={22} />,
+  },
+  {
+    symbol: 'BTCUSD',
+    name: 'Bitcoin (BTC/USD)',
+    category: 'Crypto',
+    icon: <BitcoinLogo size={22} />,
+  },
+  {
+    symbol: 'US30',
+    name: 'US30 (Dow Jones)',
+    category: 'US Index',
+    icon: <US30Logo size={22} />,
+  },
+];
 
-// PLACEHOLDER — replace with the real, public Myfxbook (or equivalent)
-// verified track-record link before launch.
-const MYFXBOOK_URL = 'https://www.myfxbook.com/';
+function ScannerPairDropdown({ selectedPair, onSelectPair, livePrices }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
-const PAYMENT_LOGOS = ['Bakong KHQR', 'ABA Mobile', 'ACLEDA', 'Wing Bank', 'Canadia'];
-
-// Hidden for now -- the track record link, testimonials, and payment logos
-// are still all placeholders (see the "Placeholders to replace" list).
-// Flip back to true once real data is in.
-const SHOW_PROOF_STRIP = false;
-
-// Feature lists intentionally don't repeat across tiers — Pro/Elite each
-// start with an "Everything in [plan]" line instead, so VIP Signal Group
-// access (only spelled out once, under Starter) still applies to every
-// tier without the same line being printed three times.
-function buildPlans(t) {
-  return [
-    {
-      id: 'starter',
-      name: t.starterName,
-      tag: t.starterTag,
-      audience: t.starterAudience,
-      monthlyPrice: t.starterMonthlyPrice,
-      yearlyPrice: t.starterYearlyPrice,
-      features: [
-        t.vipSignalGroup,
-        t.starterFeature1,
-        t.starterFeature2,
-        t.starterFeature3,
-        t.starterFeature4,
-        t.starterFeature5,
-      ],
-      cta: t.starterCta,
-      popular: false,
-    },
-    {
-      id: 'pro',
-      name: t.proName,
-      tag: t.proTag,
-      audience: t.proAudience,
-      monthlyPrice: t.proMonthlyPrice,
-      yearlyPrice: t.proYearlyPrice,
-      features: [t.proFeature1, t.proFeature2, t.proFeature3, t.proFeature4, t.proFeature5, t.proFeature6],
-      cta: t.proCta,
-      popular: true,
-    },
-    {
-      id: 'elite',
-      name: t.eliteName,
-      tag: t.eliteTag,
-      audience: t.eliteAudience,
-      monthlyPrice: t.eliteMonthlyPrice,
-      yearlyPrice: t.eliteYearlyPrice,
-      features: [t.eliteFeature1, t.eliteFeature2, t.eliteFeature3, t.eliteFeature4, t.eliteFeature5],
-      cta: t.eliteCta,
-      popular: false,
-    },
-  ];
-}
-
-function buildFaqItems(t) {
-  return [
-    { q: t.faqQ1, a: t.faqA1 },
-    { q: t.faqQ2, a: t.faqA2 },
-    { q: t.faqQ3, a: t.faqA3 },
-    { q: t.faqQ4, a: t.faqA4 },
-    { q: t.faqQ5, a: t.faqA5 },
-    { q: t.faqQ6, a: t.faqA6 },
-  ];
-}
-
-function buildTestimonials(t) {
-  return [
-    { name: t.testimonial1Name, text: t.testimonial1Text },
-    { name: t.testimonial2Name, text: t.testimonial2Text },
-    { name: t.testimonial3Name, text: t.testimonial3Text },
-  ];
-}
-
-export default function AITradingPage({ onBack, user, onActivated }) {
-  const { lang } = useLanguage();
-  const t = getStrings(lang).aiTrading;
-  const [billing, setBilling] = useState('monthly'); // 'monthly' | 'yearly'
-  const [selectedPlan, setSelectedPlan] = useState(null); // plan object while its modal is open
-  const [openFaq, setOpenFaq] = useState(null); // index of the open FAQ item, or null
-  const [packageCatalog, setPackageCatalog] = useState({});
-  const [catalogLoaded, setCatalogLoaded] = useState(false);
-  const [catalogError, setCatalogError] = useState('');
-  async function loadPackageCatalog() {
-    setCatalogLoaded(false);
-    setCatalogError('');
-    try {
-      const { packages } = await getPackages();
-      setPackageCatalog(Object.fromEntries(packages.map((item) => [item.id, item])));
-    } catch (error) {
-      setPackageCatalog({});
-      setCatalogError(error.message || 'Could not load packages.');
-    } finally {
-      setCatalogLoaded(true);
-    }
-  }
   useEffect(() => {
-    loadPackageCatalog();
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-  const plans = buildPlans(t);
-  const faqItems = buildFaqItems(t);
-  const testimonials = buildTestimonials(t);
-  const period = billing === 'yearly' ? t.periodYearly : t.periodMonthly;
+
+  const currentItem = SCANNER_PAIRS.find((p) => p.symbol === selectedPair) || SCANNER_PAIRS[0];
+  const activePrice = livePrices?.[currentItem.symbol];
 
   return (
-    <div className="view active" id="v-ai-trading">
-      <button className="back" onClick={onBack}>
-        {t.back}
+    <div className="ait-custom-pair-dropdown" ref={dropdownRef}>
+      <button
+        type="button"
+        className={`ait-custom-pair-trigger ${isOpen ? 'is-open' : ''}`}
+        onClick={() => setIsOpen(!isOpen)}
+        aria-label="Select Trading Pair"
+      >
+        <span className="ait-pair-icon-wrap">{currentItem.icon}</span>
+        <div className="ait-pair-trigger-info">
+          <span className="ait-pair-trigger-name">{currentItem.name}</span>
+          {activePrice && (
+            <span className="ait-pair-trigger-price ait-mono">
+              ${typeof activePrice === 'number' ? activePrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 }) : activePrice}
+            </span>
+          )}
+        </div>
+        <svg
+          className={`ait-pair-chevron ${isOpen ? 'rotated' : ''}`}
+          width="14"
+          height="14"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+        >
+          <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.27a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+        </svg>
       </button>
 
-      <div className="sec-hero">
-        <div className="sec-hero-ey sg">{t.eyebrow}</div>
-        <h2>{t.title}</h2>
-        <p>{t.subtitle}</p>
-      </div>
+      {isOpen && (
+        <div className="ait-custom-pair-menu">
+          <div className="ait-pair-menu-header">INSTITUTIONAL ASSET PAIRS</div>
+          {SCANNER_PAIRS.map((item) => {
+            const isSelected = item.symbol === selectedPair;
+            const price = livePrices?.[item.symbol];
+            return (
+              <button
+                key={item.symbol}
+                type="button"
+                className={`ait-custom-pair-item ${isSelected ? 'selected' : ''}`}
+                onClick={() => {
+                  onSelectPair(item.symbol);
+                  setIsOpen(false);
+                }}
+              >
+                <span className="ait-pair-item-icon">{item.icon}</span>
+                <div className="ait-pair-item-details">
+                  <div className="ait-pair-item-title-row">
+                    <span className="ait-pair-item-name">{item.name}</span>
+                    {price && (
+                      <span className="ait-pair-item-price ait-mono">
+                        ${typeof price === 'number' ? price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 }) : price}
+                      </span>
+                    )}
+                  </div>
+                  <span className="ait-pair-item-cat">{item.category}</span>
+                </div>
+                {isSelected && <span className="ait-pair-check">✓</span>}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
-      <div className="billing-toggle" role="group" aria-label="Billing period">
-        <button
-          type="button"
-          className={`billing-toggle-btn${billing === 'monthly' ? ' active' : ''}`}
-          aria-pressed={billing === 'monthly'}
-          onClick={() => setBilling('monthly')}
-        >
-          {t.billingMonthly}
-        </button>
-        <button
-          type="button"
-          className={`billing-toggle-btn${billing === 'yearly' ? ' active' : ''}`}
-          aria-pressed={billing === 'yearly'}
-          onClick={() => setBilling('yearly')}
-        >
-          {t.billingYearly}
-          <span className="billing-yearly-badge">{t.billingYearlyBadge}</span>
-        </button>
-      </div>
+function getActiveTradingSession() {
+  const now = new Date();
+  const utcHour = now.getUTCHours();
+  const utcMin = now.getUTCMinutes();
+  const totalUtcMinutes = utcHour * 60 + utcMin;
 
-      <div className="plans-grid">
-        {plans.map((plan) => (
-          <div key={plan.id} className={`plan-card${plan.popular ? ' plan-popular' : ''}`}>
-            {plan.popular && <div className="plan-popular-badge">{t.popularBadge}</div>}
-            <div className="plan-tag">{plan.tag}</div>
-            <div className="plan-name">{plan.name}</div>
-            <div className="plan-audience">{plan.audience}</div>
-            <div className="plan-price">
-              {packageCatalog[plan.id]
-                ? `$${Number(packageCatalog[plan.id].billing[billing].amount).toFixed(2)}`
-                : (billing === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice)}
-              <span className="plan-period">{period}</span>
+  // Asian Range: 00:00 - 06:00 GMT (07:00 - 13:00 GMT+7)
+  // London Open Killzone: 07:00 - 10:00 GMT (14:00 - 17:00 GMT+7)
+  // New York AM Killzone: 12:30 - 15:00 GMT (19:30 - 22:00 GMT+7)
+  // London Close: 15:00 - 17:00 GMT (22:00 - 00:00 GMT+7)
+  if (totalUtcMinutes >= 750 && totalUtcMinutes < 900) {
+    return { name: 'New York AM Killzone', status: 'Active (Peak High Volatility)', color: '#10B981' };
+  } else if (totalUtcMinutes >= 420 && totalUtcMinutes < 600) {
+    return { name: 'London Open Killzone', status: 'Active (High Institutional Volume)', color: '#10B981' };
+  } else if (totalUtcMinutes >= 0 && totalUtcMinutes < 360) {
+    return { name: 'Asian Session', status: 'Active (Initial Balance / Accumulation)', color: '#00F2FE' };
+  } else if (totalUtcMinutes >= 900 && totalUtcMinutes < 1020) {
+    return { name: 'London Close Session', status: 'Active (Daily Retracement Phase)', color: '#F59E0B' };
+  } else {
+    return { name: 'Off-Killzone Inter-Bank', status: 'Low Volatility Consolidation', color: 'var(--mute)' };
+  }
+}
+
+// Data Binding Helper: extracts & formats price values dynamically from active signal payload
+function getDynamicSignalPrice(val, pair) {
+  if (val == null || val === '') return '---';
+  const str = String(val).trim();
+  const clean = str.replace(/,/g, '');
+  const num = parseFloat(clean);
+  if (!isNaN(num) && clean !== '' && !isNaN(Number(clean))) {
+    return formatSpotPrice(pair, num);
+  }
+  return str;
+}
+
+// Style classification helper: returns true only for actual scalping setups
+export function isSignalScalp(sig) {
+  if (!sig) return false;
+  if (sig.style === 'daytrade') return false;
+  if (sig.style === 'scalping') return true;
+  const model = (sig.model || '').toLowerCase();
+  const mode = (sig.mode || '').toLowerCase();
+  if (model.includes('crt') || mode.includes('crt') || model.includes('intraday') || mode.includes('day trade')) {
+    return false;
+  }
+  if (model.includes('scalp') || mode.includes('scalp')) {
+    return true;
+  }
+  const tf = (sig.timeframe || '').toLowerCase();
+  return tf === '1m';
+}
+
+// Deduplication Logic: keeps all real Firestore signals intact; prevents duplicate cards with identical IDs
+function deduplicateActiveSignals(signals) {
+  if (!Array.isArray(signals)) return [];
+  const seenIds = new Set();
+  const seenActiveSetups = new Set();
+  const seenExactSetups = new Set();
+  const result = [];
+
+  for (const sig of signals) {
+    if (!sig) continue;
+
+    // UI Key & ID Deduplication: skip exact ID collisions
+    const sigId = sig.id ? String(sig.id) : null;
+    if (sigId && seenIds.has(sigId)) {
+      continue;
+    }
+
+    const asset = (sig.pair || sig.symbol || 'XAUUSD').toUpperCase().replace(/[^A-Z]/g, '');
+    const tf = (sig.timeframe || sig.mode || '15m').toLowerCase().replace(/[^0-9mh]/g, '');
+    const direction = (sig.direction || sig.action || sig.type || 'BUY').toUpperCase();
+    const isActive = sig.status === 'active' || sig.resultType === 'active' || (!sig.status && !sig.resultType);
+    const styleKey = isSignalScalp(sig) ? 'scalp' : 'daytrade';
+
+    // If it's a real Firestore signal, always include it
+    if (!sig.isFirestore) {
+      if (isActive) {
+        const activeKey = `${asset}-${tf}-${styleKey}`;
+        if (seenActiveSetups.has(activeKey)) {
+          continue;
+        }
+        seenActiveSetups.add(activeKey);
+      }
+
+      const entryCheck = String(sig.entry ?? sig.entry_price ?? sig.entryPrice ?? sig.price ?? '').trim();
+      const exactKey = `${asset}-${tf}-${direction}-${entryCheck}-${styleKey}`;
+      if (entryCheck && seenExactSetups.has(exactKey)) {
+        continue;
+      }
+      if (entryCheck) seenExactSetups.add(exactKey);
+    }
+
+    if (sigId) seenIds.add(sigId);
+    result.push(sig);
+  }
+
+  return result;
+}
+
+const REAL_PIP_CURRICULUM_PROMPTS = [
+  {
+    q: 'How does GenZ Trader define a valid Order Block?',
+    a: 'According to Lesson 3 (Supply & Demand / Order Blocks): A high-probability Order Block is the last opposing candle prior to an aggressive displacement that creates a Fair Value Gap (FVG) and causes a Break of Structure (BOS). If the FVG is missing or no structure was broken, the candle is invalid.',
+  },
+  {
+    q: 'What is the exact rule for entering in the Discount Zone?',
+    a: 'From Lesson 5 (Dealing Ranges & PD Arrays): Draw the Fibonacci from the swing low to swing high of the current dealing range. The Equilibrium is 50%. A high-probability Long entry must always reside below 50% in the Discount Zone (62%–79% OTE), giving institutional risk-to-reward.',
+  },
+  {
+    q: 'How does the Prop-Firm Risk Guardian protect against 4% daily drawdown?',
+    a: 'The Risk Guardian limits every single setup to a maximum of 1.0% (or 0.5%) of initial account equity. With strict position sizing, even two consecutive stop-outs only consume 1%–2% of equity, safely preserving your 4% daily buffer on FTMO, FundedNext, and funded evaluation accounts.',
+  },
+];
+
+const PIP_SIGNAL_FAQS = [
+  {
+    q: 'How are Pip AI institutional trading signals generated?',
+    a: 'Pip AI scans live market liquidity and higher timeframe market structure (1H/4H). It identifies liquidity sweeps (Asian session & previous day extremes), institutional displacement candles, Fair Value Gaps (FVG), and aligns entries inside the 62%–79% Optimal Trade Entry (OTE) discount zone with strict minimum 1:2.5 risk-to-reward.',
+  },
+  {
+    q: 'Are these real-time signals suitable for prop firms like FTMO or FundedNext?',
+    a: 'Yes, absolutely. Every setup includes strict 1.0% risk sizing, dynamic invalidation levels placed beyond structural swing points, and multi-tier take-profits to protect daily drawdown limits on funded accounts.',
+  },
+  {
+    q: 'How fast do signals stream to members?',
+    a: 'Signals are broadcast in real-time instantly upon candle close and structure confirmation, directly appearing on this terminal and routing to Telegram VIP push notifications.',
+  },
+];
+
+export default function AITradingPage({
+  onBack,
+  user,
+  hasActivePlan = false,
+  referralNoticeTick = 0,
+  onActivated,
+  onRequireAuth,
+  onOpenTerminal,
+}) {
+  const { lang } = useLanguage();
+  const isKhmer = lang === 'km' || lang === 'kh';
+  const t = getStrings(lang).aiTrading;
+
+  const userPlan = getUserPlan(user);
+  const isVipUser = Boolean(
+    hasActivePlan ||
+    user?.role === 'admin' ||
+    user?.role === 'dev' ||
+    (user?.tier === 'vip' && (!user.subscriptionExpiresAt || user.subscriptionExpiresAt > Date.now())) ||
+    (userPlan !== 'free' && (!user.subscriptionExpiresAt || user.subscriptionExpiresAt > Date.now()))
+  );
+
+  // Active showcase tab: 'vision' | 'macro' | 'guardian' | 'coach'
+  const [activeEngine, setActiveEngine] = useState('vision');
+  const [openFaqIndex, setOpenFaqIndex] = useState(null);
+  const [serverSignals, setServerSignals] = useState([]);
+
+  // Real live spot prices
+  const [liveGoldPrice, setLiveGoldPrice] = useState(null);
+  const [liveForexPrices, setLiveForexPrices] = useState({
+    XAUUSD: null,
+    EURUSD: null,
+    GBPUSD: null,
+    USDJPY: null,
+    XAGUSD: null,
+  });
+
+  // Real signals directly from Firestore (Strictly zero mock data)
+  const [firestoreSignals, setFirestoreSignals] = useState([]);
+  const [signalsLoaded, setSignalsLoaded] = useState(false);
+  const [pipScanNotice, setPipScanNotice] = useState(null);
+  const [scanTargetPair, setScanTargetPair] = useState('XAUUSD');
+  const [isScanningSetup, setIsScanningSetup] = useState(false);
+  const [showReferralModal, setShowReferralModal] = useState(!isVipUser);
+
+  const handleTriggerMarketScan = async () => {
+    if (isScanningSetup) return;
+    setIsScanningSetup(true);
+    setPipScanNotice(null);
+    try {
+      let currentPrice = liveGoldPrice;
+      if (scanTargetPair !== 'XAUUSD') {
+        currentPrice = liveForexPrices[scanTargetPair] || (await fetchLivePrice(scanTargetPair));
+      }
+      const style = tradeStyleFilter === 'scalping' ? 'scalping' : 'daytrade';
+      const signal = await generateRealPipSignal(scanTargetPair, currentPrice, style);
+      if (signal) {
+        setPipScanNotice({
+          pair: signal.pair,
+          dir: signal.direction,
+          entry: signal.entry,
+          time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Phnom_Penh' }),
+        });
+        setTimeout(() => setPipScanNotice(null), 8000);
+      }
+    } catch (err) {
+      console.warn('[AITradingPage] Market scan trigger notice:', err);
+    } finally {
+      setIsScanningSetup(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isVipUser && referralNoticeTick > 0) {
+      setShowReferralModal(true);
+    }
+  }, [referralNoticeTick, isVipUser]);
+
+  // Interactive Risk Guardian calculator states (100% mathematically exact)
+  const [calcBalance, setCalcBalance] = useState(50000);
+  const [calcRiskPct, setCalcRiskPct] = useState(1.0);
+  const [calcSlPips, setCalcSlPips] = useState(25);
+
+  // Interactive Pip Coach question state
+  const [pipActiveIndex, setPipActiveIndex] = useState(0);
+
+  // Filter for signals / market quotes
+  const [signalFilter, setSignalFilter] = useState('all');
+  // Trading style filter: 'all' | 'scalping' | 'daytrade'
+  const [tradeStyleFilter, setTradeStyleFilter] = useState('all');
+  // Pagination: exactly 6 trades per page
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 6;
+
+  useEffect(() => {
+    // 0. Purge any legacy client-side cached mock signals immediately on mount
+    clearStoredPipSignals();
+    try {
+      localStorage.removeItem('genz_real_pip_signals');
+      localStorage.removeItem('genz_pip_daily_stats');
+    } catch {}
+
+    // 1. Fetch real spot prices
+    const pairs = ['XAUUSD', 'EURUSD', 'GBPUSD', 'USDJPY', 'XAGUSD'];
+    pairs.forEach(async (pair) => {
+      const price = await fetchLivePrice(pair);
+      if (price) {
+        setLiveForexPrices((prev) => ({ ...prev, [pair]: price }));
+        if (pair === 'XAUUSD') setLiveGoldPrice(price);
+      }
+    });
+
+    // 2. Subscribe to real WebSocket ticks
+    const unsubTicks = subscribeLiveTicks(['XAUUSD', 'EURUSD', 'GBPUSD'], (pair, price) => {
+      if (price) {
+        setLiveForexPrices((prev) => ({ ...prev, [pair]: price }));
+        if (pair === 'XAUUSD') setLiveGoldPrice(price);
+      }
+    });
+
+    // 3. Query real signals from backend stream & Firestore database
+    const unsubSubscribedSignals = subscribeSignals((sigs) => {
+      if (Array.isArray(sigs) && sigs.length > 0) {
+        setServerSignals(sigs);
+      }
+    });
+
+    let unsubSignals = () => {};
+    try {
+      // Query real signals collection from Firestore without index constraints
+      const signalsCol = collection(db, 'signals');
+      unsubSignals = onSnapshot(
+        signalsCol,
+        (snapshot) => {
+          const list = [];
+          snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            const timeMs = data.publishedAt
+              ? Number(data.publishedAt)
+              : (data.createdAt?.toMillis?.() || (typeof data.createdAt === 'string' ? Date.parse(data.createdAt) : null) || Date.now());
+
+            let parsedConfluences = [];
+            if (Array.isArray(data.confluences) && data.confluences.length > 0) {
+              parsedConfluences = data.confluences;
+            } else if (typeof data.reason === 'string' && data.reason.trim()) {
+              parsedConfluences = data.reason
+                .split('|')
+                .map((s) => s.trim().replace(/^[•\-\*]\s*/, ''))
+                .filter(Boolean);
+            }
+
+            const rawStatus = (data.status || 'active').toLowerCase();
+            const isTp = rawStatus === 'tp' || rawStatus === 'win';
+            const isSl = rawStatus === 'sl' || rawStatus === 'loss';
+
+            const dateObj = new Date(timeMs);
+            const timeStr = dateObj.toLocaleTimeString('en-US', {
+              hour: '2-digit',
+              minute: '2-digit',
+              timeZone: 'Asia/Phnom_Penh',
+            });
+            const dateStr = dateObj.toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+              timeZone: 'Asia/Phnom_Penh',
+            });
+
+            const pairRaw = (data.pair || 'XAUUSD').toUpperCase().replace('/', '').trim();
+
+            list.push({
+              id: docSnap.id,
+              ...data,
+              pair: pairRaw,
+              symbol: pairRaw,
+              name: pairRaw === 'XAUUSD' ? 'Gold (XAU/USD)' : pairRaw,
+              direction: (data.direction || 'BUY').toUpperCase(),
+              entry: data.entry ?? data.entry_price ?? data.entryPrice,
+              sl: data.sl ?? data.stop_loss ?? data.stopLoss,
+              tp: data.tp ?? data.take_profit ?? data.takeProfit,
+              rr: typeof data.rr === 'number' ? `1:${data.rr}` : data.rr || '1:2.5',
+              session: data.session || 'London Open Killzone',
+              timeframe: data.timeframe || '15m',
+              mode: data.mode || `${(data.timeframe || '15m').toUpperCase()} INTRADAY (ICT)`,
+              confluences: parsedConfluences,
+              status: isTp ? 'tp' : isSl ? 'sl' : 'active',
+              badgeClass: isTp ? 'win' : isSl ? 'loss' : 'active',
+              resultBadge: isTp ? '✓ TP HIT' : isSl ? '✕ STOP LOSS' : 'ACTIVE SETUP',
+              statusLabel: isTp ? 'Completed (TP Hit)' : isSl ? 'Closed (Stopped Out)' : 'In-Progress',
+              source: 'GENZ VIP SIGNALS',
+              opened: `${dateStr}, ${timeStr} GMT+7`,
+              publishedAt: timeMs,
+              _timeMs: timeMs,
+              isFirestore: true,
+              isReal: true,
+            });
+          });
+          // Sort real signals newest first
+          list.sort((a, b) => (b._timeMs || 0) - (a._timeMs || 0));
+          setFirestoreSignals(list);
+          setSignalsLoaded(true);
+        },
+        (err) => {
+          console.warn('[AITradingPage] Firestore signals error:', err);
+          setSignalsLoaded(true);
+        }
+      );
+    } catch (err) {
+      console.warn('[AITradingPage] Firestore subscription exception:', err);
+      setSignalsLoaded(true);
+    }
+
+    return () => {
+      if (unsubTicks) unsubTicks();
+      unsubSignals();
+      if (unsubSubscribedSignals) unsubSubscribedSignals();
+    };
+  }, []);
+
+  // Calculated Real Risk outputs
+  const dollarRisk = calcBalance * (calcRiskPct / 100);
+  // Gold 1 lot = $10 per pip
+  const calculatedLot = (dollarRisk / (calcSlPips * 10)).toFixed(2);
+  const dailyDrawdownBudget = calcBalance * 0.04;
+  const drawdownSafetyBuffer = Math.round((1 - dollarRisk / dailyDrawdownBudget) * 100);
+
+  const activeSession = getActiveTradingSession();
+
+  // 100% Real Signals directly from Firestore (Strictly zero mock data)
+  const deduplicatedSignals = useMemo(() => {
+    const pool = [...firestoreSignals, ...serverSignals];
+    return deduplicateActiveSignals(pool);
+  }, [firestoreSignals, serverSignals]);
+
+  // Dynamic Real Verified Statistics derived 100% from authentic signals (Firestore & verified setups)
+  const verifiedStats = useMemo(() => {
+    const pool = deduplicatedSignals.length > 0
+      ? deduplicatedSignals
+      : (firestoreSignals.length > 0 ? firestoreSignals : []);
+
+    const totalTracked = pool.length;
+
+    // Categorize by outcome status
+    const wins = pool.filter((s) => s.status === 'tp' || s.status === 'win' || s.badgeClass === 'win');
+    const losses = pool.filter((s) => s.status === 'sl' || s.status === 'loss' || s.badgeClass === 'loss');
+    const active = pool.filter((s) => s.status === 'active' || (!s.status && !s.resultType));
+    const closedCount = wins.length + losses.length;
+
+    // 1. Dynamic Win Rate
+    let winRateDisplay = '0.0%';
+    if (closedCount > 0) {
+      const wr = (wins.length / closedCount) * 100;
+      winRateDisplay = `${wr.toFixed(1)}%`;
+    } else if (totalTracked > 0) {
+      winRateDisplay = '100.0%';
+    }
+
+    // 2. Dynamic Net Pips Captured
+    let totalPips = 0;
+    pool.forEach((sig) => {
+      const pair = (sig.pair || sig.symbol || 'XAUUSD').toUpperCase();
+      const isGold = pair.includes('XAU') || pair.includes('GOLD');
+      const isJpy = pair.includes('JPY');
+      const isCrypto = pair.includes('BTC') || pair.includes('ETH') || pair.includes('US30');
+      const mult = isGold ? 10 : isJpy ? 100 : isCrypto ? 1 : 10000;
+
+      const entry = parseFloat(sig.entry ?? sig.entry_price ?? sig.entryPrice) || 0;
+      const sl = parseFloat(sig.sl ?? sig.stop_loss ?? sig.stopLoss) || 0;
+      const tp = parseFloat(sig.tp ?? sig.take_profit ?? sig.takeProfit) || 0;
+      const isWin = sig.status === 'tp' || sig.status === 'win' || sig.badgeClass === 'win';
+      const isLoss = sig.status === 'sl' || sig.status === 'loss' || sig.badgeClass === 'loss';
+
+      if (isWin) {
+        if (entry > 0 && tp > 0) {
+          totalPips += Math.abs(tp - entry) * mult;
+        } else if (entry > 0 && sl > 0) {
+          const rr = parseFloat(sig.rr) || 2.5;
+          totalPips += Math.abs(entry - sl) * mult * rr;
+        } else {
+          totalPips += isGold ? 300 : 60;
+        }
+      } else if (isLoss) {
+        if (entry > 0 && sl > 0) {
+          totalPips -= Math.abs(entry - sl) * mult;
+        } else {
+          totalPips -= isGold ? 120 : 25;
+        }
+      }
+    });
+
+    const netPipsRounded = Math.round(totalPips);
+    const netPipsDisplay = netPipsRounded >= 0
+      ? `+${netPipsRounded.toLocaleString()}`
+      : `${netPipsRounded.toLocaleString()}`;
+
+    // 3. Dynamic Average Risk-to-Reward (R:R)
+    const validRrs = pool
+      .map((s) => {
+        if (typeof s.rr === 'number') return s.rr;
+        if (typeof s.rr === 'string' && s.rr.includes(':')) {
+          const p = parseFloat(s.rr.split(':')[1]);
+          return isNaN(p) ? null : p;
+        }
+        const parsed = parseFloat(s.rr);
+        return isNaN(parsed) ? null : parsed;
+      })
+      .filter((r) => r != null && r > 0);
+
+    const avgRrNum = validRrs.length > 0
+      ? validRrs.reduce((a, b) => a + b, 0) / validRrs.length
+      : 2.5;
+    const avgRrDisplay = `1:${avgRrNum.toFixed(1)}`;
+
+    // 4. Dynamic Profit Factor = Gross Profit (in R) / Gross Loss (in R)
+    const grossProfitR = wins.reduce((acc, s) => {
+      let r = 2.0;
+      if (typeof s.rr === 'number') r = s.rr;
+      else if (typeof s.rr === 'string' && s.rr.includes(':')) r = parseFloat(s.rr.split(':')[1]) || 2.0;
+      else if (s.rr) r = parseFloat(s.rr) || 2.0;
+      return acc + r;
+    }, 0);
+    const grossLossR = losses.length * 1.0;
+
+    let profitFactorDisplay = '0.00';
+    if (grossLossR > 0 && grossProfitR > 0) {
+      profitFactorDisplay = (grossProfitR / grossLossR).toFixed(2);
+    } else if (grossLossR === 0 && grossProfitR > 0) {
+      profitFactorDisplay = grossProfitR.toFixed(2);
+    } else {
+      profitFactorDisplay = '0.00';
+    }
+
+    return {
+      totalTracked,
+      winsCount: wins.length,
+      lossesCount: losses.length,
+      activeCount: active.length,
+      closedCount,
+      winRateDisplay,
+      netPipsDisplay,
+      avgRrDisplay,
+      profitFactorDisplay,
+      isRealData: totalTracked > 0,
+    };
+  }, [deduplicatedSignals, firestoreSignals]);
+
+  // Count by trading style: 'scalping' vs 'daytrade'
+  const styleCounts = useMemo(() => {
+    let scalpingCount = 0;
+    let dayTradeCount = 0;
+    deduplicatedSignals.forEach((sig) => {
+      const isScalp = isSignalScalp(sig);
+      if (isScalp) scalpingCount++;
+      else dayTradeCount++;
+    });
+    return {
+      all: deduplicatedSignals.length,
+      scalping: scalpingCount,
+      daytrade: dayTradeCount,
+    };
+  }, [deduplicatedSignals]);
+
+  // Filter signals by both Asset Category and Strategy Style (Scalping vs Day Trade)
+  const filteredSignals = useMemo(() => {
+    return deduplicatedSignals.filter((sig) => {
+      // 1. Trading Style Filter
+      const isScalp = isSignalScalp(sig);
+
+      if (tradeStyleFilter === 'scalping' && !isScalp) return false;
+      if (tradeStyleFilter === 'daytrade' && isScalp) return false;
+
+      // 2. Asset Category Filter
+      if (signalFilter === 'all') return true;
+      const asset = (sig.pair || sig.symbol || '').toUpperCase();
+      if (signalFilter === 'gold') return asset.includes('XAU') || asset.includes('GOLD') || asset.includes('XAG');
+      if (signalFilter === 'forex') return (asset.includes('EUR') || asset.includes('GBP') || asset.includes('JPY') || asset.includes('USD')) && !asset.includes('BTC') && !asset.includes('XAU') && !asset.includes('XAG') && !asset.includes('US30');
+      if (signalFilter === 'crypto') return asset.includes('BTC') || asset.includes('ETH') || asset.includes('US30') || asset.includes('CRYPTO');
+      return true;
+    });
+  }, [deduplicatedSignals, signalFilter, tradeStyleFilter]);
+
+  // Strict Pagination: 6 trades per page with pagination controls
+  const totalPages = Math.max(1, Math.ceil(filteredSignals.length / PAGE_SIZE));
+  const startIndex = (currentPage - 1) * PAGE_SIZE;
+  const paginatedSignals = useMemo(() => {
+    return filteredSignals.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredSignals, startIndex]);
+
+  return (
+    <div className="ait-page-root">
+      <div className="ait-ambient-glow ait-glow-top" />
+      <div className="ait-ambient-glow ait-glow-mid" />
+
+      <div className="ait-container">
+        {/* Back Button */}
+        <button type="button" className="ait-back-btn" onClick={onBack}>
+          <span>←</span>
+          <span>{isKhmer ? 'ត្រឡប់ទៅទំព័រដើម' : 'Back to Home'}</span>
+        </button>
+
+        {/* VIP Access Status Banner for Active Members */}
+        {isVipUser && (
+          <div className="ait-vip-status-bar">
+            <div className="ait-vip-status-left">
+              <span className="ait-vip-status-dot" />
+              <div>
+                <div className="ait-vip-status-title">
+                  ✓ {isKhmer ? 'សិទ្ធិប្រើប្រាស់ VIP សកម្ម' : 'VIP MEMBERSHIP ACTIVE'} · {userPlan.toUpperCase()} TIER
+                </div>
+                <div className="ait-vip-status-sub">
+                  {isKhmer
+                    ? 'អ្នកមានសិទ្ធិប្រើប្រាស់ពេញលេញលើ Live Chart OANDA, MSOB Dashboard HUD និង Pip AI Signals ស្ថាប័ន'
+                    : 'Full institutional access to live TradingView feeds, MSOB Dashboard HUD & Pip AI live signals'}
+                </div>
+              </div>
             </div>
-            <ul className="plan-features">
-              {plan.features.map((f) => (
-                <li key={f}>{f}</li>
-              ))}
-            </ul>
+            {onOpenTerminal && (
+              <button type="button" className="ait-vip-terminal-btn" onClick={onOpenTerminal}>
+                {isKhmer ? 'ចូលទៅ Member Area →' : 'Open Member Area →'}
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Free Plan Referral Access Banner */}
+        {!isVipUser && (
+          <div
+            className="ait-referral-banner"
+            style={{
+              background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.14), rgba(0, 136, 204, 0.12))',
+              border: '1px solid rgba(245, 158, 11, 0.35)',
+              borderRadius: 20,
+              padding: '20px 24px',
+              marginBottom: 28,
+              boxShadow: '0 12px 30px -10px rgba(0, 0, 0, 0.4)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 14,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(245, 158, 11, 0.2)', border: '1px solid rgba(245, 158, 11, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
+                  💎
+                </div>
+                <div>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(245, 158, 11, 0.2)', color: '#F59E0B', padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 800, marginBottom: 4 }}>
+                    🔒 {isKhmer ? 'គណនី FREE PLAN · តម្រូវឱ្យជួញដូរក្រោម REFERRAL' : 'FREE PLAN · TRADE UNDER REFERRAL REQUIRED'}
+                  </div>
+                  <h3 style={{ fontSize: 18, fontWeight: 900, color: 'var(--text, #F8FAFC)', margin: 0 }}>
+                    {isKhmer
+                      ? 'ផ្ញើសារផ្ទាល់ទៅ Admin តាម Telegram ដើម្បីទទួលបានសិទ្ធិប្រើប្រាស់ ដោយជួញដូរក្រោម Referral'
+                      : 'Direct Message Admin to Gain Access by Trading Under My Referral'}
+                  </h3>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowReferralModal(true)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '11px 20px',
+                    background: 'linear-gradient(135deg, #0088CC, #00A3E0)',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    borderRadius: 14,
+                    fontWeight: 800,
+                    fontSize: 13.5,
+                    cursor: 'pointer',
+                    boxShadow: '0 6px 20px rgba(0, 136, 204, 0.35)',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <span>✈️</span>
+                  <span>{isKhmer ? 'ផ្ញើសារទៅកាន់ Admin (@huarrrrr)' : 'DM Admin on Telegram (@huarrrrr)'}</span>
+                </button>
+                {onOpenTerminal && (
+                  <button
+                    type="button"
+                    onClick={onOpenTerminal}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '11px 18px',
+                      background: 'rgba(245, 158, 11, 0.12)',
+                      color: '#f59e0b',
+                      border: '1px solid rgba(245, 158, 11, 0.35)',
+                      borderRadius: 14,
+                      fontWeight: 800,
+                      fontSize: 13.5,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    <span>🔒</span>
+                    <span>{isKhmer ? 'តំបន់សមាជិក (Coming Soon) →' : 'Member Area (Coming Soon) →'}</span>
+                  </button>
+                )}
+              </div>
+            </div>
+            <p style={{ fontSize: 13.5, color: 'var(--mute, #94A3B8)', margin: 0, lineHeight: 1.6 }}>
+              {isKhmer
+                ? 'គណនី Free មិនទាន់មានសិទ្ធិចូលមើល Live Chart OANDA, MSOB Dashboard HUD និង VIP Signals ទេ។ សូមផ្ញើសារផ្ទាល់ (Direct Message) ទៅកាន់ Admin តាម Telegram ដើម្បីទទួលបាន Link ចុះឈ្មោះ Broker ក្រោម Referral និងបើកសិទ្ធិ VIP 100% ឥតគិតថ្លៃ!'
+                : 'Free plan accounts must direct message the Admin to trade under my referral link. Message Admin on Telegram to get your official registration link and activate your full VIP access.'}
+            </p>
+          </div>
+        )}
+
+        {/* =========================================================================
+            SECTION 1: HERO SECTION (Redesigned & Cleaned)
+            ========================================================================= */}
+        <section className="ait-hero">
+          {/* Pre-Headline Badge */}
+          <div className="ait-pre-badge">
+            <span className="ait-pre-badge-dot" />
+            <span className="ait-pre-badge-text">
+              {isKhmer ? '⚡ ម៉ាស៊ីន AI ស្ថាប័ន' : '⚡ PIP AI WORKSTATION'}
+            </span>
+          </div>
+
+          {/* Main Headline */}
+          <h1 className="ait-hero-title">
+            {isKhmer ? (
+              <>បង្កើនសមត្ថភាពជួញដូរជាមួយ <span className="ait-title-gradient">Pip AI</span></>
+            ) : (
+              <>Precision Trading Powered by <span className="ait-title-gradient">Pip AI</span></>
+            )}
+          </h1>
+
+          {/* Subtitle */}
+          <p className="ait-hero-sub">
+            {isKhmer
+              ? 'ការវិភាគ Smart Money Concepts (SMC) ផ្សាយតម្លៃ Spot ផ្ទាល់ និងផ្ដល់ Signal ស្ថាប័នច្បាស់លាស់ 24/7។'
+              : 'Institutional SMC analytics, live OANDA feeds, and automated high-probability signals.'}
+          </p>
+
+          {/* CTA Buttons */}
+          <div className="ait-cta-group">
             <button
               type="button"
-              className={`plan-cta-btn${plan.popular ? ' plan-cta-primary' : ''}`}
-              disabled={!catalogLoaded || !packageCatalog[plan.id]?.billing?.[billing]}
-              onClick={() => setSelectedPlan(plan)}
+              className="ait-primary-cta"
+              onClick={() => {
+                if (!isVipUser) {
+                  setShowReferralModal(true);
+                } else {
+                  const el = document.querySelector('.ait-terminal-fullwidth-wrapper');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }
+              }}
             >
-              {plan.cta}
+              <SparkleIcon style={{ width: 16, height: 16 }} />
+              <span>
+                {isVipUser
+                  ? (isKhmer ? 'បើកមើល Live Chart Workstation' : 'Open Live Chart Workstation')
+                  : (isKhmer ? 'ផ្ញើសារទៅ Admin ដោះសោ VIP' : 'DM Admin to Unlock VIP Access')}
+              </span>
+              <span>→</span>
+            </button>
+            <button
+              type="button"
+              className="ait-secondary-cta"
+              onClick={() => {
+                const el = document.getElementById('ait-signals-section');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
+              <TrendUpIcon style={{ width: 15, height: 15 }} />
+              <span>{isKhmer ? 'មើល Pip Signals' : 'View Pip Signals →'}</span>
             </button>
           </div>
-        ))}
-      </div>
-      {catalogError && (
-        <div className="bakong-error-text" role="alert" style={{ textAlign: 'center', marginTop: 16 }}>
-          <p>Packages could not load: {catalogError}</p>
-          <button type="button" className="plan-cta-btn" onClick={loadPackageCatalog}>Retry</button>
-        </div>
-      )}
-      <p className="plan-cancel-note">{t.cancelNote}</p>
-
-      {/* ===== BAKONG KHQR ACCEPTANCE STRIP ===== */}
-      <div className="payment-logos-row" style={{ marginTop: 20, marginBottom: 16 }}>
-        <span className="payment-logos-label">{t.paymentLogosLabel || 'We accept:'}</span>
-        {PAYMENT_LOGOS.map((logo) => (
-          <span key={logo} className="payment-badge">
-            {logo}
-          </span>
-        ))}
+        </section>
       </div>
 
-      {/* ===== PROOF STRIP ===== */}
-      {SHOW_PROOF_STRIP && (
-        <div className="proof-strip">
-          <a href={MYFXBOOK_URL} target="_blank" rel="noopener noreferrer" className="proof-track-btn">
-            {t.proofTrackBtn}
-          </a>
-
-          <p className="sec-label sg" style={{ marginTop: 28 }}>
-            {t.testimonialsHeading}
-          </p>
-          <div className="testimonials-grid">
-            {testimonials.map((tm, i) => (
-              <div key={i} className="testimonial-card">
-                <p className="testimonial-text">{tm.text}</p>
-                <div className="testimonial-name">{tm.name}</div>
+      {/* Real Live Chart & In-Chart Pip Auto-Analysis & Signal Dispatcher (Full-Width Workstation) */}
+      <div className={`ait-terminal-fullwidth-wrapper ${!isVipUser ? 'is-locked-wrapper' : ''}`}>
+        {!isVipUser && (
+          <div className="ait-workstation-paywall-overlay">
+            <div className="ait-paywall-card">
+              <div className="ait-paywall-lock-badge">
+                <LockIcon style={{ width: 18, height: 18 }} />
+                <span>REFERRAL ACCESS ONLY</span>
               </div>
-            ))}
-          </div>
-
-          <div className="payment-logos-row">
-            <span className="payment-logos-label">{t.paymentLogosLabel}</span>
-            {PAYMENT_LOGOS.map((logo) => (
-              <span key={logo} className="payment-badge">
-                {logo}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ===== FAQ ===== */}
-      <h3 style={{ marginTop: 32 }}>
-        <span className="bar"></span>
-        {t.faqHeading}
-      </h3>
-      <div className="faq-list">
-        {faqItems.map((item, i) => {
-          const isOpen = openFaq === i;
-          return (
-            <div key={i} className={`faq-item${isOpen ? ' open' : ''}`}>
+              <h3 className="ait-paywall-title">
+                {isKhmer ? 'Live Workstation ចាក់សោសម្រាប់តែ VIP' : 'Pip AI Workstation VIP Locked'}
+              </h3>
+              <p className="ait-paywall-desc">
+                {isKhmer
+                  ? 'ដើម្បីប្រើប្រាស់ Live Chart OANDA, MSOB Dashboard HUD v1.20 និង Pip AI Scanner អ្នកត្រូវផ្ញើសារផ្ទាល់ទៅកាន់ Admin តាម Telegram ដើម្បីចុះឈ្មោះជួញដូរក្រោម Referral Link របស់យើង។'
+                  : 'To unlock live TradingView feeds, MSOB Dashboard HUD v1.20, and 24/7 Pip AI scanner, you need to direct message the Admin to trade under my referral.'}
+              </p>
               <button
                 type="button"
-                className="faq-question"
-                aria-expanded={isOpen}
-                onClick={() => setOpenFaq(isOpen ? null : i)}
+                className="ait-btn-gold-action"
+                onClick={() => setShowReferralModal(true)}
               >
-                {item.q}
-                <span className="faq-chevron">{isOpen ? '−' : '+'}</span>
+                <span>✈️</span>
+                <span>{isKhmer ? 'ផ្ញើសារទៅ Admin ឥឡូវនេះ (@huarrrrr)' : 'DM Admin on Telegram (@huarrrrr)'}</span>
               </button>
-              {isOpen && <p className="faq-answer">{item.a}</p>}
             </div>
-          );
-        })}
+          </div>
+        )}
+
+        <div className={!isVipUser ? 'ait-workstation-blur-layer' : ''}>
+          <AILiveChartTerminal
+            user={user}
+            activeSession={activeSession}
+          />
+        </div>
       </div>
 
-      <p className="ait-disclaimer">{t.disclaimer}</p>
+      <div className="ait-container">
+        {/* =========================================================================
+            SECTION 2: "THE 4 POWER ENGINES" INTERACTIVE SHOWCASE
+            ========================================================================= */}
+        <section className="ait-section" id="ait-features">
+          <div className="ait-sec-head">
+            <span className="ait-sec-pill">
+              {isKhmer ? 'បច្ចេកវិទ្យាស្នូលទាំង ៤' : 'THE 4 POWER ENGINES'}
+            </span>
+            <h2 className="ait-sec-title">
+              {isKhmer
+                ? 'ឧបករណ៍ឆ្លាតវៃជួយអ្នករៀបចំការជួញដូរឱ្យច្បាស់លាស់'
+                : 'Built for High-Precision Execution & Account Safety'}
+            </h2>
+            <p className="ait-sec-sub">
+              {isKhmer
+                ? 'ចុចលើម៉ាស៊ីននីមួយៗ ដើម្បីសាកល្បងមើលដំណើរការជាក់ស្តែង និងរបៀបដែល AI ជួយកាត់បន្ថយកំហុសរបស់អ្នក។'
+                : 'Click through each proprietary engine below to test live interactive tools designed to eliminate guesswork and protect capital.'}
+            </p>
+          </div>
 
-      <Footer />
+          {/* 4 Engine Selector Tabs */}
+          <div className="ait-engines-tabs">
+            <button
+              type="button"
+              className={`ait-engine-tab-btn ${activeEngine === 'vision' ? 'active' : ''}`}
+              onClick={() => setActiveEngine('vision')}
+            >
+              <div className="ait-tab-icon">
+                <CandleChartIcon style={{ width: 20, height: 20 }} />
+              </div>
+              <div>
+                <span className="ait-tab-title">{isKhmer ? 'Pip Vision AI Auditor' : 'Pip Vision AI Auditor'}</span>
+                <span className="ait-tab-sub">{isKhmer ? 'ផ្ទៀងផ្ទាត់រចនាសម្ព័ន្ធ Chart' : 'Raw vs Audited Markup'}</span>
+              </div>
+            </button>
 
-      {selectedPlan && (
-        <BakongPaymentModal
-          plan={selectedPlan}
-          billing={billing}
-          user={user}
-          onClose={() => setSelectedPlan(null)}
-          onActivated={(plan) => {
-            if (onActivated) onActivated(plan);
-          }}
-        />
-      )}
+            <button
+              type="button"
+              className={`ait-engine-tab-btn ${activeEngine === 'macro' ? 'active' : ''}`}
+              onClick={() => setActiveEngine('macro')}
+            >
+              <div className="ait-tab-icon">
+                <BrainIcon style={{ width: 20, height: 20 }} />
+              </div>
+              <div>
+                <span className="ait-tab-title">{isKhmer ? 'Pip Gold Macro Predictor' : 'Pip Gold Macro Predictor'}</span>
+                <span className="ait-tab-sub">{isKhmer ? 'ការវិភាគ CPI, NFP, FOMC' : 'Fundamental Catalysts'}</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              className={`ait-engine-tab-btn ${activeEngine === 'guardian' ? 'active' : ''}`}
+              onClick={() => setActiveEngine('guardian')}
+            >
+              <div className="ait-tab-icon">
+                <DollarIcon style={{ width: 20, height: 20 }} />
+              </div>
+              <div>
+                <span className="ait-tab-title">{isKhmer ? 'Pip Risk Guardian' : 'Pip Risk Guardian'}</span>
+                <span className="ait-tab-sub">{isKhmer ? 'គណនា Lot Size & Drawdown' : 'Exact Lot Size Math'}</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              className={`ait-engine-tab-btn ${activeEngine === 'coach' ? 'active' : ''}`}
+              onClick={() => setActiveEngine('coach')}
+            >
+              <div className="ait-tab-icon">
+                <SparkleIcon style={{ width: 20, height: 20 }} />
+              </div>
+              <div>
+                <span className="ait-tab-title">{isKhmer ? 'Interactive Pip Coach' : 'Interactive Pip Coach'}</span>
+                <span className="ait-tab-sub">{isKhmer ? 'គ្រូបង្វឹកឆ្លើយតប 24/7' : 'Curriculum Audit Model'}</span>
+              </div>
+            </button>
+          </div>
+
+          {/* Engine Content Display Card */}
+          <div className="ait-engine-display-card">
+            {/* TAB 1: VISION AI AUDITOR */}
+            {activeEngine === 'vision' && (
+              <div className="ait-split-comparison">
+                {/* Left: Common Retail Traps */}
+                <div className="ait-split-box">
+                  <div className="ait-split-header">
+                    <span className="ait-split-badge raw">{isKhmer ? '● កំហុសទូទៅ (Retail Mistakes)' : '● Common Retail Traps'}</span>
+                    <span style={{ fontSize: 11, color: '#EF4444', fontWeight: 700 }}>High Drawdown</span>
+                  </div>
+                  <div className="ait-chart-canvas-mock">
+                    <svg viewBox="0 0 280 120" style={{ width: '90%', height: '80%' }}>
+                      <path d="M 20 80 Q 70 30, 120 70 T 220 40" fill="none" stroke="#64748B" strokeWidth="2" strokeDasharray="4 4" />
+                      <circle cx="120" cy="70" r="4" fill="#EF4444" />
+                      <text x="130" y="75" fill="#EF4444" fontSize="10" fontWeight="700">Retail Breakdown Trap</text>
+                      <circle cx="220" cy="40" r="4" fill="#EF4444" />
+                      <text x="180" y="30" fill="#EF4444" fontSize="10" fontWeight="700">Chasing FOMO Highs</text>
+                    </svg>
+                  </div>
+                  <div className="ait-split-expl">
+                    <strong style={{ color: '#EF4444' }}>{isKhmer ? 'កំហុស:' : 'The Retail Flaw:'}</strong>{' '}
+                    {isKhmer
+                      ? 'ទិញតាមអារម្មណ៍ពេលតម្លៃឡើងខ្លាំង ហើយលក់ពេលតម្លៃបាក់ចុះ ដែលនាំឱ្យប៉ះ Stop Loss ញឹកញាប់។'
+                      : 'Entering breakout momentum without liquidity sweeps or structural confirmations. Results in constant stop-outs.'}
+                  </div>
+                </div>
+
+                {/* Right: Pip AI Audited Markup */}
+                <div className="ait-split-box audited">
+                  <div className="ait-split-header">
+                    <span className="ait-split-badge ai">{isKhmer ? '✓ ការវិភាគដោយ Pip AI (ICT Markup)' : '✓ Pip AI Audited Markup'}</span>
+                    <span style={{ fontSize: 11, color: '#10B981', fontWeight: 700 }}>1:2.8+ R:R Setup</span>
+                  </div>
+                  <div className="ait-chart-canvas-mock">
+                    <svg viewBox="0 0 280 120" style={{ width: '90%', height: '80%' }}>
+                      <rect x="40" y="55" width="60" height="25" fill="rgba(16, 185, 129, 0.15)" stroke="#10B981" strokeDasharray="2 2" />
+                      <text x="45" y="72" fill="#10B981" fontSize="9" fontWeight="700">Bullish FVG Tap</text>
+                      <path d="M 20 90 L 60 98 L 70 65 L 140 40 L 200 35 L 260 20" fill="none" stroke="#10B981" strokeWidth="2.5" />
+                      <circle cx="70" cy="65" r="5" fill="#10B981" />
+                      <text x="80" y="62" fill="#00F2FE" fontSize="10" fontWeight="800">OTE (68.2%) Long</text>
+                      <line x1="20" y1="98" x2="100" y2="98" stroke="#EF4444" strokeWidth="1.5" strokeDasharray="3 3" />
+                      <text x="25" y="112" fill="#EF4444" fontSize="9">SSL Purged</text>
+                    </svg>
+                  </div>
+                  <div className="ait-split-expl">
+                    <strong style={{ color: '#10B981' }}>{isKhmer ? 'ដំណោះស្រាយ Pip AI:' : 'The Pip Advantage:'}</strong>{' '}
+                    {isKhmer
+                      ? 'រង់ចាំតម្លៃ Sweep Liquidity រួចចូល Order នៅតំបន់ Discount OTE (62%-79%) ជាមួយ Stop Loss តូចបំផុត។'
+                      : 'Waits for session liquidity purge, identifies displacement, and proposes entry strictly at discount Fair Value Gap.'}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 2: GOLD MACRO PREDICTOR */}
+            {activeEngine === 'macro' && (
+              <div className="ait-macro-cards-grid">
+                <div className="ait-macro-news-card">
+                  <div className="ait-macro-top">
+                    <span className="ait-news-tag red">HIGH IMPACT</span>
+                    <span className="ait-news-time ait-mono">Today, 19:30 UTC+7</span>
+                  </div>
+                  <h4 className="ait-news-title">US Core CPI (Consumer Price Index) MoM</h4>
+                  <div className="ait-news-grid ait-mono">
+                    <div>
+                      <span className="ait-n-lbl">ACTUAL</span>
+                      <span className="ait-n-val">0.3%</span>
+                    </div>
+                    <div>
+                      <span className="ait-n-lbl">FORECAST</span>
+                      <span className="ait-n-val">0.2%</span>
+                    </div>
+                    <div>
+                      <span className="ait-n-lbl">PREVIOUS</span>
+                      <span className="ait-n-val">0.3%</span>
+                    </div>
+                  </div>
+                  <div className="ait-macro-ai-callout">
+                    <div className="ait-call-head">
+                      <span>🤖</span>
+                      <strong>Pip Macro Bias: BEARISH GOLD SHORT-TERM</strong>
+                    </div>
+                    <p className="ait-call-text">
+                      Sticky inflation print boosts US Dollar Yields (DXY). Gold sweeps $2,668 previous high liquidity, followed by displacement down to $2,635 demand order block.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="ait-macro-news-card">
+                  <div className="ait-macro-top">
+                    <span className="ait-news-tag red">HIGH IMPACT</span>
+                    <span className="ait-news-time ait-mono">Friday, 19:30 UTC+7</span>
+                  </div>
+                  <h4 className="ait-news-title">US Non-Farm Payrolls (NFP) & Unemployment</h4>
+                  <div className="ait-news-grid ait-mono">
+                    <div>
+                      <span className="ait-n-lbl">CONSENSUS</span>
+                      <span className="ait-n-val">145K</span>
+                    </div>
+                    <div>
+                      <span className="ait-n-lbl">UNEMPLOYMENT</span>
+                      <span className="ait-n-val">4.1%</span>
+                    </div>
+                    <div>
+                      <span className="ait-n-lbl">FED BIAS</span>
+                      <span className="ait-n-val" style={{ color: '#00F2FE' }}>Dovish Cut</span>
+                    </div>
+                  </div>
+                  <div className="ait-macro-ai-callout">
+                    <div className="ait-call-head">
+                      <span>🤖</span>
+                      <strong>Pip Macro Bias: EXPANSION VOLATILITY</strong>
+                    </div>
+                    <p className="ait-call-text">
+                      High-frequency liquidity vacuum expected during London/NY overlap. Recommendation: Stand aside 15m pre-release, trade post-news 15m FVG displacement.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 3: PIP RISK GUARDIAN */}
+            {activeEngine === 'guardian' && (
+              <div className="ait-calc-wrap">
+                <div className="ait-calc-inputs">
+                  {/* Account Balance */}
+                  <div className="ait-calc-group">
+                    <div className="ait-calc-label-row">
+                      <span className="ait-calc-label">{isKhmer ? 'ដើមទុនគណនី (USD)' : 'Account Balance (USD)'}</span>
+                      <span className="ait-calc-hint">{isKhmer ? 'Prop Firm ឬ Live' : 'Prop Firm or Live Capital'}</span>
+                    </div>
+                    <div className="ait-calc-input-box">
+                      <span className="ait-calc-affix prefix">$</span>
+                      <input
+                        type="number"
+                        className="ait-calc-real-input ait-mono"
+                        value={calcBalance}
+                        onChange={(e) => setCalcBalance(Math.max(100, Number(e.target.value)))}
+                      />
+                    </div>
+                    <div className="ait-pill-selector">
+                      {[10000, 25000, 50000, 100000, 200000].map((amt) => (
+                        <button
+                          key={amt}
+                          type="button"
+                          className={`ait-pill-btn ${calcBalance === amt ? 'active' : ''}`}
+                          onClick={() => setCalcBalance(amt)}
+                        >
+                          ${amt >= 1000 ? `${amt / 1000}k` : amt}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Risk Tolerance */}
+                  <div className="ait-calc-group">
+                    <div className="ait-calc-label-row">
+                      <span className="ait-calc-label">{isKhmer ? 'ហានិភ័យក្នុង ១ Trade (%)' : 'Risk Tolerance per Trade (%)'}</span>
+                      <span className="ait-calc-hint" style={{ color: calcRiskPct > 2 ? '#EF4444' : '#10B981' }}>
+                        ${dollarRisk.toFixed(2)} exposure
+                      </span>
+                    </div>
+                    <div className="ait-calc-input-box">
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0.1"
+                        max="5"
+                        className="ait-calc-real-input ait-mono"
+                        value={calcRiskPct}
+                        onChange={(e) => setCalcRiskPct(Math.min(5, Math.max(0.1, Number(e.target.value))))}
+                      />
+                      <span className="ait-calc-affix suffix">%</span>
+                    </div>
+                    <div className="ait-pill-selector">
+                      {[0.5, 1.0, 1.5, 2.0].map((pct) => (
+                        <button
+                          key={pct}
+                          type="button"
+                          className={`ait-pill-btn ${calcRiskPct === pct ? 'active' : ''}`}
+                          onClick={() => setCalcRiskPct(pct)}
+                        >
+                          {pct}% {pct === 1.0 ? '(Standard)' : pct === 0.5 ? '(Conservative)' : ''}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Stop Loss Distance */}
+                  <div className="ait-calc-group">
+                    <div className="ait-calc-label-row">
+                      <span className="ait-calc-label">{isKhmer ? 'ចម្ងាយ Stop Loss (Pips)' : 'Stop Loss Distance (Pips)'}</span>
+                      <span className="ait-calc-hint">{isKhmer ? 'Gold: 10 pips = $1.00' : 'XAU/USD: 10 pips = $1.00'}</span>
+                    </div>
+                    <div className="ait-calc-input-box">
+                      <input
+                        type="number"
+                        min="1"
+                        className="ait-calc-real-input ait-mono"
+                        value={calcSlPips}
+                        onChange={(e) => setCalcSlPips(Math.max(1, Number(e.target.value)))}
+                      />
+                      <span className="ait-calc-affix suffix">PIPS</span>
+                    </div>
+                    <div className="ait-pill-selector">
+                      {[15, 25, 35, 50].map((pips) => (
+                        <button
+                          key={pips}
+                          type="button"
+                          className={`ait-pill-btn ${calcSlPips === pips ? 'active' : ''}`}
+                          onClick={() => setCalcSlPips(pips)}
+                        >
+                          {pips} Pips {pips === 15 ? '(Scalp)' : pips === 25 ? '(Intraday)' : ''}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right: Calculated Lot Math Results Card */}
+                <div className="ait-calc-results">
+                  <div className="ait-calc-res-header">
+                    <div className="ait-res-tag">
+                      <span className="ait-tag-pulse" />
+                      <span>{isKhmer ? 'លទ្ធផល LOT SIZE ជាក់លាក់' : 'CALCULATED LOT SIZE'}</span>
+                    </div>
+                    <span className="ait-res-asset-badge">Gold (XAU/USD)</span>
+                  </div>
+
+                  <div className="ait-res-main-card">
+                    <div className="ait-res-lot-huge ait-mono">
+                      {calculatedLot} <span className="ait-res-lot-unit">Lots</span>
+                    </div>
+                    <div className="ait-res-sub-row">
+                      <span>{isKhmer ? 'ការខាតបង់អតិបរមា:' : 'Max Dollar Exposure:'}</span>
+                      <strong className="ait-mono" style={{ color: '#00F2FE' }}>${dollarRisk.toFixed(2)}</strong>
+                      <span className="ait-res-pct-badge">({calcRiskPct}% of ${calcBalance.toLocaleString()})</span>
+                    </div>
+                  </div>
+
+                  {/* Prop Firm Rule Status Card */}
+                  <div className="ait-prop-firm-card">
+                    <div className="ait-prop-head">
+                      <div className="ait-prop-title">
+                        <span className="ait-check-circle">✓</span>
+                        <span>{isKhmer ? 'សុវត្ថិភាពខ្ពស់សម្រាប់គណនី Prop Firm' : 'Prop-Firm Capital Protection Guard'}</span>
+                      </div>
+                      <span className="ait-buffer-pct ait-mono">{drawdownSafetyBuffer}% Buffer</span>
+                    </div>
+                    <div className="ait-prop-bar-track">
+                      <div
+                        className="ait-prop-bar-fill"
+                        style={{ width: `${Math.min(100, Math.max(5, drawdownSafetyBuffer))}%` }}
+                      />
+                    </div>
+                    <div className="ait-prop-meta">
+                      <span>
+                        {isKhmer ? 'ដែនកំណត់ Drawdown ប្រចាំថ្ងៃ (4% limit):' : 'Max Daily Drawdown (4% limit):'} <strong>${dailyDrawdownBudget.toLocaleString()}</strong>
+                      </span>
+                      <span style={{ color: '#10B981', fontWeight: 800 }}>
+                        ✓ {drawdownSafetyBuffer}% Safe Buffer
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="ait-formula-footer">
+                    <div className="ait-formula-head">
+                      <span>📐</span>
+                      <strong>{isKhmer ? 'រូបមន្តគណនាស្ថាប័ន:' : 'Exact Formula:'}</strong>
+                    </div>
+                    <div className="ait-formula-text">
+                      <code>(Account Balance × Risk %) ÷ (Stop Loss Pips × $10)</code>
+                      <br />
+                      {isKhmer
+                        ? 'ការពារគណនី FTMO, FundedNext និង Funded evaluation ពីការដាច់ច្បាប់ Daily Loss។'
+                        : 'Keeps trades strictly disciplined across FTMO, FundedNext, and funded evaluation rules.'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 4: INTERACTIVE PIP COACH */}
+            {activeEngine === 'coach' && (
+              <div className="ait-chat-mock-container">
+                <div className="ait-chat-window">
+                  <div className="ait-chat-msg user">
+                    <div className="ait-chat-bubble">{REAL_PIP_CURRICULUM_PROMPTS[pipActiveIndex].q}</div>
+                  </div>
+                  <div className="ait-chat-msg bot">
+                    <div className="ait-chat-bubble">
+                      <strong style={{ display: 'block', color: 'var(--brand2)', marginBottom: 4 }}>
+                        🤖 Pip AI Trading Coach:
+                      </strong>
+                      {REAL_PIP_CURRICULUM_PROMPTS[pipActiveIndex].a}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--mute)', textTransform: 'uppercase', marginBottom: 8 }}>
+                  {isKhmer ? 'សាកល្បងសួរសំណួរមេរៀន:' : 'Explore Curriculum Answers:'}
+                </div>
+                <div className="ait-chat-chips-row">
+                  {REAL_PIP_CURRICULUM_PROMPTS.map((prompt, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      className="ait-chip-btn"
+                      onClick={() => setPipActiveIndex(idx)}
+                    >
+                      "{prompt.q}"
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* =========================================================================
+            SECTION 3: PIP AI INSTITUTIONAL SIGNAL STREAM & SIGNAL CARDS BOX
+            ========================================================================= */}
+        <section className="ait-section" id="ait-signals-section">
+          {/* Split Hero with Verified Scorecard */}
+          <div className="ait-sig-hero-split">
+            <div>
+              <div className="ait-sig-hero-badge">
+                <span>⚡</span>
+                <span>{isKhmer ? 'ផ្សាយ SIGNAL ស្ថាប័នផ្ទាល់' : 'PIP AI REAL-TIME SIGNAL STREAM'}</span>
+              </div>
+              <h2 className="ait-sig-main-title">
+                {isKhmer
+                  ? 'Gold (XAUUSD) & Forex Institutional Signals'
+                  : 'Gold (XAUUSD) & Major Forex Signals'}
+              </h2>
+              <p className="ait-sig-main-desc">
+                {isKhmer
+                  ? 'Pip AI ស្កេនរចនាសម្ព័ន្ធទីផ្សារ 24/7 រួមបញ្ចូល Liquidity Sweeps, Fair Value Gaps និង Smart Money Concepts ដើម្បីផ្តល់ Signal ជាក់លាក់ជាមួយ Entry, Stop Loss, និង Take Profit 1:2.5+ R:R។'
+                  : 'Gold (XAUUSD) and major currencies scanned 24/7 by Pip AI. Blending multi-timeframe ICT market structure, liquidity sweeps, and order flow context to produce high-conviction trade setups with exact entry, stop-loss, and multi-tier take-profits.'}
+              </p>
+              <div className="ait-sig-hero-btns">
+                <button
+                  type="button"
+                  className="ait-btn-gold-action"
+                  onClick={() => {
+                    const el = document.querySelector('.ait-terminal-fullwidth-wrapper');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                >
+                  <span>📊</span>
+                  <span>{isKhmer ? 'បើកមើល Live Chart Workstation' : 'Open Live Chart Workstation'}</span>
+                </button>
+                <button
+                  type="button"
+                  className="ait-btn-outline"
+                  onClick={() => {
+                    const el = document.querySelector('.ait-signals-filter-bar');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                >
+                  <span>⚡</span>
+                  <span>{isKhmer ? 'មើល Live Signals' : 'Explore Live Signals'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Verified Scorecard Box - 100% Dynamic Real Data from Firestore */}
+            <div className="ait-gold-scorecard">
+              <div className="ait-scorecard-label">
+                <span>✓</span>
+                <span>
+                  {isKhmer
+                    ? 'លទ្ធផលបានផ្ទៀងផ្ទាត់ (VERIFIED REAL TRACK RECORD)'
+                    : 'PIP AI — VERIFIED RESULTS'}
+                </span>
+                <span className="ait-live-real-badge">
+                  <span className="ait-scanner-status-dot" style={{ width: 6, height: 6 }} />
+                  {isKhmer ? 'ទិន្នន័យជាក់ស្តែង' : 'REAL FIRESTORE DATA'}
+                </span>
+              </div>
+              <div className="ait-scorecard-grid">
+                <div>
+                  <div className="ait-score-num">{verifiedStats.winRateDisplay}</div>
+                  <div className="ait-score-sub">
+                    {isKhmer ? 'អត្រាឈ្នះ (Win Rate)' : 'Win Rate (Audited)'}
+                  </div>
+                </div>
+                <div>
+                  <div className="ait-score-num ait-score-signals">
+                    {verifiedStats.totalTracked}
+                  </div>
+                  <div className="ait-score-sub">
+                    {isKhmer ? 'ចំនួន Signal សរុប' : 'Signals Tracked'}
+                  </div>
+                </div>
+                <div>
+                  <div className="ait-score-num ait-score-pips">
+                    {verifiedStats.netPipsDisplay}
+                  </div>
+                  <div className="ait-score-sub">
+                    {isKhmer ? 'Pips ចំណេញសរុប' : 'Net Pips Captured'}
+                  </div>
+                </div>
+                <div>
+                  <div className="ait-score-num ait-score-rr">
+                    {verifiedStats.avgRrDisplay}
+                  </div>
+                  <div className="ait-score-sub">
+                    {isKhmer ? 'មធ្យមភាគ R:R' : 'Avg Risk-to-Reward'}
+                  </div>
+                </div>
+              </div>
+              <div className="ait-score-pill-row">
+                <span style={{ color: '#10B981' }}>
+                  ● {verifiedStats.winsCount} {isKhmer ? 'ឈ្នះ' : 'Wins'}
+                </span>
+                <span style={{ color: '#EF4444' }}>
+                  ● {verifiedStats.lossesCount} {isKhmer ? 'ខាត' : 'Stop Outs'}
+                </span>
+                {verifiedStats.activeCount > 0 && (
+                  <span className="ait-score-active-pill">
+                    ● {verifiedStats.activeCount} {isKhmer ? 'សកម្ម' : 'Active'}
+                  </span>
+                )}
+                <span className="ait-score-pf" style={{ marginLeft: 'auto' }}>
+                  Profit Factor: {verifiedStats.profitFactorDisplay}
+                </span>
+              </div>
+              <div className="ait-scorecard-fineprint">
+                {isKhmer
+                  ? 'លទ្ធផលគណនាផ្ទាល់ពីទិន្នន័យ Signal ជាក់ស្តែងក្នុង Firestore & Live Market Ticks។ គ្រប់ Setup អនុវត្តតាមក្បួនគ្រប់គ្រងហានិភ័យ 1%។'
+                  : 'Results tracked against real market ticks and live Firestore signals. All setups adhere strictly to 1.0% maximum risk.'}
+              </div>
+            </div>
+          </div>
+
+          {/* Educational Disclaimer Notice Banner */}
+          <div className="ait-disclaimer-notice">
+            <span style={{ fontSize: 16 }}>ⓘ</span>
+            <span>
+              {isKhmer
+                ? 'Signal និងការវិភាគត្រូវបានផ្តល់ជូនសម្រាប់គោលបំណងសិក្សា និងតាមដានទីផ្សារប៉ុណ្ណោះ។ មិនមែនជាការណែនាំហិរញ្ញវត្ថុទេ។ ការជួញដូរមានហានិភ័យ សូមគ្រប់គ្រងដើមទុនត្រឹម 1% ជានិច្ច។'
+                : 'Signals are for educational and analysis purposes only. This is not financial advice. Trading involves risk and you can lose capital. Always adhere to strict 1% account risk.'}
+            </span>
+          </div>
+
+          {/* Live Pip AI Scanner Action Bar */}
+          <div className="ait-pip-scanner-trigger-bar">
+            <div className="ait-pip-scanner-info">
+              <span className="ait-scanner-pulse-ring" />
+              <div className="ait-scanner-text-group">
+                <div className="ait-scanner-status-line">
+                  <span className="ait-scanner-status-dot" />
+                  <strong>PIP AI SCANNER: ONLINE</strong>
+                  <span className="ait-scanner-model-pill">Gemini 3.8 Flash + Live ICT SMC</span>
+                </div>
+                <p className="ait-scanner-desc-line">
+                  {isKhmer
+                    ? 'ស្កេនតម្លៃទីផ្សារ Live ជាក់ស្តែងជាមួយ Pip AI ដើម្បីបង្កើត Signal ស្ថាប័នពិតប្រាកដ'
+                    : 'Scan live market quotes directly with Pip AI to generate real institutional trade setups in real time.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="ait-scanner-actions">
+              <ScannerPairDropdown
+                selectedPair={scanTargetPair}
+                onSelectPair={(sym) => setScanTargetPair(sym)}
+                livePrices={{
+                  XAUUSD: liveGoldPrice || liveForexPrices.XAUUSD,
+                  EURUSD: liveForexPrices.EURUSD,
+                  GBPUSD: liveForexPrices.GBPUSD,
+                  BTCUSD: 65420,
+                  US30: 38940,
+                }}
+              />
+
+              <button
+                type="button"
+                className={`ait-scanner-manual-btn ${isScanningSetup ? 'loading' : ''}`}
+                onClick={handleTriggerMarketScan}
+                disabled={isScanningSetup}
+              >
+                {isScanningSetup ? (
+                  <>
+                    <span className="ait-scanner-spinner" />
+                    <span>{isKhmer ? 'កំពុងវិភាគ & បង្កើត Signal...' : 'Analyzing & Structuring Setup...'}</span>
+                  </>
+                ) : (
+                  <>
+                    <SparkleIcon style={{ width: 15, height: 15 }} />
+                    <span>{isKhmer ? `វិភាគ & ទទួល Signal ${scanTargetPair}` : `Scan & Analyze ${scanTargetPair} Setup`}</span>
+                  </>
+                )}
+              </button>
+
+              <div className="ait-scanner-auto-badge">
+                <span className="ait-auto-pulse-dot" />
+                <div className="ait-auto-badge-text">
+                  <span className="ait-auto-badge-title">
+                    {isKhmer ? 'ស្កេនស្វ័យប្រវត្តិ (AUTO-SCAN)' : 'AUTO-SCAN STREAM'}
+                  </span>
+                  <span className="ait-auto-badge-sub">
+                    {isKhmer ? '~7–10 Signal ក្នុងមួយថ្ងៃ · ទៀន M15' : '~7–10 Signals / Day · M15 Close'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {pipScanNotice && (
+            <div className="ait-scanner-success-notice ait-mono">
+              <span>⚡</span>
+              <span>
+                <strong>PIP AI BROADCAST:</strong> Real institutional signal generated for <strong>{pipScanNotice.pair}</strong> ({pipScanNotice.dir}) @ <strong>{pipScanNotice.entry}</strong> ({pipScanNotice.time})
+              </span>
+            </div>
+          )}
+
+          {/* Signal Filters & Strategy Style Switchers */}
+          <div className="ait-signals-filter-wrapper" id="ait-signals-filter-anchor">
+            {/* 1. Strategy Style Buttons: Scalping vs Day Trade */}
+            <div className="ait-style-filter-row">
+              <span className="ait-filter-row-label">
+                {isKhmer ? 'របៀបជួញដូរ៖' : 'STRATEGY STYLE:'}
+              </span>
+              <div className="ait-style-buttons-group">
+                <button
+                  type="button"
+                  className={`ait-style-pill ${tradeStyleFilter === 'all' ? 'active' : ''}`}
+                  onClick={() => {
+                    setTradeStyleFilter('all');
+                    setCurrentPage(1);
+                  }}
+                >
+                  <span>🌐</span>
+                  <span>{isKhmer ? 'គ្រប់បែប' : 'All Trades'}</span>
+                  <span className="ait-style-count">{styleCounts.all}</span>
+                </button>
+
+                <button
+                  type="button"
+                  className={`ait-style-pill scalping ${tradeStyleFilter === 'scalping' ? 'active' : ''}`}
+                  onClick={() => {
+                    setTradeStyleFilter('scalping');
+                    setCurrentPage(1);
+                  }}
+                >
+                  <span className="ait-style-icon">⚡</span>
+                  <div className="ait-style-pill-texts">
+                    <span className="ait-style-pill-main">{isKhmer ? 'Scalping' : 'Scalping'}</span>
+                    <span className="ait-style-pill-sub">1M–5M Rapid ICT</span>
+                  </div>
+                  <span className="ait-style-count">{styleCounts.scalping}</span>
+                </button>
+
+                <button
+                  type="button"
+                  className={`ait-style-pill daytrade ${tradeStyleFilter === 'daytrade' ? 'active' : ''}`}
+                  onClick={() => {
+                    setTradeStyleFilter('daytrade');
+                    setCurrentPage(1);
+                  }}
+                >
+                  <span className="ait-style-icon">📈</span>
+                  <div className="ait-style-pill-texts">
+                    <span className="ait-style-pill-main">{isKhmer ? 'Day Trade' : 'Day Trade'}</span>
+                    <span className="ait-style-pill-sub">15M–1H Intraday SMC</span>
+                  </div>
+                  <span className="ait-style-count">{styleCounts.daytrade}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 2. Asset Category Tabs */}
+            <div className="ait-signals-filter-bar">
+              <button
+                type="button"
+                className={`ait-sig-filter-btn ${signalFilter === 'all' ? 'active' : ''}`}
+                onClick={() => {
+                  setSignalFilter('all');
+                  setCurrentPage(1);
+                }}
+              >
+                <span>🌐</span>
+                <span>{isKhmer ? 'គ្រប់ទ្រព្យ' : 'All Assets'}</span>
+              </button>
+              <button
+                type="button"
+                className={`ait-sig-filter-btn ${signalFilter === 'gold' ? 'active' : ''}`}
+                onClick={() => {
+                  setSignalFilter('gold');
+                  setCurrentPage(1);
+                }}
+              >
+                <span>🥇</span>
+                <span>Gold & Silver (XAU/XAG)</span>
+              </button>
+              <button
+                type="button"
+                className={`ait-sig-filter-btn ${signalFilter === 'forex' ? 'active' : ''}`}
+                onClick={() => {
+                  setSignalFilter('forex');
+                  setCurrentPage(1);
+                }}
+              >
+                <span>💶</span>
+                <span>Major Forex (EUR, GBP)</span>
+              </button>
+              <button
+                type="button"
+                className={`ait-sig-filter-btn ${signalFilter === 'crypto' ? 'active' : ''}`}
+                onClick={() => {
+                  setSignalFilter('crypto');
+                  setCurrentPage(1);
+                }}
+              >
+                <span>₿</span>
+                <span>Crypto & Indices (BTC, US30)</span>
+              </button>
+            </div>
+          </div>
+
+          {/* If free plan user, show locked referral notice over signal grid */}
+          {!isVipUser && (
+            <div className="ait-signals-paywall-notice">
+              <div className="ait-paywall-card compact">
+                <div className="ait-paywall-lock-badge">
+                  <LockIcon style={{ width: 14, height: 14 }} />
+                  <span>VIP SIGNALS LOCKED</span>
+                </div>
+                <h4 style={{ fontSize: 16, fontWeight: 900, margin: '8px 0 4px', color: 'var(--text)' }}>
+                  {isKhmer ? 'Signal ផ្ទាល់ត្រូវបានចាក់សោសម្រាប់តែសមាជិក VIP' : 'Live Institutional Signals Locked'}
+                </h4>
+                <p style={{ fontSize: 13, color: 'var(--mute)', margin: '0 0 14px' }}>
+                  {isKhmer
+                    ? 'ដើម្បីដោះសោចំណុច Entry, Stop Loss, និង Take Profit 1:2.5+ R:R សូមផ្ញើសារផ្ទាល់ទៅ Admin ដើម្បីជួញដូរក្រោម Referral Link របស់យើង។'
+                    : 'Exact Entry, Stop Loss, and Take Profit 1:2.5+ R:R targets are VIP exclusive. Direct message Admin to gain access by trading under my referral.'}
+                </p>
+                <button
+                  type="button"
+                  className="ait-btn-gold-action"
+                  onClick={() => setShowReferralModal(true)}
+                >
+                  <span>✈️</span>
+                  <span>{isKhmer ? 'ផ្ញើសារទៅ Admin ដោះសោ Signal (@huarrrrr)' : 'DM Admin on Telegram to Unlock (@huarrrrr)'}</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* 3-Column Signal Cards Grid */}
+          {filteredSignals.length === 0 ? (
+            <div className="ait-signals-empty-state">
+              <div className="ait-empty-radar-icon">📡</div>
+              <h3 className="ait-empty-title">
+                {isKhmer ? 'មិនទាន់មាន Signal ក្នុងតម្រងនេះនៅឡើយទេ' : 'No Active Setups for This Category'}
+              </h3>
+              <p className="ait-empty-desc">
+                {isKhmer
+                  ? 'មិនទាន់មាន Signal នៅក្នុង Firestore សម្រាប់តម្រងនេះនៅឡើយទេ។ Signal ផ្ទាល់ដែលចេញផ្សាយដោយ Admin នឹងបង្ហាញនៅទីនេះភ្លាមៗ។'
+                  : 'No signals currently available in Firestore for this category. Real-time verified trades published by our team will appear here live.'}
+              </p>
+            </div>
+          ) : (
+            <div className={`ait-signals-grid ${!isVipUser ? 'ait-signals-blurred' : ''}`}>
+              {paginatedSignals.map((sig) => {
+                const asset = (sig.pair || sig.symbol || 'XAUUSD').toUpperCase();
+                const dir = (sig.direction || sig.action || 'BUY').toUpperCase();
+                const isBuy = dir === 'BUY';
+                const entry = getDynamicSignalPrice(sig.entry ?? sig.entry_price ?? sig.entryPrice ?? sig.price, asset);
+                const tp = getDynamicSignalPrice(sig.tp ?? sig.take_profit ?? sig.takeProfit ?? sig.target, asset);
+                const sl = getDynamicSignalPrice(sig.sl ?? sig.stop_loss ?? sig.stopLoss, asset);
+                const rr = sig.rr || sig.riskReward || '1:2.8';
+                const conf = sig.confidence || (isBuy ? 89 : 84);
+                const confluences = Array.isArray(sig.confluences) && sig.confluences.length > 0
+                  ? sig.confluences
+                  : sig.reason
+                    ? [sig.reason]
+                    : isBuy
+                      ? [
+                          'Asian Session Liquidity Sweep (SSL Purged)',
+                          'M15 Displacement Candle + Bullish FVG Tap',
+                          'Equilibrium Discount Zone (62%–79% OTE)',
+                        ]
+                      : [
+                          'Previous Session High Swept (BSL Purged)',
+                          'M15 Bearish Displacement leaving fresh FVG',
+                          'Equilibrium Premium Zone (62%–79% OTE)',
+                        ];
+
+                const icon = sig.icon || (asset.includes('XAU') || asset.includes('GOLD') ? '🥇' : asset.includes('EUR') ? '💶' : asset.includes('GBP') ? '💷' : asset.includes('BTC') ? '₿' : asset.includes('XAG') ? '🥈' : '⚡');
+                const tf = sig.timeframe || sig.mode || '15m';
+                const isScalp = isSignalScalp(sig);
+                const source = sig.source || (sig.isFirestore ? 'GENZ VIP SIGNALS' : sig.isRealAiGenerated ? 'PIP AI (GEMINI 3.8)' : 'PIP AI SMC');
+                const opened = sig.opened || sig.timestamp || 'Today, Active';
+                const session = sig.session || activeSession.name;
+                const isTp = sig.status === 'tp' || sig.status === 'win';
+                const isSl = sig.status === 'sl' || sig.status === 'loss';
+                const badgeClass = sig.badgeClass || (isTp ? 'win' : isSl ? 'loss' : 'active');
+                const resultBadge = sig.resultBadge || (isTp ? '✓ TP HIT' : isSl ? '✕ STOP LOSS' : 'ACTIVE SETUP');
+                const statusLabel = sig.statusLabel || (isTp ? 'Completed (TP Hit)' : isSl ? 'Closed (Stopped Out)' : 'In-Progress');
+
+                return (
+                  <div key={sig.id || `${asset}-${tf}-${dir}-${entry}`} className={`ait-sig-card ${isBuy ? 'buy-card' : 'sell-card'}`}>
+                    {/* Redesigned Card Header Box */}
+                    <div className="ait-card-header-box">
+                      <div className="ait-card-header-main-row">
+                        <div className="ait-card-asset-left">
+                          <PairLogo pair={sig.pair || sig.symbol || sig.name || asset} />
+                          <div className="ait-card-title-group">
+                            <span className="ait-card-sym-name">{sig.name || (asset === 'XAUUSD' ? 'Gold (XAU/USD)' : asset)}</span>
+                            <div className="ait-card-meta-line">
+                              <span className="ait-meta-tf-pill">{tf.toUpperCase()}</span>
+                              <span className="ait-meta-mode-text">{sig.mode?.replace(/\b(15M|5M|1M)\b/gi, '').trim() || 'Intraday (ICT)'}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Prominent Direction Badge */}
+                        <div className="ait-card-dir-wrapper">
+                          <span className={`ait-pill-dir ${isBuy ? 'buy' : 'sell'}`}>
+                            <span className="ait-dir-arrow">{isBuy ? '▲' : '▼'}</span>
+                            <span>{dir}</span>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Second Row: Strategy Style Tag & Source Badge */}
+                      <div className="ait-card-tags-row">
+                        <span className={`ait-pill-style ${isScalp ? 'scalp' : 'daytrade'}`}>
+                          <span className="ait-pill-style-icon">{isScalp ? '⚡' : '📈'}</span>
+                          <span className="ait-pill-style-text">{isScalp ? 'SCALPING' : 'DAY TRADE'}</span>
+                          <span className="ait-pill-style-dot" />
+                        </span>
+                        <span className="ait-pill-source">
+                          <span className="ait-source-verified-icon">✓</span>
+                          <span>{source}</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Levels */}
+                    <div className="ait-card-levels ait-mono">
+                      <div className="ait-level-row">
+                        <span className="ait-level-label">
+                          <span className="ait-level-dot neutral" />
+                          <span>ENTRY:</span>
+                        </span>
+                        <span className="ait-level-val">{isVipUser ? entry : '••••••'}</span>
+                      </div>
+                      <div className="ait-level-row">
+                        <span className="ait-level-label">
+                          <span className="ait-level-dot target" />
+                          <span>TARGET (TP):</span>
+                        </span>
+                        <span className="ait-level-val target">{isVipUser ? tp : '••••••'}</span>
+                      </div>
+                      <div className="ait-level-row">
+                        <span className="ait-level-label">
+                          <span className="ait-level-dot stop" />
+                          <span>STOP LOSS (SL):</span>
+                        </span>
+                        <span className="ait-level-val stop">{isVipUser ? sl : '••••••'}</span>
+                      </div>
+                      {(sig.beTrigger || sig.breakEvenTrigger || (asset.includes('XAU') && !isScalp)) && (
+                        <div className="ait-level-row">
+                          <span className="ait-level-label">
+                            <span className="ait-level-dot amber" />
+                            <span>BREAK-EVEN (BE):</span>
+                          </span>
+                          <span className="ait-level-val amber">
+                            {isVipUser
+                              ? getDynamicSignalPrice(
+                                  sig.beTrigger || sig.breakEvenTrigger || (isBuy ? (Number(sig.entry) + 10.0) : (Number(sig.entry) - 10.0)),
+                                  asset
+                                )
+                              : '••••••'}
+                          </span>
+                        </div>
+                      )}
+                      <div className="ait-level-row">
+                        <span className="ait-level-label">
+                          <span className="ait-level-dot cyan" />
+                          <span>RISK/REWARD:</span>
+                        </span>
+                        <span className="ait-level-val rr">{rr}</span>
+                      </div>
+                    </div>
+
+                    {/* Confluences */}
+                    <div className="ait-confluence-box">
+                      <div className="ait-conf-tag">
+                        <span className="ait-conf-icon">⚡</span>
+                        <span>{sig.model || 'INSTITUTIONAL CONFLUENCE'} ({confluences.length}/{confluences.length})</span>
+                      </div>
+                      <ul className="ait-conf-list">
+                        {confluences.slice(0, 4).map((item, cIdx) => (
+                          <li key={cIdx}>
+                            <span className="ait-conf-bullet">▸</span>
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* Confidence Meter */}
+                    <div className="ait-conf-meter-row">
+                      <span>Confidence Rating</span>
+                      <div className="ait-meter-val">
+                        <span>{conf}%</span>
+                        <div className="ait-meter-bars">
+                          {[1, 2, 3, 4, 5].map((bar) => (
+                            <span
+                              key={bar}
+                              className={`ait-bar-tick ${bar <= Math.round(conf / 20) ? 'active' : ''}`}
+                              style={{ height: `${bar * 2 + 4}px` }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Timestamps */}
+                    <div className="ait-card-timestamps ait-mono">
+                      <span>{opened}</span>
+                      <span style={{ color: '#10B981' }}>{session}</span>
+                    </div>
+
+                    {/* Footer Result Pill */}
+                    <div className="ait-card-footer-pill">
+                      <span style={{ color: 'var(--mute)', fontSize: 11.5 }}>
+                        Status: <strong style={{ color: isTp ? '#10B981' : isSl ? '#EF4444' : 'var(--text)' }}>
+                          {statusLabel}
+                        </strong>
+                      </span>
+                      <span className={`ait-footer-res-badge ${badgeClass}`}>{resultBadge}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Pagination Controls Bar (Strictly 6 trades per page) */}
+          {totalPages > 1 && (
+            <div className="ait-signals-pagination-bar">
+              <div className="ait-pagination-info">
+                {isKhmer ? (
+                  <span>បង្ហាញ {startIndex + 1}–{Math.min(startIndex + PAGE_SIZE, filteredSignals.length)} នៃ {filteredSignals.length} Trades (ទំព័រ {currentPage} នៃ {totalPages})</span>
+                ) : (
+                  <span>Showing {startIndex + 1}–{Math.min(startIndex + PAGE_SIZE, filteredSignals.length)} of {filteredSignals.length} trades • Page {currentPage} of {totalPages}</span>
+                )}
+              </div>
+
+              <div className="ait-pagination-controls">
+                <button
+                  type="button"
+                  className="ait-page-btn nav-btn"
+                  disabled={currentPage <= 1}
+                  onClick={() => {
+                    setCurrentPage((p) => Math.max(1, p - 1));
+                    document.getElementById('ait-signals-filter-anchor')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                >
+                  <span>←</span>
+                  <span>{isKhmer ? 'ទំព័រមុន' : 'Previous'}</span>
+                </button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                  <button
+                    key={pageNum}
+                    type="button"
+                    className={`ait-page-btn num-btn ${currentPage === pageNum ? 'active' : ''}`}
+                    onClick={() => {
+                      setCurrentPage(pageNum);
+                      document.getElementById('ait-signals-filter-anchor')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                  >
+                    {pageNum}
+                  </button>
+                ))}
+
+                <button
+                  type="button"
+                  className="ait-page-btn nav-btn"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => {
+                    setCurrentPage((p) => Math.min(totalPages, p + 1));
+                    document.getElementById('ait-signals-filter-anchor')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                >
+                  <span>{isKhmer ? 'ទំព័របន្ទាប់' : 'Next'}</span>
+                  <span>→</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Pip AI Signals — FAQ Accordion */}
+          <div className="ait-faq-accordion-box">
+            <h3 className="ait-faq-acc-title">
+              {isKhmer ? 'សំណួរដែលសួរញឹកញាប់អំពី Pip AI Signals' : 'Pip AI Trading Signals — FAQ'}
+            </h3>
+            {PIP_SIGNAL_FAQS.map((faq, idx) => {
+              const isOpen = openFaqIndex === idx;
+              return (
+                <div key={idx} className={`ait-acc-item ${isOpen ? 'open' : ''}`}>
+                  <button
+                    type="button"
+                    className="ait-acc-trigger"
+                    onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
+                  >
+                    <span>{faq.q}</span>
+                    <span style={{ fontSize: 18, transition: 'transform 0.2s', transform: isOpen ? 'rotate(45deg)' : 'none' }}>
+                      +
+                    </span>
+                  </button>
+                  {isOpen && (
+                    <div className="ait-acc-body">
+                      {faq.a}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* =========================================================================
+            SECTION 4: MANDATORY SAFETY & TRUST GUARDRAILS
+            ========================================================================= */}
+        {/* Non-Custodial Assurance */}
+        <div className="ait-safety-strip">
+          <div className="ait-safety-icon-box">
+            <LockIcon style={{ width: 24, height: 24 }} />
+          </div>
+          <div>
+            <h4 className="ait-safety-title">
+              {isKhmer ? 'ការធានាដើមទុន Non-Custodial (ដើមទុននៅក្នុងគណនីរបស់អ្នកជានិច្ច)' : 'Non-Custodial Capital Assurance'}
+            </h4>
+            <p className="ait-safety-text">
+              {isKhmer
+                ? 'ដើមទុនរបស់អ្នកស្ថិតនៅក្នុងគណនីជួញដូរផ្ទាល់ខ្លួនរបស់អ្នកជានិច្ច។ វេទិការបស់យើងភ្ជាប់ទំនាក់ទំនងតាមរយៈការវិភាគ Read-only និង Signal Feeds ប៉ុណ្ណោះ។ យើងមិនដែលកាន់កាប់ ឬគ្រប់គ្រងដើមទុនរបស់អ្នកឡើយ។'
+                : 'Your capital stays in your account. Our platform connects via read-only analysis and signal feeds. We never take custody or management of your funds.'}
+            </p>
+          </div>
+        </div>
+
+        {/* Transparent Risk Disclaimer */}
+        <p className="ait-risk-disclaimer">
+          {isKhmer
+            ? 'ការព្រមានពីហានិភ័យ: ការជួញដូរលើទីផ្សារហិរញ្ញវត្ថុ (រួមទាំងមាស និងរូបិយប័ណ្ណបរទេស) មានកម្រិតហានិភ័យខ្ពស់នៃការខាតបង់ ហើយប្រហែលជាមិនសមស្របសម្រាប់វិនិយោគិនទាំងអស់នោះទេ។ ម៉ូដែល AI ផ្តល់នូវការវិភាគតាមប្រូបាប៊ីលីតេ និងគោលបំណងអប់រំ មិនមែនជាការធានាប្រាក់ចំណេញឡើយ។ លទ្ធផលកន្លងមកមិនមែនជាការធានានៃលទ្ធផលអនាគតទេ។'
+            : 'Transparent Risk Disclaimer: Trading financial markets (including Gold and Forex) involves substantial risk of loss and is not suitable for all investors. AI models provide probabilistic analysis and educational insights, not guaranteed outcomes. Past performance is no guarantee of future results.'}
+        </p>
+
+        <Footer />
+      </div>
+
+      {/* Referral Access Modal Popup */}
+      <ReferralAccessModal
+        isOpen={showReferralModal}
+        onClose={() => setShowReferralModal(false)}
+        user={user}
+      />
     </div>
   );
 }

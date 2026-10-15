@@ -8,7 +8,7 @@ import favicon from '../assets/Fav.png';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
 
-export default function Signup({ onNeedVerification, onSwitchToLogin }) {
+export default function Signup({ onNeedVerification, onSwitchToLogin, onBackToHome }) {
   const { lang } = useLanguage();
   const t = getStrings(lang).auth;
   const [name, setName] = useState('');
@@ -57,6 +57,11 @@ export default function Signup({ onNeedVerification, onSwitchToLogin }) {
         <LanguageDropdown />
       </div>
       <div className="auth-card">
+        {onBackToHome && (
+          <button type="button" className="auth-back-to-home-btn" onClick={onBackToHome}>
+            ← {lang === 'km' || lang === 'kh' ? 'ត្រឡប់ទៅទំព័រដើម' : 'Back to Home'}
+          </button>
+        )}
         <div className="auth-logo">
           <img src={favicon} alt="GenZ Trader" />
         </div>

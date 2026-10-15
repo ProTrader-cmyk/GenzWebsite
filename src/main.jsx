@@ -4,6 +4,7 @@ import App from './App.jsx';
 import { LanguageProvider } from './i18n/LanguageContext.jsx';
 import { ThemeProvider } from './theme/ThemeContext.jsx';
 import './styles/main.css';
+import './styles/landing.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

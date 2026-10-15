@@ -74,7 +74,7 @@ function buildCategories(t, approved, isVip) {
   ];
 }
 
-export default function CategoryHome({ onSelectCategory, approved, isVip, noticeTick }) {
+export default function CategoryHome({ onSelectCategory, approved, isVip, noticeTick, user, onRequireAuth }) {
   const { lang } = useLanguage();
   const t = getStrings(lang).category;
   const tp = getStrings(lang).pending;
@@ -122,10 +122,14 @@ export default function CategoryHome({ onSelectCategory, approved, isVip, notice
   // switching `section`
   // back to 'categories' is otherwise a no-op that wouldn't re-trigger this.
   useEffect(() => {
-    if (!approved) setShowPendingModal(true);
-  }, [approved, noticeTick]);
+    if (user && !approved) setShowPendingModal(true);
+  }, [user, approved, noticeTick]);
 
   function handleCardClick(cat) {
+    if (!user) {
+      if (onRequireAuth) onRequireAuth();
+      return;
+    }
     if (cat.pendingLocked) {
       setShowPendingModal(true);
     } else if (cat.vipLocked) {
@@ -231,17 +235,26 @@ export default function CategoryHome({ onSelectCategory, approved, isVip, notice
             </div>
             <h3 className="modal-title">{tp.vipModalTitle}</h3>
             <p className="modal-text">{tp.vipModalText}</p>
-            <button
-              type="button"
+            <a
+              href="https://t.me/huarrrrr"
+              target="_blank"
+              rel="noopener noreferrer"
               className="modal-btn"
-              style={{ marginBottom: 14, width: '100%' }}
-              onClick={() => {
-                setShowVipModal(false);
-                onSelectCategory('ai-trading');
+              style={{
+                marginBottom: 14,
+                width: '100%',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                textDecoration: 'none',
+                background: 'linear-gradient(135deg, #0088CC, #00A3E0)',
+                color: '#fff',
               }}
             >
-              💳 {lang === 'km' ? 'ជ្រើសរើសកញ្ចប់ VIP & Payment' : 'Choose VIP Package & Pay'}
-            </button>
+              <span>✈️</span>
+              <span>{lang === 'km' ? 'ផ្ញើសារទៅ Admin ជួញដូរក្រោម Referral (@huarrrrr)' : 'DM Admin to Trade Under Referral (@huarrrrr)'}</span>
+            </a>
             <a href={TELEGRAM_URL} target="_blank" rel="noopener noreferrer" className="modal-telegram-link">
               <TelegramIcon width="16" height="16" />
               {tp.telegramLinkLabel}

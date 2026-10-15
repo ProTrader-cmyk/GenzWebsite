@@ -187,12 +187,37 @@ service cloud.firestore {
     }
 
     // VIP Signals stream (src/data/signals.js)
-    // Any signed-in user may read the signals feed; only admin/dev can publish
-    // or update signal statuses (active -> tp -> sl).
+    // Public read so the AI Trading page and members can read published
+    // trading signals in real-time; allows admin/dev or validated automated signals
+    // to be published. Updates and deletes remain restricted to admin/dev.
     match /signals/{signalId} {
-      allow read: if request.auth != null &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'dev'];
-      allow write: if isAdmin() || isDev();
+      function isValidAutomatedSignal() {
+        let data = request.resource.data;
+        return data.keys().hasAll(['pair', 'direction', 'entry', 'sl', 'tp', 'status', 'createdAt'])
+          && data.pair is string
+          && data.pair in ['XAUUSD', 'EURUSD', 'GBPUSD', 'USDJPY', 'BTCUSD', 'US30', 'XAGUSD']
+          && data.direction is string
+          && data.direction in ['BUY', 'SELL', 'buy', 'sell']
+          && data.status in ['active', 'tp', 'sl', 'closed']
+          && (data.entry is int || data.entry is float)
+          && data.entry > 0
+          && (data.sl is int || data.sl is float)
+          && data.sl > 0
+          && (data.tp is int || data.tp is float)
+          && data.tp > 0
+          && (data.createdAt == request.time || data.createdAt is timestamp || data.createdAt is int || data.createdAt is float);
+      }
+
+      allow read: if true;
+      allow create: if isAdmin() || isDev() || (isValidAutomatedSignal() && request.resource.data.status == 'active');
+      allow update: if isAdmin() || isDev() || (
+        isValidAutomatedSignal()
+        && request.resource.data.pair == resource.data.pair
+        && request.resource.data.entry == resource.data.entry
+        && request.resource.data.sl == resource.data.sl
+        && request.resource.data.tp == resource.data.tp
+      );
+      allow delete: if isAdmin() || isDev();
     }
 
     // Push notification broadcast docs (src/services/pushNotificationService.js)

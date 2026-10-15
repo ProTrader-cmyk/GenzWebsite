@@ -18,6 +18,7 @@ export default function Login({
   onAuthCancel,
   onNeedVerification,
   onSwitchToSignup,
+  onBackToHome,
   resetLink,
   onExitResetFlow,
 }) {
@@ -154,6 +155,11 @@ export default function Login({
         <LanguageDropdown />
       </div>
       <div className="auth-card">
+        {onBackToHome && (
+          <button type="button" className="auth-back-to-home-btn" onClick={onBackToHome}>
+            ← {lang === 'km' || lang === 'kh' ? 'ត្រឡប់ទៅទំព័រដើម' : 'Back to Home'}
+          </button>
+        )}
         <div className="auth-logo">
           <img src={favicon} alt="GenZ Trader" />
         </div>

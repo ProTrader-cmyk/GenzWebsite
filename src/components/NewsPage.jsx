@@ -4,6 +4,7 @@ import Trans from '../i18n/Trans.jsx';
 import EconomicCalendar from './EconomicCalendar.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
+import { analyzeGoldImpact } from '../utils/goldImpactAnalyzer.js';
 
 // Set once the backend (genztrader-news-api, deployed on Railway) is live.
 // Until then the page falls back to the static "coming soon" panel below.
@@ -31,6 +32,9 @@ const DIRECTION_META = {
 };
 
 function NewsCard({ a, lang, readMoreLabel, featured, onOpen }) {
+  const isKhmer = lang === 'km' || lang === 'kh';
+  const impact = analyzeGoldImpact(a, lang);
+
   return (
     <div
       className={featured ? 'news-featured' : 'news-card'}
@@ -41,10 +45,45 @@ function NewsCard({ a, lang, readMoreLabel, featured, onOpen }) {
         if (e.key === 'Enter' || e.key === ' ') onOpen(a);
       }}
     >
-      {a.imageUrl && <div className="news-thumb" style={{ backgroundImage: `url(${a.imageUrl})` }} />}
+      {a.imageUrl && (
+        <div className="news-thumb" style={{ backgroundImage: `url(${a.imageUrl})` }}>
+          <div className={`news-thumb-impact-badge impact-badge-${impact.direction}`}>
+            {impact.biasTag}
+          </div>
+        </div>
+      )}
       <div className="news-body">
         <div className="news-title">{a.title}</div>
         {a.description && <div className="news-desc">{a.description}</div>}
+
+        {/* Dedicated Gold Impact Panel */}
+        <div className={`gold-impact-panel gold-impact-${impact.direction} ${featured ? 'featured-panel' : ''}`}>
+          <div className="gold-impact-panel-header">
+            <div className="gold-impact-title-group">
+              <span className="gold-impact-icon">🏆</span>
+              <span className="gold-impact-heading">
+                {isKhmer ? 'ឥទ្ធិពលលើមាស (XAU/USD)' : 'Impact on Gold (XAU/USD)'}
+              </span>
+            </div>
+            <span className={`gold-impact-badge gold-impact-badge-${impact.direction}`}>
+              {impact.biasTag}
+            </span>
+          </div>
+
+          <p className="gold-impact-explanation">{impact.explanation}</p>
+
+          <div className="gold-impact-footer-row">
+            <span className="gold-impact-driver">
+              📌 {impact.driverTag}
+            </span>
+            {featured && (
+              <span className="gold-impact-tip">
+                💡 {impact.tradingTip}
+              </span>
+            )}
+          </div>
+        </div>
+
         <div className="news-meta">
           <span className="news-source">{a.source}</span>
           <span className="news-time">{formatPublished(a.publishedAt, lang)}</span>
@@ -183,7 +222,26 @@ export default function NewsPage({ onBack }) {
     };
   }, [reloadKey]);
 
-  const [featuredArticle, ...restArticles] = articles;
+  const isKhmer = lang === 'km' || lang === 'kh';
+  const [impactFilter, setImpactFilter] = useState('all'); // 'all' | 'bullish' | 'bearish' | 'volatile'
+
+  const filteredArticles = articles.filter((a) => {
+    if (impactFilter === 'all') return true;
+    const impact = analyzeGoldImpact(a, lang);
+    if (impactFilter === 'volatile') {
+      return impact.direction === 'volatile' || impact.direction === 'neutral';
+    }
+    return impact.direction === impactFilter;
+  });
+
+  const counts = {
+    all: articles.length,
+    bullish: articles.filter((a) => analyzeGoldImpact(a, lang).direction === 'bullish').length,
+    bearish: articles.filter((a) => analyzeGoldImpact(a, lang).direction === 'bearish').length,
+    volatile: articles.filter((a) => ['volatile', 'neutral'].includes(analyzeGoldImpact(a, lang).direction)).length,
+  };
+
+  const [featuredArticle, ...restArticles] = filteredArticles;
 
   if (selectedArticle) {
     return (
@@ -259,21 +317,71 @@ export default function NewsPage({ onBack }) {
                 </button>
               </div>
 
-              {featuredArticle && (
-                <>
-                  <div className="news-section-label">{t.featured}</div>
-                  <NewsCard a={featuredArticle} lang={lang} readMoreLabel={t.readMore} featured onOpen={setSelectedArticle} />
-                </>
-              )}
+              {/* Gold Impact Filter Bar */}
+              <div className="gold-impact-filter-bar">
+                <button
+                  type="button"
+                  className={`impact-filter-pill ${impactFilter === 'all' ? 'active' : ''}`}
+                  onClick={() => setImpactFilter('all')}
+                >
+                  {isKhmer ? 'ព័ត៌មានទាំងអស់' : 'All Catalysts'} ({counts.all})
+                </button>
+                <button
+                  type="button"
+                  className={`impact-filter-pill filter-bullish ${impactFilter === 'bullish' ? 'active' : ''}`}
+                  onClick={() => setImpactFilter('bullish')}
+                >
+                  ▲ {isKhmer ? 'និន្នាការឡើង (Bullish)' : 'Bullish (+XAU)'} ({counts.bullish})
+                </button>
+                <button
+                  type="button"
+                  className={`impact-filter-pill filter-bearish ${impactFilter === 'bearish' ? 'active' : ''}`}
+                  onClick={() => setImpactFilter('bearish')}
+                >
+                  ▼ {isKhmer ? 'និន្នាការចុះ (Bearish)' : 'Bearish (-XAU)'} ({counts.bearish})
+                </button>
+                <button
+                  type="button"
+                  className={`impact-filter-pill filter-volatile ${impactFilter === 'volatile' ? 'active' : ''}`}
+                  onClick={() => setImpactFilter('volatile')}
+                >
+                  ⚡ {isKhmer ? 'ប្រែប្រួលខ្លាំង' : 'Volatile (CPI/Fed)'} ({counts.volatile})
+                </button>
+              </div>
 
-              {restArticles.length > 0 && (
-                <>
-                  <div className="news-section-label">{t.moreNews}</div>
-                  <div className="news-grid">
-                    {restArticles.map((a) => (
-                      <NewsCard key={a.url} a={a} lang={lang} readMoreLabel={t.readMore} onOpen={setSelectedArticle} />
-                    ))}
+              {filteredArticles.length === 0 ? (
+                <div className="empty-state" style={{ padding: '36px 20px', marginTop: '16px' }}>
+                  <div className="empty-icon">🔍</div>
+                  <div className="empty-title">
+                    {isKhmer ? 'មិនមានព័ត៌មានត្រូវនឹងតម្រងនេះទេ' : 'No news matching this impact filter'}
                   </div>
+                  <button className="news-refresh-btn" style={{ marginTop: '14px' }} onClick={() => setImpactFilter('all')}>
+                    {isKhmer ? 'បង្ហាញទាំងអស់វិញ' : 'Show All News'}
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {featuredArticle && (
+                    <>
+                      <div className="news-section-label">
+                        {impactFilter === 'all'
+                          ? t.featured
+                          : (isKhmer ? `លទ្ធផល (${filteredArticles.length})` : `Filtered Catalysts (${filteredArticles.length})`)}
+                      </div>
+                      <NewsCard a={featuredArticle} lang={lang} readMoreLabel={t.readMore} featured onOpen={setSelectedArticle} />
+                    </>
+                  )}
+
+                  {restArticles.length > 0 && (
+                    <>
+                      <div className="news-section-label">{t.moreNews}</div>
+                      <div className="news-grid">
+                        {restArticles.map((a) => (
+                          <NewsCard key={a.url} a={a} lang={lang} readMoreLabel={t.readMore} onOpen={setSelectedArticle} />
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </>
               )}
             </>

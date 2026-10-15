@@ -11,9 +11,9 @@ const common = {
   strokeLinejoin: 'round',
 };
 
-export function CandleChartIcon() {
+export function CandleChartIcon(props) {
   return (
-    <svg {...common}>
+    <svg {...common} {...props}>
       <line x1="5" y1="3" x2="5" y2="21" />
       <rect x="2.5" y="9" width="5" height="7" rx="1" />
       <line x1="12" y1="2" x2="12" y2="22" />
@@ -24,9 +24,9 @@ export function CandleChartIcon() {
   );
 }
 
-export function BrainIcon() {
+export function BrainIcon(props) {
   return (
-    <svg {...common}>
+    <svg {...common} {...props}>
       <path d="M9.5 3.5a3 3 0 0 0-3 3v.3A3 3 0 0 0 5 12a3 3 0 0 0 1.5 5.2 3 3 0 0 0 3 2.8 2.5 2.5 0 0 0 2.5-2.5V6a2.5 2.5 0 0 0-2.5-2.5Z" />
       <path d="M14.5 3.5a3 3 0 0 1 3 3v.3A3 3 0 0 1 19 12a3 3 0 0 1-1.5 5.2 3 3 0 0 1-3 2.8 2.5 2.5 0 0 1-2.5-2.5V6a2.5 2.5 0 0 1 2.5-2.5Z" />
       <path d="M9.5 8.5h1.8M9 12.5h2.3M9.5 16.2h1.8M12.7 8.5h1.8M12.7 12.5h2.3M12.7 16.2h1.8" opacity=".55" />
@@ -34,9 +34,9 @@ export function BrainIcon() {
   );
 }
 
-export function AppWindowIcon() {
+export function AppWindowIcon(props) {
   return (
-    <svg {...common}>
+    <svg {...common} {...props}>
       <rect x="2.5" y="4.5" width="19" height="15" rx="2.5" />
       <line x1="2.5" y1="8.7" x2="21.5" y2="8.7" />
       <circle cx="5.6" cy="6.6" r=".6" fill="currentColor" stroke="none" />
@@ -47,9 +47,9 @@ export function AppWindowIcon() {
   );
 }
 
-export function BacktestIcon() {
+export function BacktestIcon(props) {
   return (
-    <svg {...common}>
+    <svg {...common} {...props}>
       <path d="M4 12a8 8 0 1 0 2.5-5.8" />
       <polyline points="3 3 4 7 8 6.3" />
       <polyline points="12 8 12 12.5 15 14.3" />
@@ -110,9 +110,9 @@ export function BookIcon(props) {
   );
 }
 
-export function AdvancedChartIcon() {
+export function AdvancedChartIcon(props) {
   return (
-    <svg {...common}>
+    <svg {...common} {...props}>
       <polyline points="3 17 9 10.5 13 14 21 5" />
       <polyline points="15 5 21 5 21 11" />
       <path d="M3 20.5h18" opacity=".45" />
@@ -120,9 +120,9 @@ export function AdvancedChartIcon() {
   );
 }
 
-export function SparkleIcon() {
+export function SparkleIcon(props) {
   return (
-    <svg {...common}>
+    <svg {...common} {...props}>
       <path d="M11 2.5 12.6 8l5.4 1.6-5.4 1.6L11 16.7 9.4 11.2 4 9.6l5.4-1.6L11 2.5Z" />
       <path d="M18.5 15.5 19.3 18l2.5.8-2.5.8-.8 2.4-.8-2.4-2.5-.8 2.5-.8.8-2.5Z" />
     </svg>

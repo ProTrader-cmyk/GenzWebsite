@@ -82,10 +82,11 @@ export default function MemberDashboard({ user, onNavigate }) {
     return () => unsub();
   }, []);
 
-  const activeSignals = signals.filter((s) => s.status === 'active');
-  const tpSignals = signals.filter((s) => s.status === 'tp');
-  const slSignals = signals.filter((s) => s.status === 'sl');
-  const closedSignals = signals.filter((s) => s.status === 'tp' || s.status === 'sl');
+  const goldSignals = signals.filter((s) => /XAU|GOLD/i.test(s.pair || ''));
+  const activeSignals = goldSignals.filter((s) => s.status === 'active');
+  const tpSignals = goldSignals.filter((s) => s.status === 'tp');
+  const slSignals = goldSignals.filter((s) => s.status === 'sl');
+  const closedSignals = goldSignals.filter((s) => s.status === 'tp' || s.status === 'sl');
 
   // Dynamic Win Rate calculation based on real trade outcomes
   const totalClosed = closedSignals.length;
@@ -128,7 +129,7 @@ export default function MemberDashboard({ user, onNavigate }) {
             {greeting()}, {firstName(user)}
           </h1>
           <p className="terminal-sub">
-            Your institutional ICT trading dashboard is live. Market sessions and signals are synced with Cambodia Time (GMT+7).
+            Gold setups with clear entry, stop loss, target and trade rationale. Market times are shown in Cambodia time (GMT+7).
           </p>
 
           <div className="terminal-sessions-strip">
@@ -160,6 +161,9 @@ export default function MemberDashboard({ user, onNavigate }) {
             >
               Open Telegram
             </a>
+            <button type="button" className="tg-join-btn" onClick={() => onNavigate('pip')}>
+              Ask Pip AI
+            </button>
           </div>
         </div>
       </div>
@@ -231,8 +235,8 @@ export default function MemberDashboard({ user, onNavigate }) {
         <div className="terminal-panel">
           <div className="panel-header">
             <div>
-              <div className="panel-title">Institutional Setups Radar</div>
-              <div className="panel-sub">Latest active market entries and target projections</div>
+              <div className="panel-title">Gold Signals</div>
+              <div className="panel-sub">Published XAU/USD entries, invalidation and targets</div>
             </div>
             <button
               type="button"
@@ -248,7 +252,7 @@ export default function MemberDashboard({ user, onNavigate }) {
               <div style={{ padding: '36px 16px', textAlign: 'center', color: 'var(--mute)', fontSize: '13px' }}>
                 <div style={{ fontSize: '24px', marginBottom: '8px' }}>⚡</div>
                 <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>No Active Signals Right Now</div>
-                <div>Live institutional setups appear here as soon as dropped from Admin.</div>
+                <div>New gold setups appear here when they are published.</div>
               </div>
             ) : (
               <>
@@ -327,7 +331,7 @@ export default function MemberDashboard({ user, onNavigate }) {
           <div className="terminal-panel usd-news-panel">
             <div className="panel-header">
               <div>
-                <div className="panel-title">Upcoming USD News</div>
+                <div className="panel-title">Gold Market Drivers</div>
                 <div className="panel-sub">High impact events · Cambodia time (GMT+7)</div>
               </div>
               <span className="usd-news-badge">USD</span>
