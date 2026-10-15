@@ -3621,6 +3621,343 @@
 
 
 /* ==========================================================================
+   IN-CHART AUTO TRADE SETUP HUD & PRICE BRACKET RAYS
+   ========================================================================== */
+.pip-auto-setup-card {
+  position: absolute;
+  top: 72px;
+  left: 14px;
+  width: 275px;
+  background: rgba(10, 15, 26, 0.96);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(0, 242, 254, 0.38);
+  border-radius: 10px;
+  padding: 12px 14px;
+  color: #E2E8F0;
+  font-size: 11px;
+  z-index: 25;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.88), 0 0 18px rgba(0, 242, 254, 0.16);
+  user-select: none;
+  touch-action: none;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  animation: aitSetupFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes aitSetupFadeIn {
+  from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.pip-auto-setup-card.is-dragging {
+  border-color: #F59E0B !important;
+  box-shadow: 0 20px 50px rgba(245, 158, 11, 0.4), 0 0 20px rgba(245, 158, 11, 0.25) !important;
+  opacity: 0.98;
+}
+.pip-auto-setup-card.is-collapsed {
+  width: auto;
+  min-width: 200px;
+  padding: 8px 12px;
+}
+.pip-auto-setup-card.is-collapsed .pip-auto-setup-head {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+.pip-auto-setup-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  padding-bottom: 7px;
+  margin-bottom: 9px;
+  cursor: grab;
+}
+.pip-auto-setup-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pip-auto-setup-pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #00F2FE;
+  box-shadow: 0 0 8px #00F2FE;
+  animation: aitPulseRadar 1.8s infinite ease-in-out;
+}
+.pip-auto-setup-title {
+  font-weight: 900;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: #00F2FE;
+}
+.pip-auto-setup-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.pip-setup-action-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #94A3B8;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1.2;
+}
+.pip-setup-action-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #EF4444;
+  color: #EF4444;
+}
+.pip-auto-setup-dir-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-bottom: 9px;
+}
+.pip-auto-setup-dir-banner.buy {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(0, 242, 254, 0.15));
+  border: 1px solid rgba(16, 185, 129, 0.45);
+}
+.pip-auto-setup-dir-banner.sell {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(245, 158, 11, 0.15));
+  border: 1px solid rgba(239, 68, 68, 0.45);
+}
+.pip-setup-dir-tag {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+.pip-auto-setup-dir-banner.buy .pip-setup-dir-tag {
+  color: #10B981;
+}
+.pip-auto-setup-dir-banner.sell .pip-setup-dir-tag {
+  color: #EF4444;
+}
+.pip-setup-rr-tag {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #FFFFFF;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+.pip-setup-matrix {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 9px;
+}
+.pip-setup-matrix-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 5px;
+  padding: 4px 8px;
+}
+.pip-setup-matrix-row.tp-row {
+  border-color: rgba(16, 185, 129, 0.35);
+  background: rgba(16, 185, 129, 0.06);
+}
+.pip-setup-matrix-row.entry-row {
+  border-color: rgba(0, 242, 254, 0.35);
+  background: rgba(0, 242, 254, 0.06);
+}
+.pip-setup-matrix-row.sl-row {
+  border-color: rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.06);
+}
+.pip-setup-matrix-row.be-row {
+  border-color: rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.06);
+}
+.pip-setup-matrix-lbl {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+.pip-setup-matrix-row.tp-row .pip-setup-matrix-lbl { color: #10B981; }
+.pip-setup-matrix-row.entry-row .pip-setup-matrix-lbl { color: #00F2FE; }
+.pip-setup-matrix-row.sl-row .pip-setup-matrix-lbl { color: #EF4444; }
+.pip-setup-matrix-row.be-row .pip-setup-matrix-lbl { color: #F59E0B; }
+.pip-setup-matrix-val {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #FFFFFF;
+}
+.pip-setup-matrix-dist {
+  font-size: 9.5px;
+  color: var(--mute);
+  margin-left: 6px;
+}
+
+/* Live P&L Meter */
+.pip-setup-pnl-box {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 7px 9px;
+  margin-bottom: 9px;
+}
+.pip-setup-pnl-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+.pip-setup-pnl-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  color: #94A3B8;
+}
+.pip-setup-pnl-val {
+  font-size: 11.5px;
+  font-weight: 900;
+}
+.pip-setup-pnl-val.profit {
+  color: #10B981;
+}
+.pip-setup-pnl-val.loss {
+  color: #EF4444;
+}
+.pip-setup-pnl-progress {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.pip-setup-pnl-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00F2FE, #10B981);
+  transition: width 0.3s ease;
+}
+
+/* Confluence mini line */
+.pip-setup-confluence-mini {
+  font-size: 9.5px;
+  color: var(--mute);
+  line-height: 1.35;
+  margin-bottom: 8px;
+  padding: 4px 6px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 4px;
+  border-left: 2px solid #00F2FE;
+}
+
+/* Close Trade Button */
+.pip-setup-close-trade-btn {
+  width: 100%;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #EF4444;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: inherit;
+}
+.pip-setup-close-trade-btn:hover {
+  background: rgba(239, 68, 68, 0.28);
+  border-color: #EF4444;
+  color: #FFFFFF;
+}
+
+/* Horizontal Price Rays on Chart Edge */
+.ait-chart-setup-rays-overlay {
+  position: absolute;
+  top: 72px;
+  right: 56px;
+  bottom: 50px;
+  width: 140px;
+  pointer-events: none;
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+}
+.ait-setup-ray-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  width: fit-content;
+  margin-left: auto;
+  border: 1px solid transparent;
+}
+.ait-setup-ray-tag.tp-tag {
+  background: rgba(16, 185, 129, 0.9);
+  color: #000;
+  border-color: #10B981;
+}
+.ait-setup-ray-tag.entry-tag {
+  background: rgba(0, 242, 254, 0.9);
+  color: #000;
+  border-color: #00F2FE;
+}
+.ait-setup-ray-tag.sl-tag {
+  background: rgba(239, 68, 68, 0.9);
+  color: #FFF;
+  border-color: #EF4444;
+}
+
+/* Floating Outcome Celebration / Stop Toast */
+.ait-chart-outcome-toast {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 0, 0, 0.4);
+  animation: aitOutcomeSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+@keyframes aitOutcomeSlide {
+  from { opacity: 0; transform: translate(-50%, -14px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+.ait-chart-outcome-toast.tp {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.96), rgba(5, 150, 105, 0.96));
+  border: 1px solid #10B981;
+  color: #FFFFFF;
+  box-shadow: 0 14px 40px rgba(16, 185, 129, 0.45);
+}
+.ait-chart-outcome-toast.sl {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.96), rgba(185, 28, 28, 0.96));
+  border: 1px solid #EF4444;
+  color: #FFFFFF;
+  box-shadow: 0 14px 40px rgba(239, 68, 68, 0.45);
+}
+.ait-chart-outcome-toast.closed {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.96));
+  border: 1px solid #38BDF8;
+  color: #38BDF8;
+}
+
+/* ==========================================================================
    VIP ACCESS BADGE & PAYWALL GATING STYLES
    ========================================================================== */
 .ait-nav-vip-pill {

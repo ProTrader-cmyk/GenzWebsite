@@ -883,6 +883,7 @@ export default function AITradingPage({
           <AILiveChartTerminal
             user={user}
             activeSession={activeSession}
+            activeSignals={deduplicatedSignals}
           />
         </div>
       </div>

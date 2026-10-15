@@ -1,4 +1,7 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase.js';
+import { updateSignalStatus } from '../data/signals.js';
 import { useTheme } from '../theme/ThemeContext.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { fetchLivePrice, formatSpotPrice, subscribeLiveTicks } from '../services/marketPriceService.js';
@@ -93,6 +96,7 @@ export default function AILiveChartTerminal({
   user,
   onSignalDispatched,
   activeSession = { name: 'London Killzone', status: 'Optimal Volatility', color: '#10B981' },
+  activeSignals = [],
 }) {
   const { theme } = useTheme();
   const { lang } = useLanguage();
@@ -113,7 +117,18 @@ export default function AILiveChartTerminal({
   const dragStartRef = useRef(null);
   const hudCardRef = useRef(null);
 
-  // Drag handlers for mouse & touch
+  // In-Chart Auto Trade Setup State & Drag
+  const [liveSignals, setLiveSignals] = useState([]);
+  const [closedSignalIds, setClosedSignalIds] = useState(() => new Set());
+  const [recentOutcomeNotice, setRecentOutcomeNotice] = useState(null);
+  const [autoSetupActive, setAutoSetupActive] = useState(true);
+  const [isSetupCollapsed, setIsSetupCollapsed] = useState(false);
+  const [setupCustomPos, setSetupCustomPos] = useState(null);
+  const [isDraggingSetup, setIsDraggingSetup] = useState(false);
+  const dragSetupStartRef = useRef(null);
+  const setupCardRef = useRef(null);
+
+  // Drag handlers for MSOB HUD
   const handleHudDragStart = (e) => {
     if (e.target.closest('button')) return; // Ignore clicks on action buttons
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -175,8 +190,211 @@ export default function AILiveChartTerminal({
     };
   }, [isDraggingHud]);
 
+  // Drag handlers for Auto Trade Setup HUD
+  const handleSetupDragStart = (e) => {
+    if (e.target.closest('button')) return;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+    const cardEl = setupCardRef.current;
+    if (!cardEl) return;
+    const cardRect = cardEl.getBoundingClientRect();
+    const parentRect = cardEl.parentElement.getBoundingClientRect();
+
+    dragSetupStartRef.current = {
+      startX: clientX,
+      startY: clientY,
+      initLeft: cardRect.left - parentRect.left,
+      initTop: cardRect.top - parentRect.top,
+      parentWidth: parentRect.width,
+      parentHeight: parentRect.height,
+      cardWidth: cardRect.width,
+      cardHeight: cardRect.height,
+    };
+    setIsDraggingSetup(true);
+  };
+
+  useEffect(() => {
+    if (!isDraggingSetup) return;
+
+    const handleMove = (e) => {
+      if (!dragSetupStartRef.current) return;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+      const dx = clientX - dragSetupStartRef.current.startX;
+      const dy = clientY - dragSetupStartRef.current.startY;
+
+      const maxLeft = Math.max(8, dragSetupStartRef.current.parentWidth - dragSetupStartRef.current.cardWidth - 8);
+      const maxTop = Math.max(8, dragSetupStartRef.current.parentHeight - dragSetupStartRef.current.cardHeight - 40);
+
+      const newLeft = Math.max(8, Math.min(maxLeft, dragSetupStartRef.current.initLeft + dx));
+      const newTop = Math.max(8, Math.min(maxTop, dragSetupStartRef.current.initTop + dy));
+
+      setSetupCustomPos({ left: newLeft, top: newTop });
+    };
+
+    const handleEnd = () => {
+      setIsDraggingSetup(false);
+      dragSetupStartRef.current = null;
+    };
+
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleEnd);
+    window.addEventListener('touchmove', handleMove, { passive: false });
+    window.addEventListener('touchend', handleEnd);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleEnd);
+      window.removeEventListener('touchmove', handleMove);
+      window.removeEventListener('touchend', handleEnd);
+    };
+  }, [isDraggingSetup]);
+
+  // Fallback Firestore real-time listener if activeSignals prop is not passed
+  useEffect(() => {
+    if (activeSignals && activeSignals.length > 0) {
+      setLiveSignals(activeSignals);
+      return;
+    }
+    try {
+      const q = query(collection(db, 'signals'), orderBy('createdAt', 'desc'), limit(15));
+      const unsub = onSnapshot(q, (snapshot) => {
+        const list = [];
+        snapshot.forEach((d) => {
+          list.push({ id: d.id, ...d.data() });
+        });
+        setLiveSignals(list);
+      }, (err) => {
+        console.warn('[AILiveChartTerminal] Signals subscription notice:', err);
+      });
+      return () => unsub();
+    } catch (err) {
+      console.warn('[AILiveChartTerminal] Signals query error:', err);
+    }
+  }, [activeSignals]);
+
   // Active Symbol Object
   const currentAsset = SYMBOLS.find((s) => s.id === symbolId) || SYMBOLS[0];
+  const currentPairNorm = (currentAsset.pair || 'XAUUSD').toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+  // Locate active trade setup for the currently displayed chart asset
+  const currentActiveSetup = useMemo(() => {
+    const list = activeSignals && activeSignals.length > 0 ? activeSignals : liveSignals;
+    return list.find((s) => {
+      if (!s) return false;
+      const sPair = (s.pair || s.symbol || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      const isMatch = sPair === currentPairNorm || 
+        (currentPairNorm === 'XAUUSD' && (sPair.includes('XAU') || sPair.includes('GOLD')));
+      if (!isMatch) return false;
+
+      if (closedSignalIds.has(s.id)) return false;
+      const st = (s.status || 'active').toLowerCase();
+      const isClosed = st === 'tp' || st === 'sl' || st === 'closed' || st === 'win' || st === 'loss';
+      return !isClosed;
+    }) || null;
+  }, [activeSignals, liveSignals, currentPairNorm, closedSignalIds]);
+
+  // Precision decimals for current asset
+  const decimals = currentPairNorm.includes('EUR') || currentPairNorm.includes('GBP')
+    ? 5
+    : currentPairNorm.includes('JPY')
+      ? 3
+      : currentPairNorm.includes('US30')
+        ? 1
+        : 2;
+
+  // Real-time live P&L and target distance meter for the active position
+  const setupPnl = useMemo(() => {
+    if (!currentActiveSetup || !livePrice) return null;
+    const isBuy = (currentActiveSetup.direction || 'BUY').toUpperCase() === 'BUY';
+    const entry = Number(currentActiveSetup.entry);
+    const tp = Number(currentActiveSetup.tp);
+    const curr = Number(livePrice);
+    const isGold = currentPairNorm.includes('XAU');
+    const isForex = currentPairNorm.includes('EUR') || currentPairNorm.includes('GBP');
+    const mult = isGold ? 10 : isForex ? 10000 : 1;
+
+    const diff = isBuy ? curr - entry : entry - curr;
+    const pips = diff * mult;
+    const targetDiff = Math.abs(tp - entry);
+    const progressPct = targetDiff > 0 ? Math.min(100, Math.max(0, Math.round((Math.max(0, diff) / targetDiff) * 100))) : 50;
+
+    return {
+      pips: pips >= 0 ? `+${pips.toFixed(1)}` : pips.toFixed(1),
+      isProfit: pips >= 0,
+      progressPct,
+      pts: diff >= 0 ? `+$${diff.toFixed(2)}` : `-$${Math.abs(diff).toFixed(2)}`,
+    };
+  }, [currentActiveSetup, livePrice, currentPairNorm]);
+
+  // Live TP / SL touch detection for the active position
+  useEffect(() => {
+    if (!currentActiveSetup || !livePrice || isNaN(Number(livePrice))) return;
+
+    const isBuy = (currentActiveSetup.direction || 'BUY').toUpperCase() === 'BUY';
+    const entry = Number(currentActiveSetup.entry);
+    const tp = Number(currentActiveSetup.tp);
+    const sl = Number(currentActiveSetup.sl);
+    const curr = Number(livePrice);
+    const sId = currentActiveSetup.id;
+
+    if (!entry || !tp || !sl) return;
+
+    const hitTp = isBuy ? curr >= tp : curr <= tp;
+    const hitSl = isBuy ? curr <= sl : curr >= sl;
+
+    if (hitTp) {
+      setClosedSignalIds((prev) => new Set(prev).add(sId));
+      playAiBeep('trade', isMuted);
+      setRecentOutcomeNotice({
+        type: 'tp',
+        text: isKhmer
+          ? `✓ TAKE PROFIT HIT • +${Math.abs(tp - entry).toFixed(1)} Pts • Position Closed!`
+          : `✓ TAKE PROFIT HIT • +${Math.abs(tp - entry).toFixed(1)} Pts • Position Closed!`,
+      });
+      try {
+        updateSignalStatus(sId, 'tp').catch(() => {});
+      } catch {}
+      const timer = setTimeout(() => {
+        setRecentOutcomeNotice(null);
+      }, 4500);
+      return () => clearTimeout(timer);
+    } else if (hitSl) {
+      setClosedSignalIds((prev) => new Set(prev).add(sId));
+      setRecentOutcomeNotice({
+        type: 'sl',
+        text: isKhmer
+          ? `✕ STOP LOSS HIT • -${Math.abs(entry - sl).toFixed(1)} Pts • Position Closed!`
+          : `✕ STOP LOSS HIT • -${Math.abs(entry - sl).toFixed(1)} Pts • Position Closed!`,
+      });
+      try {
+        updateSignalStatus(sId, 'sl').catch(() => {});
+      } catch {}
+      const timer = setTimeout(() => {
+        setRecentOutcomeNotice(null);
+      }, 4500);
+      return () => clearTimeout(timer);
+    }
+  }, [livePrice, currentActiveSetup, isMuted, isKhmer]);
+
+  const handleCloseSetupManual = (e) => {
+    e?.stopPropagation?.();
+    if (!currentActiveSetup) return;
+    const sId = currentActiveSetup.id;
+    setClosedSignalIds((prev) => new Set(prev).add(sId));
+    setRecentOutcomeNotice({
+      type: 'closed',
+      text: isKhmer ? '✓ Position ត្រូវបានបិទដោយជោគជ័យ' : '✓ Position Closed Successfully',
+    });
+    try {
+      updateSignalStatus(sId, 'closed').catch(() => {});
+    } catch {}
+    setTimeout(() => {
+      setRecentOutcomeNotice(null);
+    }, 3500);
+  };
 
   // Live Spot Prices
   const [livePrice, setLivePrice] = useState(currentAsset.defaultPrice);
@@ -487,6 +705,15 @@ export default function AILiveChartTerminal({
             ⚡ MSOB HUD
           </button>
 
+          <button
+            type="button"
+            className={`ait-chart-engine-btn ${autoSetupActive ? 'active' : ''}`}
+            onClick={() => setAutoSetupActive((v) => !v)}
+            title="Toggle In-Chart Auto Trade Setup Overlay"
+          >
+            🎯 {isKhmer ? 'Auto Setup' : 'Auto Setup'} {currentActiveSetup ? '(1)' : ''}
+          </button>
+
           {/* Workstation Split View Toggle */}
           <div className="ait-chart-view-toggle ait-mono">
             <button
@@ -759,6 +986,168 @@ export default function AILiveChartTerminal({
                   <span style={{ marginLeft: 'auto', color: isReanalyzing ? '#38bdf8' : '#10b981', fontSize: 10 }}>
                     {isReanalyzing ? '⏳ Reanalyzing...' : '● Real Live Feed'}
                   </span>
+                </div>
+              </div>
+            )}
+
+            {/* Floating Outcome Toast upon Position Close */}
+            {recentOutcomeNotice && (
+              <div className={`ait-chart-outcome-toast ${recentOutcomeNotice.type} ait-mono`}>
+                <span>{recentOutcomeNotice.type === 'tp' ? '🎯' : recentOutcomeNotice.type === 'sl' ? '⚠️' : '✓'}</span>
+                <span>{recentOutcomeNotice.text}</span>
+              </div>
+            )}
+
+            {/* In-Chart Auto Trade Setup HUD Overlay */}
+            {autoSetupActive && currentActiveSetup && (
+              <div
+                ref={setupCardRef}
+                className={`pip-auto-setup-card ait-mono ${isDraggingSetup ? 'is-dragging' : ''} ${isSetupCollapsed ? 'is-collapsed' : ''}`}
+                style={
+                  setupCustomPos
+                    ? { left: `${setupCustomPos.left}px`, top: `${setupCustomPos.top}px` }
+                    : { left: '16px', top: '72px' }
+                }
+              >
+                {/* Header / Drag Handle */}
+                <div
+                  className="pip-auto-setup-head"
+                  onMouseDown={handleSetupDragStart}
+                  onTouchStart={handleSetupDragStart}
+                  style={{ cursor: isDraggingSetup ? 'grabbing' : 'grab' }}
+                  title="Click & drag to reposition setup anywhere on chart"
+                >
+                  <div className="pip-auto-setup-title-wrap">
+                    <span className="pip-auto-setup-pulse" />
+                    <span className="pip-auto-setup-title">AUTO SETUP</span>
+                    <span style={{ fontSize: 9, color: 'var(--mute)' }}>{currentAsset.pair}</span>
+                  </div>
+                  <div className="pip-auto-setup-actions">
+                    <button
+                      type="button"
+                      className="pip-setup-action-btn"
+                      onClick={() => setIsSetupCollapsed((v) => !v)}
+                      title={isSetupCollapsed ? 'Expand setup' : 'Collapse setup'}
+                    >
+                      {isSetupCollapsed ? '▼' : '▲'}
+                    </button>
+                    <button
+                      type="button"
+                      className="pip-setup-action-btn"
+                      onClick={handleCloseSetupManual}
+                      title="Close position & remove setup from chart"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+
+                {/* Body (shown when not collapsed) */}
+                {!isSetupCollapsed && (
+                  <>
+                    {/* Direction & Model Banner */}
+                    <div className={`pip-auto-setup-dir-banner ${currentActiveSetup.direction?.toLowerCase() === 'sell' ? 'sell' : 'buy'}`}>
+                      <span className="pip-setup-dir-tag">
+                        {currentActiveSetup.direction?.toUpperCase() === 'SELL' ? '▼ SELL / SHORT' : '▲ BUY / LONG'}
+                      </span>
+                      <span className="pip-setup-rr-tag">
+                        R:R {currentActiveSetup.rr || '1:2.0'}
+                      </span>
+                    </div>
+
+                    {/* Matrix of Execution Price Levels */}
+                    <div className="pip-setup-matrix">
+                      <div className="pip-setup-matrix-row tp-row">
+                        <span className="pip-setup-matrix-lbl">TAKE PROFIT (TP)</span>
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                          <span className="pip-setup-matrix-val">
+                            ${formatSpotPrice(currentAsset.pair, currentActiveSetup.tp)}
+                          </span>
+                          <span className="pip-setup-matrix-dist" style={{ color: '#10B981' }}>
+                            +{Math.abs(Number(currentActiveSetup.tp) - Number(currentActiveSetup.entry)).toFixed(decimals)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="pip-setup-matrix-row entry-row">
+                        <span className="pip-setup-matrix-lbl">ENTRY ORDER</span>
+                        <span className="pip-setup-matrix-val">
+                          ${formatSpotPrice(currentAsset.pair, currentActiveSetup.entry)}
+                        </span>
+                      </div>
+
+                      <div className="pip-setup-matrix-row sl-row">
+                        <span className="pip-setup-matrix-lbl">STOP LOSS (SL)</span>
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                          <span className="pip-setup-matrix-val">
+                            ${formatSpotPrice(currentAsset.pair, currentActiveSetup.sl)}
+                          </span>
+                          <span className="pip-setup-matrix-dist" style={{ color: '#EF4444' }}>
+                            -{Math.abs(Number(currentActiveSetup.entry) - Number(currentActiveSetup.sl)).toFixed(decimals)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {currentActiveSetup.beTrigger && (
+                        <div className="pip-setup-matrix-row be-row">
+                          <span className="pip-setup-matrix-lbl">BE MOVE (1:1 RR)</span>
+                          <span className="pip-setup-matrix-val" style={{ color: '#F59E0B' }}>
+                            ${formatSpotPrice(currentAsset.pair, currentActiveSetup.beTrigger)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Live P&L Meter */}
+                    {setupPnl && (
+                      <div className="pip-setup-pnl-box">
+                        <div className="pip-setup-pnl-top">
+                          <span className="pip-setup-pnl-lbl">LIVE STATUS:</span>
+                          <span className={`pip-setup-pnl-val ${setupPnl.isProfit ? 'profit' : 'loss'}`}>
+                            {setupPnl.pts} ({setupPnl.pips} pips)
+                          </span>
+                        </div>
+                        <div className="pip-setup-pnl-progress">
+                          <div
+                            className="pip-setup-pnl-progress-fill"
+                            style={{ width: `${setupPnl.progressPct}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Confluence Snippet */}
+                    {Array.isArray(currentActiveSetup.confluences) && currentActiveSetup.confluences.length > 0 && (
+                      <div className="pip-setup-confluence-mini">
+                        {currentActiveSetup.confluences[0]}
+                      </div>
+                    )}
+
+                    {/* Close Position Button */}
+                    <button
+                      type="button"
+                      className="pip-setup-close-trade-btn"
+                      onClick={handleCloseSetupManual}
+                    >
+                      <span>✕</span>
+                      <span>{isKhmer ? 'បិទ Position (Close Trade)' : 'Close Position'}</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* In-Chart Setup Price Rays on Right Edge */}
+            {autoSetupActive && currentActiveSetup && (
+              <div className="ait-chart-setup-rays-overlay ait-mono">
+                <div className="ait-setup-ray-tag tp-tag">
+                  <strong>TP</strong> ${formatSpotPrice(currentAsset.pair, currentActiveSetup.tp)}
+                </div>
+                <div className="ait-setup-ray-tag entry-tag">
+                  <strong>ENTRY</strong> ${formatSpotPrice(currentAsset.pair, currentActiveSetup.entry)}
+                </div>
+                <div className="ait-setup-ray-tag sl-tag">
+                  <strong>SL</strong> ${formatSpotPrice(currentAsset.pair, currentActiveSetup.sl)}
                 </div>
               </div>
             )}
