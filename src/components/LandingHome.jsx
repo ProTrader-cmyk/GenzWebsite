@@ -996,13 +996,13 @@ export default function LandingHome({
 
               <h3 className="lnd-team-name">Veng Sophea</h3>
               <p className="lnd-team-title">
-                {isKhmer ? 'ប្រធាននាយកប្រតិបត្តិ & គ្រូបណ្តុះបណ្តាល SMC / ICT' : 'Chief Executive Officer • Lead ICT & SMC Mentor'}
+                {isKhmer ? 'CEO & គ្រូបណ្តុះបណ្តាល SMC / ICT' : 'CEO & Lead ICT Mentor'}
               </p>
 
               <p className="lnd-team-bio">
                 {isKhmer
-                  ? 'បទពិសោធន៍វិភាគទិន្នន័យទីផ្សារជាង ៤ ឆ្នាំ ឯកទេសខាងរចនាសម្ព័ន្ធ Liquidity Sweeps, Order Blocks, និង Macro Economic Catalysts។'
-                  : '4+ years of institutional price action experience. Specializes in liquidity engineering, order block validation, and macroeconomic risk navigation.'}
+                  ? 'ឯកទេសវិភាគរចនាសម្ព័ន្ធទីផ្សារ SMC/ICT និងយុទ្ធសាស្ត្រស្ថាប័ន។'
+                  : 'Specializes in ICT/SMC market structure and institutional strategy.'}
               </p>
 
               <div className="lnd-team-footer">
@@ -1035,13 +1035,13 @@ export default function LandingHome({
 
               <h3 className="lnd-team-name">Lim Sunhour</h3>
               <p className="lnd-team-title">
-                {isKhmer ? 'ប្រធានផ្នែកប្រតិបត្តិការ & យុទ្ធសាស្ត្រជួញដូរ' : 'Chief Operating Officer • Head of Trading Strategy'}
+                {isKhmer ? 'COO & ប្រធានយុទ្ធសាស្ត្រ' : 'COO & Strategy Lead'}
               </p>
 
               <p className="lnd-team-bio">
                 {isKhmer
-                  ? 'ដឹកនាំការគ្រប់គ្រងហានិភ័យដើមទុន វិន័យ Drawdown និងការប្រតិបត្តិការជួញដូរផ្ទាល់នៅលើទីផ្សារអន្តរជាតិ។'
-                  : 'Directs institutional desk execution, strict drawdown mitigation, and disciplined portfolio growth.'}
+                  ? 'ដឹកនាំការគ្រប់គ្រងហានិភ័យ និងវិន័យជួញដូរដើមទុនផ្ទាល់។'
+                  : 'Directs trade execution, risk management, and capital discipline.'}
               </p>
 
               <div className="lnd-team-footer">
@@ -1068,13 +1068,13 @@ export default function LandingHome({
 
               <h3 className="lnd-team-name">Sen Visal</h3>
               <p className="lnd-team-title">
-                {isKhmer ? 'ប្រធានវិស្វករអភិវឌ្ឍន៍ប្រព័ន្ធ AI & Software' : 'Lead Software & Algorithmic AI Engineer'}
+                {isKhmer ? 'ប្រធានវិស្វករ AI & Software' : 'Lead AI & Software Engineer'}
               </p>
 
               <p className="lnd-team-bio">
                 {isKhmer
-                  ? 'រៀបចំប្រព័ន្ធ AI Terminal, ស្ទ្រីមទិន្នន័យ Live Tick WebSocket OANDA, ហេដ្ឋារចនាសម្ព័ន្ធ Cloud និងក្បួនដង្ហើមស្វ័យប្រវត្តិកម្ម។'
-                  : 'Architect of PIP AI neural engines, real-time OANDA WebSocket pipelines, high-throughput cloud services, and low-latency terminal feeds.'}
+                  ? 'អភិវឌ្ឍន៍ប្រព័ន្ធ AI Trading Terminal និងទិន្នន័យទីផ្សារផ្ទាល់។'
+                  : 'Develops the AI trading terminal and real-time market pipelines.'}
               </p>
 
               <div className="lnd-team-footer">
