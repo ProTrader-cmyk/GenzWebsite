@@ -1143,3 +1143,411 @@
   .lnd-hero-submit-btn { width: 100%; justify-content: center; }
   .lnd-bottom-cta-box { padding: 36px 20px; }
 }
+
+/* =========================================================================
+   SCROLL-REACTIVE AI NEURAL BACKGROUND & FLAGSHIP AI DESIGN SYSTEM
+   ========================================================================= */
+.landing-page-root {
+  --lnd-scroll-y: 0px;
+  --lnd-scroll-num: 0;
+  --lnd-scroll-ratio: 0;
+  --ai-cyan: #00f2fe;
+  --ai-violet: #a855f7;
+  --ai-emerald: #10b981;
+  position: relative;
+  isolation: isolate;
+}
+
+/* Fixed Full-Viewport Scroll-Reactive AI Backdrop */
+.lnd-ai-scroll-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+/* Top Scroll Progress Laser Line */
+.lnd-ai-scroll-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2.5px;
+  width: 100%;
+  transform-origin: 0 50%;
+  transform: scaleX(var(--lnd-scroll-ratio, 0));
+  background: linear-gradient(90deg, #00f2fe 0%, #a855f7 55%, #10b981 100%);
+  box-shadow: 0 0 16px rgba(0, 242, 254, 0.75), 0 0 28px rgba(168, 85, 247, 0.55);
+  z-index: 100;
+  transition: transform 0.08s linear;
+}
+
+/* Parallax-Shifting AI Aurora Orbs */
+.lnd-ai-aurora-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(110px);
+  will-change: transform;
+  opacity: 0.58;
+  mix-blend-mode: screen;
+}
+
+.lnd-orb-cyan {
+  width: 580px;
+  height: 580px;
+  top: -120px;
+  left: -100px;
+  background: radial-gradient(circle, rgba(0, 242, 254, 0.28) 0%, rgba(56, 189, 248, 0.08) 50%, transparent 72%);
+  transform: translate3d(
+      calc(var(--lnd-scroll-ratio, 0) * 280px),
+      calc(var(--lnd-scroll-y, 0px) * 0.22),
+      0
+    )
+    scale(calc(1 + var(--lnd-scroll-ratio, 0) * 0.25));
+}
+
+.lnd-orb-violet {
+  width: 640px;
+  height: 640px;
+  top: 18%;
+  right: -140px;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.26) 0%, rgba(99, 102, 241, 0.09) 52%, transparent 72%);
+  transform: translate3d(
+      calc(var(--lnd-scroll-ratio, 0) * -260px),
+      calc(var(--lnd-scroll-y, 0px) * -0.14),
+      0
+    )
+    rotate(calc(var(--lnd-scroll-num, 0) * 0.08deg));
+}
+
+.lnd-orb-emerald {
+  width: 560px;
+  height: 560px;
+  bottom: -160px;
+  left: 26%;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.22) 0%, rgba(0, 242, 254, 0.08) 50%, transparent 72%);
+  transform: translate3d(
+      calc(var(--lnd-scroll-ratio, 0) * -140px),
+      calc(var(--lnd-scroll-y, 0px) * -0.18),
+      0
+    )
+    scale(calc(1 + var(--lnd-scroll-ratio, 0) * 0.2));
+}
+
+/* 3D Perspective Neural Matrix Grid that glides while scrolling */
+.lnd-ai-perspective-grid {
+  position: absolute;
+  inset: -35% -20%;
+  background-image:
+    linear-gradient(rgba(0, 242, 254, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168, 85, 247, 0.055) 1px, transparent 1px);
+  background-size: 64px 64px;
+  background-position:
+    0 calc(var(--lnd-scroll-y, 0px) * 0.35),
+    calc(var(--lnd-scroll-y, 0px) * 0.12) 0;
+  transform: perspective(900px) rotateX(56deg) translateY(calc(var(--lnd-scroll-ratio, 0) * -90px));
+  mask-image: radial-gradient(ellipse 75% 65% at 50% 45%, rgba(0, 0, 0, 0.85) 15%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse 75% 65% at 50% 45%, rgba(0, 0, 0, 0.85) 15%, transparent 80%);
+  will-change: background-position, transform;
+}
+
+/* Holographic Horizontal Scan Beam */
+.lnd-ai-scan-beam {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 180px;
+  top: calc(var(--lnd-scroll-ratio, 0) * 85%);
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(0, 242, 254, 0.04) 48%,
+    rgba(168, 85, 247, 0.07) 50%,
+    transparent 100%
+  );
+  border-top: 1px solid rgba(0, 242, 254, 0.12);
+  filter: blur(2px);
+  will-change: top;
+}
+
+/* Animated Neural Circuit Pathways */
+.lnd-ai-neural-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.72;
+  transform: translate3d(0, calc(var(--lnd-scroll-y, 0px) * -0.08), 0);
+  will-change: transform;
+}
+
+.lnd-ai-circuit-path {
+  stroke-dasharray: 18 12;
+  stroke-dashoffset: calc(var(--lnd-scroll-num, 0) * -0.45);
+  animation: lndCircuitFlow 18s linear infinite;
+}
+
+.lnd-ai-circuit-2 {
+  stroke-dasharray: 14 16;
+  animation-direction: reverse;
+  animation-duration: 22s;
+}
+
+.lnd-ai-circuit-3 {
+  stroke-dasharray: 10 18;
+  animation-duration: 26s;
+}
+
+@keyframes lndCircuitFlow {
+  0% {
+    filter: drop-shadow(0 0 4px rgba(0, 242, 254, 0.35));
+  }
+  50% {
+    filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.6));
+  }
+  100% {
+    filter: drop-shadow(0 0 4px rgba(0, 242, 254, 0.35));
+  }
+}
+
+.lnd-ai-node {
+  fill: #00f2fe;
+  filter: drop-shadow(0 0 10px #00f2fe);
+  animation: lndNodePulse 3.2s ease-in-out infinite;
+}
+.lnd-ai-node-2,
+.lnd-ai-node-4 {
+  fill: #c084fc;
+  filter: drop-shadow(0 0 10px #a855f7);
+  animation-delay: 1.4s;
+}
+
+@keyframes lndNodePulse {
+  0%, 100% {
+    opacity: 0.35;
+    r: 3;
+  }
+  50% {
+    opacity: 0.95;
+    r: 5.5;
+  }
+}
+
+/* Ensure all foreground sections sit cleanly above the AI scroll canvas */
+.lnd-hero-section,
+.lnd-section,
+.lnd-bottom-cta-section {
+  position: relative;
+  z-index: 2;
+}
+
+/* Hero AI Badge & Core Dot */
+.lnd-hero-badge {
+  background: linear-gradient(135deg, rgba(10, 16, 30, 0.88), rgba(18, 25, 46, 0.78)) !important;
+  border: 1px solid rgba(0, 242, 254, 0.32) !important;
+  box-shadow:
+    0 12px 32px -10px rgba(0, 242, 254, 0.25),
+    0 0 22px rgba(168, 85, 247, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+  padding: 7px 18px 7px 14px !important;
+}
+
+.lnd-ai-core-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #00f2fe;
+  box-shadow: 0 0 12px #00f2fe, 0 0 22px #a855f7;
+  animation: lndPulse 1.8s infinite ease-in-out;
+  flex-shrink: 0;
+}
+
+/* Iridescent AI Hero Headline Glow */
+.lnd-hero-glow-text {
+  background: linear-gradient(135deg, #34d399 0%, #00f2fe 50%, #c084fc 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  filter: drop-shadow(0 0 28px rgba(0, 242, 254, 0.28)) !important;
+}
+
+/* Hero Action Buttons & Telemetry Strip */
+.lnd-hero-actions-row {
+  margin-bottom: 24px !important;
+}
+
+.lnd-ghost-action-btn {
+  background: rgba(11, 17, 30, 0.78) !important;
+  border: 1px solid rgba(148, 163, 184, 0.22) !important;
+  backdrop-filter: blur(16px);
+  color: #e2e8f0 !important;
+  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.5);
+}
+
+.lnd-ghost-action-btn:hover {
+  border-color: rgba(0, 242, 254, 0.48) !important;
+  color: #38bdf8 !important;
+  box-shadow: 0 0 24px rgba(0, 242, 254, 0.22);
+  transform: translateY(-2px);
+}
+
+.lnd-ai-action-btn {
+  background: linear-gradient(135deg, rgba(0, 242, 254, 0.14), rgba(168, 85, 247, 0.16)) !important;
+  border: 1px solid rgba(0, 242, 254, 0.38) !important;
+  color: #7dd3fc !important;
+  box-shadow: 0 0 26px rgba(0, 242, 254, 0.18);
+}
+
+.lnd-ai-telemetry-strip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 auto 44px;
+}
+
+.lnd-ai-telemetry-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 5px 13px;
+  border-radius: 999px;
+  color: #cbd5e1;
+  background: rgba(9, 14, 26, 0.72);
+  border: 1px solid rgba(0, 242, 254, 0.2);
+  backdrop-filter: blur(12px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.lnd-ai-chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+.lnd-dot-cyan {
+  background: #00f2fe;
+  box-shadow: 0 0 8px #00f2fe;
+}
+.lnd-dot-violet {
+  background: #a855f7;
+  box-shadow: 0 0 8px #a855f7;
+}
+.lnd-dot-emerald {
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+}
+
+/* Obsidian Glassmorphic Cards with Iridescent Top Laser Line */
+.lnd-floating-card,
+.lnd-feature-card,
+.lnd-terminal-mockup,
+.lnd-bottom-cta-box {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(165deg, rgba(11, 17, 30, 0.86) 0%, rgba(6, 10, 19, 0.92) 100%) !important;
+  border: 1px solid rgba(0, 242, 254, 0.18) !important;
+  backdrop-filter: blur(22px) saturate(175%);
+  -webkit-backdrop-filter: blur(22px) saturate(175%);
+  box-shadow:
+    0 24px 55px -20px rgba(0, 0, 0, 0.78),
+    0 0 32px rgba(0, 242, 254, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.09) !important;
+}
+
+.lnd-floating-card::before,
+.lnd-feature-card::before,
+.lnd-terminal-mockup::before,
+.lnd-bottom-cta-box::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 8%;
+  right: 8%;
+  height: 1.5px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 242, 254, 0.85) 30%,
+    rgba(168, 85, 247, 0.85) 65%,
+    rgba(16, 185, 129, 0.75) 85%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 3;
+}
+
+.lnd-floating-card:hover,
+.lnd-feature-card:hover {
+  border-color: rgba(0, 242, 254, 0.42) !important;
+  transform: translateY(-4px);
+  box-shadow:
+    0 28px 60px -18px rgba(0, 0, 0, 0.85),
+    0 0 38px rgba(0, 242, 254, 0.16),
+    0 0 24px rgba(168, 85, 247, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
+}
+
+/* AI Section Pill & Bar Accents */
+.lnd-section-pill {
+  background: linear-gradient(135deg, rgba(0, 242, 254, 0.12), rgba(168, 85, 247, 0.14)) !important;
+  border: 1px solid rgba(0, 242, 254, 0.34) !important;
+  color: #38bdf8 !important;
+  box-shadow: 0 0 22px rgba(0, 242, 254, 0.15);
+}
+
+.lnd-bar:hover,
+.lnd-bar-active {
+  background: linear-gradient(180deg, #00f2fe 0%, #a855f7 55%, #10b981 100%) !important;
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 18px rgba(0, 242, 254, 0.38) !important;
+}
+
+.lnd-port-bar-hi {
+  background: linear-gradient(180deg, #00f2fe, #10b981) !important;
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.35);
+}
+
+.lnd-cta-primary-btn {
+  background: linear-gradient(135deg, #10b981 0%, #00f2fe 52%, #8b5cf6 100%) !important;
+  box-shadow: 0 10px 30px -6px rgba(0, 242, 254, 0.38), 0 0 22px rgba(168, 85, 247, 0.25) !important;
+}
+
+.lnd-cta-primary-btn:hover {
+  box-shadow: 0 14px 36px -4px rgba(0, 242, 254, 0.55), 0 0 30px rgba(168, 85, 247, 0.4) !important;
+}
+
+/* Light Mode Compatibility for AI Scroll Background & Cards */
+html[data-theme="light"] .lnd-ai-aurora-orb,
+body.light-mode .lnd-ai-aurora-orb {
+  mix-blend-mode: normal;
+  opacity: 0.28;
+}
+
+html[data-theme="light"] .lnd-floating-card,
+html[data-theme="light"] .lnd-feature-card,
+html[data-theme="light"] .lnd-terminal-mockup,
+html[data-theme="light"] .lnd-bottom-cta-box,
+body.light-mode .lnd-floating-card,
+body.light-mode .lnd-feature-card,
+body.light-mode .lnd-terminal-mockup,
+body.light-mode .lnd-bottom-cta-box {
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.92), rgba(241, 245, 249, 0.95)) !important;
+  border-color: rgba(14, 165, 233, 0.25) !important;
+  box-shadow: 0 20px 45px -18px rgba(15, 23, 42, 0.1), 0 0 25px rgba(14, 165, 233, 0.08) !important;
+}
+
+html[data-theme="light"] .lnd-hero-badge,
+html[data-theme="light"] .lnd-ghost-action-btn,
+html[data-theme="light"] .lnd-ai-telemetry-chip,
+body.light-mode .lnd-hero-badge,
+body.light-mode .lnd-ghost-action-btn,
+body.light-mode .lnd-ai-telemetry-chip {
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: #0f172a !important;
+  border-color: rgba(14, 165, 233, 0.28) !important;
+}
+

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase.js';
 import { fetchLivePrice, formatSpotPrice, subscribeLiveTicks, fetchGoldQuoteMetrics } from '../services/marketPriceService.js';
@@ -36,6 +36,7 @@ export default function LandingHome({
 }) {
   const { lang } = useLanguage();
   const isKhmer = lang === 'km' || lang === 'kh';
+  const rootRef = useRef(null);
 
   const [activeChartTimeframe, setActiveChartTimeframe] = useState('1M');
 
@@ -43,6 +44,40 @@ export default function LandingHome({
   const [liveGoldPrice, setLiveGoldPrice] = useState(null);
   const [goldChange, setGoldChange] = useState({ pct: '+1.26%', isUp: true });
   const [firestoreSignals, setFirestoreSignals] = useState([]);
+
+  // Smooth 60fps scroll-reactive background variables
+  useEffect(() => {
+    let rafId = null;
+    const updateScrollVars = () => {
+      rafId = null;
+      const el = rootRef.current;
+      if (!el) return;
+      const scrollY = window.scrollY || window.pageYOffset || 0;
+      const docHeight = Math.max(
+        1,
+        document.documentElement.scrollHeight - window.innerHeight
+      );
+      const ratio = Math.min(1, Math.max(0, scrollY / docHeight));
+      el.style.setProperty('--lnd-scroll-y', `${scrollY.toFixed(1)}px`);
+      el.style.setProperty('--lnd-scroll-num', scrollY.toFixed(1));
+      el.style.setProperty('--lnd-scroll-ratio', ratio.toFixed(4));
+    };
+
+    const onScroll = () => {
+      if (rafId === null) {
+        rafId = window.requestAnimationFrame(updateScrollVars);
+      }
+    };
+
+    updateScrollVars();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      if (rafId !== null) window.cancelAnimationFrame(rafId);
+    };
+  }, []);
 
   useEffect(() => {
     // 1. Fetch initial live spot price and official 24h change (CORS-safe)
@@ -293,7 +328,73 @@ export default function LandingHome({
   const latestSig = firestoreSignals.length > 0 ? firestoreSignals[0] : null;
 
   return (
-    <div className="landing-page-root">
+    <div className="landing-page-root" ref={rootRef}>
+      {/* =========================================================================
+          SCROLL-REACTIVE AI NEURAL BACKGROUND LAYER
+          ========================================================================= */}
+      <div className="lnd-ai-scroll-bg" aria-hidden="true">
+        {/* Top Scroll Progress Laser Line */}
+        <div className="lnd-ai-scroll-progress-bar" />
+
+        {/* Parallax AI Aurora Orbs that shift & morph while scrolling */}
+        <div className="lnd-ai-aurora-orb lnd-orb-cyan" />
+        <div className="lnd-ai-aurora-orb lnd-orb-violet" />
+        <div className="lnd-ai-aurora-orb lnd-orb-emerald" />
+
+        {/* 3D Perspective Neural Matrix Grid */}
+        <div className="lnd-ai-perspective-grid" />
+
+        {/* Holographic Horizontal AI Scan Beam */}
+        <div className="lnd-ai-scan-beam" />
+
+        {/* Animated Neural Circuit & Data Pulse Pathways */}
+        <svg
+          className="lnd-ai-neural-svg"
+          viewBox="0 0 1440 1000"
+          preserveAspectRatio="xMidYMid slice"
+        >
+          <defs>
+            <linearGradient id="aiNeuralLineCyan" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#00f2fe" stopOpacity="0" />
+              <stop offset="45%" stopColor="#00f2fe" stopOpacity="0.45" />
+              <stop offset="75%" stopColor="#a855f7" stopOpacity="0.45" />
+              <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+            </linearGradient>
+            <linearGradient id="aiNeuralLineViolet" x1="100%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#a855f7" stopOpacity="0" />
+              <stop offset="50%" stopColor="#a855f7" stopOpacity="0.4" />
+              <stop offset="85%" stopColor="#00f2fe" stopOpacity="0.35" />
+              <stop offset="100%" stopColor="#00f2fe" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <path
+            className="lnd-ai-circuit-path lnd-ai-circuit-1"
+            d="M -60 180 C 260 180, 340 420, 680 420 C 1020 420, 1120 200, 1500 220"
+            fill="none"
+            stroke="url(#aiNeuralLineCyan)"
+            strokeWidth="1.6"
+          />
+          <path
+            className="lnd-ai-circuit-path lnd-ai-circuit-2"
+            d="M -40 720 C 320 680, 480 340, 820 520 C 1100 660, 1240 460, 1500 480"
+            fill="none"
+            stroke="url(#aiNeuralLineViolet)"
+            strokeWidth="1.4"
+          />
+          <path
+            className="lnd-ai-circuit-path lnd-ai-circuit-3"
+            d="M 180 -40 C 240 280, 560 440, 740 720 C 900 940, 1180 860, 1360 1040"
+            fill="none"
+            stroke="url(#aiNeuralLineCyan)"
+            strokeWidth="1.2"
+          />
+          <circle className="lnd-ai-node lnd-ai-node-1" cx="680" cy="420" r="4" />
+          <circle className="lnd-ai-node lnd-ai-node-2" cx="820" cy="520" r="3.5" />
+          <circle className="lnd-ai-node lnd-ai-node-3" cx="380" cy="300" r="3" />
+          <circle className="lnd-ai-node lnd-ai-node-4" cx="1090" cy="310" r="3.5" />
+        </svg>
+      </div>
+
       {/* =========================================================================
           HERO SECTION
           ========================================================================= */}
@@ -304,13 +405,14 @@ export default function LandingHome({
         <div className="lnd-container">
           {/* Platform Highlight Badge */}
           <div className="lnd-hero-badge">
-            <span style={{ display: 'inline-flex', alignItems: 'center', color: 'var(--brand2)' }}>
-              <SparkleIcon style={{ width: 16, height: 16 }} />
+            <span className="lnd-ai-core-dot" />
+            <span style={{ display: 'inline-flex', alignItems: 'center', color: '#00f2fe' }}>
+              <SparkleIcon style={{ width: 15, height: 15 }} />
             </span>
             <span className="lnd-badge-text">
               {isKhmer
-                ? 'យុទ្ធសាស្ត្រ Smart Money Concept (SMC) & Macro Market Intelligence'
-                : 'Institutional Smart Money Concepts & Macro Market Analysis'}
+                ? 'PIP AI NEURAL ENGINE • យុទ្ធសាស្ត្រ Smart Money Concept (SMC) & Macro Intelligence'
+                : 'PIP AI NEURAL ENGINE • Institutional Smart Money Concepts & Macro Intelligence'}
             </span>
           </div>
 
@@ -330,7 +432,7 @@ export default function LandingHome({
               : 'Your trading, but with a data advantage. 4+ years of backtesting, AI-supported analysis, and live precision signals — all on one unified platform.'}
           </p>
 
-          {/* Quick Nav Links under Hero Form */}
+          {/* Quick Nav Links under Hero Subtitle */}
           <div className="lnd-hero-actions-row">
             <button
               type="button"
@@ -342,12 +444,31 @@ export default function LandingHome({
             </button>
             <button
               type="button"
-              className="lnd-ghost-action-btn"
+              className="lnd-ghost-action-btn lnd-ai-action-btn"
               onClick={onNavPricing || onExploreLessons}
             >
               <SparkleIcon style={{ width: 15, height: 15, flexShrink: 0 }} />
               <span>{isKhmer ? 'AI Trading Terminal' : 'AI Trading Terminal'}</span>
             </button>
+          </div>
+
+          {/* Subtle AI Telemetry Strip */}
+          <div className="lnd-ai-telemetry-strip">
+            <span className="lnd-ai-telemetry-chip">
+              <span className="lnd-ai-chip-dot lnd-dot-cyan" />
+              PIP AI CORE v4.2
+            </span>
+            <span className="lnd-ai-telemetry-chip">
+              <span className="lnd-ai-chip-dot lnd-dot-violet" />
+              SMC + ICT CONFLUENCE
+            </span>
+            <span className="lnd-ai-telemetry-chip">
+              <span className="lnd-ai-chip-dot lnd-dot-emerald" />
+              LIVE OANDA STREAM
+            </span>
+            <span className="lnd-ai-telemetry-chip">
+              0.03 LOT PRECISION
+            </span>
           </div>
 
           {/* Floating Glass Visual Dashboard Cards (Left & Right) */}
@@ -413,8 +534,14 @@ export default function LandingHome({
                 <svg viewBox="0 0 300 90" className="lnd-wave-svg" preserveAspectRatio="none">
                   <defs>
                     <linearGradient id="waveGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="var(--brand2)" stopOpacity="0.45" />
-                      <stop offset="100%" stopColor="var(--brand2)" stopOpacity="0.0" />
+                      <stop offset="0%" stopColor="#00f2fe" stopOpacity="0.45" />
+                      <stop offset="65%" stopColor="#a855f7" stopOpacity="0.16" />
+                      <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                    </linearGradient>
+                    <linearGradient id="waveStrokeGrad" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="#10b981" />
+                      <stop offset="55%" stopColor="#00f2fe" />
+                      <stop offset="100%" stopColor="#c084fc" />
                     </linearGradient>
                   </defs>
                   <path
@@ -424,10 +551,10 @@ export default function LandingHome({
                   <path
                     d="M 0 70 Q 50 20 100 45 T 200 30 T 300 15"
                     fill="none"
-                    stroke="var(--brand2)"
+                    stroke="url(#waveStrokeGrad)"
                     strokeWidth="3.2"
                   />
-                  <circle cx="300" cy="15" r="4.5" fill="var(--brand2)" className="lnd-pulse-dot" />
+                  <circle cx="300" cy="15" r="4.5" fill="#00f2fe" className="lnd-pulse-dot" />
                 </svg>
               </div>
 
@@ -664,9 +791,14 @@ export default function LandingHome({
                   <svg viewBox="0 0 600 220" className="lnd-big-chart-svg" preserveAspectRatio="none">
                     <defs>
                       <linearGradient id="termGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="var(--brand2)" stopOpacity="0.38" />
-                        <stop offset="60%" stopColor="var(--brand2)" stopOpacity="0.08" />
-                        <stop offset="100%" stopColor="var(--brand2)" stopOpacity="0.0" />
+                        <stop offset="0%" stopColor="#00f2fe" stopOpacity="0.42" />
+                        <stop offset="55%" stopColor="#a855f7" stopOpacity="0.14" />
+                        <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                      </linearGradient>
+                      <linearGradient id="termStrokeGrad" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor="#10b981" />
+                        <stop offset="50%" stopColor="#00f2fe" />
+                        <stop offset="100%" stopColor="#c084fc" />
                       </linearGradient>
                     </defs>
                     {/* Grid lines */}
@@ -683,11 +815,11 @@ export default function LandingHome({
                     <path
                       d="M 0 180 Q 80 160 140 130 T 260 140 T 380 90 T 480 70 T 600 30"
                       fill="none"
-                      stroke="var(--brand2)"
+                      stroke="url(#termStrokeGrad)"
                       strokeWidth="3.5"
                     />
                     {/* Peak Point */}
-                    <circle cx="600" cy="30" r="5" fill="var(--brand2)" />
+                    <circle cx="600" cy="30" r="5" fill="#00f2fe" className="lnd-pulse-dot" />
                   </svg>
 
                   <div className="lnd-chart-labels">
