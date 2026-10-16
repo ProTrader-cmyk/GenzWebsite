@@ -1,64 +1,82 @@
 /* =========================================================================
-   HOW PIP WORKS — ENGINE LIVE SIMULATION STYLES
-   Exact replica of the 4-stage pipeline (WAKE, SCAN, DEBATE, PUBLISH)
+   HOW PIP WORKS — MULTI-AGENT CONSENSUS ENGINE STYLES
+   Futuristic, GPU-accelerated, high-fidelity AI trading console
    ========================================================================= */
 
 .lnd-how-pip-section {
   position: relative;
-  padding: 80px 0 70px;
+  padding: 85px 0 80px;
 }
 
-/* Console Container */
+.pip-header-sparkle {
+  color: #00f2fe;
+  font-size: 13px;
+  margin-right: 4px;
+  animation: lndPulse 1.8s infinite ease-in-out;
+}
+
+/* =========================================================================
+   MAIN CONSOLE BOARD
+   ========================================================================= */
 .pip-engine-console {
   position: relative;
-  background: linear-gradient(165deg, rgba(11, 16, 28, 0.96) 0%, rgba(6, 9, 18, 0.98) 100%);
-  border: 1px solid rgba(0, 242, 254, 0.22);
+  background: linear-gradient(165deg, rgba(12, 17, 30, 0.98) 0%, rgba(6, 9, 18, 0.99) 100%);
+  border: 1px solid rgba(0, 242, 254, 0.25);
   border-radius: 24px;
   overflow: hidden;
   box-shadow:
-    0 30px 70px -25px rgba(0, 0, 0, 0.85),
-    0 0 35px rgba(0, 242, 254, 0.08),
+    0 35px 80px -25px rgba(0, 0, 0, 0.9),
+    0 0 40px rgba(0, 242, 254, 0.09),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  max-width: 1100px;
-  margin: 0 auto;
-  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  max-width: 1120px;
+  margin: 0 auto 36px;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .pip-engine-console:hover {
-  border-color: rgba(0, 242, 254, 0.36);
+  border-color: rgba(0, 242, 254, 0.42);
   box-shadow:
-    0 35px 80px -20px rgba(0, 0, 0, 0.9),
-    0 0 45px rgba(0, 242, 254, 0.12),
+    0 40px 90px -20px rgba(0, 0, 0, 0.95),
+    0 0 55px rgba(0, 242, 254, 0.16),
     inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
-/* Top Laser Accent */
-.pip-engine-console::before {
-  content: '';
+/* Top Laser Line */
+.pip-top-laser-line {
   position: absolute;
   top: 0;
-  left: 10%;
-  right: 10%;
-  height: 1.5px;
+  left: 8%;
+  right: 8%;
+  height: 2px;
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(0, 242, 254, 0.85) 30%,
-    rgba(168, 85, 247, 0.85) 65%,
-    rgba(16, 185, 129, 0.75) 85%,
+    rgba(0, 242, 254, 0.85) 25%,
+    rgba(168, 85, 247, 0.85) 60%,
+    rgba(16, 185, 129, 0.9) 85%,
     transparent 100%
   );
   pointer-events: none;
-  z-index: 3;
+  z-index: 5;
 }
 
-/* Console Header Bar */
+/* =========================================================================
+   CONSOLE HEADER BAR
+   ========================================================================= */
 .pip-console-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 28px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 16px 28px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(8, 12, 22, 0.65);
+}
+
+.pip-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .pip-engine-status {
@@ -67,7 +85,7 @@
   gap: 8px;
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
   color: #34d399;
 }
 
@@ -76,24 +94,115 @@
   height: 7px;
   border-radius: 50%;
   background: #10b981;
-  box-shadow: 0 0 8px #10b981;
-  animation: lndPulse 1.8s infinite ease-in-out;
+  box-shadow: 0 0 10px #10b981;
+  animation: lndPulse 1.6s infinite ease-in-out;
 }
 
-.pip-engine-pair {
-  font-size: 12px;
+.pip-live-ticker-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 11px;
+}
+
+.pip-pair-name {
+  font-weight: 800;
+  color: #f1f5f9;
+}
+
+.pip-pair-tf {
+  color: #64748b;
+  font-size: 10px;
   font-weight: 700;
-  color: #94a3b8;
-  letter-spacing: 0.05em;
 }
 
-/* 4-Stage Stepper */
+.pip-pair-price {
+  color: #38bdf8;
+  font-weight: 800;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.pip-pair-change {
+  color: #34d399;
+  font-weight: 800;
+  font-size: 10.5px;
+}
+
+/* Playback Controls (Prev / Pause / Next) */
+.pip-console-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pip-ctrl-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.pip-ctrl-btn:hover {
+  background: rgba(0, 242, 254, 0.15);
+  border-color: rgba(0, 242, 254, 0.4);
+  color: #00f2fe;
+}
+
+.pip-play-btn.is-paused {
+  background: rgba(245, 158, 11, 0.18);
+  border-color: rgba(245, 158, 11, 0.5);
+  color: #fbbf24;
+}
+
+/* Auto-Cycle Timer Progress Bar */
+.pip-timer-bar-track {
+  width: 100%;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.04);
+  position: relative;
+  overflow: hidden;
+}
+
+.pip-timer-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #00f2fe, #10b981, #f59e0b);
+  animation: pipTimerFill 5.2s linear infinite;
+  box-shadow: 0 0 8px rgba(0, 242, 254, 0.7);
+}
+
+.pip-timer-bar-fill.is-paused {
+  animation-play-state: paused;
+  opacity: 0.4;
+}
+
+@keyframes pipTimerFill {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+
+/* =========================================================================
+   4-STAGE STEPPER TRACK
+   ========================================================================= */
 .pip-stepper-track {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 24px 60px 20px;
-  max-width: 860px;
+  max-width: 900px;
   margin: 0 auto;
 }
 
@@ -101,7 +210,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 5px;
   cursor: pointer;
   user-select: none;
   position: relative;
@@ -116,13 +225,13 @@
 
 .pip-step-circle {
   position: relative;
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 800;
   background: #0f172a;
   color: #64748b;
@@ -136,7 +245,7 @@
     color 0.3s ease;
 }
 
-/* Number & Checkmark Smooth Transform */
+/* Number & Checkmark Smooth Morph */
 .pip-step-num,
 .pip-step-check {
   position: absolute;
@@ -158,22 +267,30 @@
 .pip-step-check {
   opacity: 0;
   transform: scale(0.3) rotate(-60deg);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 900;
 }
 
-/* Step Label */
+/* Labels */
 .pip-step-label {
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 800;
   letter-spacing: 0.1em;
   color: #64748b;
   transition: color 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s ease;
 }
 
-/* Active Step (Glowing Yellow Ring & Pop) */
+.pip-step-sublabel {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: #475569;
+  letter-spacing: 0.04em;
+  transition: color 0.35s ease;
+}
+
+/* Active Step (Yellow Ring & Pop) */
 .pip-step-active .pip-step-circle {
-  transform: scale(1.12);
+  transform: scale(1.14);
   background: #f59e0b;
   color: #0b0f19;
   border-color: #fbbf24;
@@ -185,10 +302,14 @@
 
 .pip-step-active .pip-step-label {
   color: #f59e0b;
-  transform: scale(1.04);
+  transform: scale(1.05);
 }
 
-/* Completed Step (Smooth Green Check & Aura) */
+.pip-step-active .pip-step-sublabel {
+  color: #fbbf24;
+}
+
+/* Completed Step (Smooth Green Check & Emerald Glow) */
 .pip-step-done .pip-step-circle {
   background: #10b981;
   color: #09121f;
@@ -212,12 +333,16 @@
   color: #10b981;
 }
 
-/* Connecting Progress Line (Silky Width & Laser Pulse) */
+.pip-step-done .pip-step-sublabel {
+  color: #34d399;
+}
+
+/* Connecting Line */
 .pip-step-connector {
   flex: 1;
   height: 2px;
   background: rgba(255, 255, 255, 0.08);
-  margin: -20px 10px 0;
+  margin: -24px 12px 0;
   position: relative;
   border-radius: 2px;
   overflow: visible;
@@ -233,10 +358,10 @@
 
 .pip-connector-done .pip-connector-progress {
   background: #10b981;
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.55);
 }
 
-/* Laser stream dot traveling toward next stage */
+/* Laser stream dot traveling */
 .pip-connector-pulse-beam {
   position: absolute;
   top: -2.5px;
@@ -256,7 +381,9 @@
   100% { left: calc(100% - 28px); opacity: 0; }
 }
 
-/* Console Body Grid (2 Columns) */
+/* =========================================================================
+   CONSOLE BODY GRID
+   ========================================================================= */
 .pip-console-body {
   display: grid;
   grid-template-columns: 1.85fr 1fr;
@@ -264,7 +391,7 @@
   padding: 16px 28px 28px;
 }
 
-/* Left Main Stage Card (Stacked Grid for GPU-accelerated Crossfade) */
+/* Left Main Stage Card (Stacked Grid for GPU Crossfade) */
 .pip-main-stage {
   background: rgba(8, 12, 22, 0.75);
   border: 1px solid rgba(255, 255, 255, 0.07);
@@ -273,12 +400,12 @@
   display: grid;
   grid-template-columns: 1fr;
   grid-template-rows: 1fr;
-  min-height: 385px;
+  min-height: 400px;
   position: relative;
   overflow: hidden;
 }
 
-/* Each stage pane stacks at grid-area: 1 / 1 */
+/* Stacked Stage Panes */
 .pip-stage-pane {
   grid-area: 1 / 1;
   display: flex;
@@ -296,7 +423,6 @@
   will-change: transform, opacity;
 }
 
-/* Active Pane: Enters Center */
 .pip-stage-pane.pip-pane-active {
   opacity: 1;
   visibility: visible;
@@ -305,7 +431,6 @@
   z-index: 2;
 }
 
-/* Left Pane: Exits to Left */
 .pip-stage-pane.pip-pane-left {
   opacity: 0;
   visibility: hidden;
@@ -314,7 +439,6 @@
   z-index: 1;
 }
 
-/* Right Pane: Waits at Right */
 .pip-stage-pane.pip-pane-right {
   opacity: 0;
   visibility: hidden;
@@ -338,20 +462,35 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 16px auto 26px;
+  margin: 10px auto 20px;
 }
 
 .pip-orbit-ring {
   position: absolute;
-  inset: 0;
   border-radius: 50%;
+  pointer-events: none;
+}
+
+.pip-orbit-ring-outer {
+  inset: 0;
   border: 1px dashed rgba(245, 158, 11, 0.35);
   animation: pipSpin 24s linear infinite;
+}
+
+.pip-orbit-ring-inner {
+  inset: 18px;
+  border: 1px dotted rgba(0, 242, 254, 0.35);
+  animation: pipSpinReverse 16s linear infinite;
 }
 
 @keyframes pipSpin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+@keyframes pipSpinReverse {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
 }
 
 .pip-orbit-dot {
@@ -360,10 +499,9 @@
   height: 7px;
   border-radius: 50%;
   background: #f59e0b;
-  box-shadow: 0 0 8px #f59e0b;
+  box-shadow: 0 0 10px #f59e0b;
 }
 
-/* Satellite dots positioning */
 .pip-dot-1 { top: 0; left: 50%; transform: translate(-50%, -50%); }
 .pip-dot-2 { top: 25%; right: 4%; }
 .pip-dot-3 { bottom: 25%; right: 4%; }
@@ -377,19 +515,30 @@
   border-radius: 50%;
   background: radial-gradient(circle, rgba(245, 158, 11, 0.22) 0%, rgba(15, 23, 42, 0.95) 70%);
   border: 1.5px solid #f59e0b;
-  box-shadow: 0 0 24px rgba(245, 158, 11, 0.4);
+  box-shadow: 0 0 28px rgba(245, 158, 11, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
+  animation: pipBrainBreathe 3s infinite ease-in-out;
 }
 
-.pip-wake-chips-row,
-.pip-scan-chips-row {
+@keyframes pipBrainBreathe {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 24px rgba(245, 158, 11, 0.35);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 0 36px rgba(245, 158, 11, 0.65);
+  }
+}
+
+.pip-wake-chips-row {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  margin-bottom: 24px;
+  gap: 10px;
+  margin-bottom: 16px;
   flex-wrap: wrap;
 }
 
@@ -399,6 +548,16 @@
   padding: 5px 14px;
   border-radius: 20px;
   letter-spacing: 0.04em;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pip-chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
 }
 
 .pip-chip-active-gold {
@@ -415,11 +574,54 @@
   box-shadow: 0 0 14px rgba(16, 185, 129, 0.25);
 }
 
+.pip-chip-active-cyan {
+  background: rgba(0, 242, 254, 0.14);
+  border: 1px solid #00f2fe;
+  color: #38bdf8;
+  box-shadow: 0 0 14px rgba(0, 242, 254, 0.25);
+}
+
 .pip-chip-faint {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
   color: #64748b;
 }
+
+/* Telemetry Grid */
+.pip-wake-telemetry-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.pip-telem-item {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 8px 10px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.pip-telem-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.08em;
+}
+
+.pip-telem-val {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #f1f5f9;
+}
+
+.pip-val-emerald { color: #34d399 !important; }
+.pip-val-gold { color: #fbbf24 !important; }
 
 /* =========================================================================
    STAGE 2: SCAN STYLES
@@ -431,10 +633,9 @@
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 14px;
   overflow: hidden;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 
-/* Radar Scan Beam */
 .pip-chart-scan-beam {
   position: absolute;
   top: 0;
@@ -458,7 +659,7 @@
   position: absolute;
   top: 0;
   right: 0;
-  width: 200px;
+  width: 220px;
   height: 100%;
   background: radial-gradient(circle at 100% 30%, rgba(245, 158, 11, 0.25) 0%, transparent 70%);
   pointer-events: none;
@@ -475,13 +676,24 @@
 }
 
 .pip-supply-tag {
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 800;
   color: #fbbf24;
   margin-top: -16px;
-  background: rgba(15, 23, 42, 0.9);
-  padding: 1px 6px;
+  background: rgba(15, 23, 42, 0.95);
+  padding: 2px 8px;
   border-radius: 4px;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.pip-supply-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #f59e0b;
 }
 
 .pip-scan-candles-svg {
@@ -489,14 +701,23 @@
   height: 100%;
 }
 
+.pip-scan-chips-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
 /* =========================================================================
-   STAGE 3 & 4: DEBATE & PUBLISH LIST
+   STAGE 3: DEBATE STYLES
    ========================================================================= */
 .pip-debate-list {
   display: flex;
   flex-direction: column;
-  gap: 9px;
-  margin-bottom: 16px;
+  gap: 8px;
+  margin-bottom: 14px;
   flex: 1;
 }
 
@@ -504,7 +725,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 9px 14px;
+  padding: 8px 12px;
   border-radius: 10px;
   background: rgba(15, 23, 42, 0.65);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -512,7 +733,6 @@
   will-change: transform, opacity;
 }
 
-/* Staggered entrance when stage pane is active */
 .pip-pane-active .pip-debate-row {
   animation: pipRowSlideIn 0.38s cubic-bezier(0.16, 1, 0.3, 1) var(--row-delay, 0s) both;
 }
@@ -529,18 +749,8 @@
 }
 
 .pip-debate-green {
-  border-color: rgba(16, 185, 129, 0.35);
-  box-shadow: 0 0 12px rgba(16, 185, 129, 0.08);
-}
-
-.pip-debate-amber {
-  border-color: rgba(245, 158, 11, 0.35);
-  box-shadow: 0 0 12px rgba(245, 158, 11, 0.08);
-}
-
-.pip-debate-red {
-  border-color: rgba(239, 68, 68, 0.38);
-  box-shadow: 0 0 14px rgba(239, 68, 68, 0.1);
+  border-color: rgba(16, 185, 129, 0.32);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.06);
 }
 
 .pip-debate-dark {
@@ -548,8 +758,8 @@
 }
 
 .pip-agent-badge {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border-radius: 6px;
   display: flex;
   align-items: center;
@@ -560,63 +770,78 @@
   flex-shrink: 0;
 }
 
-.pip-badge-ta,
-.pip-badge-ma,
-.pip-badge-rk {
-  background: rgba(16, 185, 129, 0.2);
-  color: #34d399;
-  border: 1px solid rgba(16, 185, 129, 0.4);
+.pip-badge-ta {
+  background: rgba(0, 242, 254, 0.18);
+  color: #38bdf8;
+  border: 1px solid rgba(0, 242, 254, 0.45);
+}
+
+.pip-badge-ma {
+  background: rgba(168, 85, 247, 0.2);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.45);
 }
 
 .pip-badge-se {
-  background: rgba(245, 158, 11, 0.2);
-  color: #fbbf24;
-  border: 1px solid rgba(245, 158, 11, 0.4);
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.45);
 }
 
-.pip-badge-ta-red,
-.pip-badge-ma-red,
-.pip-badge-se-red {
-  background: rgba(239, 68, 68, 0.2);
-  color: #f87171;
-  border: 1px solid rgba(239, 68, 68, 0.45);
-}
-
-.pip-badge-rk-amber {
-  background: rgba(245, 158, 11, 0.2);
-  color: #fbbf24;
-  border: 1px solid rgba(245, 158, 11, 0.4);
+.pip-badge-rk {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.45);
 }
 
 .pip-agent-info {
   display: flex;
   flex-direction: column;
   flex: 1;
+  gap: 2px;
+}
+
+.pip-agent-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .pip-agent-name {
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 800;
   color: #f1f5f9;
 }
 
-.pip-agent-msg {
-  font-size: 11px;
+.pip-agent-role-pill {
+  font-size: 9px;
+  font-weight: 700;
   color: #94a3b8;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.pip-agent-msg {
+  font-size: 10.5px;
+  color: #94a3b8;
+  line-height: 1.35;
+}
+
+.pip-agent-vote-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  margin-left: 10px;
 }
 
 .pip-vote-badge {
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 800;
-  padding: 3px 10px;
-  border-radius: 6px;
+  padding: 2px 8px;
+  border-radius: 5px;
   letter-spacing: 0.06em;
-}
-
-.pip-vote-buy {
-  background: rgba(16, 185, 129, 0.22);
-  color: #34d399;
-  border: 1px solid #10b981;
 }
 
 .pip-vote-sell {
@@ -625,22 +850,54 @@
   border: 1px solid #ef4444;
 }
 
-.pip-vote-hold {
-  background: rgba(255, 255, 255, 0.08);
-  color: #94a3b8;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+.pip-vote-buy {
+  background: rgba(16, 185, 129, 0.22);
+  color: #34d399;
+  border: 1px solid #10b981;
+}
+
+.pip-vote-conf {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #64748b;
 }
 
 /* Consensus Meter */
 .pip-consensus-meter-container {
   display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+  background: rgba(15, 23, 42, 0.5);
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.pip-consensus-meta {
+  display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  justify-content: space-between;
+}
+
+.pip-consensus-text {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.pip-consensus-text strong {
+  color: #f1f5f9;
+}
+
+.pip-consensus-status-pill {
+  font-size: 9.5px;
+  font-weight: 800;
+  color: #34d399;
+  letter-spacing: 0.05em;
 }
 
 .pip-consensus-track {
-  flex: 1;
+  width: 100%;
   height: 6px;
   background: rgba(255, 255, 255, 0.08);
   border-radius: 3px;
@@ -655,34 +912,140 @@
   will-change: width;
 }
 
-.pip-fill-red-green {
-  background: linear-gradient(90deg, #f59e0b 20%, #10b981 80%);
+/* =========================================================================
+   STAGE 4: PUBLISH BROADCAST BOX
+   ========================================================================= */
+.pip-publish-broadcast-box {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 14px;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.08);
 }
 
-.pip-consensus-text {
-  font-size: 11.5px;
+.pip-broadcast-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pip-broadcast-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pip-broadcast-pulse-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 12px #10b981;
+  animation: lndPulse 1.4s infinite ease-in-out;
+}
+
+.pip-broadcast-title {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #f1f5f9;
+  margin: 0;
+}
+
+.pip-broadcast-sub {
+  font-size: 10.5px;
   color: #94a3b8;
-  white-space: nowrap;
 }
 
-.pip-consensus-text strong {
+.pip-broadcast-speed-badge {
+  font-size: 10.5px;
+  font-weight: 800;
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  padding: 3px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.05em;
+}
+
+.pip-broadcast-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.pip-b-stat {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pip-b-stat-label {
+  font-size: 8.5px;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.08em;
+}
+
+.pip-b-stat-val {
+  font-size: 11px;
+  font-weight: 800;
   color: #f1f5f9;
 }
 
-/* Bottom Terminal Prompt Bar */
+.pip-broadcast-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pip-b-check-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #cbd5e1;
+}
+
+.pip-b-check-icon {
+  color: #34d399;
+  font-weight: 900;
+  font-size: 12px;
+}
+
+/* =========================================================================
+   BOTTOM TERMINAL PROMPT BAR
+   ========================================================================= */
 .pip-terminal-prompt {
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 8px;
   padding: 8px 14px;
   font-family: 'Courier New', Courier, monospace;
-  font-size: 11.5px;
+  font-size: 11px;
   color: #cbd5e1;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   margin-top: auto;
   transition: border-color 0.3s ease;
+}
+
+.pip-term-prefix {
+  color: #00f2fe;
+  font-weight: 700;
+}
+
+.pip-term-text {
+  color: #e2e8f0;
+  flex: 1;
 }
 
 .pip-term-cursor {
@@ -691,17 +1054,16 @@
 }
 
 /* =========================================================================
-   RIGHT PANEL: SKELETON OR PUBLISHED SIGNAL CARD (STACKED FOR SMOOTH CROSSFADE)
+   RIGHT PANEL: SKELETON OR PUBLISHED SIGNAL CARD
    ========================================================================= */
 .pip-right-panel {
   display: grid;
   grid-template-columns: 1fr;
   grid-template-rows: 1fr;
-  min-height: 385px;
+  min-height: 400px;
   position: relative;
 }
 
-/* Stacked Right Panel Cards */
 .pip-right-card-pane {
   grid-area: 1 / 1;
   width: 100%;
@@ -719,7 +1081,6 @@
   will-change: transform, opacity;
 }
 
-/* Active Right Card */
 .pip-right-card-pane.pip-card-active {
   opacity: 1;
   visibility: visible;
@@ -728,7 +1089,6 @@
   z-index: 2;
 }
 
-/* Hidden Right Card */
 .pip-right-card-pane.pip-card-hidden {
   opacity: 0;
   visibility: hidden;
@@ -762,8 +1122,8 @@
 .pip-skel-bar-lg { width: 90px; height: 16px; }
 .pip-skel-bar-sm { width: 50px; height: 16px; border-radius: 10px; }
 .pip-skel-bar-full { width: 100%; height: 10px; margin-bottom: 8px; }
-.pip-skel-bar-med { width: 68%; height: 10px; }
-.pip-skel-bar-short { width: 80px; height: 10px; }
+.pip-skel-bar-med { width: 68%; height: 10px; margin-bottom: 8px; }
+.pip-skel-bar-short { width: 50%; height: 10px; }
 
 .pip-skel-lines {
   display: flex;
@@ -787,23 +1147,36 @@
 
 .pip-waiting-label {
   text-align: center;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 700;
   color: #64748b;
   padding: 12px 0;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
-/* Published Live Signal Card matching Screenshot 4 */
+.pip-wait-spinner {
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid rgba(0, 242, 254, 0.25);
+  border-top-color: #00f2fe;
+  border-radius: 50%;
+  animation: pipSpin 1s linear infinite;
+}
+
+/* Published Live Signal Card */
 .pip-published-signal-card {
   background: linear-gradient(165deg, rgba(16, 22, 38, 0.95), rgba(8, 12, 22, 0.98));
-  border: 1px solid rgba(239, 68, 68, 0.4);
+  border: 1px solid rgba(239, 68, 68, 0.45);
   border-radius: 18px;
   padding: 22px;
   justify-content: space-between;
   box-shadow:
     0 18px 45px -15px rgba(0, 0, 0, 0.8),
-    0 0 28px rgba(239, 68, 68, 0.14),
+    0 0 28px rgba(239, 68, 68, 0.16),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
@@ -811,40 +1184,55 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .pip-pub-pair {
-  font-size: 18px;
+  font-size: 19px;
   font-weight: 900;
   color: #f1f5f9;
   margin: 0;
+  letter-spacing: -0.02em;
 }
 
 .pip-pub-sub {
-  font-size: 10.5px;
+  font-size: 9.5px;
   color: #94a3b8;
   font-weight: 700;
+  letter-spacing: 0.05em;
 }
 
 .pip-pub-badge-sell {
-  background: rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.22);
   color: #f87171;
   border: 1px solid #ef4444;
   font-size: 11px;
   font-weight: 800;
   padding: 3px 12px;
   border-radius: 6px;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.3);
+}
+
+.pip-badge-pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f87171;
+  box-shadow: 0 0 8px #ef4444;
+  animation: lndPulse 1.4s infinite ease-in-out;
 }
 
 .pip-pub-metrics {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 16px;
-  padding: 12px;
-  background: rgba(0, 0, 0, 0.35);
+  gap: 6px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.4);
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
@@ -853,21 +1241,23 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: 11.5px;
   color: #94a3b8;
 }
 
 .pip-pub-metric-row strong {
-  font-size: 13.5px;
+  font-size: 13px;
   color: #f1f5f9;
 }
 
-.pip-text-sl {
-  color: #f87171 !important;
-}
+.pip-val-entry { color: #f1f5f9 !important; font-weight: 800; }
+.pip-text-sl { color: #f87171 !important; font-weight: 800; }
+.pip-text-tp { color: #34d399 !important; font-weight: 800; }
 
-.pip-text-tp {
-  color: #34d399 !important;
+.pip-rr-row {
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+  padding-top: 5px;
+  margin-top: 2px;
 }
 
 /* Confidence Ring */
@@ -875,7 +1265,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .pip-confidence-ring {
@@ -889,7 +1279,6 @@
   height: 100%;
 }
 
-/* Animated SVG circular stroke */
 .pip-conf-circle-progress {
   transition: stroke-dashoffset 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.15s;
   will-change: stroke-dashoffset;
@@ -917,18 +1306,24 @@
 }
 
 .pip-conf-info span {
-  font-size: 10.5px;
+  font-size: 10px;
   color: #94a3b8;
 }
 
-/* Published Status Button with Smooth Aura Pulse */
+/* Card Actions (Published Badge + Copy Button) */
+.pip-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .pip-published-btn {
   background: rgba(16, 185, 129, 0.18);
   border: 1px solid #10b981;
   color: #34d399;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 800;
-  padding: 9px;
+  padding: 8px;
   border-radius: 20px;
   text-align: center;
   letter-spacing: 0.05em;
@@ -946,24 +1341,208 @@
   }
 }
 
-/* Responsive */
-@media (max-width: 860px) {
+.pip-copy-setup-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cbd5e1;
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 7px;
+  border-radius: 20px;
+  cursor: pointer;
+  letter-spacing: 0.06em;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.pip-copy-setup-btn:hover {
+  background: rgba(0, 242, 254, 0.16);
+  border-color: rgba(0, 242, 254, 0.5);
+  color: #00f2fe;
+  box-shadow: 0 0 16px rgba(0, 242, 254, 0.25);
+}
+
+.pip-copy-setup-btn:active {
+  transform: scale(0.98);
+}
+
+/* =========================================================================
+   4 INTERACTIVE PILLARS UNDER CONSOLE
+   ========================================================================= */
+.pip-pillars-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.pip-pillar-card {
+  background: rgba(12, 17, 30, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  padding: 20px 18px;
+  cursor: pointer;
+  outline: none;
+  display: flex;
+  flex-direction: column;
+  transition:
+    background 0.3s ease,
+    border-color 0.35s ease,
+    box-shadow 0.35s ease,
+    transform 0.25s ease;
+  user-select: none;
+  position: relative;
+}
+
+.pip-pillar-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(0, 242, 254, 0.35);
+  background: rgba(16, 23, 40, 0.95);
+  box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.7);
+}
+
+/* Active Pillar Card (Matches the currently visible stage in the console) */
+.pip-pillar-card.pip-pillar-active {
+  background: linear-gradient(165deg, rgba(16, 24, 44, 0.95) 0%, rgba(10, 15, 28, 0.98) 100%);
+  border-color: #00f2fe;
+  box-shadow:
+    0 16px 36px -12px rgba(0, 0, 0, 0.8),
+    0 0 24px rgba(0, 242, 254, 0.2),
+    inset 0 1px 0 rgba(0, 242, 254, 0.35);
+  transform: translateY(-2px);
+}
+
+.pip-pillar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.pip-pillar-num {
+  font-size: 18px;
+  font-weight: 900;
+  color: #475569;
+  letter-spacing: -0.02em;
+  transition: color 0.3s ease;
+}
+
+.pip-pillar-active .pip-pillar-num {
+  color: #00f2fe;
+}
+
+.pip-pillar-tag {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #64748b;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.pip-pillar-active .pip-pillar-tag {
+  color: #38bdf8;
+  background: rgba(0, 242, 254, 0.12);
+  border: 1px solid rgba(0, 242, 254, 0.25);
+}
+
+.pip-pillar-title {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #f1f5f9;
+  margin: 0 0 8px;
+  line-height: 1.35;
+}
+
+.pip-pillar-active .pip-pillar-title {
+  color: #ffffff;
+}
+
+.pip-pillar-desc {
+  font-size: 11.5px;
+  color: #94a3b8;
+  line-height: 1.55;
+  margin: 0 0 14px;
+  flex: 1;
+}
+
+.pip-pillar-footer {
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.pip-pillar-action {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #64748b;
+  transition: color 0.25s ease;
+}
+
+.pip-pillar-active .pip-pillar-action {
+  color: #00f2fe;
+}
+
+/* =========================================================================
+   RESPONSIVE DESIGN
+   ========================================================================= */
+@media (max-width: 992px) {
+  .pip-pillars-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
   .pip-stepper-track {
-    padding: 16px 20px;
-  }
-  .pip-step-circle {
-    width: 32px;
-    height: 32px;
-    font-size: 12px;
-  }
-  .pip-step-label {
-    font-size: 9.5px;
-  }
-  .pip-console-body {
-    grid-template-columns: 1fr;
-  }
-  .pip-right-panel {
-    min-height: auto;
+    padding: 20px 30px;
   }
 }
 
+@media (max-width: 860px) {
+  .pip-stepper-track {
+    padding: 16px 14px;
+  }
+  .pip-step-circle {
+    width: 34px;
+    height: 34px;
+    font-size: 12px;
+  }
+  .pip-step-label {
+    font-size: 10px;
+  }
+  .pip-step-sublabel {
+    display: none;
+  }
+  .pip-step-connector {
+    margin: -16px 6px 0;
+  }
+  .pip-console-body {
+    grid-template-columns: 1fr;
+    padding: 14px 16px 20px;
+  }
+  .pip-main-stage,
+  .pip-right-panel {
+    min-height: auto;
+  }
+  .pip-broadcast-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .pip-wake-telemetry-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .pip-pillars-grid {
+    grid-template-columns: 1fr;
+  }
+  .pip-console-header {
+    padding: 12px 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .pip-console-controls {
+    align-self: flex-end;
+  }
+}
