@@ -72,13 +72,13 @@ export default function MemberTierLocked({ feature, onUpgrade, onNavigate, isAdm
             </button>
           ) : (
             <a
-              href="https://t.me/huarrrrr"
+              href="https://t.me/Vengsopheagenz?direct"
               target="_blank"
               rel="noopener noreferrer"
               className="tier-upgrade-btn"
               style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
             >
-              👑 Upgrade to Pro VIP on Telegram (@huarrrrr)
+              👑 Upgrade to Pro VIP on Telegram (@Vengsopheagenz)
             </a>
           )}
           <button

@@ -879,9 +879,10 @@ export default function AITradingPage({
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowReferralModal(true)}
+                <a
+                  href="https://t.me/Vengsopheagenz?direct"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -889,6 +890,7 @@ export default function AITradingPage({
                     padding: '11px 20px',
                     background: 'linear-gradient(135deg, #0088CC, #00A3E0)',
                     color: '#FFFFFF',
+                    textDecoration: 'none',
                     border: 'none',
                     borderRadius: 14,
                     fontWeight: 800,
@@ -899,8 +901,8 @@ export default function AITradingPage({
                   }}
                 >
                   <IconSendPlane size={15} />
-                  <span>{isKhmer ? 'ផ្ញើសារទៅកាន់ Admin (@huarrrrr)' : 'DM Admin on Telegram (@huarrrrr)'}</span>
-                </button>
+                  <span>{isKhmer ? 'ផ្ញើសារទៅកាន់ Admin (@Vengsopheagenz)' : 'DM Admin on Telegram (@Vengsopheagenz)'}</span>
+                </a>
                 {onOpenTerminal && (
                   <button
                     type="button"
@@ -983,7 +985,7 @@ export default function AITradingPage({
               className="ait-primary-cta"
               onClick={() => {
                 if (!isVipUser) {
-                  setShowReferralModal(true);
+                  window.open('https://t.me/Vengsopheagenz?direct', '_blank', 'noopener,noreferrer');
                 } else {
                   const el = document.querySelector('.ait-terminal-fullwidth-wrapper');
                   if (el) el.scrollIntoView({ behavior: 'smooth' });
@@ -1030,14 +1032,16 @@ export default function AITradingPage({
                   ? 'ដើម្បីប្រើប្រាស់ Live Chart OANDA, MSOB Dashboard HUD v1.20 និង Pip AI Scanner អ្នកត្រូវផ្ញើសារផ្ទាល់ទៅកាន់ Admin តាម Telegram ដើម្បីចុះឈ្មោះជួញដូរក្រោម Referral Link របស់យើង។'
                   : 'To unlock live TradingView feeds, MSOB Dashboard HUD v1.20, and 24/7 Pip AI scanner, you need to direct message the Admin to trade under my referral.'}
               </p>
-              <button
-                type="button"
+              <a
+                href="https://t.me/Vengsopheagenz?direct"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="ait-btn-gold-action"
-                onClick={() => setShowReferralModal(true)}
+                style={{ textDecoration: 'none' }}
               >
                 <IconSendPlane size={15} />
-                <span>{isKhmer ? 'ផ្ញើសារទៅ Admin ឥឡូវនេះ (@huarrrrr)' : 'DM Admin on Telegram (@huarrrrr)'}</span>
-              </button>
+                <span>{isKhmer ? 'ផ្ញើសារទៅ Admin ឥឡូវនេះ (@Vengsopheagenz)' : 'DM Admin on Telegram (@Vengsopheagenz)'}</span>
+              </a>
             </div>
           </div>
         )}
@@ -1752,14 +1756,16 @@ export default function AITradingPage({
                     ? 'ដើម្បីដោះសោចំណុច Entry, Stop Loss, និង Take Profit 1:2.5+ R:R សូមផ្ញើសារផ្ទាល់ទៅ Admin ដើម្បីជួញដូរក្រោម Referral Link របស់យើង។'
                     : 'Exact Entry, Stop Loss, and Take Profit 1:2.5+ R:R targets are VIP exclusive. Direct message Admin to gain access by trading under my referral.'}
                 </p>
-                <button
-                  type="button"
+                <a
+                  href="https://t.me/Vengsopheagenz?direct"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="ait-btn-gold-action"
-                  onClick={() => setShowReferralModal(true)}
+                  style={{ textDecoration: 'none' }}
                 >
                   <IconSendPlane size={15} />
-                  <span>{isKhmer ? 'ផ្ញើសារទៅ Admin ដោះសោ Signal (@huarrrrr)' : 'DM Admin on Telegram to Unlock (@huarrrrr)'}</span>
-                </button>
+                  <span>{isKhmer ? 'ផ្ញើសារទៅ Admin ដោះសោ Signal (@Vengsopheagenz)' : 'DM Admin on Telegram to Unlock (@Vengsopheagenz)'}</span>
+                </a>
               </div>
             </div>
           )}

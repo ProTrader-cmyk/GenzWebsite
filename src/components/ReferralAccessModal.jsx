@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { TelegramIcon, LockIcon, SparkleIcon } from './ui/CategoryIcons.jsx';
 
-const ADMIN_TELEGRAM_URL = 'https://t.me/huarrrrr';
-const ADMIN_TELEGRAM_HANDLE = '@huarrrrr';
+const ADMIN_TELEGRAM_URL = 'https://t.me/Vengsopheagenz?direct';
+const ADMIN_TELEGRAM_HANDLE = '@Vengsopheagenz';
 const MENTOR_TELEGRAM_URL = 'https://t.me/Vengsopheagenz';
 
 export default function ReferralAccessModal({ isOpen, onClose, user }) {
@@ -142,7 +142,7 @@ export default function ReferralAccessModal({ isOpen, onClose, user }) {
           }}
         >
           <TelegramIcon width="18" height="18" />
-          <span>{isKhmer ? 'ផ្ញើសារទៅ Admin ឥឡូវនេះ (@huarrrrr)' : 'Direct Message Admin on Telegram (@huarrrrr)'}</span>
+          <span>{isKhmer ? 'ផ្ញើសារទៅ Admin ឥឡូវនេះ (@Vengsopheagenz)' : 'Direct Message Admin on Telegram (@Vengsopheagenz)'}</span>
         </a>
 
         {/* Secondary Actions */}

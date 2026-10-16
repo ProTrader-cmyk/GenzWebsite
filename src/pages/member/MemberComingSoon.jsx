@@ -32,7 +32,7 @@ export default function MemberComingSoon({
     return () => clearInterval(interval);
   }, []);
 
-  const TELEGRAM_ADMIN_URL = 'https://t.me/huarrrrr';
+  const TELEGRAM_ADMIN_URL = 'https://t.me/Vengsopheagenz?direct';
 
   return (
     <div className="mcs-wrapper">
@@ -275,7 +275,7 @@ export default function MemberComingSoon({
               className="mcs-btn-primary"
             >
               <span>✈️</span>
-              <span>{isKhmer ? 'ផ្ញើសារស្នើសុំចូលបញ្ជីអាទិភាព VIP (@huarrrrr)' : 'Request Priority Whitelist on Telegram (@huarrrrr)'}</span>
+              <span>{isKhmer ? 'ផ្ញើសារស្នើសុំចូលបញ្ជីអាទិភាព VIP (@Vengsopheagenz)' : 'Request Priority Whitelist on Telegram (@Vengsopheagenz)'}</span>
             </a>
 
             {onExploreAI && (

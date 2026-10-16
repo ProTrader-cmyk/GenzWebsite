@@ -302,7 +302,7 @@ export default function NewsPage({ onBack }) {
 
           <div className="gzn-hero-actions">
             <a
-              href="https://t.me/genztrader"
+              href="https://t.me/+LrfG1UgJ5hU4YzBl"
               target="_blank"
               rel="noopener noreferrer"
               className="gzn-tg-channel-btn"

@@ -236,7 +236,7 @@ export default function CategoryHome({ onSelectCategory, approved, isVip, notice
             <h3 className="modal-title">{tp.vipModalTitle}</h3>
             <p className="modal-text">{tp.vipModalText}</p>
             <a
-              href="https://t.me/huarrrrr"
+              href="https://t.me/Vengsopheagenz?direct"
               target="_blank"
               rel="noopener noreferrer"
               className="modal-btn"
@@ -253,7 +253,7 @@ export default function CategoryHome({ onSelectCategory, approved, isVip, notice
               }}
             >
               <span>✈️</span>
-              <span>{lang === 'km' ? 'ផ្ញើសារទៅ Admin ជួញដូរក្រោម Referral (@huarrrrr)' : 'DM Admin to Trade Under Referral (@huarrrrr)'}</span>
+              <span>{lang === 'km' ? 'ផ្ញើសារទៅ Admin ជួញដូរក្រោម Referral (@Vengsopheagenz)' : 'DM Admin to Trade Under Referral (@Vengsopheagenz)'}</span>
             </a>
             <a href={TELEGRAM_URL} target="_blank" rel="noopener noreferrer" className="modal-telegram-link">
               <TelegramIcon width="16" height="16" />
