@@ -437,14 +437,30 @@ export default function MarketAnalysisPanel({
     setTimeout(() => setCopiedNotice(false), 3000);
   };
 
-  const currentScalpSignal = useMemo(() => {
-    return scalpSignal || buildDefaultSignal(pair, p, 'scalp');
-  }, [scalpSignal, pair, p]);
+  // Persistent locked Pip signals (strictly frozen after scan so numbers NEVER move with live market ticks)
+  useEffect(() => {
+    try {
+      const savedScalp = localStorage.getItem(`genz_locked_scalp_${pair}`);
+      if (savedScalp) {
+        setScalpSignal(JSON.parse(savedScalp));
+      } else {
+        // First time initialization for this pair: lock at initial snapshot so it never moves
+        const initScalp = buildDefaultSignal(pair, p, 'scalp');
+        setScalpSignal(initScalp);
+        localStorage.setItem(`genz_locked_scalp_${pair}`, JSON.stringify(initScalp));
+      }
 
-  const currentDayTradeSignal = useMemo(() => {
-    return dayTradeSignal;
-  }, [dayTradeSignal]);
+      const savedDay = localStorage.getItem(`genz_locked_daytrade_${pair}`);
+      if (savedDay) {
+        setDayTradeSignal(JSON.parse(savedDay));
+      } else {
+        setDayTradeSignal(null);
+      }
+    } catch {}
+  }, [pair]);
 
+  const currentScalpSignal = scalpSignal;
+  const currentDayTradeSignal = dayTradeSignal;
   const activeSignal = pipMode === 'scalp' ? currentScalpSignal : currentDayTradeSignal;
 
   const handleScanSignal = (mode = pipMode) => {
@@ -469,17 +485,28 @@ export default function MarketAnalysisPanel({
         setScanTelemetry('Scan Complete.');
         playSuccessChime();
 
+        const lockedScanPrice = Number(livePrice) || p;
+
         if (mode === 'scalp') {
-          // SCALPING ALWAYS GIVES SIGNAL AFTER SCAN!
-          const fresh = buildDefaultSignal(pair, p, 'scalp');
+          // SCALPING ALWAYS GIVES SIGNAL AFTER SCAN - STRICTLY LOCKED NUMBERS!
+          const fresh = buildDefaultSignal(pair, lockedScanPrice, 'scalp');
           setScalpSignal(fresh);
+          try {
+            localStorage.setItem(`genz_locked_scalp_${pair}`, JSON.stringify(fresh));
+          } catch {}
         } else {
           // INTRA TRADE MUST MEET CONDITION! IF NOT MEET TELL USER NO SIGNAL!
           if (intraConditionMet) {
-            const fresh = buildDefaultSignal(pair, p, 'daytrade');
+            const fresh = buildDefaultSignal(pair, lockedScanPrice, 'daytrade');
             setDayTradeSignal(fresh);
+            try {
+              localStorage.setItem(`genz_locked_daytrade_${pair}`, JSON.stringify(fresh));
+            } catch {}
           } else {
             setDayTradeSignal(null);
+            try {
+              localStorage.removeItem(`genz_locked_daytrade_${pair}`);
+            } catch {}
           }
         }
 
@@ -993,9 +1020,17 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                         const nextState = !intraConditionMet;
                         setIntraConditionMet(nextState);
                         if (nextState) {
-                          setDayTradeSignal(buildDefaultSignal(pair, p, 'daytrade'));
+                          const lockedPrice = Number(livePrice) || p;
+                          const fresh = buildDefaultSignal(pair, lockedPrice, 'daytrade');
+                          setDayTradeSignal(fresh);
+                          try {
+                            localStorage.setItem(`genz_locked_daytrade_${pair}`, JSON.stringify(fresh));
+                          } catch {}
                         } else {
                           setDayTradeSignal(null);
+                          try {
+                            localStorage.removeItem(`genz_locked_daytrade_${pair}`);
+                          } catch {}
                         }
                       }}
                       title="Click to toggle condition check test"
@@ -1009,8 +1044,8 @@ Model: ${sig.model || 'ICT SMC Model'}`;
             </div>
 
             {/* 4. SIGNAL OUTPUT AREA */}
-            {/* 4A. SCALP MODE: SIMPLE ROW DIRECTLY UNDER THE MACHINE */}
-            {pipMode === 'scalp' && (
+            {/* 4A. SCALP MODE: SIMPLE ROW DIRECTLY UNDER THE MACHINE (NUMBERS STRICTLY LOCKED) */}
+            {pipMode === 'scalp' && currentScalpSignal && (
               <div className="ait-pm-scalp-simple-row">
                 <div className="ait-pm-sr-badge-col">
                   <span className={`ait-pm-sr-dir ${(currentScalpSignal?.direction || 'BUY').toLowerCase() === 'sell' ? 'sell' : 'buy'}`}>
