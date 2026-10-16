@@ -4,20 +4,20 @@ import { db } from '../firebase.js';
 import { updateSignalStatus } from '../data/signals.js';
 import { useTheme } from '../theme/ThemeContext.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
-import { fetchLivePrice, formatSpotPrice, subscribeLiveTicks } from '../services/marketPriceService.js';
+import { fetchLivePrice, formatSpotPrice, subscribeLiveTicks, fetchLiveExtremePrices } from '../services/marketPriceService.js';
 import { run15mMarketReanalysis, get15mCandleTimeRemaining } from '../services/marketAnalysisService.js';
 import MarketAnalysisPanel from './MarketAnalysisPanel.jsx';
 
 const TV_LOCALE = 'en';
 
 const SYMBOLS = [
-  { id: 'gold', symbol: 'OANDA:XAUUSD', label: 'XAU/USD', name: 'Gold', pair: 'XAUUSD', pipScale: 0.1, defaultPrice: 2658.20 },
-  { id: 'eurusd', symbol: 'OANDA:EURUSD', label: 'EUR/USD', name: 'EUR/USD', pair: 'EURUSD', pipScale: 0.0001, defaultPrice: 1.08540 },
-  { id: 'gbpusd', symbol: 'OANDA:GBPUSD', label: 'GBP/USD', name: 'GBP/USD', pair: 'GBPUSD', pipScale: 0.0001, defaultPrice: 1.30120 },
-  { id: 'usdjpy', symbol: 'OANDA:USDJPY', label: 'USD/JPY', name: 'USD/JPY', pair: 'USDJPY', pipScale: 0.01, defaultPrice: 152.40 },
-  { id: 'btc', symbol: 'BINANCE:BTCUSDT', label: 'BTC/USD', name: 'Bitcoin', pair: 'BTCUSD', pipScale: 1.0, defaultPrice: 65420.00 },
-  { id: 'us30', symbol: 'CAPITALCOM:US30', label: 'US30', name: 'Dow Jones', pair: 'US30', pipScale: 1.0, defaultPrice: 42800.00 },
-  { id: 'silver', symbol: 'OANDA:XAGUSD', label: 'XAG/USD', name: 'Silver', pair: 'XAGUSD', pipScale: 0.01, defaultPrice: 31.45 },
+  { id: 'gold', symbol: 'OANDA:XAUUSD', label: 'XAU/USD', name: 'Gold', pair: 'XAUUSD', pipScale: 0.1, defaultPrice: 4171.25 },
+  { id: 'eurusd', symbol: 'OANDA:EURUSD', label: 'EUR/USD', name: 'EUR/USD', pair: 'EURUSD', pipScale: 0.0001, defaultPrice: 1.12250 },
+  { id: 'gbpusd', symbol: 'OANDA:GBPUSD', label: 'GBP/USD', name: 'GBP/USD', pair: 'GBPUSD', pipScale: 0.0001, defaultPrice: 1.32700 },
+  { id: 'usdjpy', symbol: 'OANDA:USDJPY', label: 'USD/JPY', name: 'USD/JPY', pair: 'USDJPY', pipScale: 0.01, defaultPrice: 149.20 },
+  { id: 'btc', symbol: 'BINANCE:BTCUSDT', label: 'BTC/USD', name: 'Bitcoin', pair: 'BTCUSD', pipScale: 1.0, defaultPrice: 81200.00 },
+  { id: 'us30', symbol: 'CAPITALCOM:US30', label: 'US30', name: 'Dow Jones', pair: 'US30', pipScale: 1.0, defaultPrice: 51830.00 },
+  { id: 'silver', symbol: 'OANDA:XAGUSD', label: 'XAG/USD', name: 'Silver', pair: 'XAGUSD', pipScale: 0.01, defaultPrice: 34.20 },
 ];
 
 const TIMEFRAMES = [
@@ -279,9 +279,12 @@ export default function AILiveChartTerminal({
   const currentAsset = SYMBOLS.find((s) => s.id === symbolId) || SYMBOLS[0];
   const currentPairNorm = (currentAsset.pair || 'XAUUSD').toUpperCase().replace(/[^A-Z0-9]/g, '');
 
-  // Live Spot Prices
+  // Live Spot Prices & Extreme Peak/Trough Prices (Wicks & High/Low)
   const [livePrice, setLivePrice] = useState(currentAsset.defaultPrice);
+  const [hasVerifiedLivePrice, setHasVerifiedLivePrice] = useState(false);
   const [priceChangeDirection, setPriceChangeDirection] = useState('neutral');
+  const [marketExtremes, setMarketExtremes] = useState(null);
+  const [marketAnalysis, setMarketAnalysis] = useState(null);
 
   // Locate active trade setup for the currently displayed chart asset
   const currentActiveSetup = useMemo(() => {
@@ -296,9 +299,32 @@ export default function AILiveChartTerminal({
       if (closedSignalIds.has(s.id)) return false;
       const st = (s.status || 'active').toLowerCase();
       const isClosed = st === 'tp' || st === 'sl' || st === 'closed' || st === 'win' || st === 'loss';
-      return !isClosed;
+      if (isClosed) return false;
+
+      // Pre-flight check only when live price has been verified from real feed
+      if (hasVerifiedLivePrice) {
+        const isBuy = (s.direction || 'BUY').toUpperCase() === 'BUY';
+        const entry = Number(s.entry ?? s.entry_price ?? s.entryPrice);
+        const tp = Number(s.tp ?? s.take_profit ?? s.takeProfit);
+        const sl = Number(s.sl ?? s.stop_loss ?? s.stopLoss);
+        const curr = Number(livePrice);
+        const peakHigh = Number(marketExtremes?.peakHigh || marketAnalysis?.sessionHigh || marketAnalysis?.high15 || 0);
+        const troughLow = Number(marketExtremes?.troughLow || marketAnalysis?.sessionLow || marketAnalysis?.low15 || 0);
+
+        if (entry > 0 && tp > 0 && sl > 0 && !isNaN(curr) && Math.abs(curr - entry) / entry < 0.15) {
+          const alreadyHitTp = isBuy
+            ? (curr >= tp || (curr > entry && peakHigh >= tp))
+            : (curr <= tp || (curr < entry && troughLow > 0 && troughLow <= tp));
+          const alreadyHitSl = isBuy ? (curr <= sl) : (curr >= sl);
+          if (alreadyHitTp || alreadyHitSl) {
+            return false;
+          }
+        }
+      }
+
+      return true;
     }) || null;
-  }, [activeSignals, liveSignals, currentPairNorm, closedSignalIds]);
+  }, [activeSignals, liveSignals, currentPairNorm, closedSignalIds, marketExtremes, marketAnalysis, livePrice, hasVerifiedLivePrice]);
 
   // Precision decimals for current asset
   const decimals = currentPairNorm.includes('EUR') || currentPairNorm.includes('GBP')
@@ -364,30 +390,54 @@ export default function AILiveChartTerminal({
     };
   }, [currentActiveSetup, livePrice, currentPairNorm]);
 
-  // Live TP / SL touch detection for the active position
+  // Live TP / SL touch detection for the active position (strictly requires verified live price)
   useEffect(() => {
-    if (!currentActiveSetup || !livePrice || isNaN(Number(livePrice))) return;
+    if (!hasVerifiedLivePrice) return;
 
-    const isBuy = (currentActiveSetup.direction || 'BUY').toUpperCase() === 'BUY';
-    const entry = Number(currentActiveSetup.entry);
-    const tp = Number(currentActiveSetup.tp);
-    const sl = Number(currentActiveSetup.sl);
-    const curr = Number(livePrice);
-    const sId = currentActiveSetup.id;
+    // Find active setup candidate from list, even if currentActiveSetup already suppressed it
+    const list = activeSignals && activeSignals.length > 0 ? activeSignals : liveSignals;
+    const targetSetup = currentActiveSetup || list.find((s) => {
+      if (!s || closedSignalIds.has(s.id)) return false;
+      const sPair = (s.pair || s.symbol || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      const isMatch = sPair === currentPairNorm || 
+        (currentPairNorm === 'XAUUSD' && (sPair.includes('XAU') || sPair.includes('GOLD')));
+      if (!isMatch) return false;
+      const st = (s.status || 'active').toLowerCase();
+      return st !== 'tp' && st !== 'sl' && st !== 'closed' && st !== 'win' && st !== 'loss';
+    });
+
+    if (!targetSetup) return;
+
+    const isBuy = (targetSetup.direction || 'BUY').toUpperCase() === 'BUY';
+    const entry = Number(targetSetup.entry ?? targetSetup.entry_price ?? targetSetup.entryPrice);
+    const tp = Number(targetSetup.tp ?? targetSetup.take_profit ?? targetSetup.takeProfit);
+    const sl = Number(targetSetup.sl ?? targetSetup.stop_loss ?? targetSetup.stopLoss);
+    const sId = targetSetup.id;
 
     if (!entry || !tp || !sl) return;
 
-    const hitTp = isBuy ? curr >= tp : curr <= tp;
-    const hitSl = isBuy ? curr <= sl : curr >= sl;
-    const isGold = currentPairNorm.includes('XAU');
-    const tpPts = Math.abs(tp - entry);
-    const slPts = Math.abs(entry - sl);
-    const tpProfitUsd = isGold ? tpPts * 100 * 0.03 : tpPts * 10;
-    const slLossUsd = isGold ? slPts * 100 * 0.03 : slPts * 10;
+    const curr = Number(livePrice);
+    if (isNaN(curr) || curr <= 0) return;
+
+    // Guard against uninitialized or cross-asset price mismatches
+    if (Math.abs(curr - entry) / entry >= 0.15) return;
+
+    const peakHigh = Number(marketExtremes?.peakHigh || marketAnalysis?.sessionHigh || marketAnalysis?.high15 || 0);
+    const troughLow = Number(marketExtremes?.troughLow || marketAnalysis?.sessionLow || marketAnalysis?.low15 || 0);
+
+    // Only allow session peakHigh/troughLow to confirm TP when current price is in profit territory relative to entry
+    // Never allow pre-entry 24h session lows/highs to falsely trigger SL while price is trading above/below SL
+    const hitTp = isBuy
+      ? (curr >= tp || (curr > entry && peakHigh >= tp))
+      : (curr <= tp || (curr < entry && troughLow > 0 && troughLow <= tp));
+    const hitSl = isBuy ? (curr <= sl) : (curr >= sl);
 
     if (hitTp) {
       setClosedSignalIds((prev) => new Set(prev).add(sId));
       playAiBeep('trade', isMuted);
+      const isGold = currentPairNorm.includes('XAU');
+      const tpPts = Math.abs(tp - entry);
+      const tpProfitUsd = isGold ? tpPts * 100 * 0.03 : tpPts * 10;
       setRecentOutcomeNotice({
         type: 'tp',
         text: isKhmer
@@ -399,10 +449,13 @@ export default function AILiveChartTerminal({
       } catch {}
       const timer = setTimeout(() => {
         setRecentOutcomeNotice(null);
-      }, 4500);
+      }, 5000);
       return () => clearTimeout(timer);
     } else if (hitSl) {
       setClosedSignalIds((prev) => new Set(prev).add(sId));
+      const isGold = currentPairNorm.includes('XAU');
+      const slPts = Math.abs(entry - sl);
+      const slLossUsd = isGold ? slPts * 100 * 0.03 : slPts * 10;
       setRecentOutcomeNotice({
         type: 'sl',
         text: isKhmer
@@ -414,10 +467,10 @@ export default function AILiveChartTerminal({
       } catch {}
       const timer = setTimeout(() => {
         setRecentOutcomeNotice(null);
-      }, 4500);
+      }, 5000);
       return () => clearTimeout(timer);
     }
-  }, [livePrice, currentActiveSetup, isMuted, isKhmer, currentPairNorm]);
+  }, [hasVerifiedLivePrice, livePrice, marketExtremes, marketAnalysis, currentActiveSetup, activeSignals, liveSignals, isMuted, isKhmer, currentPairNorm, closedSignalIds]);
 
   const handleCloseSetupManual = (e) => {
     e?.stopPropagation?.();
@@ -437,7 +490,6 @@ export default function AILiveChartTerminal({
   };
 
   // Real-Time 15M Market Analysis State (Synchronized across MSOB & Market Analysis Panel)
-  const [marketAnalysis, setMarketAnalysis] = useState(null);
   const [isReanalyzing, setIsReanalyzing] = useState(false);
   const [candleCountdown, setCandleCountdown] = useState(() => get15mCandleTimeRemaining());
   const [lastCandleCloseNotice, setLastCandleCloseNotice] = useState(null);
@@ -551,19 +603,36 @@ export default function AILiveChartTerminal({
     }, 200);
   }
 
-  // 2. Real-time Live Price Streaming for the selected asset
+  // 2. Real-time Live Price Streaming & Candle Wick / Extreme Tracking for the selected asset
   useEffect(() => {
     let isSubscribed = true;
+    setHasVerifiedLivePrice(false);
 
     fetchLivePrice(currentAsset.pair).then((price) => {
       if (isSubscribed && price) {
         setLivePrice(price);
+        setHasVerifiedLivePrice(true);
         addLog('TICK', `Live Spot synced: $${formatSpotPrice(currentAsset.pair, price)}`);
       }
     });
 
+    fetchLiveExtremePrices(currentAsset.pair).then((ext) => {
+      if (isSubscribed && ext) {
+        setMarketExtremes(ext);
+      }
+    });
+
+    const extremesPollTimer = setInterval(() => {
+      fetchLiveExtremePrices(currentAsset.pair).then((ext) => {
+        if (isSubscribed && ext) {
+          setMarketExtremes(ext);
+        }
+      });
+    }, 4000);
+
     const unsubTicks = subscribeLiveTicks([currentAsset.pair], (pair, newPrice) => {
       if (!isSubscribed || !newPrice) return;
+      setHasVerifiedLivePrice(true);
       setLivePrice((prev) => {
         if (newPrice > prev) setPriceChangeDirection('up');
         else if (newPrice < prev) setPriceChangeDirection('down');
@@ -573,6 +642,7 @@ export default function AILiveChartTerminal({
 
     return () => {
       isSubscribed = false;
+      clearInterval(extremesPollTimer);
       unsubTicks();
     };
   }, [currentAsset.pair, currentAsset.pipScale]);

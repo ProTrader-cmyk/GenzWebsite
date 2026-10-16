@@ -65,7 +65,15 @@ class TradingViewStreamer {
       if (this.prices[p]) immediate[p] = this.prices[p];
     }
     if (Object.keys(immediate).length > 0) {
-      try { callback(immediate); } catch {}
+      try {
+        if (callback.length >= 2) {
+          for (const [k, v] of Object.entries(immediate)) {
+            callback(k, v);
+          }
+        } else {
+          callback(immediate);
+        }
+      } catch {}
     }
 
     this.connect();
@@ -205,7 +213,11 @@ class TradingViewStreamer {
     this.listeners.forEach((sub) => {
       if (sub.symbols.includes(pair)) {
         try {
-          sub.callback({ [pair]: price });
+          if (sub.callback.length >= 2) {
+            sub.callback(pair, price);
+          } else {
+            sub.callback({ [pair]: price });
+          }
         } catch (e) {
           console.error(e);
         }
@@ -304,6 +316,66 @@ export async function fetchGoldQuoteMetrics() {
     }
   } catch {}
 
+  return null;
+}
+
+/**
+ * Fetches real-time price extremes (candle wicks, session high/low, multi-timeframe extremes)
+ * from TradingView scanner. This ensures that if a candle wick pierces TP or SL, the touch
+ * is 100% captured and executed even if live price retraced before page load.
+ * @param {string} pair
+ * @returns {Promise<{ price: number, peakHigh: number, troughLow: number, sessionHigh: number, sessionLow: number, high15: number, low15: number }|null>}
+ */
+export async function fetchLiveExtremePrices(pair = 'XAUUSD') {
+  const norm = normalizePair(pair);
+  const isCfd = norm.includes('XAU') || norm.includes('GOLD') || norm.includes('US30') || norm.includes('SILVER') || norm.includes('XAG');
+  const isCrypto = norm.includes('BTC') || norm.includes('ETH');
+  const endpoint = isCfd ? 'cfd' : (isCrypto ? 'crypto' : 'forex');
+  const ticker = isCfd
+    ? (norm.includes('US30') ? 'OANDA:US30USD' : `OANDA:${norm}`)
+    : (isCrypto ? 'BINANCE:BTCUSDT' : `OANDA:${norm}`);
+
+  try {
+    const res = await fetch(`https://scanner.tradingview.com/${endpoint}/scan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({
+        symbols: { tickers: [ticker] },
+        columns: ['close', 'high', 'low', 'high|15', 'low|15', 'high|60', 'low|60'],
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const row = data.data?.[0]?.d;
+      if (Array.isArray(row) && typeof row[0] === 'number') {
+        const close = row[0];
+        const sessionHigh = typeof row[1] === 'number' ? row[1] : close;
+        const sessionLow = typeof row[2] === 'number' ? row[2] : close;
+        const high15 = typeof row[3] === 'number' ? row[3] : sessionHigh;
+        const low15 = typeof row[4] === 'number' ? row[4] : sessionLow;
+        const high60 = typeof row[5] === 'number' ? row[5] : sessionHigh;
+        const low60 = typeof row[6] === 'number' ? row[6] : sessionLow;
+
+        // Peak high and trough low across all active timeframes
+        const peakHigh = Math.max(close, sessionHigh, high15, high60);
+        const troughLow = Math.min(close, sessionLow, low15, low60);
+
+        return {
+          price: close,
+          sessionHigh,
+          sessionLow,
+          high15,
+          low15,
+          high60,
+          low60,
+          peakHigh,
+          troughLow,
+        };
+      }
+    }
+  } catch (err) {
+    console.warn(`[marketPriceService] fetchLiveExtremePrices error for ${pair}:`, err);
+  }
   return null;
 }
 
