@@ -1040,8 +1040,8 @@ export default function LandingHome({
 
               <p className="lnd-team-bio">
                 {isKhmer
-                  ? 'ដឹកនាំការគ្រប់គ្រងហានិភ័យដើមទុន 0.03 Lot Precision វិន័យ Drawdown និងការប្រតិបត្តិការជួញដូរផ្ទាល់នៅលើទីផ្សារអន្តរជាតិ។'
-                  : 'Directs institutional desk execution, strict drawdown mitigation, and disciplined 0.03 lot precision portfolio growth.'}
+                  ? 'ដឹកនាំការគ្រប់គ្រងហានិភ័យដើមទុន វិន័យ Drawdown និងការប្រតិបត្តិការជួញដូរផ្ទាល់នៅលើទីផ្សារអន្តរជាតិ។'
+                  : 'Directs institutional desk execution, strict drawdown mitigation, and disciplined portfolio growth.'}
               </p>
 
               <div className="lnd-team-footer">
