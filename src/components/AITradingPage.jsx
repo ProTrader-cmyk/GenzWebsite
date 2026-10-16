@@ -548,8 +548,14 @@ export default function AITradingPage({
               isReal: true,
             });
           });
-          // Sort real signals newest first
-          list.sort((a, b) => (b._timeMs || 0) - (a._timeMs || 0));
+          // Sort real signals: ACTIVE setups first, then closed setups (newest first)
+          list.sort((a, b) => {
+            const aActive = String(a.status || 'active').toLowerCase() === 'active';
+            const bActive = String(b.status || 'active').toLowerCase() === 'active';
+            if (aActive && !bActive) return -1;
+            if (!aActive && bActive) return 1;
+            return (b._timeMs || 0) - (a._timeMs || 0);
+          });
           setFirestoreSignals(list);
           setSignalsLoaded(true);
         },
@@ -798,6 +804,18 @@ export default function AITradingPage({
       if (signalFilter === 'forex') return (asset.includes('EUR') || asset.includes('GBP') || asset.includes('JPY') || asset.includes('USD')) && !asset.includes('BTC') && !asset.includes('XAU') && !asset.includes('XAG') && !asset.includes('US30');
       if (signalFilter === 'crypto') return asset.includes('BTC') || asset.includes('ETH') || asset.includes('US30') || asset.includes('CRYPTO');
       return true;
+    });
+
+    // Guarantee ACTIVE setups are ALWAYS sorted first so they appear at the top-left of the grid
+    return res.sort((a, b) => {
+      const aActive = String(a.status || 'active').toLowerCase() === 'active';
+      const bActive = String(b.status || 'active').toLowerCase() === 'active';
+      if (aActive && !bActive) return -1;
+      if (!aActive && bActive) return 1;
+
+      const aTime = a._timeMs || a.publishedAt || a.timestamp || 0;
+      const bTime = b._timeMs || b.publishedAt || b.timestamp || 0;
+      return bTime - aTime;
     });
   }, [deduplicatedSignals, signalFilter, tradeStyleFilter]);
 
@@ -1923,6 +1941,15 @@ export default function AITradingPage({
                               <span>{dir}</span>
                             </span>
                             <span className={`ait-desk-pill ${isBuy ? 'buy' : 'sell'}`}>DESK</span>
+                            {(!isTp && !isSl && sig.status === 'active') ? (
+                              <span className="ait-active-setup-pill">
+                                <span className="ait-pulse-dot" /> ACTIVE SETUP
+                              </span>
+                            ) : isTp ? (
+                              <span className="ait-outcome-pill tp">✓ TP HIT</span>
+                            ) : isSl ? (
+                              <span className="ait-outcome-pill sl">✕ STOPPED OUT</span>
+                            ) : null}
                           </div>
                           <span className="ait-card-symbol-sub">{assetSubtitle}</span>
                         </div>

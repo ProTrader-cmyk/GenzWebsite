@@ -107,6 +107,15 @@ function SignalCard({ signal, livePrice }) {
                 <span>{dir}</span>
               </span>
               <span className={`ait-desk-pill ${isBuy ? 'buy' : 'sell'}`}>DESK</span>
+              {(!isWin && !isLoss && signal.status === 'active') ? (
+                <span className="ait-active-setup-pill">
+                  <span className="ait-pulse-dot" /> ACTIVE SETUP
+                </span>
+              ) : isWin ? (
+                <span className="ait-outcome-pill tp">✓ TP HIT</span>
+              ) : isLoss ? (
+                <span className="ait-outcome-pill sl">✕ STOPPED OUT</span>
+              ) : null}
             </div>
             <span className="ait-card-symbol-sub">{assetSubtitle}</span>
           </div>
@@ -292,7 +301,19 @@ export default function MemberSignals({ plan = 'elite' }) {
     };
   }, [signals]);
 
-  const sorted = signals.filter((s) => /XAU|GOLD/i.test(s.pair || '')).sort((a, b) => (a.minutesAgo ?? 0) - (b.minutesAgo ?? 0));
+  const sorted = signals
+    .filter((s) => /XAU|GOLD/i.test(s.pair || ''))
+    .sort((a, b) => {
+      const aActive = String(a.status || 'active').toLowerCase() === 'active';
+      const bActive = String(b.status || 'active').toLowerCase() === 'active';
+      if (aActive && !bActive) return -1;
+      if (!aActive && bActive) return 1;
+
+      const aTime = a.publishedAt || a.timestamp || a.createdAt || 0;
+      const bTime = b.publishedAt || b.timestamp || b.createdAt || 0;
+      if (aTime && bTime) return bTime - aTime;
+      return (a.minutesAgo ?? 0) - (b.minutesAgo ?? 0);
+    });
   const filtered = sorted.filter((s) => statusFilter === 'all' || s.status === statusFilter);
   const visibilityPercent = Math.round((PLAN_SIGNAL_ACCESS[plan] ?? 1) * 100);
 
