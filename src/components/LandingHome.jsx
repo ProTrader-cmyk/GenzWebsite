@@ -4,6 +4,7 @@ import { db } from '../firebase.js';
 import { fetchLivePrice, formatSpotPrice, subscribeLiveTicks, fetchGoldQuoteMetrics } from '../services/marketPriceService.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import Footer from './Footer.jsx';
+import mentorImg from '../assets/mentor.jpg';
 import {
   SparkleIcon,
   CandleChartIcon,
@@ -13,6 +14,8 @@ import {
   AppWindowIcon,
   BacktestIcon,
   AdvancedChartIcon,
+  TelegramIcon,
+  UserIcon,
 } from './ui/CategoryIcons.jsx';
 import '../styles/landing.css';
 
@@ -947,7 +950,140 @@ export default function LandingHome({
       </section>
 
       {/* =========================================================================
-          SECTION 3: BOTTOM CALL-TO-ACTION BANNER
+          SECTION 3: EXECUTIVE LEADERSHIP & CORE TEAM (CEO, COO, DEV)
+          ========================================================================= */}
+      <section className="lnd-section lnd-team-section" id="lnd-team">
+        <div className="lnd-container">
+          <div className="lnd-section-header">
+            <span className="lnd-section-pill">
+              {isKhmer ? 'ថ្នាក់ដឹកនាំ និងក្រុមការងារស្នូល' : 'EXECUTIVE LEADERSHIP & CORE TEAM'}
+            </span>
+            <h2 className="lnd-section-title">
+              {isKhmer
+                ? 'ក្រុមការងារ និងថ្នាក់ដឹកនាំនៅពីក្រោយ GenZ Trader'
+                : 'The Leadership Driving Your Trading Edge'}
+            </h2>
+            <p className="lnd-section-sub">
+              {isKhmer
+                ? 'អ្នកឯកទេសយុទ្ធសាស្ត្រទីផ្សារស្ថាប័ន វិស្វករប្រព័ន្ធស្វ័យប្រវត្តិកម្ម និងអ្នកជំនាញប្រតិបត្តិការដែលប្តេជ្ញាជួយឱ្យអ្នកជួញដូរទទួលបានប្រៀបឈ្នះលើទីផ្សារ។'
+                : 'Institutional market strategists, algorithmic engineers, and execution specialists dedicated to empowering retail traders.'}
+            </p>
+          </div>
+
+          <div className="lnd-team-grid">
+            {/* Member 1: CEO - Veng Sophea */}
+            <div className="lnd-team-card lnd-team-card-ceo">
+              <div className="lnd-team-avatar-container">
+                <div className="lnd-team-avatar-glow lnd-glow-ceo" />
+                <img
+                  src={mentorImg}
+                  alt="Veng Sophea - CEO"
+                  className="lnd-team-avatar-img"
+                  loading="lazy"
+                />
+                <span className="lnd-team-status-dot" title="Active Founder" />
+              </div>
+
+              <div className="lnd-team-role-pill lnd-role-ceo">
+                <span>⚡ CEO & FOUNDER</span>
+              </div>
+
+              <h3 className="lnd-team-name">Veng Sophea</h3>
+              <p className="lnd-team-title">
+                {isKhmer ? 'ប្រធាននាយកប្រតិបត្តិ & គ្រូបណ្តុះបណ្តាល SMC / ICT' : 'Chief Executive Officer • Lead ICT & SMC Mentor'}
+              </p>
+
+              <p className="lnd-team-bio">
+                {isKhmer
+                  ? 'បទពិសោធន៍វិភាគទិន្នន័យទីផ្សារជាង ៤ ឆ្នាំ ឯកទេសខាងរចនាសម្ព័ន្ធ Liquidity Sweeps, Order Blocks, និង Macro Economic Catalysts។'
+                  : '4+ years of institutional price action experience. Specializes in liquidity engineering, order block validation, and macroeconomic risk navigation.'}
+              </p>
+
+              <div className="lnd-team-footer">
+                <a
+                  href="https://t.me/Vengsopheagenz?direct"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="lnd-team-social-btn"
+                  title="Telegram Veng Sophea"
+                >
+                  <TelegramIcon style={{ width: 14, height: 14 }} />
+                  <span>@Vengsopheagenz</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Member 2: COO - Lim Sunhour */}
+            <div className="lnd-team-card lnd-team-card-coo">
+              <div className="lnd-team-avatar-container">
+                <div className="lnd-team-avatar-glow lnd-glow-coo" />
+                <div className="lnd-team-monogram-avatar lnd-monogram-coo">
+                  <span>LS</span>
+                </div>
+                <span className="lnd-team-status-dot lnd-status-coo" title="Head of Operations" />
+              </div>
+
+              <div className="lnd-team-role-pill lnd-role-coo">
+                <span>🛡️ COO</span>
+              </div>
+
+              <h3 className="lnd-team-name">Lim Sunhour</h3>
+              <p className="lnd-team-title">
+                {isKhmer ? 'ប្រធានផ្នែកប្រតិបត្តិការ & យុទ្ធសាស្ត្រជួញដូរ' : 'Chief Operating Officer • Head of Trading Strategy'}
+              </p>
+
+              <p className="lnd-team-bio">
+                {isKhmer
+                  ? 'ដឹកនាំការគ្រប់គ្រងហានិភ័យដើមទុន 0.03 Lot Precision វិន័យ Drawdown និងការប្រតិបត្តិការជួញដូរផ្ទាល់នៅលើទីផ្សារអន្តរជាតិ។'
+                  : 'Directs institutional desk execution, strict drawdown mitigation, and disciplined 0.03 lot precision portfolio growth.'}
+              </p>
+
+              <div className="lnd-team-footer">
+                <span className="lnd-team-badge-tag">
+                  <span className="lnd-live-pulse-dot" style={{ width: 5, height: 5 }} />
+                  Trading Desk & Operations
+                </span>
+              </div>
+            </div>
+
+            {/* Member 3: DEV - Sen Visal */}
+            <div className="lnd-team-card lnd-team-card-dev">
+              <div className="lnd-team-avatar-container">
+                <div className="lnd-team-avatar-glow lnd-glow-dev" />
+                <div className="lnd-team-monogram-avatar lnd-monogram-dev">
+                  <span>SV</span>
+                </div>
+                <span className="lnd-team-status-dot lnd-status-dev" title="AI Systems Lead" />
+              </div>
+
+              <div className="lnd-team-role-pill lnd-role-dev">
+                <span>💻 LEAD DEV</span>
+              </div>
+
+              <h3 className="lnd-team-name">Sen Visal</h3>
+              <p className="lnd-team-title">
+                {isKhmer ? 'ប្រធានវិស្វករអភិវឌ្ឍន៍ប្រព័ន្ធ AI & Software' : 'Lead Software & Algorithmic AI Engineer'}
+              </p>
+
+              <p className="lnd-team-bio">
+                {isKhmer
+                  ? 'រៀបចំប្រព័ន្ធ AI Terminal, ស្ទ្រីមទិន្នន័យ Live Tick WebSocket OANDA, ហេដ្ឋារចនាសម្ព័ន្ធ Cloud និងក្បួនដង្ហើមស្វ័យប្រវត្តិកម្ម។'
+                  : 'Architect of PIP AI neural engines, real-time OANDA WebSocket pipelines, high-throughput cloud services, and low-latency terminal feeds.'}
+              </p>
+
+              <div className="lnd-team-footer">
+                <span className="lnd-team-badge-tag">
+                  <span className="lnd-ai-chip-dot lnd-dot-cyan" />
+                  AI & Full-Stack Systems
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================================
+          SECTION 4: BOTTOM CALL-TO-ACTION BANNER
           ========================================================================= */}
       <section className="lnd-bottom-cta-section">
         <div className="lnd-container">

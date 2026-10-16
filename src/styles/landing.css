@@ -1554,4 +1554,288 @@ body.light-mode .lnd-ai-telemetry-chip {
   border-color: rgba(14, 165, 233, 0.28) !important;
 }
 
+/* =========================================================================
+   EXECUTIVE LEADERSHIP TEAM STYLES (CEO, COO, DEV)
+   ========================================================================= */
+.lnd-team-section {
+  position: relative;
+  padding: 80px 0 60px;
+}
+
+.lnd-team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 28px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.lnd-team-card {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(165deg, rgba(12, 19, 34, 0.94) 0%, rgba(6, 10, 19, 0.97) 100%) !important;
+  border: 1px solid rgba(0, 242, 254, 0.2) !important;
+  border-radius: var(--rl, 20px);
+  padding: 32px 24px 26px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transform: translateZ(0);
+  transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+  box-shadow:
+    0 24px 50px -20px rgba(0, 0, 0, 0.78),
+    0 0 28px rgba(0, 242, 254, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.09) !important;
+}
+
+.lnd-team-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 12%;
+  right: 12%;
+  height: 1.5px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 242, 254, 0.85) 30%,
+    rgba(168, 85, 247, 0.85) 65%,
+    rgba(16, 185, 129, 0.75) 85%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 3;
+}
+
+.lnd-team-card:hover {
+  transform: translate3d(0, -6px, 0);
+  border-color: rgba(0, 242, 254, 0.44) !important;
+  box-shadow:
+    0 30px 60px -18px rgba(0, 0, 0, 0.88),
+    0 0 34px rgba(0, 242, 254, 0.18),
+    0 0 22px rgba(168, 85, 247, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16) !important;
+}
+
+.lnd-team-card-ceo {
+  border-color: rgba(0, 242, 254, 0.32) !important;
+}
+
+.lnd-team-card-coo {
+  border-color: rgba(16, 185, 129, 0.28) !important;
+}
+
+.lnd-team-card-dev {
+  border-color: rgba(168, 85, 247, 0.28) !important;
+}
+
+/* Avatar Containers */
+.lnd-team-avatar-container {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  margin-bottom: 18px;
+}
+
+.lnd-team-avatar-glow {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0.6;
+  filter: blur(8px);
+}
+
+.lnd-glow-ceo {
+  background: radial-gradient(circle, rgba(0, 242, 254, 0.5), transparent 70%);
+}
+
+.lnd-glow-coo {
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.5), transparent 70%);
+}
+
+.lnd-glow-dev {
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.5), transparent 70%);
+}
+
+.lnd-team-avatar-img {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2.5px solid #00f2fe;
+  box-shadow: 0 0 18px rgba(0, 242, 254, 0.35);
+  display: block;
+}
+
+.lnd-team-monogram-avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
+}
+
+.lnd-monogram-coo {
+  border: 2.5px solid #10b981;
+  color: #34d399;
+  box-shadow: 0 0 18px rgba(16, 185, 129, 0.35);
+}
+
+.lnd-monogram-dev {
+  border: 2.5px solid #a855f7;
+  color: #c084fc;
+  box-shadow: 0 0 18px rgba(168, 85, 247, 0.35);
+}
+
+.lnd-team-status-dot {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #10b981;
+  border: 2px solid #090e1a;
+  box-shadow: 0 0 8px #10b981;
+}
+
+.lnd-status-coo {
+  background: #34d399;
+  box-shadow: 0 0 8px #34d399;
+}
+
+.lnd-status-dev {
+  background: #00f2fe;
+  box-shadow: 0 0 8px #00f2fe;
+}
+
+/* Role Badges */
+.lnd-team-role-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 14px;
+  border-radius: 20px;
+  margin-bottom: 12px;
+}
+
+.lnd-role-ceo {
+  background: linear-gradient(135deg, rgba(0, 242, 254, 0.16), rgba(16, 185, 129, 0.16));
+  border: 1px solid rgba(0, 242, 254, 0.38);
+  color: #38bdf8;
+  box-shadow: 0 0 16px rgba(0, 242, 254, 0.2);
+}
+
+.lnd-role-coo {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.16), rgba(52, 211, 153, 0.16));
+  border: 1px solid rgba(16, 185, 129, 0.38);
+  color: #34d399;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.2);
+}
+
+.lnd-role-dev {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.16), rgba(0, 242, 254, 0.16));
+  border: 1px solid rgba(168, 85, 247, 0.38);
+  color: #c084fc;
+  box-shadow: 0 0 16px rgba(168, 85, 247, 0.2);
+}
+
+.lnd-team-name {
+  font-size: 21px;
+  font-weight: 800;
+  margin: 0 0 4px;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.lnd-team-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--brand2, #38bdf8);
+  margin: 0 0 14px;
+  line-height: 1.45;
+}
+
+.lnd-team-bio {
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--mute, #94a3b8);
+  margin: 0 0 20px;
+  flex: 1;
+}
+
+.lnd-team-footer {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lnd-team-social-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #38bdf8;
+  background: rgba(0, 242, 254, 0.1);
+  border: 1px solid rgba(0, 242, 254, 0.28);
+  padding: 6px 16px;
+  border-radius: 20px;
+  text-decoration: none;
+  transition: all 0.18s ease;
+}
+
+.lnd-team-social-btn:hover {
+  background: rgba(0, 242, 254, 0.2);
+  border-color: rgba(0, 242, 254, 0.5);
+  box-shadow: 0 0 18px rgba(0, 242, 254, 0.3);
+  transform: translateY(-2px);
+}
+
+.lnd-team-badge-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--mute, #94a3b8);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 5px 14px;
+  border-radius: 20px;
+}
+
+/* Light mode overrides for team cards */
+html[data-theme="light"] .lnd-team-card,
+body.light-mode .lnd-team-card {
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.96), rgba(241, 245, 249, 0.98)) !important;
+  border-color: rgba(14, 165, 233, 0.25) !important;
+  box-shadow: 0 20px 45px -18px rgba(15, 23, 42, 0.1), 0 0 25px rgba(14, 165, 233, 0.08) !important;
+}
+
+html[data-theme="light"] .lnd-team-monogram-avatar,
+body.light-mode .lnd-team-monogram-avatar {
+  background: #f1f5f9;
+}
+
+html[data-theme="light"] .lnd-team-footer,
+body.light-mode .lnd-team-footer {
+  border-top-color: rgba(15, 23, 42, 0.08);
+}
+
+
 
