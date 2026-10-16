@@ -26,19 +26,16 @@ export function GoldAssetEmblem({ size = 42, className = '' }) {
       <circle cx="22" cy="22" r="21" fill={`url(#${gradId})`} />
       
       {/* 2-Tier Stacked Gold Bullion / Ingot matching reference screenshot */}
-      {/* Top trapezoid tier */}
       <path
         d="M16 15H28L29.8 19H14.2L16 15Z"
         fill="#FFFFFF"
         opacity="0.95"
       />
-      {/* Bottom wider trapezoid tier */}
       <path
         d="M13 20.5H31L32.8 25.5H11.2L13 20.5Z"
         fill="#FFFFFF"
         opacity="0.9"
       />
-      {/* Subtle depth separator */}
       <line x1="14.5" y1="19.8" x2="29.5" y2="19.8" stroke="#CA8A04" strokeWidth="0.8" opacity="0.45" />
     </svg>
   );
@@ -84,24 +81,80 @@ export function SignalStrengthBars({ activeCount = 4, color = '#F59E0B' }) {
 }
 
 /**
+ * Safely parses any date/timestamp input (Firestore Timestamp, ISO, serialized string, ms, seconds)
+ */
+export function parseDateInput(val) {
+  if (!val) return null;
+  if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
+  
+  // Firestore Timestamp object methods
+  if (typeof val.toDate === 'function') {
+    try {
+      const d = val.toDate();
+      if (d instanceof Date && !isNaN(d.getTime())) return d;
+    } catch (e) {}
+  }
+  if (typeof val.toMillis === 'function') {
+    try {
+      const d = new Date(val.toMillis());
+      if (!isNaN(d.getTime())) return d;
+    } catch (e) {}
+  }
+
+  // Firestore Timestamp object fields { seconds, nanoseconds }
+  if (typeof val === 'object' && val !== null && typeof val.seconds === 'number') {
+    const ms = val.seconds * 1000 + Math.floor((val.nanoseconds || 0) / 1000000);
+    const d = new Date(ms);
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // Number: seconds vs ms
+  if (typeof val === 'number') {
+    const ms = val < 10000000000 ? val * 1000 : val;
+    const d = new Date(ms);
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // String parsing
+  if (typeof val === 'string') {
+    // Matches: Timestamp(seconds=1792136425, nanoseconds=186000000)
+    const match = val.match(/seconds\s*=\s*(\d+)/i);
+    if (match) {
+      const d = new Date(parseInt(match[1], 10) * 1000);
+      if (!isNaN(d.getTime())) return d;
+    }
+    // Numeric string
+    const num = Number(val);
+    if (!isNaN(num) && num > 0) {
+      const ms = num < 10000000000 ? num * 1000 : num;
+      const d = new Date(ms);
+      if (!isNaN(d.getTime())) return d;
+    }
+    // ISO or Date string
+    const d = new Date(val);
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  return null;
+}
+
+/**
  * Formats a timestamp into "Oct 6, 2026 · 10:30 UTC" format matching reference screenshot
  */
 export function formatSignalDate(val) {
   if (!val) return 'Today · Active';
-  if (typeof val === 'string' && val.includes('·')) return val;
-  try {
-    const d = typeof val === 'number' ? new Date(val) : new Date(val);
-    if (isNaN(d.getTime())) return String(val);
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const month = months[d.getUTCMonth()];
-    const day = d.getUTCDate();
-    const year = d.getUTCFullYear();
-    const hours = String(d.getUTCHours()).padStart(2, '0');
-    const mins = String(d.getUTCMinutes()).padStart(2, '0');
-    return `${month} ${day}, ${year} · ${hours}:${mins} UTC`;
-  } catch (e) {
-    return String(val);
-  }
+  if (typeof val === 'string' && val.includes('·') && !val.includes('Timestamp')) return val;
+  
+  const d = parseDateInput(val);
+  if (!d) return 'Today · Active';
+
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const month = months[d.getUTCMonth()];
+  const day = d.getUTCDate();
+  const year = d.getUTCFullYear();
+  const hours = String(d.getUTCHours()).padStart(2, '0');
+  const mins = String(d.getUTCMinutes()).padStart(2, '0');
+  return `${month} ${day}, ${year} · ${hours}:${mins} UTC`;
 }
 
 /**
@@ -121,4 +174,3 @@ export function formatLevelPrice(val, asset = 'XAUUSD') {
   }
   return num.toFixed(5);
 }
-

@@ -26,7 +26,7 @@ import PairLogo, {
   US30Logo,
   SilverIngotLogo,
 } from './ui/PairLogo.jsx';
-import { GoldAssetEmblem, SignalStrengthBars, formatSignalDate, formatLevelPrice } from './ui/SignalEmblems.jsx';
+import { GoldAssetEmblem, SignalStrengthBars, formatSignalDate, formatLevelPrice, parseDateInput } from './ui/SignalEmblems.jsx';
 import '../styles/aiTradingPage.css';
 
 // =========================================================================
@@ -1935,15 +1935,15 @@ export default function AITradingPage({
                     {/* Price Levels: Entry, Target, Stop */}
                     <div className="ait-card-levels-vertical ait-mono">
                       <div className="ait-level-row">
-                        <span className="ait-level-key">{isKhmer ? 'ចំណុចចូល (Entry)' : 'Entry'}</span>
+                        <span className="ait-level-key">Entry</span>
                         <span className="ait-level-val entry">{isVipUser ? formatLevelPrice(entry, asset) : '••••••'}</span>
                       </div>
                       <div className="ait-level-row">
-                        <span className="ait-level-key">{isKhmer ? 'គោលដៅ (Target)' : 'Target'}</span>
+                        <span className="ait-level-key">Target</span>
                         <span className="ait-level-val target">{isVipUser ? formatLevelPrice(tp, asset) : '••••••'}</span>
                       </div>
                       <div className="ait-level-row">
-                        <span className="ait-level-key">{isKhmer ? 'បញ្ឈប់ខាត (Stop)' : 'Stop'}</span>
+                        <span className="ait-level-key">Stop</span>
                         <span className="ait-level-val stop">{isVipUser ? formatLevelPrice(sl, asset) : '••••••'}</span>
                       </div>
                     </div>
@@ -1992,31 +1992,49 @@ export default function AITradingPage({
                     <div className="ait-card-hr" />
 
                     {/* Meta Section: Confidence, Opened, Closed */}
-                    <div className="ait-card-meta-list">
-                      <div className="ait-meta-row">
-                        <span className="ait-meta-key">{isKhmer ? 'ទំនុកចិត្ត (Confidence)' : 'Confidence'}</span>
-                        <div className="ait-meta-val confidence">
-                          <SignalStrengthBars activeCount={Math.min(4, Math.max(2, Math.round((conf / 100) * 4)))} />
-                          <span className="ait-confidence-pct">{conf}%</span>
+                    {(() => {
+                      const openedTimeVal = sig.publishedAt || sig.opened || sig.timestamp || sig.createdAt || Date.now();
+                      const openedTimeStr = formatSignalDate(openedTimeVal);
+
+                      let closedTimeVal = null;
+                      if (isTp || isSl || sig.closedAt || sig.updatedAt) {
+                        closedTimeVal = sig.closedAt || sig.updatedAt;
+                      } else {
+                        const openedDate = parseDateInput(openedTimeVal) || new Date();
+                        const tfStr = String(tf || '15m').toLowerCase();
+                        let durationMins = 30;
+                        if (tfStr.includes('1m')) durationMins = 5;
+                        else if (tfStr.includes('5m')) durationMins = 15;
+                        else if (tfStr.includes('15m')) durationMins = 30;
+                        else if (tfStr.includes('30m')) durationMins = 60;
+                        else if (tfStr.includes('1h')) durationMins = 120;
+                        else if (tfStr.includes('4h')) durationMins = 240;
+                        closedTimeVal = new Date(openedDate.getTime() + durationMins * 60000);
+                      }
+                      const closedTimeStr = formatSignalDate(closedTimeVal);
+
+                      return (
+                        <div className="ait-card-meta-list">
+                          <div className="ait-meta-row">
+                            <span className="ait-meta-key">Confidence</span>
+                            <div className="ait-meta-val confidence">
+                              <SignalStrengthBars activeCount={Math.min(4, Math.max(2, Math.round((conf / 100) * 4)))} />
+                              <span className="ait-confidence-pct">{conf}%</span>
+                            </div>
+                          </div>
+
+                          <div className="ait-meta-row">
+                            <span className="ait-meta-key">Opened</span>
+                            <span className="ait-meta-val date ait-mono">{openedTimeStr}</span>
+                          </div>
+
+                          <div className="ait-meta-row">
+                            <span className="ait-meta-key">Closed</span>
+                            <span className="ait-meta-val date ait-mono">{closedTimeStr}</span>
+                          </div>
                         </div>
-                      </div>
-
-                      <div className="ait-meta-row">
-                        <span className="ait-meta-key">{isKhmer ? 'ពេលវេលាបើក (Opened)' : 'Opened'}</span>
-                        <span className="ait-meta-val date ait-mono">
-                          {formatSignalDate(sig.publishedAt || sig.opened || sig.timestamp)}
-                        </span>
-                      </div>
-
-                      <div className="ait-meta-row">
-                        <span className="ait-meta-key">{isKhmer ? 'ពេលវេលាបិទ (Closed)' : 'Closed'}</span>
-                        <span className="ait-meta-val date ait-mono">
-                          {isTp || isSl
-                            ? formatSignalDate(sig.closedAt || sig.updatedAt || Date.now())
-                            : (isKhmer ? 'សកម្ម (Active)' : 'Active · In-Progress')}
-                        </span>
-                      </div>
-                    </div>
+                      );
+                    })()}
 
                     {/* Bottom Tags & Status Note */}
                     <div className="ait-card-footer-tags">
@@ -2032,9 +2050,9 @@ export default function AITradingPage({
                       <div className="ait-status-note-banner">
                         <span>
                           {isTp
-                            ? `Take Profit target reached — trade won (+${tpUsd})`
+                            ? `Take profit target hit (+$${tpUsd})`
                             : isSl
-                            ? `Stopped out at risk limit (-${slUsd})`
+                            ? `Stopped out at risk limit (-$${slUsd})`
                             : sig.status === 'cancelled' || sig.status === 'no_trade'
                             ? 'Entry never reached — no trade'
                             : 'Active setup — tracking market liquidity'}

@@ -8,7 +8,7 @@ import {
   subscribeLiveTicks,
   formatSpotPrice,
 } from '../../services/marketPriceService.js';
-import { GoldAssetEmblem, SignalStrengthBars, formatSignalDate, formatLevelPrice } from '../../components/ui/SignalEmblems.jsx';
+import { GoldAssetEmblem, SignalStrengthBars, formatSignalDate, formatLevelPrice, parseDateInput } from '../../components/ui/SignalEmblems.jsx';
 import PairLogo from '../../components/ui/PairLogo.jsx';
 
 const STATUS_FILTERS = [
@@ -169,27 +169,49 @@ function SignalCard({ signal, livePrice }) {
       <div className="ait-card-hr" />
 
       {/* Meta Section: Confidence, Opened, Closed */}
-      <div className="ait-card-meta-list">
-        <div className="ait-meta-row">
-          <span className="ait-meta-key">Confidence</span>
-          <div className="ait-meta-val confidence">
-            <SignalStrengthBars activeCount={Math.min(4, Math.max(2, Math.round((conf / 100) * 4)))} />
-            <span className="ait-confidence-pct">{conf}%</span>
+      {(() => {
+        const openedTimeVal = signal.publishedAt || signal.timestamp || signal.createdAt || Date.now();
+        const openedTimeStr = formatSignalDate(openedTimeVal);
+
+        let closedTimeVal = null;
+        if (isWin || isLoss || signal.closedAt || signal.updatedAt) {
+          closedTimeVal = signal.closedAt || signal.updatedAt;
+        } else {
+          const openedDate = parseDateInput(openedTimeVal) || new Date();
+          const tfStr = String(tf || '15m').toLowerCase();
+          let durationMins = 30;
+          if (tfStr.includes('1m')) durationMins = 5;
+          else if (tfStr.includes('5m')) durationMins = 15;
+          else if (tfStr.includes('15m')) durationMins = 30;
+          else if (tfStr.includes('30m')) durationMins = 60;
+          else if (tfStr.includes('1h')) durationMins = 120;
+          else if (tfStr.includes('4h')) durationMins = 240;
+          closedTimeVal = new Date(openedDate.getTime() + durationMins * 60000);
+        }
+        const closedTimeStr = formatSignalDate(closedTimeVal);
+
+        return (
+          <div className="ait-card-meta-list">
+            <div className="ait-meta-row">
+              <span className="ait-meta-key">Confidence</span>
+              <div className="ait-meta-val confidence">
+                <SignalStrengthBars activeCount={Math.min(4, Math.max(2, Math.round((conf / 100) * 4)))} />
+                <span className="ait-confidence-pct">{conf}%</span>
+              </div>
+            </div>
+
+            <div className="ait-meta-row">
+              <span className="ait-meta-key">Opened</span>
+              <span className="ait-meta-val date ait-mono">{openedTimeStr}</span>
+            </div>
+
+            <div className="ait-meta-row">
+              <span className="ait-meta-key">Closed</span>
+              <span className="ait-meta-val date ait-mono">{closedTimeStr}</span>
+            </div>
           </div>
-        </div>
-
-        <div className="ait-meta-row">
-          <span className="ait-meta-key">Opened</span>
-          <span className="ait-meta-val date ait-mono">{formatSignalDate(signal.publishedAt || signal.timestamp)}</span>
-        </div>
-
-        <div className="ait-meta-row">
-          <span className="ait-meta-key">Closed</span>
-          <span className="ait-meta-val date ait-mono">
-            {isWin ? 'Completed · Target Hit' : isLoss ? 'Closed · Stopped Out' : 'Active · In-Progress'}
-          </span>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* Bottom Tags & Status Note */}
       <div className="ait-card-footer-tags">
