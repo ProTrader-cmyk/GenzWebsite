@@ -22,7 +22,7 @@ export default function HowPipWorks({ isKhmer }) {
     setActiveStep(step);
     setIsPaused(true);
     if (autoPlayRef.current) clearInterval(autoPlayRef.current);
-    // Resume auto-play after 14 seconds of inactivity
+    // Resume auto-play after 14 seconds of user inactivity
     autoPlayRef.current = setTimeout(() => {
       setIsPaused(false);
     }, 14000);
@@ -41,7 +41,7 @@ export default function HowPipWorks({ isKhmer }) {
   };
 
   const handleCopySignal = () => {
-    const text = `🎯 PIP AI LIVE SIGNAL\nPair: XAUUSD (15m)\nAction: SELL\nEntry: 3,998.40\nStop Loss: 4,014.90\nTake Profit: 3,974.10\nRisk/Reward: 1:3.2\nConfidence: 88%\nStatus: Verified by Multi-Agent Consensus`;
+    const text = `🎯 PIP AI LIVE SIGNAL\nPair: XAUUSD (15m)\nAction: SELL\nEntry: 3,998.40\nStop Loss: 4,014.90\nTake Profit 1: 3,982.00\nTake Profit 2: 3,974.10\nRisk/Reward: 1:3.2\nConfidence: 88%\nStatus: Verified by Multi-Agent Consensus`;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(text);
       setCopied(true);
@@ -49,41 +49,11 @@ export default function HowPipWorks({ isKhmer }) {
     }
   };
 
-  // 4 Feature Pillars under the console
-  const pillars = [
-    {
-      id: 1,
-      tag: isKhmer ? 'ដំណាក់កាលទី ១' : 'STAGE 01',
-      title: isKhmer ? 'ការចាប់យកទិន្នន័យ (WAKE)' : 'Synaptic Ingestion (WAKE)',
-      desc: isKhmer
-        ? 'ម៉ាស៊ីន AI ភ្ញាក់ឡើងដើម្បីទាញទិន្នន័យពីទីផ្សារសកលចំនួន ១៤ ប្រភព រួមទាំង Order Book, Volatility និងប្រវត្តិជួញដូរ។'
-        : 'Pip awakens 24/7, continuously streaming from 14 institutional order books, volatility feeds, and pattern memory.'
-    },
-    {
-      id: 2,
-      tag: isKhmer ? 'ដំណាក់កាលទី ២' : 'STAGE 02',
-      title: isKhmer ? 'ស្កេនរចនាសម្ព័ន្ធ (SCAN)' : 'SMC Structure Scan (SCAN)',
-      desc: isKhmer
-        ? 'ស្កេនរក Liquidity Sweeps, Supply/Demand Zones និង Fair Value Gaps ដោយស្វ័យប្រវត្តិតាមរយៈ Computer Vision។'
-        : 'Algorithmic computer vision identifies liquidity sweeps, institutional supply zones, and fair value gaps.'
-    },
-    {
-      id: 3,
-      tag: isKhmer ? 'ដំណាក់កាលទី ៣' : 'STAGE 03',
-      title: isKhmer ? 'ជជែកវាយតម្លៃ (DEBATE)' : '4-Agent Debate (DEBATE)',
-      desc: isKhmer
-        ? 'ភ្នាក់ងារ AI ចំនួន ៤ (បច្ចេកទេស, ម៉ាក្រូ, អារម្មណ៍ទីផ្សារ, និងហានិភ័យ) ជជែកពិភាក្សាដើម្បីសម្រេចមតិរួម >= ៧៥%។'
-        : 'Four specialized autonomous agents cross-examine the trade until a supermajority consensus (>=75%) is reached.'
-    },
-    {
-      id: 4,
-      tag: isKhmer ? 'ដំណាក់កាលទី ៤' : 'STAGE 04',
-      title: isKhmer ? 'បញ្ចេញ Signal (PUBLISH)' : 'Instant Execution (PUBLISH)',
-      desc: isKhmer
-        ? 'បញ្ចេញ Signal ក្នុងរយៈពេល ១៤ms ទៅកាន់ Telegram VIP និងកម្មវិធីផ្ទាល់ ដោយមានចំណុច Entry, SL និង TP ច្បាស់លាស់។'
-        : 'Sub-second 14ms broadcast directly to Telegram VIP, Webhook, and mobile push with verified TP/SL parameters.'
-    }
-  ];
+  // Rail progress width percentage based on activeStep
+  const railProgressWidth =
+    activeStep === 1 ? '0%' :
+    activeStep === 2 ? '33.33%' :
+    activeStep === 3 ? '66.66%' : '100%';
 
   return (
     <section className="lnd-section lnd-how-pip-section" id="how-pip-works">
@@ -118,7 +88,7 @@ export default function HowPipWorks({ isKhmer }) {
             <div className="pip-header-left">
               <div className="pip-engine-status">
                 <span className="pip-live-pulse-dot" />
-                <span className="pip-status-txt">ENGINE LIVE • V4.2 CORE</span>
+                <span className="pip-status-txt">ENGINE LIVE • PIP AI V4.2</span>
               </div>
               <div className="pip-live-ticker-badge">
                 <span className="pip-pair-name">XAUUSD</span>
@@ -166,101 +136,128 @@ export default function HowPipWorks({ isKhmer }) {
             />
           </div>
 
-          {/* 4-Stage Interactive Stepper Track */}
-          <div className="pip-stepper-track">
+          {/* Unified Fluid Pipeline Stepper (Seamless Continuous Rail) */}
+          <div className="pip-pipeline-track">
+            {/* Continuous Energy Rail Layer */}
+            <div className="pip-pipeline-rail-container">
+              <div className="pip-pipeline-rail-bg" />
+              <div
+                className="pip-pipeline-rail-fill"
+                style={{ width: railProgressWidth }}
+              >
+                <span className="pip-rail-photon-dot" />
+              </div>
+            </div>
+
             {/* Step 1: WAKE */}
             <div
-              className={`pip-step-node ${activeStep === 1 ? 'pip-step-active' : ''} ${activeStep > 1 ? 'pip-step-done' : ''}`}
+              className={`pip-pipe-node ${activeStep === 1 ? 'is-active' : ''} ${activeStep > 1 ? 'is-done' : ''}`}
               onClick={() => handleStepClick(1)}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleStepClick(1); }}
               role="button"
               tabIndex={0}
-              aria-label="Step 1: WAKE"
+              aria-label="Stage 1: WAKE"
             >
-              <div className="pip-step-circle">
-                <span className="pip-step-num">1</span>
-                <span className="pip-step-check">✓</span>
+              <div className="pip-pipe-capsule">
+                <div className="pip-pipe-icon-box">
+                  {/* Custom SVG Icon 1: Quantum Synaptic Reactor */}
+                  <svg className="pip-custom-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="3" fill="currentColor" fillOpacity="0.4" />
+                    <path d="M12 3v3m0 12v3M3 12h3m12 0h3" strokeLinecap="round" />
+                    <path d="m5.6 5.6 2.1 2.1m8.6 8.6 2.1 2.1m0-12.8-2.1 2.1M7.7 16.3l-2.1 2.1" strokeLinecap="round" opacity="0.6" />
+                  </svg>
+                  <span className="pip-pipe-check-badge">✓</span>
+                </div>
+                <div className="pip-pipe-meta">
+                  <span className="pip-pipe-num">01</span>
+                  <span className="pip-pipe-title">WAKE</span>
+                  <span className="pip-pipe-sub">Data Ingestion</span>
+                </div>
               </div>
-              <span className="pip-step-label">WAKE</span>
-              <span className="pip-step-sublabel">Data Sync</span>
-            </div>
-
-            {/* Connecting Line 1-2 */}
-            <div className={`pip-step-connector ${activeStep >= 2 ? 'pip-connector-done' : activeStep === 1 ? 'pip-connector-active' : ''}`}>
-              <div
-                className="pip-connector-progress"
-                style={{ width: activeStep >= 2 ? '100%' : activeStep === 1 ? '55%' : '0%' }}
-              />
-              {activeStep === 1 && <span className="pip-connector-pulse-beam" />}
             </div>
 
             {/* Step 2: SCAN */}
             <div
-              className={`pip-step-node ${activeStep === 2 ? 'pip-step-active' : ''} ${activeStep > 2 ? 'pip-step-done' : ''}`}
+              className={`pip-pipe-node ${activeStep === 2 ? 'is-active' : ''} ${activeStep > 2 ? 'is-done' : ''}`}
               onClick={() => handleStepClick(2)}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleStepClick(2); }}
               role="button"
               tabIndex={0}
-              aria-label="Step 2: SCAN"
+              aria-label="Stage 2: SCAN"
             >
-              <div className="pip-step-circle">
-                <span className="pip-step-num">2</span>
-                <span className="pip-step-check">✓</span>
+              <div className="pip-pipe-capsule">
+                <div className="pip-pipe-icon-box">
+                  {/* Custom SVG Icon 2: Deep SMC Crosshair Radar */}
+                  <svg className="pip-custom-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="9" />
+                    <circle cx="12" cy="12" r="4" strokeDasharray="3 3" opacity="0.7" />
+                    <line x1="12" y1="2" x2="12" y2="22" strokeLinecap="round" />
+                    <line x1="2" y1="12" x2="22" y2="12" strokeLinecap="round" />
+                    <circle cx="15.5" cy="8.5" r="1.5" fill="#10b981" stroke="none" />
+                  </svg>
+                  <span className="pip-pipe-check-badge">✓</span>
+                </div>
+                <div className="pip-pipe-meta">
+                  <span className="pip-pipe-num">02</span>
+                  <span className="pip-pipe-title">SCAN</span>
+                  <span className="pip-pipe-sub">Structure & SMC</span>
+                </div>
               </div>
-              <span className="pip-step-label">SCAN</span>
-              <span className="pip-step-sublabel">SMC Flow</span>
-            </div>
-
-            {/* Connecting Line 2-3 */}
-            <div className={`pip-step-connector ${activeStep >= 3 ? 'pip-connector-done' : activeStep === 2 ? 'pip-connector-active' : ''}`}>
-              <div
-                className="pip-connector-progress"
-                style={{ width: activeStep >= 3 ? '100%' : activeStep === 2 ? '55%' : '0%' }}
-              />
-              {activeStep === 2 && <span className="pip-connector-pulse-beam" />}
             </div>
 
             {/* Step 3: DEBATE */}
             <div
-              className={`pip-step-node ${activeStep === 3 ? 'pip-step-active' : ''} ${activeStep > 3 ? 'pip-step-done' : ''}`}
+              className={`pip-pipe-node ${activeStep === 3 ? 'is-active' : ''} ${activeStep > 3 ? 'is-done' : ''}`}
               onClick={() => handleStepClick(3)}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleStepClick(3); }}
               role="button"
               tabIndex={0}
-              aria-label="Step 3: DEBATE"
+              aria-label="Stage 3: DEBATE"
             >
-              <div className="pip-step-circle">
-                <span className="pip-step-num">3</span>
-                <span className="pip-step-check">✓</span>
+              <div className="pip-pipe-capsule">
+                <div className="pip-pipe-icon-box">
+                  {/* Custom SVG Icon 3: 4-Node Consensus Matrix */}
+                  <svg className="pip-custom-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="6" cy="6" r="2.5" />
+                    <circle cx="18" cy="6" r="2.5" />
+                    <circle cx="6" cy="18" r="2.5" />
+                    <circle cx="18" cy="18" r="2.5" />
+                    <circle cx="12" cy="12" r="2" fill="currentColor" />
+                    <path d="M7.8 7.8 10.2 10.2M16.2 7.8l-2.4 2.4M7.8 16.2l2.4-2.4M16.2 16.2l-2.4-2.4" strokeLinecap="round" />
+                  </svg>
+                  <span className="pip-pipe-check-badge">✓</span>
+                </div>
+                <div className="pip-pipe-meta">
+                  <span className="pip-pipe-num">03</span>
+                  <span className="pip-pipe-title">DEBATE</span>
+                  <span className="pip-pipe-sub">4-Agent Nexus</span>
+                </div>
               </div>
-              <span className="pip-step-label">DEBATE</span>
-              <span className="pip-step-sublabel">4-Agent Vote</span>
-            </div>
-
-            {/* Connecting Line 3-4 */}
-            <div className={`pip-step-connector ${activeStep >= 4 ? 'pip-connector-done' : activeStep === 3 ? 'pip-connector-active' : ''}`}>
-              <div
-                className="pip-connector-progress"
-                style={{ width: activeStep >= 4 ? '100%' : activeStep === 3 ? '55%' : '0%' }}
-              />
-              {activeStep === 3 && <span className="pip-connector-pulse-beam" />}
             </div>
 
             {/* Step 4: PUBLISH */}
             <div
-              className={`pip-step-node ${activeStep === 4 ? 'pip-step-active' : ''}`}
+              className={`pip-pipe-node ${activeStep === 4 ? 'is-active' : ''}`}
               onClick={() => handleStepClick(4)}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleStepClick(4); }}
               role="button"
               tabIndex={0}
-              aria-label="Step 4: PUBLISH"
+              aria-label="Stage 4: PUBLISH"
             >
-              <div className="pip-step-circle">
-                <span className="pip-step-num">4</span>
-                <span className="pip-step-check">✓</span>
+              <div className="pip-pipe-capsule">
+                <div className="pip-pipe-icon-box">
+                  {/* Custom SVG Icon 4: Lightning Broadcast Beacon */}
+                  <svg className="pip-custom-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z" strokeLinecap="round" strokeLinejoin="round" fill="currentColor" fillOpacity="0.3" />
+                  </svg>
+                  <span className="pip-pipe-check-badge">✓</span>
+                </div>
+                <div className="pip-pipe-meta">
+                  <span className="pip-pipe-num">04</span>
+                  <span className="pip-pipe-title">PUBLISH</span>
+                  <span className="pip-pipe-sub">14ms Broadcast</span>
+                </div>
               </div>
-              <span className="pip-step-label">PUBLISH</span>
-              <span className="pip-step-sublabel">14ms Broadcast</span>
             </div>
           </div>
 
@@ -268,70 +265,79 @@ export default function HowPipWorks({ isKhmer }) {
           <div className="pip-console-body">
             {/* Left Screen: Dynamic Stage View (Stacked Grid for Buttery-Smooth Crossfade) */}
             <div className="pip-main-stage">
-              {/* STAGE 1: WAKE */}
+              {/* STAGE 1: WAKE (Unique Cyber Ingestion HUD) */}
               <div
                 className={`pip-stage-pane pip-stage-wake ${
                   activeStep === 1 ? 'pip-pane-active' : activeStep > 1 ? 'pip-pane-left' : 'pip-pane-right'
                 }`}
               >
-                {/* Visual Brain / Neural Core Container */}
-                <div className="pip-wake-orbit-container">
-                  <div className="pip-orbit-ring pip-orbit-ring-outer" />
-                  <div className="pip-orbit-ring pip-orbit-ring-inner" />
-                  <div className="pip-orbit-dot pip-dot-1" />
-                  <div className="pip-orbit-dot pip-dot-2" />
-                  <div className="pip-orbit-dot pip-dot-3" />
-                  <div className="pip-orbit-dot pip-dot-4" />
-                  <div className="pip-orbit-dot pip-dot-5" />
-                  <div className="pip-orbit-dot pip-dot-6" />
+                {/* Visual Quantum Reactor Core */}
+                <div className="pip-reactor-container">
+                  <div className="pip-reactor-ring-outer" />
+                  <div className="pip-reactor-ring-inner" />
+                  <div className="pip-reactor-orbit-particle p1" />
+                  <div className="pip-reactor-orbit-particle p2" />
+                  <div className="pip-reactor-orbit-particle p3" />
+                  <div className="pip-reactor-orbit-particle p4" />
 
-                  <div className="pip-wake-brain-core">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M9.5 3.5a3 3 0 0 0-3 3v.3A3 3 0 0 0 5 12a3 3 0 0 0 1.5 5.2 3 3 0 0 0 3 2.8 2.5 2.5 0 0 0 2.5-2.5V6a2.5 2.5 0 0 0-2.5-2.5Z" />
-                      <path d="M14.5 3.5a3 3 0 0 1 3 3v.3A3 3 0 0 1 19 12a3 3 0 0 1-1.5 5.2 3 3 0 0 1-3 2.8 2.5 2.5 0 0 1-2.5-2.5V6a2.5 2.5 0 0 1 2.5-2.5Z" />
-                      <path d="M9.5 8.5h1.8M9 12.5h2.3M9.5 16.2h1.8M12.7 8.5h1.8M12.7 12.5h2.3M12.7 16.2h1.8" opacity=".6" />
+                  <div className="pip-reactor-core">
+                    <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#00f2fe" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <polygon points="12 2 2 7 12 12 22 7 12 2" fill="rgba(0, 242, 254, 0.15)" />
+                      <polyline points="2 17 12 22 22 17" />
+                      <polyline points="2 12 12 17 22 12" />
                     </svg>
                   </div>
                 </div>
 
-                {/* Live Ingestion Chips */}
-                <div className="pip-wake-chips-row">
-                  <span className="pip-chip pip-chip-active-gold">
-                    <span className="pip-chip-dot" /> Market data (14 feeds)
-                  </span>
-                  <span className="pip-chip pip-chip-active-gold">
-                    <span className="pip-chip-dot" /> Loss memory (14,280 setups)
-                  </span>
-                  <span className="pip-chip pip-chip-active-cyan">
-                    <span className="pip-chip-dot" /> Risk guardrail (0.8% cap)
-                  </span>
+                {/* Animated Ingestion Equalizer */}
+                <div className="pip-equalizer-stream">
+                  <span className="pip-eq-bar eq-1" />
+                  <span className="pip-eq-bar eq-2" />
+                  <span className="pip-eq-bar eq-3" />
+                  <span className="pip-eq-bar eq-4" />
+                  <span className="pip-eq-bar eq-5" />
+                  <span className="pip-eq-label">14,200 TICKS / SEC INGESTION</span>
                 </div>
 
-                {/* Telemetry Matrix Grid */}
-                <div className="pip-wake-telemetry-grid">
-                  <div className="pip-telem-item">
-                    <span className="pip-telem-label">STREAM LATENCY</span>
-                    <strong className="pip-telem-val">18 ms</strong>
+                {/* Floating Telemetry Pods */}
+                <div className="pip-telemetry-pods-grid">
+                  <div className="pip-pod-item">
+                    <div className="pip-pod-header">
+                      <span className="pip-pod-dot cyan" />
+                      <span className="pip-pod-tag">ORDER BOOKS</span>
+                    </div>
+                    <strong className="pip-pod-val">14 Institutional Feeds</strong>
+                    <span className="pip-pod-sub">CME • LMAX • Binance</span>
                   </div>
-                  <div className="pip-telem-item">
-                    <span className="pip-telem-label">ORDER FLOW REGIME</span>
-                    <strong className="pip-telem-val pip-val-emerald">ACCUMULATION</strong>
+
+                  <div className="pip-pod-item">
+                    <div className="pip-pod-header">
+                      <span className="pip-pod-dot amber" />
+                      <span className="pip-pod-tag">PATTERN MEMORY</span>
+                    </div>
+                    <strong className="pip-pod-val">14,280 SMC Setups</strong>
+                    <span className="pip-pod-sub">Synced 99.8% Recall</span>
                   </div>
-                  <div className="pip-telem-item">
-                    <span className="pip-telem-label">NEURAL WEIGHTS</span>
-                    <strong className="pip-telem-val">CALIBRATED</strong>
+
+                  <div className="pip-pod-item">
+                    <div className="pip-pod-header">
+                      <span className="pip-pod-dot emerald" />
+                      <span className="pip-pod-tag">RISK CEILING</span>
+                    </div>
+                    <strong className="pip-pod-val">0.8% Max Drawdown</strong>
+                    <span className="pip-pod-sub">Guaranteed Shield</span>
                   </div>
                 </div>
 
                 {/* Animated Terminal Bar */}
                 <div className="pip-terminal-prompt">
-                  <span className="pip-term-prefix">$ pip.boot()</span>
-                  <span className="pip-term-text">neural weights warmed • 14 orderbook feeds streaming live</span>
+                  <span className="pip-term-prefix">[PIP-CORE]</span>
+                  <span className="pip-term-text">synaptic mesh active • 14 order books streaming • volatility normal</span>
                   <span className="pip-term-cursor">█</span>
                 </div>
               </div>
 
-              {/* STAGE 2: SCAN */}
+              {/* STAGE 2: SCAN (Unique High-Precision SMC Order Flow Terminal) */}
               <div
                 className={`pip-stage-pane pip-stage-scan ${
                   activeStep === 2 ? 'pip-pane-active' : activeStep > 2 ? 'pip-pane-left' : 'pip-pane-right'
@@ -341,19 +347,22 @@ export default function HowPipWorks({ isKhmer }) {
                   {/* Real-time Scanning Radar Laser Beam */}
                   <div className="pip-chart-scan-beam" />
 
-                  {/* Supply Zone Glow Overlay */}
-                  <div className="pip-supply-glow" />
-
-                  {/* Dashed Line Supply Level */}
-                  <div className="pip-supply-line">
-                    <span className="pip-supply-tag">
-                      <span className="pip-supply-dot" /> Institutional Supply 4,014.00
-                    </span>
+                  {/* Institutional Order Block Zone */}
+                  <div className="pip-order-block-band">
+                    <div className="pip-ob-tag">
+                      <span className="pip-ob-pulse-dot" />
+                      <span>ORDER BLOCK • SUPPLY 4,014.00</span>
+                    </div>
                   </div>
 
-                  {/* Candlestick Wave Graphic */}
+                  {/* Asian Session High Sweep Marker */}
+                  <div className="pip-sweep-marker">
+                    <span>⚡ ASIAN HIGH SWEPT</span>
+                  </div>
+
+                  {/* Candlestick Wave Graphic with Real Order Flow Rejection */}
                   <svg className="pip-scan-candles-svg" viewBox="0 0 680 180" preserveAspectRatio="none">
-                    {/* Bullish run into supply */}
+                    {/* Asian Accumulation Range */}
                     <line x1="40" y1="110" x2="40" y2="135" stroke="#10b981" strokeWidth="1.6" />
                     <rect x="36" y="115" width="8" height="15" rx="1.5" fill="#10b981" />
 
@@ -369,208 +378,255 @@ export default function HowPipWorks({ isKhmer }) {
                     <line x1="200" y1="72" x2="200" y2="108" stroke="#10b981" strokeWidth="1.6" />
                     <rect x="196" y="78" width="8" height="22" rx="1.5" fill="#10b981" />
 
-                    <line x1="240" y1="65" x2="240" y2="100" stroke="#f87171" strokeWidth="1.6" />
-                    <rect x="236" y="70" width="8" height="18" rx="1.5" fill="#f87171" />
+                    {/* Liquidity Sweep Spike into Supply */}
+                    <line x1="240" y1="45" x2="240" y2="95" stroke="#10b981" strokeWidth="1.6" />
+                    <rect x="236" y="52" width="8" height="24" rx="1.5" fill="#10b981" />
 
-                    <line x1="280" y1="58" x2="280" y2="92" stroke="#10b981" strokeWidth="1.6" />
-                    <rect x="276" y="65" width="8" height="20" rx="1.5" fill="#10b981" />
+                    <line x1="280" y1="40" x2="280" y2="92" stroke="#10b981" strokeWidth="1.6" />
+                    <rect x="276" y="48" width="8" height="26" rx="1.5" fill="#10b981" />
 
-                    <line x1="320" y1="52" x2="320" y2="88" stroke="#10b981" strokeWidth="1.6" />
-                    <rect x="316" y="58" width="8" height="18" rx="1.5" fill="#10b981" />
+                    {/* Clean Rejection Pin Bar at 4,014 Supply */}
+                    <line x1="320" y1="36" x2="320" y2="98" stroke="#f87171" strokeWidth="1.8" />
+                    <rect x="316" y="62" width="8" height="18" rx="1.5" fill="#f87171" />
 
-                    {/* Rejection candles at Supply line (4,014) */}
-                    <line x1="360" y1="55" x2="360" y2="95" stroke="#f87171" strokeWidth="1.6" />
-                    <rect x="356" y="62" width="8" height="18" rx="1.5" fill="#f87171" />
+                    {/* Bearish Displacement Candles */}
+                    <line x1="365" y1="65" x2="365" y2="110" stroke="#f87171" strokeWidth="1.6" />
+                    <rect x="361" y="72" width="8" height="24" rx="1.5" fill="#f87171" />
 
-                    <line x1="400" y1="60" x2="400" y2="105" stroke="#f87171" strokeWidth="1.6" />
-                    <rect x="396" y="68" width="8" height="22" rx="1.5" fill="#f87171" />
+                    <line x1="410" y1="78" x2="410" y2="120" stroke="#f87171" strokeWidth="1.6" />
+                    <rect x="406" y="85" width="8" height="24" rx="1.5" fill="#f87171" />
 
-                    <line x1="440" y1="70" x2="440" y2="115" stroke="#f87171" strokeWidth="1.6" />
-                    <rect x="436" y="78" width="8" height="24" rx="1.5" fill="#f87171" />
+                    <line x1="455" y1="90" x2="455" y2="135" stroke="#f87171" strokeWidth="1.6" />
+                    <rect x="451" y="98" width="8" height="26" rx="1.5" fill="#f87171" />
 
-                    <line x1="480" y1="85" x2="480" y2="128" stroke="#f87171" strokeWidth="1.6" />
-                    <rect x="476" y="92" width="8" height="22" rx="1.5" fill="#f87171" />
+                    <line x1="500" y1="105" x2="500" y2="148" stroke="#f87171" strokeWidth="1.6" />
+                    <rect x="496" y="112" width="8" height="25" rx="1.5" fill="#f87171" />
 
-                    <line x1="520" y1="98" x2="520" y2="140" stroke="#f87171" strokeWidth="1.6" />
-                    <rect x="516" y="105" width="8" height="25" rx="1.5" fill="#f87171" />
+                    <line x1="545" y1="118" x2="545" y2="158" stroke="#f87171" strokeWidth="1.6" />
+                    <rect x="541" y="125" width="8" height="24" rx="1.5" fill="#f87171" />
 
-                    <line x1="560" y1="110" x2="560" y2="150" stroke="#f87171" strokeWidth="1.6" />
-                    <rect x="556" y="118" width="8" height="24" rx="1.5" fill="#f87171" />
+                    <line x1="590" y1="126" x2="590" y2="168" stroke="#f87171" strokeWidth="1.6" />
+                    <rect x="586" y="132" width="8" height="26" rx="1.5" fill="#f87171" />
 
-                    <line x1="600" y1="120" x2="600" y2="160" stroke="#f87171" strokeWidth="1.6" />
-                    <rect x="596" y="128" width="8" height="22" rx="1.5" fill="#f87171" />
-
-                    <line x1="640" y1="130" x2="640" y2="170" stroke="#f87171" strokeWidth="1.6" />
-                    <rect x="636" y="136" width="8" height="26" rx="1.5" fill="#f87171" />
+                    <line x1="635" y1="135" x2="635" y2="175" stroke="#f87171" strokeWidth="1.6" />
+                    <rect x="631" y="140" width="8" height="26" rx="1.5" fill="#f87171" />
                   </svg>
                 </div>
 
-                {/* Detected SMC Criteria Chips */}
-                <div className="pip-scan-chips-row">
-                  <span className="pip-chip pip-chip-active-green">✓ Structure Rejection</span>
-                  <span className="pip-chip pip-chip-active-green">✓ Asian High Swept</span>
-                  <span className="pip-chip pip-chip-active-green">✓ Bearish ChoCh (15m)</span>
-                  <span className="pip-chip pip-chip-faint">FVG Imbalance</span>
+                {/* Detected Confluence Tags Matrix */}
+                <div className="pip-confluences-row">
+                  <div className="pip-conf-tag-pill active">
+                    <span className="pip-conf-icon">⚡</span>
+                    <span>Asian High Swept</span>
+                  </div>
+                  <div className="pip-conf-tag-pill active">
+                    <span className="pip-conf-icon">🎯</span>
+                    <span>Supply Rejection (4,014)</span>
+                  </div>
+                  <div className="pip-conf-tag-pill active">
+                    <span className="pip-conf-icon">📉</span>
+                    <span>15m ChoCh Confirmed</span>
+                  </div>
+                  <div className="pip-conf-tag-pill">
+                    <span className="pip-conf-icon">📊</span>
+                    <span>FVG Imbalance Zone</span>
+                  </div>
                 </div>
 
                 <div className="pip-terminal-prompt">
-                  <span className="pip-term-prefix">$ pip.scan()</span>
-                  <span className="pip-term-text">supply zone confirmed at 4,014.00 — institutional sellers in control</span>
+                  <span className="pip-term-prefix">[PIP-SCAN]</span>
+                  <span className="pip-term-text">order block confirmed at 4,014.00 • liquidity pool absorbed • initiating debate</span>
                   <span className="pip-term-cursor">█</span>
                 </div>
               </div>
 
-              {/* STAGE 3: DEBATE */}
+              {/* STAGE 3: DEBATE (Unique 4-Agent Autonomous Arena) */}
               <div
                 className={`pip-stage-pane pip-stage-debate ${
                   activeStep === 3 ? 'pip-pane-active' : activeStep > 3 ? 'pip-pane-left' : 'pip-pane-right'
                 }`}
               >
-                <div className="pip-debate-list">
-                  {/* Row 1: Technical */}
-                  <div className="pip-debate-row pip-debate-green" style={{ '--row-delay': '0.04s' }}>
-                    <div className="pip-agent-badge pip-badge-ta">TA</div>
-                    <div className="pip-agent-info">
-                      <div className="pip-agent-title-row">
-                        <span className="pip-agent-name">Technical Agent</span>
-                        <span className="pip-agent-role-pill">SMC Market Structure</span>
+                <div className="pip-agent-arena-grid">
+                  {/* Agent 1: Quant SMC */}
+                  <div className="pip-arena-card cyan-theme" style={{ '--card-delay': '0.04s' }}>
+                    <div className="pip-arena-top">
+                      <div className="pip-arena-avatar cyan">
+                        <span>⚡</span>
                       </div>
-                      <span className="pip-agent-msg">Lower highs into 4,014 supply. Bearish FVG displacement on 15m.</span>
+                      <div className="pip-arena-info">
+                        <strong className="pip-arena-name">Quant SMC Engine</strong>
+                        <span className="pip-arena-role">Market Structure</span>
+                      </div>
+                      <span className="pip-arena-vote sell">SELL</span>
                     </div>
-                    <div className="pip-agent-vote-col">
-                      <span className="pip-vote-badge pip-vote-sell">SELL</span>
-                      <span className="pip-vote-conf">91% conf</span>
+                    <p className="pip-arena-arg">
+                      Asian liquidity swept clean. 15m Fair Value Gap displacement confirms institutional distribution.
+                    </p>
+                    <div className="pip-arena-confidence">
+                      <span>Confidence</span>
+                      <strong>92%</strong>
                     </div>
                   </div>
 
-                  {/* Row 2: Macro */}
-                  <div className="pip-debate-row pip-debate-green" style={{ '--row-delay': '0.10s' }}>
-                    <div className="pip-agent-badge pip-badge-ma">MA</div>
-                    <div className="pip-agent-info">
-                      <div className="pip-agent-title-row">
-                        <span className="pip-agent-name">Macro Agent</span>
-                        <span className="pip-agent-role-pill">Yields & DXY</span>
+                  {/* Agent 2: Macro Sentinel */}
+                  <div className="pip-arena-card purple-theme" style={{ '--card-delay': '0.10s' }}>
+                    <div className="pip-arena-top">
+                      <div className="pip-arena-avatar purple">
+                        <span>🌐</span>
                       </div>
-                      <span className="pip-agent-msg">US 10-Year yield firm above 4.28%, Dollar Index gaining bullish momentum.</span>
+                      <div className="pip-arena-info">
+                        <strong className="pip-arena-name">Macro Sentinel</strong>
+                        <span className="pip-arena-role">Yields & Dollar Index</span>
+                      </div>
+                      <span className="pip-arena-vote sell">SELL</span>
                     </div>
-                    <div className="pip-agent-vote-col">
-                      <span className="pip-vote-badge pip-vote-sell">SELL</span>
-                      <span className="pip-vote-conf">86% conf</span>
+                    <p className="pip-arena-arg">
+                      US 10Y Yields firm at 4.28%, DXY bullish expansion capping Gold upside pressure.
+                    </p>
+                    <div className="pip-arena-confidence">
+                      <span>Confidence</span>
+                      <strong>88%</strong>
                     </div>
                   </div>
 
-                  {/* Row 3: Sentiment */}
-                  <div className="pip-debate-row pip-debate-green" style={{ '--row-delay': '0.16s' }}>
-                    <div className="pip-agent-badge pip-badge-se">SE</div>
-                    <div className="pip-agent-info">
-                      <div className="pip-agent-title-row">
-                        <span className="pip-agent-name">Sentiment Agent</span>
-                        <span className="pip-agent-role-pill">Retail Positioning</span>
+                  {/* Agent 3: Sentiment AI */}
+                  <div className="pip-arena-card blue-theme" style={{ '--card-delay': '0.16s' }}>
+                    <div className="pip-arena-top">
+                      <div className="pip-arena-avatar blue">
+                        <span>📊</span>
                       </div>
-                      <span className="pip-agent-msg">Retail crowd 74% long near highs. High probability liquidity trap.</span>
+                      <div className="pip-arena-info">
+                        <strong className="pip-arena-name">Orderbook Sentiment</strong>
+                        <span className="pip-arena-role">Retail Positioning</span>
+                      </div>
+                      <span className="pip-arena-vote sell">SELL</span>
                     </div>
-                    <div className="pip-agent-vote-col">
-                      <span className="pip-vote-badge pip-vote-sell">SELL</span>
-                      <span className="pip-vote-conf">89% conf</span>
+                    <p className="pip-arena-arg">
+                      Retail crowd 74% net-long near highs. Prime institutional liquidity trap scenario.
+                    </p>
+                    <div className="pip-arena-confidence">
+                      <span>Confidence</span>
+                      <strong>91%</strong>
                     </div>
                   </div>
 
-                  {/* Row 4: Risk */}
-                  <div className="pip-debate-row pip-debate-dark" style={{ '--row-delay': '0.22s' }}>
-                    <div className="pip-agent-badge pip-badge-rk">RK</div>
-                    <div className="pip-agent-info">
-                      <div className="pip-agent-title-row">
-                        <span className="pip-agent-name">Risk Sentinel</span>
-                        <span className="pip-agent-role-pill">Capital Shield</span>
+                  {/* Agent 4: Risk Guardian */}
+                  <div className="pip-arena-card emerald-theme" style={{ '--card-delay': '0.22s' }}>
+                    <div className="pip-arena-top">
+                      <div className="pip-arena-avatar emerald">
+                        <span>🛡️</span>
                       </div>
-                      <span className="pip-agent-msg">Tight stop above 4,014.90 wick gives asymmetric 1:3.2 R:R. Approved.</span>
+                      <div className="pip-arena-info">
+                        <strong className="pip-arena-name">Capital Guardian</strong>
+                        <span className="pip-arena-role">Drawdown Shield</span>
+                      </div>
+                      <span className="pip-arena-vote pass">APPROVED</span>
                     </div>
-                    <div className="pip-agent-vote-col">
-                      <span className="pip-vote-badge pip-vote-buy">PASS</span>
-                      <span className="pip-vote-conf">95% conf</span>
+                    <p className="pip-arena-arg">
+                      Stop loss placed above 4,014.90 wick structure provides 1:3.2 Risk-to-Reward. Approved.
+                    </p>
+                    <div className="pip-arena-confidence">
+                      <span>Confidence</span>
+                      <strong>96%</strong>
                     </div>
                   </div>
                 </div>
 
-                {/* Consensus Meter Bar */}
-                <div className="pip-consensus-meter-container">
-                  <div className="pip-consensus-meta">
-                    <span className="pip-consensus-text">Consensus Threshold: <strong>3 of 4 Agree (75%)</strong></span>
-                    <span className="pip-consensus-status-pill">✓ SUPERMAJORITY REACHED</span>
+                {/* Consensus Nexus Bar */}
+                <div className="pip-consensus-nexus-box">
+                  <div className="pip-nexus-header">
+                    <span className="pip-nexus-label">Consensus Chamber Tally:</span>
+                    <strong className="pip-nexus-stat">3 of 4 Agents Agree (75%)</strong>
+                    <span className="pip-nexus-badge">✓ SUPERMAJORITY REACHED</span>
                   </div>
-                  <div className="pip-consensus-track">
+                  <div className="pip-nexus-track">
                     <div
-                      className="pip-consensus-fill"
+                      className="pip-nexus-fill"
                       style={{ width: activeStep === 3 ? '75%' : '0%' }}
                     />
                   </div>
                 </div>
 
                 <div className="pip-terminal-prompt">
-                  <span className="pip-term-prefix">$ pip.debate()</span>
-                  <span className="pip-term-text">3 of 4 supermajority confirmed — SELL bias approved by Risk Sentinel</span>
+                  <span className="pip-term-prefix">[PIP-DEBATE]</span>
+                  <span className="pip-term-text">supermajority agreement verified • risk parameters signed • compiling dispatch</span>
                   <span className="pip-term-cursor">█</span>
                 </div>
               </div>
 
-              {/* STAGE 4: PUBLISH */}
+              {/* STAGE 4: PUBLISH (Unique 14ms Sub-Second Execution Hub) */}
               <div
                 className={`pip-stage-pane pip-stage-publish ${
                   activeStep === 4 ? 'pip-pane-active' : 'pip-pane-right'
                 }`}
               >
-                {/* Broadcast Execution Dashboard */}
-                <div className="pip-publish-broadcast-box">
-                  <div className="pip-broadcast-header">
-                    <div className="pip-broadcast-title-group">
-                      <span className="pip-broadcast-pulse-dot" />
+                {/* Broadcast Hub Console */}
+                <div className="pip-dispatch-hub">
+                  <div className="pip-dispatch-header">
+                    <div className="pip-dispatch-identity">
+                      <span className="pip-dispatch-beacon" />
                       <div>
-                        <h4 className="pip-broadcast-title">Execution Order Compiled & Dispatched</h4>
-                        <span className="pip-broadcast-sub">Multi-channel broadcast completed in 14 milliseconds</span>
+                        <h4 className="pip-dispatch-title">High-Frequency Execution Broadcast</h4>
+                        <span className="pip-dispatch-sub">Dispatched simultaneously across VIP channels in 14ms</span>
                       </div>
                     </div>
-                    <span className="pip-broadcast-speed-badge">14ms SPEED</span>
+                    <span className="pip-latency-tag">14ms SPEED</span>
                   </div>
 
-                  {/* Telemetry metrics */}
-                  <div className="pip-broadcast-stats-grid">
-                    <div className="pip-b-stat">
-                      <span className="pip-b-stat-label">VIP TELEGRAM</span>
-                      <strong className="pip-b-stat-val pip-val-emerald">✓ DISPATCHED</strong>
+                  {/* Multi-Channel Distribution Grid */}
+                  <div className="pip-dispatch-channels-grid">
+                    <div className="pip-d-channel">
+                      <span className="pip-channel-icon">✈️</span>
+                      <div className="pip-channel-info">
+                        <span className="pip-channel-name">VIP TELEGRAM</span>
+                        <strong className="pip-channel-status">✓ 2,400+ SENT</strong>
+                      </div>
                     </div>
-                    <div className="pip-b-stat">
-                      <span className="pip-b-stat-label">MOBILE PUSH</span>
-                      <strong className="pip-b-stat-val pip-val-emerald">✓ 2,400+ SENT</strong>
+
+                    <div className="pip-d-channel">
+                      <span className="pip-channel-icon">📱</span>
+                      <div className="pip-channel-info">
+                        <span className="pip-channel-name">MOBILE APP PUSH</span>
+                        <strong className="pip-channel-status">✓ INSTANT NOTIFIED</strong>
+                      </div>
                     </div>
-                    <div className="pip-b-stat">
-                      <span className="pip-b-stat-label">EXECUTION LATENCY</span>
-                      <strong className="pip-b-stat-val">14 ms</strong>
+
+                    <div className="pip-d-channel">
+                      <span className="pip-channel-icon">⚡</span>
+                      <div className="pip-channel-info">
+                        <span className="pip-channel-name">WEB TERMINAL</span>
+                        <strong className="pip-channel-status">✓ LIVE SYNCED</strong>
+                      </div>
                     </div>
-                    <div className="pip-b-stat">
-                      <span className="pip-b-stat-label">SLIPPAGE GUARD</span>
-                      <strong className="pip-b-stat-val pip-val-gold">ZERO SLIP</strong>
+
+                    <div className="pip-d-channel">
+                      <span className="pip-channel-icon">🛡️</span>
+                      <div className="pip-channel-info">
+                        <span className="pip-channel-name">SLIPPAGE GUARD</span>
+                        <strong className="pip-channel-status gold">ZERO SLIP</strong>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Real-time Execution Steps checklist */}
-                  <div className="pip-broadcast-checklist">
-                    <div className="pip-b-check-item">
-                      <span className="pip-b-check-icon">✓</span>
-                      <span>SMC structure verified with 88% overall confidence</span>
+                  {/* Real-time Order Parameters Checklist */}
+                  <div className="pip-dispatch-checklist">
+                    <div className="pip-check-row">
+                      <span className="pip-check-bullet">✓</span>
+                      <span>SMC order block confluence confirmed with 88% collective confidence</span>
                     </div>
-                    <div className="pip-b-check-item">
-                      <span className="pip-b-check-icon">✓</span>
-                      <span>1:3.2 Risk-to-Reward ratio locked with strict Stop Loss at 4,014.90</span>
+                    <div className="pip-check-row">
+                      <span className="pip-check-bullet">✓</span>
+                      <span>Asymmetric 1:3.2 Risk-to-Reward locked with predefined TP1 / TP2 levels</span>
                     </div>
-                    <div className="pip-b-check-item">
-                      <span className="pip-b-check-icon">✓</span>
-                      <span>Live WebSocket tracking activated for automated TP1 / TP2 updates</span>
+                    <div className="pip-check-row">
+                      <span className="pip-check-bullet">✓</span>
+                      <span>Automated 24/7 WebSocket tracker activated for real-time TP hit alerts</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="pip-terminal-prompt">
-                  <span className="pip-term-prefix">$ pip.publish()</span>
+                  <span className="pip-term-prefix">[PIP-EXECUTE]</span>
                   <span className="pip-term-text">signal broadcast live • entry, SL & TP monitored 24/7 across WebSocket</span>
                   <span className="pip-term-cursor">█</span>
                 </div>
@@ -597,14 +653,14 @@ export default function HowPipWorks({ isKhmer }) {
                 <div className="pip-waiting-label">
                   <span className="pip-wait-spinner" />
                   <span>
-                    {activeStep === 1 && 'Ingesting order flow & memory...'}
-                    {activeStep === 2 && 'Scanning liquidity & supply structure...'}
-                    {activeStep === 3 && 'Agents debating setup (3/4 agree)...'}
+                    {activeStep === 1 && 'Ingesting institutional order flow...'}
+                    {activeStep === 2 && 'Scanning liquidity & SMC structure...'}
+                    {activeStep === 3 && 'Agents debating trade consensus...'}
                   </span>
                 </div>
               </div>
 
-              {/* Step 4: Published Live Signal Card matching screenshot 4 */}
+              {/* Step 4: Published Live Signal Card (Unique Cyber Glassmorphism) */}
               <div className={`pip-right-card-pane pip-published-signal-card ${activeStep === 4 ? 'pip-card-active' : 'pip-card-hidden'}`}>
                 <div className="pip-pub-header">
                   <div>
@@ -612,7 +668,7 @@ export default function HowPipWorks({ isKhmer }) {
                     <span className="pip-pub-sub">GOLD • 15M • INSTITUTIONAL SMC</span>
                   </div>
                   <span className="pip-pub-badge-sell">
-                    <span className="pip-badge-pulse-dot" /> SELL
+                    <span className="pip-badge-pulse-dot" /> SELL ORDER
                   </span>
                 </div>
 
@@ -661,12 +717,12 @@ export default function HowPipWorks({ isKhmer }) {
                     <span className="pip-conf-pct">88%</span>
                   </div>
                   <div className="pip-conf-info">
-                    <strong>88% Confidence</strong>
+                    <strong>88% AI Confidence</strong>
                     <span>Verified by 4-agent consensus</span>
                   </div>
                 </div>
 
-                {/* Published & Tracked Button Badge + Interactive Copy Button */}
+                {/* Published Status & Copy Action Buttons */}
                 <div className="pip-card-actions">
                   <div className="pip-published-btn">
                     <span>✓ PUBLISHED & TRACKED LIVE</span>
@@ -682,37 +738,6 @@ export default function HowPipWorks({ isKhmer }) {
               </div>
             </div>
           </div>
-        </div>
-
-        {/* 4 Interactive Feature Pillars Under Console */}
-        <div className="pip-pillars-grid">
-          {pillars.map((p, idx) => {
-            const stepNum = idx + 1;
-            const isActive = activeStep === stepNum;
-            return (
-              <div
-                key={p.id}
-                className={`pip-pillar-card ${isActive ? 'pip-pillar-active' : ''}`}
-                onClick={() => handleStepClick(stepNum)}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleStepClick(stepNum); }}
-                role="button"
-                tabIndex={0}
-                aria-label={`Jump to Stage ${stepNum}: ${p.title}`}
-              >
-                <div className="pip-pillar-header">
-                  <span className="pip-pillar-num">0{stepNum}</span>
-                  <span className="pip-pillar-tag">{p.tag}</span>
-                </div>
-                <h4 className="pip-pillar-title">{p.title}</h4>
-                <p className="pip-pillar-desc">{p.desc}</p>
-                <div className="pip-pillar-footer">
-                  <span className="pip-pillar-action">
-                    {isActive ? (isKhmer ? '● កំពុងបង្ហាញ' : '● ACTIVE STAGE') : (isKhmer ? 'ចុចមើល →' : 'VIEW STAGE →')}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
         </div>
       </div>
     </section>
