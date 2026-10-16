@@ -7063,5 +7063,566 @@
   border-color: #E2E8F0 !important;
 }
 
+/* ==========================================================================
+   PIP SIGNAL TAB (PIP SCALP & PIP DAY TRADE WITH LIVE SCAN BUTTONS)
+   ========================================================================== */
+.ait-pip-sig-tab-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: aitFadeInUp 0.25s ease-out;
+}
+
+@keyframes aitFadeInUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 1. Two-Option Segmented Mode Switcher */
+.ait-pip-mode-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  background: rgba(8, 14, 28, 0.85);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: 12px;
+  padding: 5px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.ait-pip-mode-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #94A3B8;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  text-align: left;
+}
+
+.ait-pip-mode-pill:hover {
+  background: rgba(56, 189, 248, 0.06);
+  color: #E2E8F0;
+  border-color: rgba(56, 189, 248, 0.2);
+}
+
+.ait-pip-mode-pill.active {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.18) 0%, rgba(59, 130, 246, 0.18) 100%);
+  border-color: rgba(56, 189, 248, 0.55);
+  color: #FFFFFF;
+  box-shadow: 0 4px 18px rgba(14, 165, 233, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.ait-pip-mode-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.ait-pip-mode-texts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.ait-pip-mode-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #F8FAFC;
+  letter-spacing: -0.01em;
+}
+
+.ait-pip-mode-sub {
+  font-size: 11px;
+  color: #94A3B8;
+}
+
+.ait-pip-mode-pill.active .ait-pip-mode-sub {
+  color: #7DD3FC;
+}
+
+.ait-pip-mode-tag {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #94A3B8;
+  white-space: nowrap;
+}
+
+.ait-pip-mode-pill.active .ait-pip-mode-tag {
+  background: rgba(14, 165, 233, 0.25);
+  color: #38BDF8;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+}
+
+/* 2. Mode Header & Scan Bar */
+.ait-pip-scan-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: linear-gradient(180deg, rgba(10, 18, 38, 0.9) 0%, rgba(6, 11, 24, 0.94) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+.ait-pip-scan-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ait-pip-scan-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+}
+
+.ait-pip-badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.ait-pip-badge-dot.amber {
+  background: #F59E0B;
+  box-shadow: 0 0 8px #F59E0B;
+}
+
+.ait-pip-badge-dot.cyan {
+  background: #00F2FE;
+  box-shadow: 0 0 8px #00F2FE;
+}
+
+.ait-pip-badge-pair {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #94A3B8;
+  padding: 1px 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+}
+
+.ait-pip-scan-desc {
+  margin: 0;
+  font-size: 11.5px;
+  color: #94A3B8;
+}
+
+.ait-pip-scan-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ait-scan-signal-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #00F2FE 0%, #3B82F6 100%);
+  border: 1px solid rgba(0, 242, 254, 0.7);
+  box-shadow: 0 0 20px rgba(0, 242, 254, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  color: #040814;
+  font-size: 12.5px;
+  font-weight: 800;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.ait-scan-signal-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 0 26px rgba(0, 242, 254, 0.6);
+  filter: brightness(1.06);
+}
+
+.ait-scan-signal-btn:disabled {
+  opacity: 0.85;
+  cursor: wait;
+}
+
+.ait-scan-signal-btn.scanning {
+  background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%);
+  color: #FFFFFF;
+  border-color: rgba(139, 92, 246, 0.6);
+  box-shadow: 0 0 24px rgba(139, 92, 246, 0.45);
+}
+
+.ait-copy-signal-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #E2E8F0;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7.5px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.ait-copy-signal-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(56, 189, 248, 0.5);
+  color: #FFFFFF;
+}
+
+/* 3. Active Signal Card */
+.ait-pip-signal-card {
+  background: linear-gradient(180deg, rgba(10, 18, 38, 0.94) 0%, rgba(6, 11, 24, 0.97) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 12px;
+  padding: 16px 18px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+  transition: border-color 0.25s ease;
+}
+
+.ait-pip-signal-card.scalp {
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.ait-pip-signal-card.daytrade {
+  border-color: rgba(0, 242, 254, 0.35);
+}
+
+.ait-pip-signal-card.scanning-hud {
+  border-color: rgba(0, 242, 254, 0.7);
+  box-shadow: 0 0 28px rgba(0, 242, 254, 0.22);
+}
+
+.ait-sig-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.ait-sig-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ait-sig-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ait-sig-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ait-sig-pair {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: #FFFFFF;
+  letter-spacing: -0.01em;
+}
+
+.ait-sig-dir-badge {
+  font-size: 11px;
+  font-weight: 900;
+  padding: 2.5px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.04em;
+}
+
+.ait-sig-dir-badge.buy {
+  background: rgba(16, 185, 129, 0.16);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  color: #34D399;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.25);
+}
+
+.ait-sig-dir-badge.sell {
+  background: rgba(239, 68, 68, 0.16);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  color: #F87171;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.25);
+}
+
+.ait-sig-status-dot-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ait-sig-status-dot {
+  width: 6.5px;
+  height: 6.5px;
+  border-radius: 50%;
+  background: #10B981;
+  box-shadow: 0 0 8px #10B981;
+}
+
+.ait-sig-status-txt {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #10B981;
+  letter-spacing: 0.03em;
+}
+
+.ait-sig-meta-row {
+  font-size: 11px;
+  color: #94A3B8;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ait-sig-meta-row strong {
+  color: #E2E8F0;
+}
+
+.ait-sig-quality-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+
+.ait-sig-q-score {
+  font-size: 18px;
+  font-weight: 900;
+  color: #00F2FE;
+  text-shadow: 0 0 12px rgba(0, 242, 254, 0.5);
+  font-family: inherit;
+}
+
+.ait-sig-q-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Signal Matrix (5 Parameter Boxes) */
+.ait-sig-matrix {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .ait-sig-matrix {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.ait-sig-box {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  transition: border-color 0.2s ease;
+}
+
+.ait-sig-box.entry {
+  border-color: rgba(56, 189, 248, 0.3);
+}
+
+.ait-sig-box.sl {
+  border-color: rgba(239, 68, 68, 0.25);
+  background: rgba(239, 68, 68, 0.04);
+}
+
+.ait-sig-box.tp {
+  border-color: rgba(16, 185, 129, 0.25);
+  background: rgba(16, 185, 129, 0.04);
+}
+
+.ait-sig-box.rr {
+  border-color: rgba(139, 92, 246, 0.25);
+}
+
+.ait-sig-box-lbl {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #94A3B8;
+}
+
+.ait-sig-box-val {
+  font-size: 15px;
+  font-weight: 800;
+  color: #FFFFFF;
+}
+
+.ait-sig-box-sub {
+  font-size: 10px;
+  font-weight: 500;
+  color: #64748B;
+}
+
+/* Break-Even Notice Bar */
+.ait-sig-be-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 8px;
+  font-size: 11.5px;
+  color: #BAE6FD;
+}
+
+.ait-sig-be-icon {
+  font-size: 14px;
+}
+
+/* Confluences Checklist */
+.ait-sig-confluences {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  background: rgba(8, 14, 28, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+}
+
+.ait-sig-conf-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.ait-sig-conf-header h4 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #E2E8F0;
+  letter-spacing: -0.01em;
+}
+
+.ait-conf-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.2);
+  color: #10B981;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.ait-sig-conf-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ait-sig-conf-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 11.5px;
+  color: #CBD5E1;
+  line-height: 1.45;
+}
+
+.ait-conf-chk {
+  color: #10B981;
+  font-weight: 900;
+  font-size: 11px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* Signal Card Footer */
+.ait-sig-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ait-sig-footer-note {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  color: #64748B;
+}
+
+.ait-sig-pulse-live {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #00F2FE;
+  box-shadow: 0 0 6px #00F2FE;
+  display: inline-block;
+}
+
+.ait-sig-re-scan-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #38BDF8;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-family: inherit;
+}
+
+.ait-sig-re-scan-btn:hover:not(:disabled) {
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.65);
+  color: #FFFFFF;
+}
+
+.ait-sig-re-scan-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
 
 
