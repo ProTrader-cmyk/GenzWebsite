@@ -1568,79 +1568,121 @@ body.light-mode .lnd-ai-telemetry-chip {
   padding: 80px 0 60px;
 }
 
+.lnd-team-section {
+  position: relative;
+  padding: 100px 0 110px;
+  background: radial-gradient(ellipse at 50% 20%, rgba(14, 165, 233, 0.05) 0%, transparent 60%);
+}
+
 .lnd-team-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 28px;
-  max-width: 1100px;
+  max-width: 1160px;
   margin: 0 auto;
 }
 
 .lnd-team-card {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(165deg, rgba(12, 19, 34, 0.94) 0%, rgba(6, 10, 19, 0.97) 100%) !important;
-  border: 1px solid rgba(0, 242, 254, 0.2) !important;
-  border-radius: var(--rl, 20px);
-  padding: 32px 24px 26px;
+  background: linear-gradient(175deg, rgba(14, 21, 38, 0.88) 0%, rgba(7, 11, 20, 0.96) 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 24px;
+  padding: 38px 24px 28px;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   transform: translateZ(0);
-  transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.28s ease, box-shadow 0.28s ease;
   box-shadow:
-    0 24px 50px -20px rgba(0, 0, 0, 0.78),
-    0 0 28px rgba(0, 242, 254, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.09) !important;
+    0 24px 50px -20px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
+/* Atmospheric Top Light Bars */
 .lnd-team-card::before {
   content: '';
   position: absolute;
   top: 0;
-  left: 12%;
-  right: 12%;
-  height: 1.5px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(0, 242, 254, 0.85) 30%,
-    rgba(168, 85, 247, 0.85) 65%,
-    rgba(16, 185, 129, 0.75) 85%,
-    transparent 100%
-  );
+  left: 15%;
+  right: 15%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(0, 242, 254, 0.8), transparent);
   pointer-events: none;
   z-index: 3;
 }
 
+.lnd-team-card-coo::before {
+  background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.85), transparent);
+}
+
+.lnd-team-card-dev::before {
+  background: linear-gradient(90deg, transparent, rgba(168, 85, 247, 0.85), transparent);
+}
+
+/* Top Ambient Radial Glow inside Card */
+.lnd-team-card-ambient {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 240px;
+  height: 140px;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0.5;
+  filter: blur(35px);
+  transition: opacity 0.3s ease;
+}
+
+.lnd-team-card-ceo .lnd-team-card-ambient {
+  background: radial-gradient(circle, rgba(0, 242, 254, 0.35) 0%, transparent 70%);
+}
+
+.lnd-team-card-coo .lnd-team-card-ambient {
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.35) 0%, transparent 70%);
+}
+
+.lnd-team-card-dev .lnd-team-card-ambient {
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.35) 0%, transparent 70%);
+}
+
 .lnd-team-card:hover {
-  transform: translate3d(0, -6px, 0);
-  border-color: rgba(0, 242, 254, 0.44) !important;
+  transform: translateY(-8px);
+}
+
+.lnd-team-card-ceo:hover {
+  border-color: rgba(0, 242, 254, 0.45) !important;
   box-shadow:
-    0 30px 60px -18px rgba(0, 0, 0, 0.88),
-    0 0 34px rgba(0, 242, 254, 0.18),
-    0 0 22px rgba(168, 85, 247, 0.14),
-    inset 0 1px 0 rgba(255, 255, 255, 0.16) !important;
+    0 32px 64px -16px rgba(0, 0, 0, 0.9),
+    0 0 35px rgba(0, 242, 254, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
 }
 
-.lnd-team-card-ceo {
-  border-color: rgba(0, 242, 254, 0.32) !important;
+.lnd-team-card-coo:hover {
+  border-color: rgba(16, 185, 129, 0.45) !important;
+  box-shadow:
+    0 32px 64px -16px rgba(0, 0, 0, 0.9),
+    0 0 35px rgba(16, 185, 129, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
 }
 
-.lnd-team-card-coo {
-  border-color: rgba(16, 185, 129, 0.28) !important;
+.lnd-team-card-dev:hover {
+  border-color: rgba(168, 85, 247, 0.45) !important;
+  box-shadow:
+    0 32px 64px -16px rgba(0, 0, 0, 0.9),
+    0 0 35px rgba(168, 85, 247, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
 }
 
-.lnd-team-card-dev {
-  border-color: rgba(168, 85, 247, 0.28) !important;
-}
-
-/* Avatar Containers */
+/* Avatar Containers & Glow */
 .lnd-team-avatar-container {
   position: relative;
-  width: 96px;
-  height: 96px;
+  width: 112px;
+  height: 112px;
   margin-bottom: 18px;
 }
 
@@ -1650,89 +1692,84 @@ body.light-mode .lnd-ai-telemetry-chip {
   border-radius: 50%;
   pointer-events: none;
   opacity: 0.6;
-  filter: blur(8px);
+  filter: blur(12px);
+  transition: opacity 0.3s ease;
+}
+
+.lnd-team-card:hover .lnd-team-avatar-glow {
+  opacity: 0.9;
 }
 
 .lnd-glow-ceo {
-  background: radial-gradient(circle, rgba(0, 242, 254, 0.5), transparent 70%);
+  background: radial-gradient(circle, rgba(0, 242, 254, 0.6), transparent 70%);
 }
 
 .lnd-glow-coo {
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.5), transparent 70%);
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.6), transparent 70%);
 }
 
 .lnd-glow-dev {
-  background: radial-gradient(circle, rgba(168, 85, 247, 0.5), transparent 70%);
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.6), transparent 70%);
 }
 
 .lnd-team-avatar-img {
-  width: 96px;
-  height: 96px;
+  width: 112px;
+  height: 112px;
   border-radius: 50%;
   object-fit: cover;
+  object-position: center 15%;
   display: block;
+  position: relative;
+  z-index: 2;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lnd-team-card:hover .lnd-team-avatar-img {
+  transform: scale(1.04);
 }
 
 .lnd-avatar-ceo {
-  border: 2.5px solid #00f2fe;
-  box-shadow: 0 0 18px rgba(0, 242, 254, 0.45);
+  border: 3px solid #00f2fe;
+  box-shadow: 0 0 22px rgba(0, 242, 254, 0.4);
 }
 
 .lnd-avatar-coo {
-  border: 2.5px solid #10b981;
-  box-shadow: 0 0 18px rgba(16, 185, 129, 0.45);
+  border: 3px solid #10b981;
+  box-shadow: 0 0 22px rgba(16, 185, 129, 0.4);
 }
 
 .lnd-avatar-dev {
-  border: 2.5px solid #a855f7;
-  box-shadow: 0 0 18px rgba(168, 85, 247, 0.45);
+  border: 3px solid #a855f7;
+  box-shadow: 0 0 22px rgba(168, 85, 247, 0.4);
 }
 
-.lnd-team-monogram-avatar {
-  width: 96px;
-  height: 96px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 28px;
-  font-weight: 900;
-  letter-spacing: 0.05em;
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
-}
-
-.lnd-monogram-coo {
-  border: 2.5px solid #10b981;
-  color: #34d399;
-  box-shadow: 0 0 18px rgba(16, 185, 129, 0.35);
-}
-
-.lnd-monogram-dev {
-  border: 2.5px solid #a855f7;
-  color: #c084fc;
-  box-shadow: 0 0 18px rgba(168, 85, 247, 0.35);
-}
-
+/* Status Dot with Radar Pulse */
 .lnd-team-status-dot {
   position: absolute;
   bottom: 4px;
   right: 4px;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: #10b981;
-  border: 2px solid #090e1a;
-  box-shadow: 0 0 8px #10b981;
+  border: 3px solid #070b14;
+  box-shadow: 0 0 10px #10b981;
+  z-index: 4;
+}
+
+.lnd-status-ceo {
+  background: #00f2fe;
+  box-shadow: 0 0 10px #00f2fe;
 }
 
 .lnd-status-coo {
-  background: #34d399;
-  box-shadow: 0 0 8px #34d399;
+  background: #10b981;
+  box-shadow: 0 0 10px #10b981;
 }
 
 .lnd-status-dev {
-  background: #00f2fe;
-  box-shadow: 0 0 8px #00f2fe;
+  background: #c084fc;
+  box-shadow: 0 0 10px #c084fc;
 }
 
 /* Role Badges */
@@ -1747,35 +1784,37 @@ body.light-mode .lnd-ai-telemetry-chip {
   padding: 4px 14px;
   border-radius: 20px;
   margin-bottom: 12px;
+  z-index: 2;
 }
 
 .lnd-role-ceo {
-  background: linear-gradient(135deg, rgba(0, 242, 254, 0.16), rgba(16, 185, 129, 0.16));
-  border: 1px solid rgba(0, 242, 254, 0.38);
+  background: linear-gradient(135deg, rgba(0, 242, 254, 0.15), rgba(56, 189, 248, 0.1));
+  border: 1px solid rgba(0, 242, 254, 0.4);
   color: #38bdf8;
-  box-shadow: 0 0 16px rgba(0, 242, 254, 0.2);
+  box-shadow: 0 0 14px rgba(0, 242, 254, 0.18);
 }
 
 .lnd-role-coo {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.16), rgba(52, 211, 153, 0.16));
-  border: 1px solid rgba(16, 185, 129, 0.38);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(52, 211, 153, 0.1));
+  border: 1px solid rgba(16, 185, 129, 0.4);
   color: #34d399;
-  box-shadow: 0 0 16px rgba(16, 185, 129, 0.2);
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.18);
 }
 
 .lnd-role-dev {
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.16), rgba(0, 242, 254, 0.16));
-  border: 1px solid rgba(168, 85, 247, 0.38);
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(192, 132, 252, 0.1));
+  border: 1px solid rgba(168, 85, 247, 0.4);
   color: #c084fc;
-  box-shadow: 0 0 16px rgba(168, 85, 247, 0.2);
+  box-shadow: 0 0 14px rgba(168, 85, 247, 0.18);
 }
 
 .lnd-team-name {
-  font-size: 21px;
+  font-size: 22px;
   font-weight: 800;
   margin: 0 0 4px;
-  color: var(--text);
+  color: #f8fafc;
   letter-spacing: -0.01em;
+  z-index: 2;
 }
 
 .lnd-team-title {
@@ -1784,23 +1823,68 @@ body.light-mode .lnd-ai-telemetry-chip {
   color: var(--brand2, #38bdf8);
   margin: 0 0 14px;
   line-height: 1.45;
+  z-index: 2;
 }
 
 .lnd-team-bio {
   font-size: 13px;
   line-height: 1.65;
-  color: var(--mute, #94a3b8);
-  margin: 0 0 20px;
+  color: #94a3b8;
+  margin: 0 0 18px;
   flex: 1;
+  z-index: 2;
 }
 
+/* Core Focus Badges */
+.lnd-team-focus-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 0 0 20px;
+  width: 100%;
+  z-index: 2;
+}
+
+.lnd-focus-tag {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 4px 10px;
+  border-radius: 6px;
+  letter-spacing: 0.02em;
+  transition: all 0.2s ease;
+}
+
+.lnd-team-card-ceo:hover .lnd-focus-tag {
+  background: rgba(0, 242, 254, 0.06);
+  border-color: rgba(0, 242, 254, 0.2);
+  color: #e0f2fe;
+}
+
+.lnd-team-card-coo:hover .lnd-focus-tag {
+  background: rgba(16, 185, 129, 0.06);
+  border-color: rgba(16, 185, 129, 0.2);
+  color: #d1fae5;
+}
+
+.lnd-team-card-dev:hover .lnd-focus-tag {
+  background: rgba(168, 85, 247, 0.06);
+  border-color: rgba(168, 85, 247, 0.2);
+  color: #f3e8ff;
+}
+
+/* Footers */
 .lnd-team-footer {
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding-top: 14px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  z-index: 2;
 }
 
 .lnd-team-social-btn {
@@ -1811,18 +1895,19 @@ body.light-mode .lnd-ai-telemetry-chip {
   font-weight: 700;
   color: #38bdf8;
   background: rgba(0, 242, 254, 0.1);
-  border: 1px solid rgba(0, 242, 254, 0.28);
-  padding: 6px 16px;
+  border: 1px solid rgba(0, 242, 254, 0.35);
+  padding: 7px 18px;
   border-radius: 20px;
   text-decoration: none;
-  transition: all 0.18s ease;
+  transition: all 0.2s ease;
 }
 
 .lnd-team-social-btn:hover {
-  background: rgba(0, 242, 254, 0.2);
-  border-color: rgba(0, 242, 254, 0.5);
-  box-shadow: 0 0 18px rgba(0, 242, 254, 0.3);
+  background: rgba(0, 242, 254, 0.22);
+  border-color: #00f2fe;
+  box-shadow: 0 0 20px rgba(0, 242, 254, 0.4);
   transform: translateY(-2px);
+  color: #ffffff;
 }
 
 .lnd-team-badge-tag {
@@ -1831,11 +1916,35 @@ body.light-mode .lnd-ai-telemetry-chip {
   gap: 7px;
   font-size: 11px;
   font-weight: 700;
-  color: var(--mute, #94a3b8);
+  color: #94a3b8;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 5px 14px;
+  padding: 6px 15px;
   border-radius: 20px;
+  letter-spacing: 0.02em;
+}
+
+.lnd-badge-coo {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.lnd-badge-dev {
+  color: #c084fc;
+  background: rgba(168, 85, 247, 0.08);
+  border-color: rgba(168, 85, 247, 0.25);
+}
+
+@media (max-width: 900px) {
+  .lnd-team-grid {
+    grid-template-columns: 1fr;
+    max-width: 480px;
+    gap: 20px;
+  }
+  .lnd-team-card {
+    padding: 30px 20px 24px;
+  }
 }
 
 /* Light mode overrides for team cards */

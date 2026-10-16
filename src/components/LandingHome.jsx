@@ -966,32 +966,34 @@ export default function LandingHome({
         <div className="lnd-container">
           <div className="lnd-section-header">
             <span className="lnd-section-pill">
-              {isKhmer ? 'ថ្នាក់ដឹកនាំ និងក្រុមការងារស្នូល' : 'EXECUTIVE LEADERSHIP & CORE TEAM'}
+              <span className="lnd-live-pulse-dot" style={{ width: 6, height: 6 }} />
+              <span>{isKhmer ? 'ថ្នាក់ដឹកនាំ និងស្ថាបនិក GenZ Trader' : 'EXECUTIVE LEADERSHIP & CORE TEAM'}</span>
             </span>
             <h2 className="lnd-section-title">
               {isKhmer
-                ? 'ក្រុមការងារ និងថ្នាក់ដឹកនាំនៅពីក្រោយ GenZ Trader'
+                ? 'ថ្នាក់ដឹកនាំនៅពីក្រោយភាពជោគជ័យនៃ GenZ Trader'
                 : 'The Leadership Driving Your Trading Edge'}
             </h2>
             <p className="lnd-section-sub">
               {isKhmer
-                ? 'អ្នកឯកទេសយុទ្ធសាស្ត្រទីផ្សារស្ថាប័ន វិស្វករប្រព័ន្ធស្វ័យប្រវត្តិកម្ម និងអ្នកជំនាញប្រតិបត្តិការដែលប្តេជ្ញាជួយឱ្យអ្នកជួញដូរទទួលបានប្រៀបឈ្នះលើទីផ្សារ។'
-                : 'Institutional market strategists, algorithmic engineers, and execution specialists dedicated to empowering retail traders.'}
+                ? 'រួមបញ្ចូលគ្នារវាងអ្នកជំនាញយុទ្ធសាស្ត្រទីផ្សារស្ថាប័ន SMC អ្នកគ្រប់គ្រងហានិភ័យ និងវិស្វករប្រព័ន្ធ AI ដើម្បីផ្តល់ប្រៀបឈ្នះពិតប្រាកដដល់អ្នកជួញដូរ។'
+                : 'Combining institutional SMC market strategy, disciplined risk operations, and high-speed AI engineering to give you an undeniable edge.'}
             </p>
           </div>
 
           <div className="lnd-team-grid">
             {/* Member 1: CEO - Veng Sophea */}
             <div className="lnd-team-card lnd-team-card-ceo">
+              <div className="lnd-team-card-ambient" />
               <div className="lnd-team-avatar-container">
                 <div className="lnd-team-avatar-glow lnd-glow-ceo" />
                 <img
                   src={pheaImg}
-                  alt="Veng Sophea - CEO"
+                  alt="Veng Sophea - CEO & Founder"
                   className="lnd-team-avatar-img lnd-avatar-ceo"
                   loading="lazy"
                 />
-                <span className="lnd-team-status-dot" title="Active Founder" />
+                <span className="lnd-team-status-dot lnd-status-ceo" title="Active Founder & Mentor" />
               </div>
 
               <div className="lnd-team-role-pill lnd-role-ceo">
@@ -1000,14 +1002,21 @@ export default function LandingHome({
 
               <h3 className="lnd-team-name">Veng Sophea</h3>
               <p className="lnd-team-title">
-                {isKhmer ? 'CEO & គ្រូបណ្តុះបណ្តាល SMC / ICT' : 'CEO & Lead ICT Mentor'}
+                {isKhmer ? 'CEO & គ្រូបណ្តុះបណ្តាល SMC / ICT' : 'CEO & Lead ICT / SMC Mentor'}
               </p>
 
               <p className="lnd-team-bio">
                 {isKhmer
-                  ? 'ឯកទេសវិភាគរចនាសម្ព័ន្ធទីផ្សារ SMC/ICT និងយុទ្ធសាស្ត្រស្ថាប័ន។'
-                  : 'Specializes in ICT/SMC market structure and institutional strategy.'}
+                  ? 'ឯកទេសវិភាគរចនាសម្ព័ន្ធទីផ្សារ SMC/ICT កំណត់តំបន់ទុនស្ថាប័ន និងបណ្តុះបណ្តាលផ្នត់គំនិតជួញដូរប្រកបដោយវិន័យខ្ពស់។'
+                  : 'Specializes in institutional SMC/ICT order flow, liquidity mapping, and developing disciplined execution psychology.'}
               </p>
+
+              {/* Core Focus Badges */}
+              <div className="lnd-team-focus-tags">
+                <span className="lnd-focus-tag">{isKhmer ? 'យុទ្ធសាស្ត្រ SMC/ICT' : 'SMC & ICT Strategy'}</span>
+                <span className="lnd-focus-tag">{isKhmer ? 'រចនាសម្ព័ន្ធ Liquidity' : 'Order Flow & Liquidity'}</span>
+                <span className="lnd-focus-tag">{isKhmer ? 'ការបង្វឹកផ្ទាល់' : 'Live Mentorship'}</span>
+              </div>
 
               <div className="lnd-team-footer">
                 <a
@@ -1015,7 +1024,7 @@ export default function LandingHome({
                   target="_blank"
                   rel="noopener noreferrer"
                   className="lnd-team-social-btn"
-                  title="Telegram Veng Sophea"
+                  title="Contact Veng Sophea"
                 >
                   <TelegramIcon style={{ width: 14, height: 14 }} />
                   <span>@Vengsopheagenz</span>
@@ -1025,11 +1034,12 @@ export default function LandingHome({
 
             {/* Member 2: COO - Lim Sunhour */}
             <div className="lnd-team-card lnd-team-card-coo">
+              <div className="lnd-team-card-ambient" />
               <div className="lnd-team-avatar-container">
                 <div className="lnd-team-avatar-glow lnd-glow-coo" />
                 <img
                   src={hourImg}
-                  alt="Lim Sunhour - COO"
+                  alt="Lim Sunhour - COO & Strategy Lead"
                   className="lnd-team-avatar-img lnd-avatar-coo"
                   loading="lazy"
                 />
@@ -1037,35 +1047,43 @@ export default function LandingHome({
               </div>
 
               <div className="lnd-team-role-pill lnd-role-coo">
-                <span>🛡️ COO</span>
+                <span>🛡️ COO & HEAD OF RISK</span>
               </div>
 
               <h3 className="lnd-team-name">Lim Sunhour</h3>
               <p className="lnd-team-title">
-                {isKhmer ? 'COO & ប្រធានយុទ្ធសាស្ត្រ' : 'COO & Strategy Lead'}
+                {isKhmer ? 'COO & ប្រធានយុទ្ធសាស្ត្រប្រតិបត្តិការ' : 'COO & Strategy Lead'}
               </p>
 
               <p className="lnd-team-bio">
                 {isKhmer
-                  ? 'ដឹកនាំការគ្រប់គ្រងហានិភ័យ និងវិន័យជួញដូរដើមទុនផ្ទាល់។'
-                  : 'Directs trade execution, risk management, and capital discipline.'}
+                  ? 'ដឹកនាំការគ្រប់គ្រងហានិភ័យដើមទុន វិន័យជួញដូរជាក់ស្តែង និងត្រួតពិនិត្យប្រតិបត្តិការប្រព័ន្ធជួញដូរទូទាំងស្ថាប័ន។'
+                  : 'Directs trade execution discipline, strict capital risk management, and overall platform operational infrastructure.'}
               </p>
 
+              {/* Core Focus Badges */}
+              <div className="lnd-team-focus-tags">
+                <span className="lnd-focus-tag">{isKhmer ? 'គ្រប់គ្រងហានិភ័យ' : 'Risk Management'}</span>
+                <span className="lnd-focus-tag">{isKhmer ? 'ប្រតិបត្តិការជួញដូរ' : 'Trading Desk Operations'}</span>
+                <span className="lnd-focus-tag">{isKhmer ? 'វិន័យដើមទុន' : 'Capital Discipline'}</span>
+              </div>
+
               <div className="lnd-team-footer">
-                <span className="lnd-team-badge-tag">
-                  <span className="lnd-live-pulse-dot" style={{ width: 5, height: 5 }} />
-                  Trading Desk & Operations
+                <span className="lnd-team-badge-tag lnd-badge-coo">
+                  <span className="lnd-live-pulse-dot" style={{ width: 6, height: 6 }} />
+                  <span>Trading Desk & Operations</span>
                 </span>
               </div>
             </div>
 
             {/* Member 3: DEV - Sen Visal */}
             <div className="lnd-team-card lnd-team-card-dev">
+              <div className="lnd-team-card-ambient" />
               <div className="lnd-team-avatar-container">
                 <div className="lnd-team-avatar-glow lnd-glow-dev" />
                 <img
                   src={visalImg}
-                  alt="Sen Visal - Lead Dev"
+                  alt="Sen Visal - Lead AI & Software Engineer"
                   className="lnd-team-avatar-img lnd-avatar-dev"
                   loading="lazy"
                 />
@@ -1073,7 +1091,7 @@ export default function LandingHome({
               </div>
 
               <div className="lnd-team-role-pill lnd-role-dev">
-                <span>💻 LEAD DEV</span>
+                <span>💻 LEAD AI & ARCHITECT</span>
               </div>
 
               <h3 className="lnd-team-name">Sen Visal</h3>
@@ -1083,14 +1101,21 @@ export default function LandingHome({
 
               <p className="lnd-team-bio">
                 {isKhmer
-                  ? 'អភិវឌ្ឍន៍ប្រព័ន្ធ AI Trading Terminal និងទិន្នន័យទីផ្សារផ្ទាល់។'
-                  : 'Develops the AI trading terminal and real-time market pipelines.'}
+                  ? 'អភិវឌ្ឍន៍ប្រព័ន្ធក្បួនដោះស្រាយ Pip Engine AI ស្ថានីយវិភាគបន្តផ្ទាល់ និងប្រព័ន្ធទិន្នន័យទីផ្សារស្វ័យប្រវត្តិ។'
+                  : 'Architects the Pip Engine AI models, real-time live charting terminal, and high-frequency market pipelines.'}
               </p>
 
+              {/* Core Focus Badges */}
+              <div className="lnd-team-focus-tags">
+                <span className="lnd-focus-tag">{isKhmer ? 'Pip AI Engine' : 'Pip AI Engine'}</span>
+                <span className="lnd-focus-tag">{isKhmer ? 'ទិន្នន័យផ្ទាល់ Real-Time' : 'Live Data Streams'}</span>
+                <span className="lnd-focus-tag">{isKhmer ? 'Full-Stack Architecture' : 'Full-Stack Systems'}</span>
+              </div>
+
               <div className="lnd-team-footer">
-                <span className="lnd-team-badge-tag">
+                <span className="lnd-team-badge-tag lnd-badge-dev">
                   <span className="lnd-ai-chip-dot lnd-dot-cyan" />
-                  AI & Full-Stack Systems
+                  <span>AI & Full-Stack Systems</span>
                 </span>
               </div>
             </div>
