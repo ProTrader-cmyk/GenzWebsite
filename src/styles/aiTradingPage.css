@@ -21,6 +21,9 @@
 
 .ait-page-root {
   width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  box-sizing: border-box;
   color: var(--text);
   font-family: inherit;
   position: relative;
@@ -8875,8 +8878,19 @@
   animation: aitFadeIn 0.2s ease-out;
 }
 
-/* Responsiveness for Simple Row */
+/* ==========================================================================
+   AI TRADING PAGE COMPREHENSIVE MOBILE RESPONSIVENESS
+   ========================================================================== */
+
+/* 1. Tablet & Large Mobile (<= 992px) */
 @media (max-width: 992px) {
+  .ait-terminal-fullwidth-wrapper {
+    padding: 0 12px;
+    margin-bottom: 24px;
+  }
+  .ait-chart-terminal-card {
+    border-radius: 14px;
+  }
   .ait-pm-scalp-simple-row {
     flex-wrap: wrap;
     gap: 12px;
@@ -8890,14 +8904,395 @@
   }
 }
 
-@media (max-width: 600px) {
+/* 2. Standard Mobile Devices (<= 768px) */
+@media (max-width: 768px) {
+  /* Container & Hero Section */
+  .ait-terminal-fullwidth-wrapper {
+    padding: 0 8px;
+    margin-bottom: 20px;
+  }
+  .ait-container {
+    padding: 0 12px;
+  }
+  .ait-hero-section {
+    padding: 24px 0 16px;
+  }
+  .ait-hero-title {
+    font-size: 26px;
+    line-height: 1.25;
+  }
+  .ait-hero-sub {
+    font-size: 13.5px;
+    line-height: 1.5;
+    margin-bottom: 18px;
+  }
+  .ait-cta-group {
+    flex-direction: column;
+    width: 100%;
+    gap: 10px;
+  }
+  .ait-primary-cta,
+  .ait-secondary-cta {
+    width: 100%;
+    justify-content: center;
+    padding: 12px 16px;
+    font-size: 13.5px;
+  }
+
+  /* Live Chart Terminal Top Controls */
+  .ait-chart-terminal-top {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 8px 10px;
+    gap: 8px;
+  }
+  .ait-chart-left-controls {
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .ait-chart-selectors-group {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .ait-chart-group-label {
+    min-width: 44px;
+    font-size: 9.5px;
+    flex-shrink: 0;
+  }
+  .ait-chart-pills-wrap {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    width: calc(100% - 50px);
+    padding-bottom: 2px;
+  }
+  .ait-chart-pills-wrap::-webkit-scrollbar {
+    display: none;
+  }
+  .ait-chart-symbol-pill,
+  .ait-chart-timeframe-pill {
+    flex-shrink: 0;
+    font-size: 10.5px;
+    padding: 4px 7px;
+  }
+  .ait-chart-right-controls {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .ait-chart-engine-btn {
+    font-size: 10.5px;
+    padding: 4px 8px;
+  }
+  .ait-chart-view-toggle {
+    padding: 1px;
+    gap: 1px;
+  }
+  .ait-view-pill {
+    font-size: 10px;
+    padding: 3px 6px;
+  }
+  .ait-chart-live-ticker {
+    font-size: 11px;
+    padding: 3px 7px;
+  }
+  .ait-chart-icon-btn,
+  .ait-chart-fs-btn {
+    padding: 4px 7px;
+    font-size: 11px;
+  }
+
+  /* Workstation Split & Chart Canvas */
+  .ait-workstation-split-container {
+    display: flex;
+    flex-direction: column;
+    height: auto !important;
+  }
+  .ait-chart-col {
+    min-height: 380px;
+    height: 380px;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .ait-workstation-split-container.view-chart .ait-chart-col {
+    min-height: 70vh;
+    height: 70vh;
+  }
+  .ait-analysis-col {
+    width: 100%;
+    min-height: auto;
+  }
+
+  /* In-Chart Auto Setup HUD Card */
+  .pip-auto-setup-card {
+    top: 54px !important;
+    left: 8px !important;
+    width: calc(100% - 16px) !important;
+    max-width: 280px !important;
+    padding: 10px 10px;
+    font-size: 10px;
+  }
+  .pip-auto-setup-card.is-collapsed {
+    max-width: 190px !important;
+    padding: 5px 8px;
+  }
+  .pip-auto-setup-title {
+    font-size: 10px;
+  }
+  .pip-setup-matrix-row {
+    padding: 3px 6px;
+  }
+  .pip-setup-matrix-lbl {
+    font-size: 8.5px;
+  }
+  .pip-setup-matrix-val {
+    font-size: 11px;
+  }
+  .pip-setup-locked-footer {
+    font-size: 9px;
+    padding: 4px 6px;
+  }
+
+  /* Market Analysis Panel */
+  .ait-ma-tabs-bar {
+    padding: 0 10px;
+    gap: 2px;
+  }
+  .ait-ma-tab-btn {
+    font-size: 12px;
+    padding: 10px 10px;
+  }
+  .ait-ma-content-scroll {
+    padding: 10px 8px 20px;
+    gap: 12px;
+  }
+  .ait-ma-header-card {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .ait-ma-sym-title {
+    font-size: 16px;
+  }
+  .ait-ma-price-num {
+    font-size: 18px;
+  }
+  .ait-ma-sentiment-cell {
+    min-width: 85px;
+  }
+  .ait-ma-candle-pill,
+  .ait-ma-reanalyze-btn {
+    font-size: 10px;
+    padding: 2px 7px;
+  }
+
+  /* Pip Machine Scanner & Output Rows */
+  .ait-pm-radar-card {
+    padding: 14px 10px;
+    gap: 12px;
+  }
+  .ait-pm-radar-wrap {
+    width: 130px;
+    height: 130px;
+  }
+  .ait-pm-radar-svg {
+    width: 130px;
+    height: 130px;
+  }
+  .ait-pm-status-title {
+    font-size: 13px;
+  }
+  .ait-pm-status-sub {
+    font-size: 10.5px;
+  }
+  .ait-pm-scan-btn {
+    width: 100%;
+    justify-content: center;
+    font-size: 12px;
+    padding: 10px 14px;
+  }
+  .ait-pm-condition-toggle-btn {
+    width: 100%;
+    justify-content: center;
+    font-size: 10.5px;
+    padding: 7px 10px;
+  }
+  .ait-pm-hud-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+  }
+
+  /* Scalp / Intra Simple Result Row */
+  .ait-pm-scalp-simple-row {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px 10px;
+    gap: 10px;
+  }
+  .ait-pm-sr-badge-col {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+  .ait-pm-sr-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 6px;
+    order: 2;
+  }
+  .ait-pm-saved-badge {
+    font-size: 9px;
+    padding: 2px 6px;
+  }
   .ait-pm-sr-metrics {
+    order: 3;
+    width: 100%;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    gap: 8px 10px;
+    background: rgba(0, 0, 0, 0.32);
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin: 0;
+    box-sizing: border-box;
   }
   .ait-pm-sr-divider {
     display: none;
+  }
+  .ait-pm-sr-val {
+    font-size: 12.5px;
+  }
+
+  /* No Signal Card */
+  .ait-pm-no-signal-card {
+    padding: 12px 10px;
+    gap: 10px;
+  }
+  .ait-pm-no-sig-header {
+    gap: 10px;
+  }
+  .ait-pm-no-sig-title {
+    font-size: 12.5px;
+  }
+  .ait-pm-no-sig-desc {
+    font-size: 11px;
+  }
+  .ait-pm-cond-row {
+    padding: 7px 8px;
+    font-size: 10.5px;
+  }
+
+  /* Strategy Filter Row */
+  .ait-style-filter-row {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 10px;
+    gap: 8px;
+  }
+  .ait-filter-row-label {
+    font-size: 10px;
+  }
+  .ait-style-buttons-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    width: 100%;
+  }
+  .ait-style-pill {
+    padding: 7px 10px;
+    justify-content: center;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .ait-style-pill-main {
+    font-size: 12px;
+  }
+  .ait-style-pill-sub {
+    font-size: 9px;
+  }
+  .ait-sig-filters {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+    width: 100%;
+  }
+  .ait-sig-filters::-webkit-scrollbar {
+    display: none;
+  }
+  .ait-sig-filter-pill {
+    flex-shrink: 0;
+  }
+
+  /* Signals Cards on Mobile */
+  .ait-signals-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .ait-sig-card {
+    padding: 14px 12px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .ait-sig-matrix {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .ait-card-actions-row {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .ait-card-btn {
+    flex: 1;
+    min-width: 110px;
+  }
+}
+
+/* 3. Small Mobile Phones (<= 480px, e.g. iPhone SE / Mini) */
+@media (max-width: 480px) {
+  .ait-terminal-fullwidth-wrapper {
+    padding: 0 4px;
+  }
+  .ait-container {
+    padding: 0 8px;
+  }
+  .ait-hero-title {
+    font-size: 22px;
+  }
+  .ait-chart-col {
+    min-height: 330px;
+    height: 330px;
+  }
+  .ait-style-buttons-group {
+    grid-template-columns: 1fr;
+  }
+  .ait-engines-tabs {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .ait-paywall-card {
+    padding: 18px 14px;
+  }
+  .ait-paywall-title {
+    font-size: 16px;
+  }
+  .ait-paywall-desc {
+    font-size: 12px;
   }
 }
 
