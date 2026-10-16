@@ -357,28 +357,23 @@ export default function MarketAnalysisPanel({
           </div>
           <div className="ait-aii-updated-line">
             <span className="ait-aii-pulse-dot" />
-            <span>
-              {isReanalyzing
-                ? 'Updating institutional analysis...'
-                : `Analysis updated ${minutesElapsed}m ago`}
-            </span>
+            <span>Analysis updated {minutesElapsed}m ago</span>
           </div>
         </div>
 
         <div className="ait-aii-top-actions">
           <button
             type="button"
-            className={`ait-aii-reanalyze-btn ${isReanalyzing ? 'is-loading' : ''}`}
+            className="ait-aii-reanalyze-btn"
             onClick={onReanalyze}
-            disabled={isReanalyzing}
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={isReanalyzing ? 'ait-spin' : ''}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="4" />
               <path d="M8 12a4 4 0 0 1 7-2.6L16 10" />
               <path d="M16 6v4h-4" />
               <path d="M16 12a4 4 0 0 1-7 2.6L8 14" />
             </svg>
-            <span>{isReanalyzing ? 'Re-analyzing...' : 'Re-analyze'}</span>
+            <span>Re-analyze</span>
           </button>
         </div>
       </div>
@@ -793,7 +788,7 @@ export default function MarketAnalysisPanel({
                 </div>
 
                 <div className="ait-aii-status-body">
-                  <div className={`ait-aii-neon-ring-wrap ${isReanalyzing ? 'is-spinning' : ''}`}>
+                  <div className="ait-aii-neon-ring-wrap">
                     <svg viewBox="0 0 80 80" className="ait-aii-neon-ring-svg">
                       <defs>
                         <linearGradient id="aiiRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -824,9 +819,7 @@ export default function MarketAnalysisPanel({
                   </div>
 
                   <div className="ait-aii-status-copy">
-                    <h4 className="ait-aii-status-ready">
-                      {isReanalyzing ? 'Re-analyzing...' : 'Analysis Ready'}
-                    </h4>
+                    <h4 className="ait-aii-status-ready">Analysis Ready</h4>
                     <p className="ait-aii-status-sub">
                       The latest analysis is available and up to date.
                     </p>

@@ -489,8 +489,10 @@ export default function AILiveChartTerminal({
     }, 3500);
   };
 
-  // Real-Time 15M Market Analysis State (Synchronized across MSOB & Market Analysis Panel)
-  const [isReanalyzing, setIsReanalyzing] = useState(false);
+  // Real-Time 15M Market Analysis State (Synchronized silently in background across MSOB & Market Analysis Panel)
+  const isReanalyzing = false;
+  const livePriceRef = useRef(livePrice);
+  livePriceRef.current = livePrice;
   const [candleCountdown, setCandleCountdown] = useState(() => get15mCandleTimeRemaining());
   const [lastCandleCloseNotice, setLastCandleCloseNotice] = useState(null);
 
@@ -502,11 +504,10 @@ export default function AILiveChartTerminal({
     return () => clearInterval(timer);
   }, []);
 
-  // Real-time market re-analysis triggered on initial mount, asset change, and on every 15m candle close
+  // Silent background market re-analysis triggered on initial mount, asset change, manual click, and every 15m candle close
   const triggerReanalysis = useCallback(async (isCandleCloseTrigger = false) => {
-    setIsReanalyzing(true);
     try {
-      const result = await run15mMarketReanalysis(currentAsset.pair, livePrice);
+      const result = await run15mMarketReanalysis(currentAsset.pair, livePriceRef.current);
       if (result) {
         setMarketAnalysis(result);
         if (isCandleCloseTrigger) {
@@ -521,12 +522,10 @@ export default function AILiveChartTerminal({
       }
     } catch (err) {
       console.warn('[AILiveChartTerminal] Reanalysis failed:', err);
-    } finally {
-      setIsReanalyzing(false);
     }
-  }, [currentAsset.pair, livePrice, isMuted, isKhmer]);
+  }, [currentAsset.pair, isMuted, isKhmer]);
 
-  // Synchronized 15m candle close scheduler
+  // Synchronized 15m candle close scheduler + background refresh every 60s
   useEffect(() => {
     let isMounted = true;
     triggerReanalysis(false);
@@ -545,9 +544,14 @@ export default function AILiveChartTerminal({
 
     scheduleNext();
 
+    const bgInterval = setInterval(() => {
+      if (isMounted) triggerReanalysis(false);
+    }, 60000);
+
     return () => {
       isMounted = false;
       if (candleTimeoutId) clearTimeout(candleTimeoutId);
+      clearInterval(bgInterval);
     };
   }, [currentAsset.pair, symbolId, timeframe, triggerReanalysis]);
 

@@ -1450,21 +1450,11 @@ export default function AITradingPage({
 
               <button
                 type="button"
-                className={`ait-scanner-manual-btn ${isScanningSetup ? 'loading' : ''}`}
+                className="ait-scanner-manual-btn"
                 onClick={handleTriggerMarketScan}
-                disabled={isScanningSetup}
               >
-                {isScanningSetup ? (
-                  <>
-                    <span className="ait-scanner-spinner" />
-                    <span>{isKhmer ? 'កំពុងវិភាគ & បង្កើត Signal...' : 'Analyzing & Structuring Setup...'}</span>
-                  </>
-                ) : (
-                  <>
-                    <SparkleIcon style={{ width: 15, height: 15 }} />
-                    <span>{isKhmer ? `វិភាគ & ទទួល Signal ${scanTargetPair}` : `Scan & Analyze ${scanTargetPair} Setup`}</span>
-                  </>
-                )}
+                <SparkleIcon style={{ width: 15, height: 15 }} />
+                <span>{isKhmer ? `វិភាគ & ទទួល Signal ${scanTargetPair}` : `Scan & Analyze ${scanTargetPair} Setup`}</span>
               </button>
 
               <div className="ait-scanner-auto-badge">
