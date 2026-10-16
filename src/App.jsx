@@ -670,7 +670,10 @@ export default function App() {
       />
       {section === 'home' ? (
         <LandingHome
-          onGetStarted={() => setAuthView('signup')}
+          onGetStarted={() => {
+            setSection('categories');
+            setView('home');
+          }}
           onLogin={() => setAuthView('login')}
           onExploreLessons={() => {
             setSection('categories');

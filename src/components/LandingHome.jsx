@@ -951,7 +951,11 @@ export default function LandingHome({
           ========================================================================= */}
       <section className="lnd-bottom-cta-section">
         <div className="lnd-container">
-          <div className="lnd-bottom-cta-box">
+          <div
+            className="lnd-bottom-cta-box"
+            onClick={onExploreLessons || onGetStarted}
+            style={{ cursor: 'pointer' }}
+          >
             <h2 className="lnd-bottom-cta-title">
               {isKhmer
                 ? 'ត្រៀមខ្លួនរួចរាល់ហើយឬនៅ ដើម្បីជួញដូរដោយមានប្រៀបលើទីផ្សារ?'
@@ -966,7 +970,11 @@ export default function LandingHome({
               <button
                 type="button"
                 className="lnd-cta-primary-btn lnd-btn-large"
-                onClick={onGetStarted}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onExploreLessons) onExploreLessons();
+                  else if (onGetStarted) onGetStarted();
+                }}
               >
                 <SparkleIcon style={{ width: 16, height: 16, marginRight: 8, verticalAlign: '-2px' }} />
                 <span>{isKhmer ? 'ចាប់ផ្តើមរៀនឥឡូវនេះ (ឥតគិតថ្លៃ)' : 'Start Learning Free Today'}</span>
@@ -976,7 +984,10 @@ export default function LandingHome({
                 <button
                   type="button"
                   className="lnd-cta-secondary-btn"
-                  onClick={onLogin}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onLogin();
+                  }}
                 >
                   {isKhmer ? 'ចូលគណនី (Login)' : 'Sign In to Terminal'}
                 </button>
