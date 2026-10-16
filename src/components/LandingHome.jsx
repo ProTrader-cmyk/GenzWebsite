@@ -326,7 +326,7 @@ export default function LandingHome({
           {/* Subtitle */}
           <p className="lnd-hero-subtitle">
             {isKhmer
-              ? 'ការជួញដូររបស់អ្នក តែជាមួយនឹងទិន្នន័យច្បាស់លាស់។ ការ Backtest ជាង 4 ឆ្នាំ ការវិភាគដោយ AI និងការតាមដាន Signal ផ្ទាល់ — ទាំងអស់នៅលើ Terminal តែមួយ។'
+              ? 'ការជួញដូររបស់អ្នក កាន់តែមានប្រសេីរជាងមុន ដោយសារការប្រើប្រាស់ទិន្នន័យដ៏មានប្រសិទ្ធភាព។ ជាមួយនឹង ទិន្នន័យ Backtesting ជាង ៤ ឆ្នាំ ការវិភាគដែលគាំទ្រដោយបញ្ញាសិប្បនិម្មិត (AI) និងសញ្ញាជួញដូរផ្ទាល់ (Live Signals) ដែលមានភាពច្បាស់លាស់ខ្ពស់ — ទាំងអស់នេះត្រូវបានរួមបញ្ចូលនៅក្នុងវេទិកាតែមួយ។'
               : 'Your trading, but with a data advantage. 4+ years of backtesting, AI-supported analysis, and live precision signals — all on one unified platform.'}
           </p>
 
