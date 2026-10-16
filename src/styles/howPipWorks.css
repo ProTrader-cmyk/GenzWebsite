@@ -1,0 +1,773 @@
+/* =========================================================================
+   HOW PIP WORKS — ENGINE LIVE SIMULATION STYLES
+   Exact replica of the 4-stage pipeline (WAKE, SCAN, DEBATE, PUBLISH)
+   ========================================================================= */
+
+.lnd-how-pip-section {
+  position: relative;
+  padding: 80px 0 70px;
+}
+
+/* Console Container */
+.pip-engine-console {
+  position: relative;
+  background: linear-gradient(165deg, rgba(11, 16, 28, 0.96) 0%, rgba(6, 9, 18, 0.98) 100%);
+  border: 1px solid rgba(0, 242, 254, 0.22);
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow:
+    0 30px 70px -25px rgba(0, 0, 0, 0.85),
+    0 0 35px rgba(0, 242, 254, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  max-width: 1100px;
+  margin: 0 auto;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.pip-engine-console:hover {
+  border-color: rgba(0, 242, 254, 0.36);
+  box-shadow:
+    0 35px 80px -20px rgba(0, 0, 0, 0.9),
+    0 0 45px rgba(0, 242, 254, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+/* Top Laser Accent */
+.pip-engine-console::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1.5px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 242, 254, 0.85) 30%,
+    rgba(168, 85, 247, 0.85) 65%,
+    rgba(16, 185, 129, 0.75) 85%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Console Header Bar */
+.pip-console-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 28px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.pip-engine-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #34d399;
+}
+
+.pip-live-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: lndPulse 1.8s infinite ease-in-out;
+}
+
+.pip-engine-pair {
+  font-size: 12px;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 0.05em;
+}
+
+/* 4-Stage Stepper */
+.pip-stepper-track {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 60px 20px;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.pip-step-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  z-index: 2;
+  transition: transform 0.18s ease;
+}
+
+.pip-step-node:hover {
+  transform: translateY(-2px);
+}
+
+.pip-step-circle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 800;
+  background: #0f172a;
+  color: #64748b;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transition: all 0.25s ease;
+}
+
+.pip-step-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #64748b;
+  transition: color 0.25s ease;
+}
+
+/* Active Step (Glowing Yellow Ring) */
+.pip-step-active .pip-step-circle {
+  background: #f59e0b;
+  color: #0b0f19;
+  border-color: #fbbf24;
+  box-shadow:
+    0 0 0 6px rgba(245, 158, 11, 0.2),
+    0 0 20px rgba(245, 158, 11, 0.6);
+}
+
+.pip-step-active .pip-step-label {
+  color: #f59e0b;
+}
+
+/* Completed Step (Green Check) */
+.pip-step-done .pip-step-circle {
+  background: #10b981;
+  color: #09121f;
+  border-color: #34d399;
+  box-shadow:
+    0 0 0 4px rgba(16, 185, 129, 0.15),
+    0 0 16px rgba(16, 185, 129, 0.45);
+}
+
+.pip-step-done .pip-step-label {
+  color: #10b981;
+}
+
+/* Connecting Progress Line */
+.pip-step-connector {
+  flex: 1;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: -18px 8px 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.pip-connector-progress {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #f59e0b);
+  transition: width 0.35s ease;
+}
+
+.pip-connector-done .pip-connector-progress {
+  background: #10b981;
+}
+
+/* Console Body Grid (2 Columns) */
+.pip-console-body {
+  display: grid;
+  grid-template-columns: 1.85fr 1fr;
+  gap: 24px;
+  padding: 16px 28px 28px;
+}
+
+/* Left Main Stage Card */
+.pip-main-stage {
+  background: rgba(8, 12, 22, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 18px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  min-height: 340px;
+}
+
+.pip-stage-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+/* =========================================================================
+   STAGE 1: WAKE STYLES
+   ========================================================================= */
+.pip-stage-wake {
+  align-items: center;
+  justify-content: center;
+}
+
+.pip-wake-orbit-container {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 16px auto 26px;
+}
+
+.pip-orbit-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px dashed rgba(245, 158, 11, 0.35);
+  animation: pipSpin 24s linear infinite;
+}
+
+@keyframes pipSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.pip-orbit-dot {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 8px #f59e0b;
+}
+
+/* Satellite dots positioning */
+.pip-dot-1 { top: 0; left: 50%; transform: translate(-50%, -50%); }
+.pip-dot-2 { top: 25%; right: 4%; }
+.pip-dot-3 { bottom: 25%; right: 4%; }
+.pip-dot-4 { bottom: 0; left: 50%; transform: translate(-50%, 50%); }
+.pip-dot-5 { bottom: 25%; left: 4%; }
+.pip-dot-6 { top: 25%; left: 4%; }
+
+.pip-wake-brain-core {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.22) 0%, rgba(15, 23, 42, 0.95) 70%);
+  border: 1.5px solid #f59e0b;
+  box-shadow: 0 0 24px rgba(245, 158, 11, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pip-wake-chips-row,
+.pip-scan-chips-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.pip-chip {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 5px 14px;
+  border-radius: 20px;
+  letter-spacing: 0.04em;
+}
+
+.pip-chip-active-gold {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid #f59e0b;
+  color: #fbbf24;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.25);
+}
+
+.pip-chip-active-green {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid #10b981;
+  color: #34d399;
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.25);
+}
+
+.pip-chip-faint {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #64748b;
+}
+
+/* =========================================================================
+   STAGE 2: SCAN STYLES
+   ========================================================================= */
+.pip-scan-chart-container {
+  position: relative;
+  height: 180px;
+  background: rgba(10, 15, 26, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 18px;
+}
+
+.pip-supply-glow {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 200px;
+  height: 100%;
+  background: radial-gradient(circle at 100% 30%, rgba(245, 158, 11, 0.25) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.pip-supply-line {
+  position: absolute;
+  top: 50px;
+  left: 20px;
+  right: 14px;
+  border-top: 1.5px dashed rgba(245, 158, 11, 0.75);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.pip-supply-tag {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #fbbf24;
+  margin-top: -16px;
+  background: rgba(15, 23, 42, 0.9);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.pip-scan-candles-svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* =========================================================================
+   STAGE 3 & 4: DEBATE & PUBLISH LIST
+   ========================================================================= */
+.pip-debate-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-bottom: 16px;
+  flex: 1;
+}
+
+.pip-debate-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 14px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.2s ease;
+}
+
+.pip-debate-green {
+  border-color: rgba(16, 185, 129, 0.35);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.08);
+}
+
+.pip-debate-amber {
+  border-color: rgba(245, 158, 11, 0.35);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.08);
+}
+
+.pip-debate-red {
+  border-color: rgba(239, 68, 68, 0.38);
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.1);
+}
+
+.pip-debate-dark {
+  border-color: rgba(255, 255, 255, 0.09);
+}
+
+.pip-agent-badge {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.pip-badge-ta,
+.pip-badge-ma,
+.pip-badge-rk {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.pip-badge-se {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.pip-badge-ta-red,
+.pip-badge-ma-red,
+.pip-badge-se-red {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.45);
+}
+
+.pip-badge-rk-amber {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.pip-agent-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.pip-agent-name {
+  font-size: 12px;
+  font-weight: 800;
+  color: #f1f5f9;
+}
+
+.pip-agent-msg {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.pip-vote-badge {
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 6px;
+  letter-spacing: 0.06em;
+}
+
+.pip-vote-buy {
+  background: rgba(16, 185, 129, 0.22);
+  color: #34d399;
+  border: 1px solid #10b981;
+}
+
+.pip-vote-sell {
+  background: rgba(239, 68, 68, 0.22);
+  color: #f87171;
+  border: 1px solid #ef4444;
+}
+
+.pip-vote-hold {
+  background: rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* Consensus Meter */
+.pip-consensus-meter-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.pip-consensus-track {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.pip-consensus-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #f59e0b, #10b981);
+  border-radius: 3px;
+  transition: width 0.35s ease;
+}
+
+.pip-fill-red-green {
+  background: linear-gradient(90deg, #f59e0b 20%, #10b981 80%);
+}
+
+.pip-consensus-text {
+  font-size: 11.5px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.pip-consensus-text strong {
+  color: #f1f5f9;
+}
+
+/* Bottom Terminal Prompt Bar */
+.pip-terminal-prompt {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 11.5px;
+  color: #cbd5e1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: auto;
+}
+
+.pip-term-cursor {
+  color: #f59e0b;
+  animation: lndPulse 1s infinite steps(2, start);
+}
+
+/* =========================================================================
+   RIGHT PANEL: SKELETON OR PUBLISHED SIGNAL CARD
+   ========================================================================= */
+.pip-right-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Skeleton Card */
+.pip-skeleton-card {
+  background: rgba(8, 12, 22, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 18px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  min-height: 340px;
+}
+
+.pip-skel-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.pip-skel-bar {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  height: 12px;
+}
+
+.pip-skel-bar-lg { width: 90px; height: 16px; }
+.pip-skel-bar-sm { width: 50px; height: 16px; border-radius: 10px; }
+.pip-skel-bar-full { width: 100%; height: 10px; margin-bottom: 8px; }
+.pip-skel-bar-med { width: 68%; height: 10px; }
+.pip-skel-bar-short { width: 80px; height: 10px; }
+
+.pip-skel-lines {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 24px;
+}
+
+.pip-skel-circle-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: auto;
+}
+
+.pip-skel-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 255, 255, 0.1);
+}
+
+.pip-waiting-label {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  padding: 12px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Published Live Signal Card matching Screenshot 4 */
+.pip-published-signal-card {
+  background: linear-gradient(165deg, rgba(16, 22, 38, 0.95), rgba(8, 12, 22, 0.98));
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 18px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  min-height: 340px;
+  box-shadow:
+    0 18px 45px -15px rgba(0, 0, 0, 0.8),
+    0 0 28px rgba(239, 68, 68, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  animation: pipCardFadeIn 0.3s ease;
+}
+
+@keyframes pipCardFadeIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.pip-pub-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.pip-pub-pair {
+  font-size: 18px;
+  font-weight: 900;
+  color: #f1f5f9;
+  margin: 0;
+}
+
+.pip-pub-sub {
+  font-size: 10.5px;
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+.pip-pub-badge-sell {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border: 1px solid #ef4444;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 12px;
+  border-radius: 6px;
+  letter-spacing: 0.05em;
+}
+
+.pip-pub-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.pip-pub-metric-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.pip-pub-metric-row strong {
+  font-size: 13.5px;
+  color: #f1f5f9;
+}
+
+.pip-text-sl {
+  color: #f87171 !important;
+}
+
+.pip-text-tp {
+  color: #34d399 !important;
+}
+
+/* Confidence Ring */
+.pip-pub-confidence-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.pip-confidence-ring {
+  position: relative;
+  width: 44px;
+  height: 44px;
+}
+
+.pip-conf-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.pip-conf-pct {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: #f1f5f9;
+}
+
+.pip-conf-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.pip-conf-info strong {
+  font-size: 12px;
+  color: #f1f5f9;
+}
+
+.pip-conf-info span {
+  font-size: 10.5px;
+  color: #94a3b8;
+}
+
+/* Published Status Button */
+.pip-published-btn {
+  background: rgba(16, 185, 129, 0.18);
+  border: 1px solid #10b981;
+  color: #34d399;
+  font-size: 11.5px;
+  font-weight: 800;
+  padding: 9px;
+  border-radius: 20px;
+  text-align: center;
+  letter-spacing: 0.05em;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.25);
+}
+
+/* Responsive */
+@media (max-width: 860px) {
+  .pip-stepper-track {
+    padding: 16px 20px;
+  }
+  .pip-step-circle {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+  }
+  .pip-step-label {
+    font-size: 9.5px;
+  }
+  .pip-console-body {
+    grid-template-columns: 1fr;
+  }
+  .pip-right-panel {
+    min-height: auto;
+  }
+}

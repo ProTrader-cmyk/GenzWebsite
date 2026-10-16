@@ -17,6 +17,7 @@ import {
   TelegramIcon,
   UserIcon,
 } from './ui/CategoryIcons.jsx';
+import HowPipWorks from './HowPipWorks.jsx';
 import '../styles/landing.css';
 
 function getActiveTradingSession() {
@@ -770,7 +771,12 @@ export default function LandingHome({
       </section>
 
       {/* =========================================================================
-          SECTION 2: DATA ADVANTAGE TERMINAL SHOWCASE
+          SECTION 2: HOW PIP WORKS (WAKE, SCAN, DEBATE, PUBLISH)
+          ========================================================================= */}
+      <HowPipWorks isKhmer={isKhmer} />
+
+      {/* =========================================================================
+          SECTION 3: DATA ADVANTAGE TERMINAL SHOWCASE
           ========================================================================= */}
       <section className="lnd-section lnd-terminal-section">
         <div className="lnd-container">
