@@ -1137,21 +1137,6 @@ export default function AILiveChartTerminal({
               </div>
             )}
 
-            {/* In-Chart Setup Price Rays on Right Edge */}
-            {autoSetupActive && currentActiveSetup && (
-              <div className="ait-chart-setup-rays-overlay ait-mono">
-                <div className="ait-setup-ray-tag tp-tag">
-                  <strong>TP</strong> ${formatSpotPrice(currentAsset.pair, currentActiveSetup.tp)}
-                </div>
-                <div className="ait-setup-ray-tag entry-tag">
-                  <strong>ENTRY</strong> ${formatSpotPrice(currentAsset.pair, currentActiveSetup.entry)}
-                </div>
-                <div className="ait-setup-ray-tag sl-tag">
-                  <strong>SL</strong> ${formatSpotPrice(currentAsset.pair, currentActiveSetup.sl)}
-                </div>
-              </div>
-            )}
-
             {/* Real Live Interactive TradingView Candlestick Canvas (Always 100% Active) */}
             <div
               ref={tvContainerRef}

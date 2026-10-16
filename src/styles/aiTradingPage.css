@@ -3874,48 +3874,6 @@
   color: #FFFFFF;
 }
 
-/* Horizontal Price Rays on Chart Edge */
-.ait-chart-setup-rays-overlay {
-  position: absolute;
-  top: 72px;
-  right: 56px;
-  bottom: 50px;
-  width: 140px;
-  pointer-events: none;
-  z-index: 15;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-around;
-}
-.ait-setup-ray-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 8px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 800;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-  width: fit-content;
-  margin-left: auto;
-  border: 1px solid transparent;
-}
-.ait-setup-ray-tag.tp-tag {
-  background: rgba(16, 185, 129, 0.9);
-  color: #000;
-  border-color: #10B981;
-}
-.ait-setup-ray-tag.entry-tag {
-  background: rgba(0, 242, 254, 0.9);
-  color: #000;
-  border-color: #00F2FE;
-}
-.ait-setup-ray-tag.sl-tag {
-  background: rgba(239, 68, 68, 0.9);
-  color: #FFF;
-  border-color: #EF4444;
-}
-
 /* Floating Outcome Celebration / Stop Toast */
 .ait-chart-outcome-toast {
   position: absolute;
