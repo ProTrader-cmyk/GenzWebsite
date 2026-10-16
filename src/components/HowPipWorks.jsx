@@ -415,6 +415,9 @@ export default function HowPipWorks({ isKhmer }) {
                       <span>Confidence</span>
                       <strong>92%</strong>
                     </div>
+                    <div className="pip-arena-bar-track">
+                      <div className="pip-arena-bar-fill cyan" style={{ width: activeStep === 3 ? '92%' : '0%' }} />
+                    </div>
                   </div>
 
                   {/* Agent 2: Macro Sentinel */}
@@ -435,6 +438,9 @@ export default function HowPipWorks({ isKhmer }) {
                     <div className="pip-arena-confidence">
                       <span>Confidence</span>
                       <strong>88%</strong>
+                    </div>
+                    <div className="pip-arena-bar-track">
+                      <div className="pip-arena-bar-fill purple" style={{ width: activeStep === 3 ? '88%' : '0%' }} />
                     </div>
                   </div>
 
@@ -457,6 +463,9 @@ export default function HowPipWorks({ isKhmer }) {
                       <span>Confidence</span>
                       <strong>91%</strong>
                     </div>
+                    <div className="pip-arena-bar-track">
+                      <div className="pip-arena-bar-fill blue" style={{ width: activeStep === 3 ? '91%' : '0%' }} />
+                    </div>
                   </div>
 
                   {/* Agent 4: Risk Guardian */}
@@ -477,6 +486,9 @@ export default function HowPipWorks({ isKhmer }) {
                     <div className="pip-arena-confidence">
                       <span>Confidence</span>
                       <strong>96%</strong>
+                    </div>
+                    <div className="pip-arena-bar-track">
+                      <div className="pip-arena-bar-fill emerald" style={{ width: activeStep === 3 ? '96%' : '0%' }} />
                     </div>
                   </div>
                 </div>
@@ -657,7 +669,7 @@ export default function HowPipWorks({ isKhmer }) {
                         stroke="#10b981"
                         strokeWidth="3.2"
                         strokeDasharray="113"
-                        strokeDashoffset={activeStep === 4 ? 24 : 113}
+                        strokeDashoffset={activeStep === 4 ? 13.5 : 113}
                         strokeLinecap="round"
                         transform="rotate(-90 22 22)"
                         className="pip-conf-circle-progress"
