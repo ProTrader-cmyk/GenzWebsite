@@ -408,8 +408,8 @@ export function calculateRealIctSetup(pair, spotPrice, preferredDir = null, styl
   let riskPips, rewardPips;
   if (isScalp) {
     if (isGold) {
-      riskPips = 4.5; // $4.50 risk for scalping
-      rewardPips = 12.0; // $12.00 target = 1:2.67 R:R
+      riskPips = 2.5; // 2–3 numbers SL ($2.50 risk for scalping)
+      rewardPips = 3.0; // 2–3 numbers TP ($3.00 target = 1:1.2 R:R quick scalp)
     } else if (isCrypto) {
       riskPips = 380.0;
       rewardPips = 1020.0; // 1:2.68 R:R
@@ -686,8 +686,8 @@ Return ONLY raw JSON with no backticks, no code fence, matching this exact struc
               tpNum = Number((isBuy ? entryNum + 20.0 : entryNum - 20.0).toFixed(decimals));
               beTrigger = Number((isBuy ? entryNum + 10.0 : entryNum - 10.0).toFixed(decimals));
             } else {
-              slNum = Number(parsed.sl) || (dir === 'SELL' ? entryNum + (isGold ? (isScalp ? 4.5 : 12) : 0.002) : entryNum - (isGold ? (isScalp ? 4.5 : 12) : 0.002));
-              tpNum = Number(parsed.tp) || (dir === 'SELL' ? entryNum - (isGold ? (isScalp ? 12 : 32) : 0.006) : entryNum + (isGold ? (isScalp ? 12 : 32) : 0.006));
+              slNum = Number(parsed.sl) || (dir === 'SELL' ? entryNum + (isGold ? (isScalp ? 2.5 : 12) : 0.001) : entryNum - (isGold ? (isScalp ? 2.5 : 12) : 0.001));
+              tpNum = Number(parsed.tp) || (dir === 'SELL' ? entryNum - (isGold ? (isScalp ? 3.0 : 32) : 0.0015) : entryNum + (isGold ? (isScalp ? 3.0 : 32) : 0.0015));
               beTrigger = Number(parsed.beTrigger) || null;
             }
 

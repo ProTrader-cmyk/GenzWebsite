@@ -54,30 +54,30 @@ function buildDefaultSignal(pair, price, style = 'scalp') {
   const isScalp = style === 'scalp';
 
   if (isScalp) {
-    const slDist = isGold ? 4.5 : 0.0015;
-    const tp1Dist = isGold ? 7.5 : 0.0025;
-    const tp2Dist = isGold ? 14.0 : 0.0048;
+    const slDist = isGold ? 2.5 : 0.0008; // 2–3 numbers SL ($2.50 on Gold / 25 pips)
+    const tp1Dist = isGold ? 3.0 : 0.0012; // 2–3 numbers TP1 ($3.00 on Gold / 30 pips)
+    const tp2Dist = isGold ? 5.0 : 0.0022; // 5 numbers TP2 ($5.00 on Gold / 50 pips)
     return {
       id: `sig-scalp-${Date.now()}`,
       pair,
       direction: 'BUY',
-      timeframe: '5m',
+      timeframe: '1m / 5m',
       style: 'scalping',
-      mode: '5M SCALP (M1-M5 EXECUTION)',
-      model: 'ICT Liquidity Sweep + 5M FVG Displacement',
+      mode: '1M/5M QUICK SCALP (2–3 NUMBERS)',
+      model: '1M-5M Liquidity Sweep + Fast FVG Tap',
       entry: Number(p.toFixed(decimals)),
       sl: Number((p - slDist).toFixed(decimals)),
       tp1: Number((p + tp1Dist).toFixed(decimals)),
       tp2: Number((p + tp2Dist).toFixed(decimals)),
-      rr: '1 : 2.8',
-      confidence: 93,
-      pipsGain: isGold ? '+75 Pips' : '+25 Pips',
+      rr: '1 : 1.2',
+      confidence: 94,
+      pipsGain: isGold ? '+30 Pips ($3.00)' : '+12 Pips',
       session: 'Active Institutional Overlap',
       status: 'ACTIVE',
       confluences: [
-        'Asian session low liquidity swept with sharp rejection wick on 5M',
-        'Institutional displacement candle creating clean 5M Fair Value Gap',
-        'Discount zone retest (62%–70.5% Fibonacci OTE level) confirmed',
+        'Asian/Session micro liquidity swept with instant 1M/5M rejection wick',
+        'Strict 2–3 numbers Stop Loss ($2.50) beyond immediate micro swing',
+        'Quick 2–3 numbers Take Profit ($3.00) secured inside opposing micro-imbalance',
       ],
       time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Phnom_Penh' }),
     };
@@ -439,10 +439,32 @@ export default function MarketAnalysisPanel({
       }
 
       if (signal) {
+        const isBuy = (signal.direction || 'BUY').toUpperCase() === 'BUY';
+        let adjustedSl = signal.sl;
+        let adjustedTp1 = signal.tp1 || signal.tp;
+        let adjustedTp2 = signal.tp2;
+        let adjustedRr = signal.rr || (mode === 'scalp' ? '1 : 1.2' : '1 : 2.0');
+
+        if (mode === 'scalp') {
+          // Strict 2-3 numbers SL & TP for scalping on Gold
+          const scalpSlPts = isGold ? 2.5 : 0.0008;
+          const scalpTp1Pts = isGold ? 3.0 : 0.0012;
+          const scalpTp2Pts = isGold ? 5.0 : 0.0022;
+          adjustedSl = Number((isBuy ? Number(signal.entry) - scalpSlPts : Number(signal.entry) + scalpSlPts).toFixed(decimals));
+          adjustedTp1 = Number((isBuy ? Number(signal.entry) + scalpTp1Pts : Number(signal.entry) - scalpTp1Pts).toFixed(decimals));
+          adjustedTp2 = Number((isBuy ? Number(signal.entry) + scalpTp2Pts : Number(signal.entry) - scalpTp2Pts).toFixed(decimals));
+          adjustedRr = '1 : 1.2';
+        } else {
+          adjustedTp2 = adjustedTp2 || (isBuy ? Number((Number(signal.entry) + (isGold ? 20.0 : 0.008)).toFixed(decimals)) : Number((Number(signal.entry) - (isGold ? 20.0 : 0.008)).toFixed(decimals)));
+        }
+
         const formatted = {
           ...signal,
-          tp1: signal.tp1 || signal.tp,
-          tp2: signal.tp2 || (signal.direction === 'BUY' ? Number((Number(signal.entry) + (isGold ? (mode === 'scalp' ? 14 : 20) : 0.005)).toFixed(decimals)) : Number((Number(signal.entry) - (isGold ? (mode === 'scalp' ? 14 : 20) : 0.005)).toFixed(decimals))),
+          sl: adjustedSl,
+          tp1: adjustedTp1,
+          tp2: adjustedTp2,
+          rr: adjustedRr,
+          pipsGain: isGold ? (mode === 'scalp' ? '+30 Pips ($3.00)' : '+200 Pips ($20.00)') : (mode === 'scalp' ? '+12 Pips' : '+80 Pips'),
           time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Phnom_Penh' }),
           status: 'ACTIVE',
         };
@@ -857,9 +879,9 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                 <span className="ait-pip-mode-icon">⚡</span>
                 <div className="ait-pip-mode-texts">
                   <span className="ait-pip-mode-name">Pip Scalp</span>
-                  <span className="ait-pip-mode-sub">5m • 15m Fast Execution</span>
+                  <span className="ait-pip-mode-sub">1m • 5m Fast Execution</span>
                 </div>
-                <span className="ait-pip-mode-tag">Quick Scalp</span>
+                <span className="ait-pip-mode-tag">2–3 Numbers Target &amp; SL</span>
               </button>
 
               <button
@@ -883,7 +905,7 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                   {pipMode === 'scalp' ? (
                     <>
                       <span className="ait-pip-badge-dot amber" />
-                      <strong className="text-amber">⚡ PIP SCALP SCANNER</strong>
+                      <strong className="text-amber">⚡ PIP SCALP SCANNER (2–3 NUMBERS)</strong>
                     </>
                   ) : (
                     <>
@@ -895,8 +917,8 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                 </div>
                 <p className="ait-pip-scan-desc">
                   {pipMode === 'scalp'
-                    ? 'High-speed algorithmic micro-sweep scan • Target 15–35 Pips • Max SL 45 Pips'
-                    : 'Institutional 3-Candle CRT liquidation & Order Block scan • Target 50–120 Pips'}
+                    ? 'Ultra-fast micro-sweep scalper • Strict 2–3 numbers SL & Target ($2.00–$3.00 / 20–30 Pips) • In and out in minutes'
+                    : 'Institutional 3-Candle CRT liquidation & Order Block scan • Target 50–120 Pips ($10–$20)'}
                 </p>
               </div>
 
@@ -985,19 +1007,25 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                 <div className="ait-sig-box sl">
                   <span className="ait-sig-box-lbl">Stop Loss (SL)</span>
                   <div className="ait-sig-box-val ait-mono text-red">${formatCommaPrice(activeSignal.sl, decimals)}</div>
-                  <span className="ait-sig-box-sub text-red">Structural Invalidation</span>
+                  <span className="ait-sig-box-sub text-red">
+                    {pipMode === 'scalp' ? '2–3 Numbers SL ($2.50)' : 'CRT 1000 Pts SL ($10.00)'}
+                  </span>
                 </div>
 
                 <div className="ait-sig-box tp">
                   <span className="ait-sig-box-lbl">Take Profit 1</span>
                   <div className="ait-sig-box-val ait-mono text-emerald">${formatCommaPrice(activeSignal.tp1, decimals)}</div>
-                  <span className="ait-sig-box-sub text-emerald">50% Partials Target</span>
+                  <span className="ait-sig-box-sub text-emerald">
+                    {pipMode === 'scalp' ? '2–3 Numbers TP1 ($3.00)' : 'CRT 1500 Pts TP1 ($15.00)'}
+                  </span>
                 </div>
 
                 <div className="ait-sig-box tp runner">
                   <span className="ait-sig-box-lbl">Take Profit 2 (Runner)</span>
                   <div className="ait-sig-box-val ait-mono text-emerald">${formatCommaPrice(activeSignal.tp2, decimals)}</div>
-                  <span className="ait-sig-box-sub text-emerald">Final Target ({activeSignal.pipsGain || '+150 Pips'})</span>
+                  <span className="ait-sig-box-sub text-emerald">
+                    {pipMode === 'scalp' ? '5.0 Numbers Runner ($5.00)' : `Final Target (${activeSignal.pipsGain || '+200 Pips'})`}
+                  </span>
                 </div>
 
                 <div className="ait-sig-box rr">
