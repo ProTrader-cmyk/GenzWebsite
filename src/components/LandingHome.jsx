@@ -480,10 +480,12 @@ export default function LandingHome({
 
           {/* Main Hero Headline */}
           <h1 className="lnd-hero-title">
-            <span>96.3 % of traders lose money.</span>
+            <span>
+              {isKhmer ? 'ទីផ្សារមិនមែនជាកន្លែងសម្រាប់ការស្មានទេ។' : 'The market is not a place for guessing.'}
+            </span>
             <br />
             <span className="lnd-hero-glow-text">
-              {isKhmer ? 'អ្នកឈ្នះសិក្សាជាមួយ GenZ Trader។' : 'The others trade with GenZ Trader.'}
+              {isKhmer ? 'វិភាគឱ្យច្បាស់។ រៀបចំយុទ្ធសាស្ត្រឱ្យត្រឹមត្រូវ។' : 'Trade smarter with GenZ Trader.'}
             </span>
           </h1>
 
