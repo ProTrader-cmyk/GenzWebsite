@@ -1670,9 +1670,22 @@ body.light-mode .lnd-ai-telemetry-chip {
   height: 96px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2.5px solid #00f2fe;
-  box-shadow: 0 0 18px rgba(0, 242, 254, 0.35);
   display: block;
+}
+
+.lnd-avatar-ceo {
+  border: 2.5px solid #00f2fe;
+  box-shadow: 0 0 18px rgba(0, 242, 254, 0.45);
+}
+
+.lnd-avatar-coo {
+  border: 2.5px solid #10b981;
+  box-shadow: 0 0 18px rgba(16, 185, 129, 0.45);
+}
+
+.lnd-avatar-dev {
+  border: 2.5px solid #a855f7;
+  box-shadow: 0 0 18px rgba(168, 85, 247, 0.45);
 }
 
 .lnd-team-monogram-avatar {

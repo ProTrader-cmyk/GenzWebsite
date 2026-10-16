@@ -4,7 +4,9 @@ import { db } from '../firebase.js';
 import { fetchLivePrice, formatSpotPrice, subscribeLiveTicks, fetchGoldQuoteMetrics } from '../services/marketPriceService.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import Footer from './Footer.jsx';
-import mentorImg from '../assets/mentor.jpg';
+import pheaImg from '../assets/Phea.jpg';
+import hourImg from '../assets/Hour.jpg';
+import visalImg from '../assets/Visal.jpg';
 import {
   SparkleIcon,
   CandleChartIcon,
@@ -984,9 +986,9 @@ export default function LandingHome({
               <div className="lnd-team-avatar-container">
                 <div className="lnd-team-avatar-glow lnd-glow-ceo" />
                 <img
-                  src={mentorImg}
+                  src={pheaImg}
                   alt="Veng Sophea - CEO"
-                  className="lnd-team-avatar-img"
+                  className="lnd-team-avatar-img lnd-avatar-ceo"
                   loading="lazy"
                 />
                 <span className="lnd-team-status-dot" title="Active Founder" />
@@ -1025,9 +1027,12 @@ export default function LandingHome({
             <div className="lnd-team-card lnd-team-card-coo">
               <div className="lnd-team-avatar-container">
                 <div className="lnd-team-avatar-glow lnd-glow-coo" />
-                <div className="lnd-team-monogram-avatar lnd-monogram-coo">
-                  <span>LS</span>
-                </div>
+                <img
+                  src={hourImg}
+                  alt="Lim Sunhour - COO"
+                  className="lnd-team-avatar-img lnd-avatar-coo"
+                  loading="lazy"
+                />
                 <span className="lnd-team-status-dot lnd-status-coo" title="Head of Operations" />
               </div>
 
@@ -1058,9 +1063,12 @@ export default function LandingHome({
             <div className="lnd-team-card lnd-team-card-dev">
               <div className="lnd-team-avatar-container">
                 <div className="lnd-team-avatar-glow lnd-glow-dev" />
-                <div className="lnd-team-monogram-avatar lnd-monogram-dev">
-                  <span>SV</span>
-                </div>
+                <img
+                  src={visalImg}
+                  alt="Sen Visal - Lead Dev"
+                  className="lnd-team-avatar-img lnd-avatar-dev"
+                  loading="lazy"
+                />
                 <span className="lnd-team-status-dot lnd-status-dev" title="AI Systems Lead" />
               </div>
 
