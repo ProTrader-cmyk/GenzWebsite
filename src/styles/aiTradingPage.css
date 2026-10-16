@@ -5878,6 +5878,36 @@
   display: inline-block;
 }
 
+.ait-aii-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ait-aii-copy-plan-topbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(14, 165, 233, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.32);
+  color: #38BDF8;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6.5px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.ait-aii-copy-plan-topbtn:hover {
+  background: rgba(14, 165, 233, 0.2);
+  border-color: rgba(56, 189, 248, 0.65);
+  color: #FFFFFF;
+  transform: translateY(-1px);
+}
+
 .ait-aii-reanalyze-btn {
   display: inline-flex;
   align-items: center;

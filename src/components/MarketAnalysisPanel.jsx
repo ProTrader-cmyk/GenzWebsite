@@ -44,7 +44,6 @@ export default function MarketAnalysisPanel({
   const [liveCalendarEvents, setLiveCalendarEvents] = useState(null);
   const [liveNewsItems, setLiveNewsItems] = useState(null);
   const [copiedNotice, setCopiedNotice] = useState(false);
-  const [showPrevAnalysis, setShowPrevAnalysis] = useState(false);
   const [minutesElapsed, setMinutesElapsed] = useState(2);
 
   // Update "Updated Xm ago" dynamically based on marketAnalysis.analyzedAt
@@ -364,6 +363,19 @@ export default function MarketAnalysisPanel({
         <div className="ait-aii-top-actions">
           <button
             type="button"
+            className="ait-aii-copy-plan-topbtn"
+            onClick={handleCopyTradingPlan}
+            title="Copy Trading Plan"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+              <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+            </svg>
+            <span>{copiedNotice ? 'Copied Plan!' : 'Copy Plan'}</span>
+          </button>
+
+          <button
+            type="button"
             className="ait-aii-reanalyze-btn"
             onClick={onReanalyze}
           >
@@ -392,20 +404,14 @@ export default function MarketAnalysisPanel({
         ))}
       </div>
 
-      {/* Notification Banner when 15m candle closes or Previous Analysis toggled */}
-      {(lastCandleCloseNotice || copiedNotice || showPrevAnalysis) && (
+      {/* Notification Banner when 15m candle closes or Plan is copied */}
+      {(lastCandleCloseNotice || copiedNotice) && (
         <div className="ait-aii-notice-strip">
           {copiedNotice && (
             <span className="text-emerald">✓ Trading Plan copied to clipboard!</span>
           )}
           {!copiedNotice && lastCandleCloseNotice && (
             <span className="text-emerald">● {lastCandleCloseNotice}</span>
-          )}
-          {!copiedNotice && !lastCandleCloseNotice && showPrevAnalysis && (
-            <span>
-              ⏱️ Previous 15m Candle Close Snapshot: <strong>{pair}</strong> closed at{' '}
-              <strong>${formatCommaPrice(p + (isGold ? 0.96 : 0.0005), priceDecimals)}</strong> • Bias: {intel.shortTermBias} • Next auto-scan in <strong>{candleCountdown?.timeStr || '12:40'}</strong>
-            </span>
           )}
         </div>
       )}
@@ -673,156 +679,6 @@ export default function MarketAnalysisPanel({
                         {intel.upcomingEventText}
                       </p>
                     </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* BOTTOM 3-CARD ROW: Key Levels + Quick Actions + AI Analysis Status */}
-            <div className="ait-aii-bottom-grid">
-              {/* CARD 4: KEY LEVELS TABLE */}
-              <div className="ait-aii-card ait-aii-levels-card">
-                <div className="ait-aii-card-header">
-                  <div className="ait-aii-card-title-group">
-                    <span className="ait-aii-card-icon purple">🎯</span>
-                    <h3>Key Levels</h3>
-                  </div>
-                </div>
-
-                <div className="ait-aii-table-wrap">
-                  <table className="ait-aii-levels-table">
-                    <thead>
-                      <tr>
-                        <th>Level</th>
-                        <th>Type</th>
-                        <th>Timeframe</th>
-                        <th>Distance</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="ait-mono">
-                      {intel.keyLevelsRows.map((row, idx) => (
-                        <tr key={idx}>
-                          <td>
-                            <div className="ait-aii-lvl-cell">
-                              <span className={`ait-aii-lvl-badge ${row.isRes ? 'res' : 'sup'}`}>
-                                {row.isRes ? '⊤' : '⊥'}
-                              </span>
-                              <strong>{row.level}</strong>
-                            </div>
-                          </td>
-                          <td className={row.isRes ? 'text-red' : 'text-emerald'}>
-                            {row.type}
-                          </td>
-                          <td>{row.tf}</td>
-                          <td className={row.isPosDist ? 'text-emerald' : 'text-amber'}>
-                            {row.distance}
-                          </td>
-                          <td>
-                            <span className={`ait-aii-status-pill ${row.isTested ? 'tested' : 'untested'}`}>
-                              {row.status}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* CARD 5: QUICK ACTIONS */}
-              <div className="ait-aii-card ait-aii-actions-card">
-                <div className="ait-aii-card-header">
-                  <div className="ait-aii-card-title-group">
-                    <span className="ait-aii-card-icon purple">✦</span>
-                    <h3>Quick Actions</h3>
-                  </div>
-                </div>
-
-                <div className="ait-aii-quick-btns">
-                  <button
-                    type="button"
-                    className="ait-aii-qbtn"
-                    onClick={handleCopyTradingPlan}
-                  >
-                    <span className="ait-aii-qbtn-icon">📋</span>
-                    <span>{copiedNotice ? 'Copied Trading Plan!' : 'Copy Trading Plan'}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="ait-aii-qbtn"
-                    onClick={() => setActiveTab('levels')}
-                  >
-                    <span className="ait-aii-qbtn-icon">📊</span>
-                    <span>Open Chart Levels</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="ait-aii-qbtn"
-                    onClick={() => setActiveTab('structure')}
-                  >
-                    <span className="ait-aii-qbtn-icon">🔀</span>
-                    <span>Compare Timeframes</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="ait-aii-qbtn"
-                    onClick={() => setShowPrevAnalysis((v) => !v)}
-                  >
-                    <span className="ait-aii-qbtn-icon">🕒</span>
-                    <span>View Previous Analysis</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* CARD 6: AI ANALYSIS STATUS */}
-              <div className="ait-aii-card ait-aii-status-card">
-                <div className="ait-aii-card-header">
-                  <div className="ait-aii-card-title-group">
-                    <span className="ait-aii-card-icon blue">⚡</span>
-                    <h3>AI Analysis Status</h3>
-                  </div>
-                </div>
-
-                <div className="ait-aii-status-body">
-                  <div className="ait-aii-neon-ring-wrap">
-                    <svg viewBox="0 0 80 80" className="ait-aii-neon-ring-svg">
-                      <defs>
-                        <linearGradient id="aiiRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" stopColor="#10B981" />
-                          <stop offset="50%" stopColor="#00F2FE" />
-                          <stop offset="100%" stopColor="#3B82F6" />
-                        </linearGradient>
-                      </defs>
-                      <circle
-                        cx="40"
-                        cy="40"
-                        r="30"
-                        fill="none"
-                        stroke="rgba(0, 242, 254, 0.14)"
-                        strokeWidth="6"
-                      />
-                      <circle
-                        cx="40"
-                        cy="40"
-                        r="30"
-                        fill="none"
-                        stroke="url(#aiiRingGrad)"
-                        strokeWidth="6"
-                        strokeLinecap="round"
-                        strokeDasharray="165 30"
-                      />
-                    </svg>
-                  </div>
-
-                  <div className="ait-aii-status-copy">
-                    <h4 className="ait-aii-status-ready">Analysis Ready</h4>
-                    <p className="ait-aii-status-sub">
-                      The latest analysis is available and up to date.
-                    </p>
                   </div>
                 </div>
               </div>
