@@ -511,7 +511,7 @@
   background: linear-gradient(160deg, var(--bg1), var(--bg2));
   border: 1px solid var(--faint);
   border-radius: var(--rl);
-  padding: 22px;
+  padding: 20px;
   transition: all .2s ease;
   display: flex;
   flex-direction: column;
@@ -525,22 +525,23 @@
   background: var(--bg2);
   border: 1px solid var(--faint);
   border-radius: 12px;
-  padding: 14px;
-  margin-bottom: 18px;
-  min-height: 76px;
+  padding: 12px 14px;
+  margin-bottom: 15px;
+  min-height: 72px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .lnd-feat-title {
-  font-size: 16.5px;
+  font-size: 16px;
   font-weight: 700;
   margin: 0 0 8px;
   color: var(--text);
+  line-height: 1.35;
 }
 .lnd-feat-desc {
   font-size: 13px;
-  line-height: 1.65;
+  line-height: 1.6;
   color: var(--mute);
   margin: 0;
 }
@@ -601,7 +602,7 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
   font-size: 12px;
   font-weight: 600;
 }
@@ -609,6 +610,63 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+.lnd-swap-sym {
+  color: var(--text);
+  font-weight: 700;
+  font-size: 12px;
+}
+.lnd-swap-metrics {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.lnd-swap-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.lnd-swap-metric.right {
+  align-items: flex-end;
+  text-align: right;
+}
+.lnd-swap-lbl {
+  font-size: 10.5px;
+  color: var(--mute, #94A3B8);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.lnd-swap-metric .lnd-dn-text {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--dn, #ef4444);
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+}
+.lnd-swap-metric .lnd-up-text {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--up, #10b981);
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+}
+.lnd-swap-rr-bar {
+  display: flex;
+  height: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.08);
+  gap: 2px;
+  margin-top: 1px;
+}
+.lnd-rr-risk {
+  background: var(--dn, #ef4444);
+  border-radius: 2px;
+}
+.lnd-rr-reward {
+  background: var(--up, #10b981);
+  border-radius: 2px;
 }
 .lnd-badge-sm {
   background: var(--brandd);

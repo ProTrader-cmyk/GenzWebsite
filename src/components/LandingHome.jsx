@@ -717,12 +717,22 @@ export default function LandingHome({
               <div className="lnd-feat-visual">
                 <div className="lnd-mini-swap">
                   <div className="lnd-swap-row">
-                    <span>XAU/USD Position</span>
+                    <span className="lnd-swap-sym">XAU/USD Position</span>
                     <span className="lnd-badge-sm">Lot {POSITION_LOT_SIZE.toFixed(2)}</span>
                   </div>
-                  <div className="lnd-swap-row">
-                    <span>Risk: 10 Pts ($30)</span>
-                    <span className="lnd-up-text">Target: +$90.00</span>
+                  <div className="lnd-swap-metrics">
+                    <div className="lnd-swap-metric">
+                      <span className="lnd-swap-lbl">Risk (10 Pts)</span>
+                      <span className="lnd-dn-text">-$30.00</span>
+                    </div>
+                    <div className="lnd-swap-metric right">
+                      <span className="lnd-swap-lbl">Target (30 Pts)</span>
+                      <span className="lnd-up-text">+$90.00</span>
+                    </div>
+                  </div>
+                  <div className="lnd-swap-rr-bar" title="1:3.0 Risk to Reward Ratio">
+                    <div className="lnd-rr-risk" style={{ width: '25%' }} />
+                    <div className="lnd-rr-reward" style={{ width: '75%' }} />
                   </div>
                 </div>
               </div>
@@ -731,8 +741,8 @@ export default function LandingHome({
               </h3>
               <p className="lnd-feat-desc">
                 {isKhmer
-                  ? 'គ្រប់គ្រងដើមទុនប្រកបដោយវិន័យខ្ពស់ ជាមួយក្បួនគណនា Lot Size និងការកំណត់ Stop Loss / Take Profit ច្បាស់លាស់។'
-                  : 'Track live market moves and execute with disciplined, institutional position sizing rules and automated risk calculators.'}
+                  ? 'គ្រប់គ្រងដើមទុនប្រកបដោយវិន័យខ្ពស់ ជាមួយក្បួនគណនា Lot Size កំណត់ Stop Loss និង Take Profit 1:3+ R:R ស្ថាប័នច្បាស់លាស់។'
+                  : 'Track live market moves and execute with disciplined, institutional position sizing rules, precise stop-loss limits, and automated risk calculators.'}
               </p>
             </div>
 
