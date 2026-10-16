@@ -163,7 +163,6 @@ export default function AILiveChartTerminal({
   const [closedSignalIds, setClosedSignalIds] = useState(() => new Set());
   const [recentOutcomeNotice, setRecentOutcomeNotice] = useState(null);
   const [autoSetupActive, setAutoSetupActive] = useState(true);
-  const [isSetupCollapsed, setIsSetupCollapsed] = useState(false);
   const [setupCustomPos, setSetupCustomPos] = useState(null);
   const [isDraggingSetup, setIsDraggingSetup] = useState(false);
   const dragSetupStartRef = useRef(null);
@@ -1158,7 +1157,7 @@ export default function AILiveChartTerminal({
             {autoSetupActive && currentActiveSetup && (
               <div
                 ref={setupCardRef}
-                className={`pip-auto-setup-card ait-mono ${isDraggingSetup ? 'is-dragging' : ''} ${isSetupCollapsed ? 'is-collapsed' : ''}`}
+                className={`pip-auto-setup-card ait-mono ${isDraggingSetup ? 'is-dragging' : ''}`}
                 style={
                   setupCustomPos
                     ? { left: `${setupCustomPos.left}px`, top: `${setupCustomPos.top}px` }
@@ -1177,23 +1176,11 @@ export default function AILiveChartTerminal({
                     <span className="pip-auto-setup-pulse" />
                     <span className="pip-auto-setup-title">AUTO SETUP (INTRA)</span>
                     <span style={{ fontSize: 9, color: 'var(--mute)' }}>{currentAsset.pair}</span>
-                    <span className="pip-setup-lot-badge">0.03 LOT</span>
-                  </div>
-                  <div className="pip-auto-setup-actions">
-                    <button
-                      type="button"
-                      className="pip-setup-action-btn"
-                      onClick={() => setIsSetupCollapsed((v) => !v)}
-                      title={isSetupCollapsed ? 'Expand setup' : 'Collapse setup'}
-                    >
-                      {isSetupCollapsed ? '▼' : '▲'}
-                    </button>
                   </div>
                 </div>
 
-                {/* Body (shown when not collapsed) */}
-                {!isSetupCollapsed && (
-                  <>
+                {/* Body */}
+                <>
                     {/* Direction & Model Banner */}
                     <div className={`pip-auto-setup-dir-banner ${currentActiveSetup.direction?.toLowerCase() === 'sell' ? 'sell' : 'buy'}`}>
                       <span className="pip-setup-dir-tag">
@@ -1281,7 +1268,6 @@ export default function AILiveChartTerminal({
                       <span>{isKhmer ? 'ដំណើរការស្វ័យប្រវត្តិតាម TP / SL (Protected)' : 'Institutional Position • Runs until TP or SL'}</span>
                     </div>
                   </>
-                )}
               </div>
             )}
 
