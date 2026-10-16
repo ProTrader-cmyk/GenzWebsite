@@ -1146,16 +1146,42 @@
 
 /* =========================================================================
    SCROLL-REACTIVE AI NEURAL BACKGROUND & FLAGSHIP AI DESIGN SYSTEM
+   (100% GPU-Composited: Zero blur filters, zero blend modes, zero repaints)
    ========================================================================= */
 .landing-page-root {
-  --lnd-scroll-y: 0px;
-  --lnd-scroll-num: 0;
-  --lnd-scroll-ratio: 0;
   --ai-cyan: #00f2fe;
   --ai-violet: #a855f7;
   --ai-emerald: #10b981;
   position: relative;
   isolation: isolate;
+}
+
+/* Remove expensive filter:blur(110px) from legacy hero glow spots */
+.lnd-glow-spot {
+  filter: none !important;
+  will-change: transform;
+  transform: translateZ(0);
+}
+.lnd-glow-top {
+  width: 820px;
+  height: 560px;
+  background: radial-gradient(
+    circle,
+    rgba(0, 242, 254, 0.14) 0%,
+    rgba(168, 85, 247, 0.07) 35%,
+    rgba(16, 185, 129, 0.03) 58%,
+    transparent 75%
+  ) !important;
+}
+.lnd-glow-center {
+  width: 680px;
+  height: 680px;
+  background: radial-gradient(
+    circle,
+    rgba(168, 85, 247, 0.12) 0%,
+    rgba(0, 242, 254, 0.05) 42%,
+    transparent 72%
+  ) !important;
 }
 
 /* Fixed Full-Viewport Scroll-Reactive AI Backdrop */
@@ -1165,9 +1191,12 @@
   pointer-events: none;
   z-index: 0;
   overflow: hidden;
+  contain: strict;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
-/* Top Scroll Progress Laser Line */
+/* Top Scroll Progress Laser Line (GPU scale3d only) */
 .lnd-ai-scroll-progress-bar {
   position: fixed;
   top: 0;
@@ -1175,162 +1204,135 @@
   height: 2.5px;
   width: 100%;
   transform-origin: 0 50%;
-  transform: scaleX(var(--lnd-scroll-ratio, 0));
+  transform: scale3d(0, 1, 1);
   background: linear-gradient(90deg, #00f2fe 0%, #a855f7 55%, #10b981 100%);
-  box-shadow: 0 0 16px rgba(0, 242, 254, 0.75), 0 0 28px rgba(168, 85, 247, 0.55);
+  box-shadow: 0 0 12px rgba(0, 242, 254, 0.65);
   z-index: 100;
-  transition: transform 0.08s linear;
+  will-change: transform;
+  backface-visibility: hidden;
 }
 
-/* Parallax-Shifting AI Aurora Orbs */
+/* Parallax-Shifting AI Aurora Orbs
+   Pre-diffused multi-stop radial gradients = ZERO runtime filter:blur() cost! */
 .lnd-ai-aurora-orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(110px);
   will-change: transform;
-  opacity: 0.58;
-  mix-blend-mode: screen;
+  backface-visibility: hidden;
+  transform: translate3d(0, 0, 0);
+  pointer-events: none;
 }
 
 .lnd-orb-cyan {
-  width: 580px;
-  height: 580px;
-  top: -120px;
-  left: -100px;
-  background: radial-gradient(circle, rgba(0, 242, 254, 0.28) 0%, rgba(56, 189, 248, 0.08) 50%, transparent 72%);
-  transform: translate3d(
-      calc(var(--lnd-scroll-ratio, 0) * 280px),
-      calc(var(--lnd-scroll-y, 0px) * 0.22),
-      0
-    )
-    scale(calc(1 + var(--lnd-scroll-ratio, 0) * 0.25));
+  width: 820px;
+  height: 820px;
+  top: -240px;
+  left: -220px;
+  background: radial-gradient(
+    circle,
+    rgba(0, 242, 254, 0.18) 0%,
+    rgba(0, 242, 254, 0.10) 24%,
+    rgba(56, 189, 248, 0.04) 48%,
+    rgba(56, 189, 248, 0.01) 64%,
+    transparent 75%
+  );
 }
 
 .lnd-orb-violet {
-  width: 640px;
-  height: 640px;
-  top: 18%;
-  right: -140px;
-  background: radial-gradient(circle, rgba(168, 85, 247, 0.26) 0%, rgba(99, 102, 241, 0.09) 52%, transparent 72%);
-  transform: translate3d(
-      calc(var(--lnd-scroll-ratio, 0) * -260px),
-      calc(var(--lnd-scroll-y, 0px) * -0.14),
-      0
-    )
-    rotate(calc(var(--lnd-scroll-num, 0) * 0.08deg));
+  width: 860px;
+  height: 860px;
+  top: 8%;
+  right: -260px;
+  background: radial-gradient(
+    circle,
+    rgba(168, 85, 247, 0.17) 0%,
+    rgba(139, 92, 246, 0.09) 26%,
+    rgba(99, 102, 241, 0.04) 48%,
+    rgba(99, 102, 241, 0.01) 64%,
+    transparent 75%
+  );
 }
 
 .lnd-orb-emerald {
-  width: 560px;
-  height: 560px;
-  bottom: -160px;
-  left: 26%;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.22) 0%, rgba(0, 242, 254, 0.08) 50%, transparent 72%);
-  transform: translate3d(
-      calc(var(--lnd-scroll-ratio, 0) * -140px),
-      calc(var(--lnd-scroll-y, 0px) * -0.18),
-      0
-    )
-    scale(calc(1 + var(--lnd-scroll-ratio, 0) * 0.2));
+  width: 780px;
+  height: 780px;
+  bottom: -260px;
+  left: 18%;
+  background: radial-gradient(
+    circle,
+    rgba(16, 185, 129, 0.15) 0%,
+    rgba(0, 242, 254, 0.07) 26%,
+    rgba(16, 185, 129, 0.025) 48%,
+    transparent 72%
+  );
 }
 
-/* 3D Perspective Neural Matrix Grid that glides while scrolling */
+/* 3D Perspective Neural Matrix Grid (Pure translate3d modulo loop, zero background-position paint) */
 .lnd-ai-perspective-grid {
   position: absolute;
-  inset: -35% -20%;
+  inset: -40% -20%;
   background-image:
-    linear-gradient(rgba(0, 242, 254, 0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(168, 85, 247, 0.055) 1px, transparent 1px);
+    linear-gradient(rgba(0, 242, 254, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168, 85, 247, 0.05) 1px, transparent 1px);
   background-size: 64px 64px;
-  background-position:
-    0 calc(var(--lnd-scroll-y, 0px) * 0.35),
-    calc(var(--lnd-scroll-y, 0px) * 0.12) 0;
-  transform: perspective(900px) rotateX(56deg) translateY(calc(var(--lnd-scroll-ratio, 0) * -90px));
-  mask-image: radial-gradient(ellipse 75% 65% at 50% 45%, rgba(0, 0, 0, 0.85) 15%, transparent 80%);
-  -webkit-mask-image: radial-gradient(ellipse 75% 65% at 50% 45%, rgba(0, 0, 0, 0.85) 15%, transparent 80%);
-  will-change: background-position, transform;
+  transform: perspective(900px) rotateX(56deg) translate3d(0, 0, 0);
+  will-change: transform;
+  backface-visibility: hidden;
+  opacity: 0.65;
 }
 
-/* Holographic Horizontal Scan Beam */
+/* Holographic Horizontal Scan Beam (Pure translate3d, zero top/blur paint) */
 .lnd-ai-scan-beam {
   position: absolute;
+  top: 0;
   left: 0;
   right: 0;
-  height: 180px;
-  top: calc(var(--lnd-scroll-ratio, 0) * 85%);
+  height: 160px;
+  transform: translate3d(0, 0, 0);
   background: linear-gradient(
     180deg,
     transparent 0%,
-    rgba(0, 242, 254, 0.04) 48%,
-    rgba(168, 85, 247, 0.07) 50%,
+    rgba(0, 242, 254, 0.035) 46%,
+    rgba(168, 85, 247, 0.06) 50%,
     transparent 100%
   );
-  border-top: 1px solid rgba(0, 242, 254, 0.12);
-  filter: blur(2px);
-  will-change: top;
+  border-top: 1px solid rgba(0, 242, 254, 0.11);
+  will-change: transform;
+  backface-visibility: hidden;
 }
 
-/* Animated Neural Circuit Pathways */
+/* Animated Neural Circuit Pathways (Static GPU texture translated via translate3d) */
 .lnd-ai-neural-svg {
   position: absolute;
-  inset: 0;
+  inset: -10% 0;
   width: 100%;
-  height: 100%;
-  opacity: 0.72;
-  transform: translate3d(0, calc(var(--lnd-scroll-y, 0px) * -0.08), 0);
+  height: 120%;
+  opacity: 0.65;
+  transform: translate3d(0, 0, 0);
   will-change: transform;
+  backface-visibility: hidden;
 }
 
 .lnd-ai-circuit-path {
   stroke-dasharray: 18 12;
-  stroke-dashoffset: calc(var(--lnd-scroll-num, 0) * -0.45);
-  animation: lndCircuitFlow 18s linear infinite;
 }
 
 .lnd-ai-circuit-2 {
   stroke-dasharray: 14 16;
-  animation-direction: reverse;
-  animation-duration: 22s;
 }
 
 .lnd-ai-circuit-3 {
   stroke-dasharray: 10 18;
-  animation-duration: 26s;
-}
-
-@keyframes lndCircuitFlow {
-  0% {
-    filter: drop-shadow(0 0 4px rgba(0, 242, 254, 0.35));
-  }
-  50% {
-    filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.6));
-  }
-  100% {
-    filter: drop-shadow(0 0 4px rgba(0, 242, 254, 0.35));
-  }
 }
 
 .lnd-ai-node {
   fill: #00f2fe;
-  filter: drop-shadow(0 0 10px #00f2fe);
-  animation: lndNodePulse 3.2s ease-in-out infinite;
+  opacity: 0.8;
 }
 .lnd-ai-node-2,
 .lnd-ai-node-4 {
   fill: #c084fc;
-  filter: drop-shadow(0 0 10px #a855f7);
-  animation-delay: 1.4s;
-}
-
-@keyframes lndNodePulse {
-  0%, 100% {
-    opacity: 0.35;
-    r: 3;
-  }
-  50% {
-    opacity: 0.95;
-    r: 5.5;
-  }
+  opacity: 0.8;
 }
 
 /* Ensure all foreground sections sit cleanly above the AI scroll canvas */
@@ -1343,8 +1345,10 @@
 
 /* Hero AI Badge & Core Dot */
 .lnd-hero-badge {
-  background: linear-gradient(135deg, rgba(10, 16, 30, 0.88), rgba(18, 25, 46, 0.78)) !important;
-  border: 1px solid rgba(0, 242, 254, 0.32) !important;
+  background: linear-gradient(135deg, rgba(10, 16, 30, 0.94), rgba(18, 25, 46, 0.9)) !important;
+  border: 1px solid rgba(0, 242, 254, 0.34) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   box-shadow:
     0 12px 32px -10px rgba(0, 242, 254, 0.25),
     0 0 22px rgba(168, 85, 247, 0.16),
@@ -1357,8 +1361,8 @@
   height: 8px;
   border-radius: 50%;
   background: #00f2fe;
-  box-shadow: 0 0 12px #00f2fe, 0 0 22px #a855f7;
-  animation: lndPulse 1.8s infinite ease-in-out;
+  box-shadow: 0 0 10px #00f2fe;
+  animation: lndPulse 2s infinite ease-in-out;
   flex-shrink: 0;
 }
 
@@ -1367,7 +1371,8 @@
   background: linear-gradient(135deg, #34d399 0%, #00f2fe 50%, #c084fc 100%) !important;
   -webkit-background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
-  filter: drop-shadow(0 0 28px rgba(0, 242, 254, 0.28)) !important;
+  filter: none !important;
+  text-shadow: 0 0 32px rgba(0, 242, 254, 0.22);
 }
 
 /* Hero Action Buttons & Telemetry Strip */
@@ -1376,9 +1381,8 @@
 }
 
 .lnd-ghost-action-btn {
-  background: rgba(11, 17, 30, 0.78) !important;
-  border: 1px solid rgba(148, 163, 184, 0.22) !important;
-  backdrop-filter: blur(16px);
+  background: rgba(11, 17, 30, 0.9) !important;
+  border: 1px solid rgba(148, 163, 184, 0.24) !important;
   color: #e2e8f0 !important;
   box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.5);
 }
@@ -1391,10 +1395,10 @@
 }
 
 .lnd-ai-action-btn {
-  background: linear-gradient(135deg, rgba(0, 242, 254, 0.14), rgba(168, 85, 247, 0.16)) !important;
-  border: 1px solid rgba(0, 242, 254, 0.38) !important;
+  background: linear-gradient(135deg, rgba(0, 242, 254, 0.16), rgba(168, 85, 247, 0.18)) !important;
+  border: 1px solid rgba(0, 242, 254, 0.4) !important;
   color: #7dd3fc !important;
-  box-shadow: 0 0 26px rgba(0, 242, 254, 0.18);
+  box-shadow: 0 0 24px rgba(0, 242, 254, 0.18);
 }
 
 .lnd-ai-telemetry-strip {
@@ -1417,9 +1421,8 @@
   padding: 5px 13px;
   border-radius: 999px;
   color: #cbd5e1;
-  background: rgba(9, 14, 26, 0.72);
-  border: 1px solid rgba(0, 242, 254, 0.2);
-  backdrop-filter: blur(12px);
+  background: rgba(9, 14, 26, 0.88);
+  border: 1px solid rgba(0, 242, 254, 0.22);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
 
@@ -1441,20 +1444,22 @@
   box-shadow: 0 0 8px #10b981;
 }
 
-/* Obsidian Glassmorphic Cards with Iridescent Top Laser Line */
+/* Obsidian Luxury Cards with Iridescent Top Laser Line
+   (backdrop-filter disabled on scrolling cards to prevent per-frame background re-blurring!) */
 .lnd-floating-card,
 .lnd-feature-card,
 .lnd-terminal-mockup,
 .lnd-bottom-cta-box {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(165deg, rgba(11, 17, 30, 0.86) 0%, rgba(6, 10, 19, 0.92) 100%) !important;
-  border: 1px solid rgba(0, 242, 254, 0.18) !important;
-  backdrop-filter: blur(22px) saturate(175%);
-  -webkit-backdrop-filter: blur(22px) saturate(175%);
+  background: linear-gradient(165deg, rgba(12, 19, 34, 0.94) 0%, rgba(6, 10, 19, 0.97) 100%) !important;
+  border: 1px solid rgba(0, 242, 254, 0.2) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transform: translateZ(0);
   box-shadow:
-    0 24px 55px -20px rgba(0, 0, 0, 0.78),
-    0 0 32px rgba(0, 242, 254, 0.08),
+    0 24px 50px -20px rgba(0, 0, 0, 0.78),
+    0 0 28px rgba(0, 242, 254, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.09) !important;
 }
 
@@ -1482,12 +1487,11 @@
 
 .lnd-floating-card:hover,
 .lnd-feature-card:hover {
-  border-color: rgba(0, 242, 254, 0.42) !important;
-  transform: translateY(-4px);
+  border-color: rgba(0, 242, 254, 0.44) !important;
+  transform: translate3d(0, -4px, 0);
   box-shadow:
-    0 28px 60px -18px rgba(0, 0, 0, 0.85),
-    0 0 38px rgba(0, 242, 254, 0.16),
-    0 0 24px rgba(168, 85, 247, 0.12),
+    0 28px 56px -18px rgba(0, 0, 0, 0.85),
+    0 0 34px rgba(0, 242, 254, 0.16),
     inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
 }
 
@@ -1523,8 +1527,7 @@
 /* Light Mode Compatibility for AI Scroll Background & Cards */
 html[data-theme="light"] .lnd-ai-aurora-orb,
 body.light-mode .lnd-ai-aurora-orb {
-  mix-blend-mode: normal;
-  opacity: 0.28;
+  opacity: 0.45;
 }
 
 html[data-theme="light"] .lnd-floating-card,
@@ -1535,7 +1538,7 @@ body.light-mode .lnd-floating-card,
 body.light-mode .lnd-feature-card,
 body.light-mode .lnd-terminal-mockup,
 body.light-mode .lnd-bottom-cta-box {
-  background: linear-gradient(165deg, rgba(255, 255, 255, 0.92), rgba(241, 245, 249, 0.95)) !important;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.96), rgba(241, 245, 249, 0.98)) !important;
   border-color: rgba(14, 165, 233, 0.25) !important;
   box-shadow: 0 20px 45px -18px rgba(15, 23, 42, 0.1), 0 0 25px rgba(14, 165, 233, 0.08) !important;
 }
@@ -1546,8 +1549,9 @@ html[data-theme="light"] .lnd-ai-telemetry-chip,
 body.light-mode .lnd-hero-badge,
 body.light-mode .lnd-ghost-action-btn,
 body.light-mode .lnd-ai-telemetry-chip {
-  background: rgba(255, 255, 255, 0.9) !important;
+  background: rgba(255, 255, 255, 0.95) !important;
   color: #0f172a !important;
   border-color: rgba(14, 165, 233, 0.28) !important;
 }
+
 

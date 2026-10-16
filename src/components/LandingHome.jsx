@@ -36,7 +36,13 @@ export default function LandingHome({
 }) {
   const { lang } = useLanguage();
   const isKhmer = lang === 'km' || lang === 'kh';
-  const rootRef = useRef(null);
+  const progressRef = useRef(null);
+  const orbCyanRef = useRef(null);
+  const orbVioletRef = useRef(null);
+  const orbEmeraldRef = useRef(null);
+  const gridRef = useRef(null);
+  const beamRef = useRef(null);
+  const svgRef = useRef(null);
 
   const [activeChartTimeframe, setActiveChartTimeframe] = useState('1M');
 
@@ -45,36 +51,87 @@ export default function LandingHome({
   const [goldChange, setGoldChange] = useState({ pct: '+1.26%', isUp: true });
   const [firestoreSignals, setFirestoreSignals] = useState([]);
 
-  // Smooth 60fps scroll-reactive background variables
+  // Ultra-smooth GPU-composited lerp scroll animation (zero DOM style cascade or repaint)
   useEffect(() => {
     let rafId = null;
-    const updateScrollVars = () => {
-      rafId = null;
-      const el = rootRef.current;
-      if (!el) return;
-      const scrollY = window.scrollY || window.pageYOffset || 0;
-      const docHeight = Math.max(
-        1,
-        document.documentElement.scrollHeight - window.innerHeight
-      );
-      const ratio = Math.min(1, Math.max(0, scrollY / docHeight));
-      el.style.setProperty('--lnd-scroll-y', `${scrollY.toFixed(1)}px`);
-      el.style.setProperty('--lnd-scroll-num', scrollY.toFixed(1));
-      el.style.setProperty('--lnd-scroll-ratio', ratio.toFixed(4));
-    };
+    let targetY = window.scrollY || window.pageYOffset || 0;
+    let currentY = targetY;
+    let maxScroll = Math.max(
+      1,
+      document.documentElement.scrollHeight - window.innerHeight
+    );
 
-    const onScroll = () => {
-      if (rafId === null) {
-        rafId = window.requestAnimationFrame(updateScrollVars);
+    const applyTransforms = (y) => {
+      const ratio = Math.min(1, Math.max(0, y / maxScroll));
+
+      if (progressRef.current) {
+        progressRef.current.style.transform = `scale3d(${ratio.toFixed(4)}, 1, 1)`;
+      }
+      if (orbCyanRef.current) {
+        const tx = (ratio * 240).toFixed(1);
+        const ty = (y * 0.16).toFixed(1);
+        const sc = (1 + ratio * 0.18).toFixed(3);
+        orbCyanRef.current.style.transform = `translate3d(${tx}px, ${ty}px, 0) scale3d(${sc}, ${sc}, 1)`;
+      }
+      if (orbVioletRef.current) {
+        const tx = (-ratio * 220).toFixed(1);
+        const ty = (-y * 0.12).toFixed(1);
+        orbVioletRef.current.style.transform = `translate3d(${tx}px, ${ty}px, 0)`;
+      }
+      if (orbEmeraldRef.current) {
+        const tx = (-ratio * 130).toFixed(1);
+        const ty = (-y * 0.14).toFixed(1);
+        const sc = (1 + ratio * 0.15).toFixed(3);
+        orbEmeraldRef.current.style.transform = `translate3d(${tx}px, ${ty}px, 0) scale3d(${sc}, ${sc}, 1)`;
+      }
+      if (gridRef.current) {
+        const gy = ((y * 0.28) % 64).toFixed(1);
+        gridRef.current.style.transform = `perspective(900px) rotateX(56deg) translate3d(0, ${gy}px, 0)`;
+      }
+      if (beamRef.current) {
+        const by = (ratio * (window.innerHeight * 0.88)).toFixed(1);
+        beamRef.current.style.transform = `translate3d(0, ${by}px, 0)`;
+      }
+      if (svgRef.current) {
+        const sy = (-y * 0.07).toFixed(1);
+        svgRef.current.style.transform = `translate3d(0, ${sy}px, 0)`;
       }
     };
 
-    updateScrollVars();
+    const tick = () => {
+      const diff = targetY - currentY;
+      if (Math.abs(diff) > 0.35) {
+        currentY += diff * 0.14;
+        applyTransforms(currentY);
+        rafId = window.requestAnimationFrame(tick);
+      } else {
+        currentY = targetY;
+        applyTransforms(currentY);
+        rafId = null;
+      }
+    };
+
+    const onScroll = () => {
+      targetY = window.scrollY || window.pageYOffset || 0;
+      if (rafId === null) {
+        rafId = window.requestAnimationFrame(tick);
+      }
+    };
+
+    const onResize = () => {
+      maxScroll = Math.max(
+        1,
+        document.documentElement.scrollHeight - window.innerHeight
+      );
+      onScroll();
+    };
+
+    applyTransforms(currentY);
     window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll, { passive: true });
+    window.addEventListener('resize', onResize, { passive: true });
     return () => {
       window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onScroll);
+      window.removeEventListener('resize', onResize);
       if (rafId !== null) window.cancelAnimationFrame(rafId);
     };
   }, []);
@@ -328,27 +385,28 @@ export default function LandingHome({
   const latestSig = firestoreSignals.length > 0 ? firestoreSignals[0] : null;
 
   return (
-    <div className="landing-page-root" ref={rootRef}>
+    <div className="landing-page-root">
       {/* =========================================================================
           SCROLL-REACTIVE AI NEURAL BACKGROUND LAYER
           ========================================================================= */}
       <div className="lnd-ai-scroll-bg" aria-hidden="true">
         {/* Top Scroll Progress Laser Line */}
-        <div className="lnd-ai-scroll-progress-bar" />
+        <div className="lnd-ai-scroll-progress-bar" ref={progressRef} />
 
         {/* Parallax AI Aurora Orbs that shift & morph while scrolling */}
-        <div className="lnd-ai-aurora-orb lnd-orb-cyan" />
-        <div className="lnd-ai-aurora-orb lnd-orb-violet" />
-        <div className="lnd-ai-aurora-orb lnd-orb-emerald" />
+        <div className="lnd-ai-aurora-orb lnd-orb-cyan" ref={orbCyanRef} />
+        <div className="lnd-ai-aurora-orb lnd-orb-violet" ref={orbVioletRef} />
+        <div className="lnd-ai-aurora-orb lnd-orb-emerald" ref={orbEmeraldRef} />
 
         {/* 3D Perspective Neural Matrix Grid */}
-        <div className="lnd-ai-perspective-grid" />
+        <div className="lnd-ai-perspective-grid" ref={gridRef} />
 
         {/* Holographic Horizontal AI Scan Beam */}
-        <div className="lnd-ai-scan-beam" />
+        <div className="lnd-ai-scan-beam" ref={beamRef} />
 
         {/* Animated Neural Circuit & Data Pulse Pathways */}
         <svg
+          ref={svgRef}
           className="lnd-ai-neural-svg"
           viewBox="0 0 1440 1000"
           preserveAspectRatio="xMidYMid slice"
