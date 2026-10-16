@@ -8855,6 +8855,19 @@
   color: #FFFFFF;
 }
 
+.ait-pm-saved-badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(16, 185, 129, 0.18);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  color: #10B981;
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+  animation: aitFadeIn 0.2s ease-out;
+}
+
 /* Responsiveness for Simple Row */
 @media (max-width: 992px) {
   .ait-pm-scalp-simple-row {

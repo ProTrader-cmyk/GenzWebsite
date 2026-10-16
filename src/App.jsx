@@ -164,8 +164,8 @@ export default function App() {
 
     function handleCustomAlert(e) {
       if (e?.detail) {
-        // News alerts remain available to everyone; signal alerts are paid-only.
-        if (e.detail.type !== 'news' && !canReceiveSignalNotifications) return;
+        // News alerts and interactive Pip Machine scans are displayed directly; automated signal alerts are paid-only.
+        if (e.detail.type !== 'news' && !e.detail.isPipScan && !canReceiveSignalNotifications) return;
         setGlobalNotifToast(e.detail);
         const timer = setTimeout(() => setGlobalNotifToast(null), 9000);
         return () => clearTimeout(timer);

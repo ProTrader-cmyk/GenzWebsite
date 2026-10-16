@@ -1,7 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import PairLogo from './ui/PairLogo.jsx';
 import { formatSpotPrice } from '../services/marketPriceService.js';
-import { generateRealPipSignal } from '../services/pipLiveSignalService.js';
+import { generateRealPipSignal, saveSignalToFirestore } from '../services/pipLiveSignalService.js';
+import {
+  showBrowserNotification,
+  playNotificationSound,
+  requestNotificationPermission,
+  getNotificationPermission,
+} from '../services/pushNotificationService.js';
+import { sendTelegramSignal } from '../services/telegramService.js';
 
 const NEWS_API_URL = (import.meta.env.VITE_NEWS_API_URL || 'https://genzapi-production.up.railway.app').replace(/\/$/, '');
 
@@ -38,7 +45,7 @@ function playScanSound() {
     osc.type = 'sine';
     osc.frequency.setValueAtTime(587.33, ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12);
-    gain.gain.setValueAtTime(0.08, ctx.currentTime);
+    gain.gain.setValueAtTime(0.04, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
     osc.connect(gain);
     gain.connect(ctx.destination);
@@ -77,6 +84,7 @@ function buildDefaultSignal(pair, price, style = 'scalp') {
     const slDist = isGold ? 2.5 : 0.0008; // 2–3 numbers SL ($2.50 on Gold / 25 pips)
     const tp1Dist = isGold ? 3.0 : 0.0012; // 2–3 numbers TP1 ($3.00 on Gold / 30 pips)
     const tp2Dist = isGold ? 5.0 : 0.0022; // 5 numbers TP2 ($5.00 on Gold / 50 pips)
+    const tpVal = Number((p + tp1Dist).toFixed(decimals));
     return {
       id: `sig-scalp-${Date.now()}`,
       pair,
@@ -87,13 +95,14 @@ function buildDefaultSignal(pair, price, style = 'scalp') {
       model: '1M-5M Liquidity Sweep + Fast FVG Tap',
       entry: Number(p.toFixed(decimals)),
       sl: Number((p - slDist).toFixed(decimals)),
-      tp1: Number((p + tp1Dist).toFixed(decimals)),
+      tp: tpVal,
+      tp1: tpVal,
       tp2: Number((p + tp2Dist).toFixed(decimals)),
       rr: '1 : 1.2',
       confidence: 94,
       pipsGain: isGold ? '+30 Pips ($3.00)' : '+12 Pips',
       session: 'Active Institutional Overlap',
-      status: 'ACTIVE',
+      status: 'active',
       confluences: [
         'Asian/Session micro liquidity swept with instant 1M/5M rejection wick',
         'Strict 2–3 numbers Stop Loss ($2.50) beyond immediate micro swing',
@@ -107,6 +116,7 @@ function buildDefaultSignal(pair, price, style = 'scalp') {
     const tp1Dist = isGold ? 15.0 : 0.0055;
     const tp2Dist = isGold ? 20.0 : 0.0080;
     const beDist = isGold ? 10.0 : 0.0035;
+    const tpVal = Number((p + tp1Dist).toFixed(decimals));
     return {
       id: `sig-daytrade-${Date.now()}`,
       pair,
@@ -117,14 +127,15 @@ function buildDefaultSignal(pair, price, style = 'scalp') {
       model: '3-Candle CRT Daily Liquidation Model',
       entry: Number(p.toFixed(decimals)),
       sl: Number((p - slDist).toFixed(decimals)),
-      tp1: Number((p + tp1Dist).toFixed(decimals)),
+      tp: tpVal,
+      tp1: tpVal,
       tp2: Number((p + tp2Dist).toFixed(decimals)),
       breakEvenTrigger: Number((p + beDist).toFixed(decimals)),
       rr: '1 : 2.0',
       confidence: 96,
       pipsGain: isGold ? '+200 Pips' : '+80 Pips',
       session: 'Intraday Session Trend',
-      status: 'ACTIVE',
+      status: 'active',
       confluences: [
         'Previous Day Low swept during C2 manipulation phase',
         'C3 expansion candle confirmed with 1H Order Block mitigation',
@@ -157,6 +168,7 @@ export default function MarketAnalysisPanel({
   const [scalpSignal, setScalpSignal] = useState(null);
   const [dayTradeSignal, setDayTradeSignal] = useState(null);
   const [signalCopiedNotice, setSignalCopiedNotice] = useState(false);
+  const [signalSavedNotice, setSignalSavedNotice] = useState(false);
   const [liveCalendarEvents, setLiveCalendarEvents] = useState(null);
   const [liveNewsItems, setLiveNewsItems] = useState(null);
   const [copiedNotice, setCopiedNotice] = useState(false);
@@ -486,11 +498,13 @@ export default function MarketAnalysisPanel({
         playSuccessChime();
 
         const lockedScanPrice = Number(livePrice) || p;
+        let generatedSignal = null;
 
         if (mode === 'scalp') {
           // SCALPING ALWAYS GIVES SIGNAL AFTER SCAN - STRICTLY LOCKED NUMBERS!
           const fresh = buildDefaultSignal(pair, lockedScanPrice, 'scalp');
           setScalpSignal(fresh);
+          generatedSignal = fresh;
           try {
             localStorage.setItem(`genz_locked_scalp_${pair}`, JSON.stringify(fresh));
           } catch {}
@@ -499,6 +513,7 @@ export default function MarketAnalysisPanel({
           if (intraConditionMet) {
             const fresh = buildDefaultSignal(pair, lockedScanPrice, 'daytrade');
             setDayTradeSignal(fresh);
+            generatedSignal = fresh;
             try {
               localStorage.setItem(`genz_locked_daytrade_${pair}`, JSON.stringify(fresh));
             } catch {}
@@ -508,6 +523,61 @@ export default function MarketAnalysisPanel({
               localStorage.removeItem(`genz_locked_daytrade_${pair}`);
             } catch {}
           }
+        }
+
+        // 🌟 1. STORE SCANNED SIGNAL IN CLOUD FIRESTORE ('signals' collection)
+        // 🌟 2. BROADCAST REAL-TIME NOTIFICATIONS (OS Web Push, In-App Toast, Sound, Telegram)
+        if (generatedSignal) {
+          saveSignalToFirestore(generatedSignal)
+            .then((doc) => {
+              console.log('[Pip Machine] Signal successfully stored in Firestore:', doc?.id || generatedSignal.id);
+            })
+            .catch((err) => {
+              console.warn('[Pip Machine] Firestore save notice:', err);
+            });
+
+          try {
+            // Proactively request permission if user has not yet decided
+            if (getNotificationPermission() === 'default') {
+              requestNotificationPermission().catch(() => {});
+            }
+
+            const notifPayload = {
+              id: generatedSignal.id,
+              type: 'signal',
+              isPipScan: true,
+              title: `⚡ New Pip ${mode === 'scalp' ? 'Scalp' : 'Intraday'} Signal: ${generatedSignal.pair}`,
+              body: `${generatedSignal.direction} ${generatedSignal.pair} @ $${formatCommaPrice(generatedSignal.entry, decimals)} | SL: $${formatCommaPrice(generatedSignal.sl, decimals)} | TP: $${formatCommaPrice(generatedSignal.tp1 || generatedSignal.tp, decimals)}`,
+              pair: generatedSignal.pair,
+              direction: (generatedSignal.direction || 'BUY').toLowerCase(),
+              entry: generatedSignal.entry,
+              sl: generatedSignal.sl,
+              tp: generatedSignal.tp1 || generatedSignal.tp,
+              tp1: generatedSignal.tp1,
+              tp2: generatedSignal.tp2,
+              session: generatedSignal.session || 'Live Market Overlap',
+              publishedAt: Date.now(),
+            };
+
+            // Play institutional notification sound
+            playNotificationSound();
+
+            // Native OS Browser Popup Notification (Desktop Windows/Mac & Mobile)
+            showBrowserNotification(notifPayload).catch(() => {});
+
+            // Dispatch global event for in-app floating toast banner
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('genz_signal_notification', { detail: notifPayload }));
+            }
+
+            // Sync to VIP Telegram channel if enabled
+            sendTelegramSignal(generatedSignal).catch(() => {});
+          } catch (notifErr) {
+            console.warn('[Pip Machine] Notification dispatch warning:', notifErr);
+          }
+
+          setSignalSavedNotice(true);
+          setTimeout(() => setSignalSavedNotice(false), 4500);
         }
 
         setTimeout(() => {
@@ -1103,6 +1173,9 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                 </div>
 
                 <div className="ait-pm-sr-actions">
+                  {signalSavedNotice && (
+                    <span className="ait-pm-saved-badge">✓ Stored in Firestore &amp; Alert Sent</span>
+                  )}
                   <span className="ait-pm-sr-conf">95% AI</span>
                   <button
                     type="button"
@@ -1269,6 +1342,9 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                 </div>
 
                 <div className="ait-pm-sr-actions">
+                  {signalSavedNotice && (
+                    <span className="ait-pm-saved-badge">✓ Stored in Firestore &amp; Alert Sent</span>
+                  )}
                   <span className="ait-pm-sr-conf cyan">96% AI</span>
                   <button
                     type="button"

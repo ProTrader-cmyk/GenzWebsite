@@ -144,7 +144,7 @@ export async function saveSignalToFirestore(signal) {
 
     const entry = parseNum(signal.entry ?? signal.entry_price ?? signal.entryPrice);
     const sl = parseNum(signal.sl ?? signal.stop_loss ?? signal.stopLoss);
-    const tp = parseNum(signal.tp ?? signal.take_profit ?? signal.takeProfit);
+    const tp = parseNum(signal.tp ?? signal.tp1 ?? signal.take_profit ?? signal.takeProfit);
     const direction = (signal.direction || 'buy').toLowerCase() === 'sell' ? 'sell' : 'buy';
 
     let calculatedRr = 2.0;
@@ -181,6 +181,9 @@ export async function saveSignalToFirestore(signal) {
       source: signal.source || 'PIP AI ENGINE',
     };
 
+    if (signal.tp1) firestoreData.tp1 = parseNum(signal.tp1);
+    if (signal.tp2) firestoreData.tp2 = parseNum(signal.tp2);
+    if (signal.mode) firestoreData.mode = signal.mode;
     if (signal.beTrigger) firestoreData.beTrigger = parseNum(signal.beTrigger);
     if (signal.breakEvenTrigger) firestoreData.breakEvenTrigger = parseNum(signal.breakEvenTrigger);
     if (signal.refCandleHigh) firestoreData.refCandleHigh = parseNum(signal.refCandleHigh);
