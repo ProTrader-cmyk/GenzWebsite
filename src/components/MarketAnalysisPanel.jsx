@@ -1009,72 +1009,74 @@ Model: ${sig.model || 'ICT SMC Model'}`;
             </div>
 
             {/* 4. SIGNAL OUTPUT AREA */}
-            {/* 4A. SCALP MODE: ALWAYS GIVES SIGNAL AFTER SCAN! */}
-            {pipMode === 'scalp' && scalpSignal && (
-              <div className="ait-pm-signal-result scalp-theme">
-                <div className="ait-pm-res-header">
-                  <div className="ait-pm-res-badge-wrap">
-                    <span className="ait-pm-res-icon">⚡</span>
-                    <div>
-                      <div className="ait-pm-res-title-row">
-                        <span className="ait-pm-res-dir buy">▲ BUY (LONG)</span>
-                        <strong className="ait-pm-res-pair">{pair}</strong>
-                        <span className="ait-pm-res-model">1M / 5M Ultra Scalp</span>
-                      </div>
-                      <span className="ait-pm-res-time">Signal locked at {scalpSignal.time || 'Live'} • Asian Micro-Sweep</span>
+            {/* 4A. SCALP MODE: SIMPLE ROW DIRECTLY UNDER THE MACHINE */}
+            {pipMode === 'scalp' && (
+              <div className="ait-pm-scalp-simple-row">
+                <div className="ait-pm-sr-badge-col">
+                  <span className={`ait-pm-sr-dir ${(currentScalpSignal?.direction || 'BUY').toLowerCase() === 'sell' ? 'sell' : 'buy'}`}>
+                    {(currentScalpSignal?.direction || 'BUY').toLowerCase() === 'sell' ? '▼ SELL' : '▲ BUY'}
+                  </span>
+                  <div className="ait-pm-sr-pair-wrap">
+                    <strong className="ait-pm-sr-pair">{pair}</strong>
+                    <span className="ait-pm-sr-tf-tag">1M / 5M</span>
+                  </div>
+                </div>
+
+                <div className="ait-pm-sr-metrics">
+                  <div className="ait-pm-sr-item">
+                    <span className="ait-pm-sr-label">ENTRY</span>
+                    <strong className="ait-pm-sr-val text-cyan ait-mono">
+                      ${formatCommaPrice(currentScalpSignal?.entry, decimals)}
+                    </strong>
+                  </div>
+
+                  <div className="ait-pm-sr-divider" />
+
+                  <div className="ait-pm-sr-item">
+                    <span className="ait-pm-sr-label">STOP LOSS</span>
+                    <div className="ait-pm-sr-val-row">
+                      <strong className="ait-pm-sr-val text-red ait-mono">
+                        ${formatCommaPrice(currentScalpSignal?.sl, decimals)}
+                      </strong>
+                      <span className="ait-pm-sr-tag-badge text-red">2.5 Num</span>
                     </div>
                   </div>
 
-                  <div className="ait-pm-res-actions">
-                    <span className="ait-pm-conf-badge">95% AI Probability</span>
-                    <button
-                      type="button"
-                      className="ait-pm-copy-btn"
-                      onClick={() => handleCopySignal(scalpSignal)}
-                    >
-                      <span>{signalCopiedNotice ? '✓ Copied!' : '📋 Copy Signal'}</span>
-                    </button>
+                  <div className="ait-pm-sr-divider" />
+
+                  <div className="ait-pm-sr-item">
+                    <span className="ait-pm-sr-label">TAKE PROFIT 1</span>
+                    <div className="ait-pm-sr-val-row">
+                      <strong className="ait-pm-sr-val text-emerald ait-mono">
+                        ${formatCommaPrice(currentScalpSignal?.tp1, decimals)}
+                      </strong>
+                      <span className="ait-pm-sr-tag-badge text-emerald">3.0 Num</span>
+                    </div>
+                  </div>
+
+                  <div className="ait-pm-sr-divider" />
+
+                  <div className="ait-pm-sr-item">
+                    <span className="ait-pm-sr-label">RUNNER (TP2)</span>
+                    <div className="ait-pm-sr-val-row">
+                      <strong className="ait-pm-sr-val text-emerald ait-mono">
+                        ${formatCommaPrice(currentScalpSignal?.tp2, decimals)}
+                      </strong>
+                      <span className="ait-pm-sr-tag-badge text-emerald">+5.0 Num</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* 4-Box Clean Price Matrix */}
-                <div className="ait-pm-boxes-grid">
-                  <div className="ait-pm-box entry">
-                    <span className="ait-pm-box-tag">ENTRY PRICE</span>
-                    <strong className="ait-pm-box-num ait-mono">${formatCommaPrice(scalpSignal.entry, decimals)}</strong>
-                    <span className="ait-pm-box-hint text-cyan">Micro OTE Level</span>
-                  </div>
-
-                  <div className="ait-pm-box sl">
-                    <span className="ait-pm-box-tag">STOP LOSS</span>
-                    <strong className="ait-pm-box-num ait-mono text-red">${formatCommaPrice(scalpSignal.sl, decimals)}</strong>
-                    <span className="ait-pm-box-hint text-red">Strict 2.5 Numbers SL (-$2.50)</span>
-                  </div>
-
-                  <div className="ait-pm-box tp">
-                    <span className="ait-pm-box-tag">TAKE PROFIT 1</span>
-                    <strong className="ait-pm-box-num ait-mono text-emerald">${formatCommaPrice(scalpSignal.tp1, decimals)}</strong>
-                    <span className="ait-pm-box-hint text-emerald">Strict 3.0 Numbers TP (+$3.00)</span>
-                  </div>
-
-                  <div className="ait-pm-box runner">
-                    <span className="ait-pm-box-tag">RUNNER (TP2)</span>
-                    <strong className="ait-pm-box-num ait-mono text-emerald">${formatCommaPrice(scalpSignal.tp2, decimals)}</strong>
-                    <span className="ait-pm-box-hint text-emerald">Runner Target (+$5.00)</span>
-                  </div>
-                </div>
-
-                {/* Why Scalp Triggered */}
-                <div className="ait-pm-why-card">
-                  <div className="ait-pm-why-header">
-                    <span className="ait-pm-chk">✓</span>
-                    <strong>Why Pip Scalp Triggered:</strong>
-                  </div>
-                  <div className="ait-pm-why-list">
-                    <span>• Micro Asian session low swept with immediate 1M/5M rejection wick</span>
-                    <span>• Institutional displacement candle created a fresh Fair Value Gap</span>
-                    <span>• Strict 2–3 numbers SL and TP parameters enforced for minimal exposure</span>
-                  </div>
+                <div className="ait-pm-sr-actions">
+                  <span className="ait-pm-sr-conf">95% AI</span>
+                  <button
+                    type="button"
+                    className="ait-pm-sr-copy-btn"
+                    onClick={() => handleCopySignal(currentScalpSignal)}
+                    title="Copy Scalp Signal"
+                  >
+                    <span>{signalCopiedNotice ? '✓ Copied' : '📋 Copy'}</span>
+                  </button>
                 </div>
               </div>
             )}
@@ -1161,67 +1163,86 @@ Model: ${sig.model || 'ICT SMC Model'}`;
               </div>
             )}
 
-            {/* 4C. INTRA TRADE MODE: IF CONDITION MET, SHOW HIGH-CONVICTION CRT SIGNAL */}
+            {/* 4C. INTRA TRADE MODE: IF CONDITION MET, SHOW HIGH-CONVICTION CRT SIGNAL ROW */}
             {pipMode === 'daytrade' && dayTradeSignal && (
-              <div className="ait-pm-signal-result intra-theme">
-                <div className="ait-pm-res-header">
-                  <div className="ait-pm-res-badge-wrap">
-                    <span className="ait-pm-res-icon">🎯</span>
-                    <div>
-                      <div className="ait-pm-res-title-row">
-                        <span className="ait-pm-res-dir buy">▲ BUY (LONG)</span>
-                        <strong className="ait-pm-res-pair">{pair}</strong>
-                        <span className="ait-pm-res-model">3-Candle CRT Daily Setup</span>
-                      </div>
-                      <span className="ait-pm-res-time">All 3/3 Institutional Conditions Verified • Locked at {dayTradeSignal.time || 'Live'}</span>
+              <div className="ait-pm-scalp-simple-row intra-theme">
+                <div className="ait-pm-sr-badge-col">
+                  <span className={`ait-pm-sr-dir ${(dayTradeSignal.direction || 'BUY').toLowerCase() === 'sell' ? 'sell' : 'buy'}`}>
+                    {(dayTradeSignal.direction || 'BUY').toLowerCase() === 'sell' ? '▼ SELL' : '▲ BUY'}
+                  </span>
+                  <div className="ait-pm-sr-pair-wrap">
+                    <strong className="ait-pm-sr-pair">{pair}</strong>
+                    <span className="ait-pm-sr-tf-tag cyan">CRT 15M/1H</span>
+                  </div>
+                </div>
+
+                <div className="ait-pm-sr-metrics">
+                  <div className="ait-pm-sr-item">
+                    <span className="ait-pm-sr-label">ENTRY</span>
+                    <strong className="ait-pm-sr-val text-cyan ait-mono">
+                      ${formatCommaPrice(dayTradeSignal.entry, decimals)}
+                    </strong>
+                  </div>
+
+                  <div className="ait-pm-sr-divider" />
+
+                  <div className="ait-pm-sr-item">
+                    <span className="ait-pm-sr-label">STOP LOSS</span>
+                    <div className="ait-pm-sr-val-row">
+                      <strong className="ait-pm-sr-val text-red ait-mono">
+                        ${formatCommaPrice(dayTradeSignal.sl, decimals)}
+                      </strong>
+                      <span className="ait-pm-sr-tag-badge text-red">-10 Pts</span>
                     </div>
                   </div>
 
-                  <div className="ait-pm-res-actions">
-                    <span className="ait-pm-conf-badge cyan">96% High Conviction</span>
-                    <button
-                      type="button"
-                      className="ait-pm-copy-btn"
-                      onClick={() => handleCopySignal(dayTradeSignal)}
-                    >
-                      <span>{signalCopiedNotice ? '✓ Copied!' : '📋 Copy Signal'}</span>
-                    </button>
+                  <div className="ait-pm-sr-divider" />
+
+                  <div className="ait-pm-sr-item">
+                    <span className="ait-pm-sr-label">TAKE PROFIT 1</span>
+                    <div className="ait-pm-sr-val-row">
+                      <strong className="ait-pm-sr-val text-emerald ait-mono">
+                        ${formatCommaPrice(dayTradeSignal.tp1, decimals)}
+                      </strong>
+                      <span className="ait-pm-sr-tag-badge text-emerald">+15 Pts</span>
+                    </div>
+                  </div>
+
+                  <div className="ait-pm-sr-divider" />
+
+                  <div className="ait-pm-sr-item">
+                    <span className="ait-pm-sr-label">FINAL TP2</span>
+                    <div className="ait-pm-sr-val-row">
+                      <strong className="ait-pm-sr-val text-emerald ait-mono">
+                        ${formatCommaPrice(dayTradeSignal.tp2, decimals)}
+                      </strong>
+                      <span className="ait-pm-sr-tag-badge text-emerald">+20 Pts</span>
+                    </div>
+                  </div>
+
+                  <div className="ait-pm-sr-divider" />
+
+                  <div className="ait-pm-sr-item">
+                    <span className="ait-pm-sr-label">BE TRIGGER</span>
+                    <div className="ait-pm-sr-val-row">
+                      <strong className="ait-pm-sr-val text-cyan ait-mono">
+                        ${formatCommaPrice(dayTradeSignal.breakEvenTrigger, decimals)}
+                      </strong>
+                      <span className="ait-pm-sr-tag-badge text-cyan">Move SL</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* 4-Box Clean Price Matrix */}
-                <div className="ait-pm-boxes-grid">
-                  <div className="ait-pm-box entry">
-                    <span className="ait-pm-box-tag">ENTRY PRICE</span>
-                    <strong className="ait-pm-box-num ait-mono">${formatCommaPrice(dayTradeSignal.entry, decimals)}</strong>
-                    <span className="ait-pm-box-hint text-cyan">CRT Confirmation Tap</span>
-                  </div>
-
-                  <div className="ait-pm-box sl">
-                    <span className="ait-pm-box-tag">STOP LOSS</span>
-                    <strong className="ait-pm-box-num ait-mono text-red">${formatCommaPrice(dayTradeSignal.sl, decimals)}</strong>
-                    <span className="ait-pm-box-hint text-red">CRT 1000 Pts SL ($10.00)</span>
-                  </div>
-
-                  <div className="ait-pm-box tp">
-                    <span className="ait-pm-box-tag">TAKE PROFIT 1</span>
-                    <strong className="ait-pm-box-num ait-mono text-emerald">${formatCommaPrice(dayTradeSignal.tp1, decimals)}</strong>
-                    <span className="ait-pm-box-hint text-emerald">1500 Pts Target ($15.00)</span>
-                  </div>
-
-                  <div className="ait-pm-box runner">
-                    <span className="ait-pm-box-tag">FINAL TP2</span>
-                    <strong className="ait-pm-box-num ait-mono text-emerald">${formatCommaPrice(dayTradeSignal.tp2, decimals)}</strong>
-                    <span className="ait-pm-box-hint text-emerald">CRT 2000 Pts Target ($20.00)</span>
-                  </div>
-                </div>
-
-                {/* Break-Even Rule */}
-                <div className="ait-sig-be-bar">
-                  <span className="ait-sig-be-icon">🛡️</span>
-                  <span>
-                    <strong>Risk Guardian Rule:</strong> Move Stop Loss to Break-Even (${formatCommaPrice(dayTradeSignal.breakEvenTrigger, decimals)}) at +10.00 pts profit.
-                  </span>
+                <div className="ait-pm-sr-actions">
+                  <span className="ait-pm-sr-conf cyan">96% AI</span>
+                  <button
+                    type="button"
+                    className="ait-pm-sr-copy-btn"
+                    onClick={() => handleCopySignal(dayTradeSignal)}
+                    title="Copy Intra Signal"
+                  >
+                    <span>{signalCopiedNotice ? '✓ Copied' : '📋 Copy'}</span>
+                  </button>
                 </div>
               </div>
             )}
