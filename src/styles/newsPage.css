@@ -163,7 +163,13 @@
   font-family: inherit;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
+  line-height: 1;
+}
+
+.gzn-chip-btn svg {
+  flex-shrink: 0;
+  display: block;
 }
 
 .gzn-chip-btn:hover {
@@ -179,13 +185,14 @@
 }
 
 .gzn-chip-dot {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
+  flex-shrink: 0;
 }
-.gzn-chip-dot.red { background: #f43f5e; box-shadow: 0 0 6px #f43f5e; }
-.gzn-chip-dot.amber { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; }
-.gzn-chip-dot.slate { background: #94a3b8; }
+.gzn-chip-dot.red { background: #f43f5e; box-shadow: 0 0 8px rgba(244, 63, 94, 0.75); }
+.gzn-chip-dot.amber { background: #f59e0b; box-shadow: 0 0 8px rgba(245, 158, 11, 0.75); }
+.gzn-chip-dot.slate { background: #94a3b8; box-shadow: 0 0 4px rgba(148, 163, 184, 0.5); }
 
 .gzn-search-input-box {
   position: relative;
@@ -216,7 +223,9 @@
   left: 11px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: #64748b;
   pointer-events: none;
 }

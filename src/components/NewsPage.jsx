@@ -1,11 +1,140 @@
 import { useEffect, useState, useMemo } from 'react';
 import Footer from './Footer.jsx';
-import EconomicCalendar from './EconomicCalendar.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
 import { analyzeGoldImpact } from '../utils/goldImpactAnalyzer.js';
 import { classifyNewsArticle, formatNewsTime } from '../utils/newsClassifier.js';
 import '../styles/newsPage.css';
+
+// =========================================================================
+// INSTITUTIONAL SVG ICONS (Replaces generic OS emojis)
+// =========================================================================
+const IconGrid = ({ size = 13, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="7" height="7" rx="1.5" />
+    <rect x="14" y="3" width="7" height="7" rx="1.5" />
+    <rect x="14" y="14" width="7" height="7" rx="1.5" />
+    <rect x="3" y="14" width="7" height="7" rx="1.5" />
+  </svg>
+);
+
+const IconGold = ({ size = 14, color = '#f59e0b' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 17h18l-2.5-7h-13L3 17z" fill={color} fillOpacity="0.22" />
+    <path d="M6 10l2-5h8l2 5" />
+    <line x1="9" y1="17" x2="10.5" y2="10" />
+    <line x1="15" y1="17" x2="13.5" y2="10" />
+  </svg>
+);
+
+const IconBank = ({ size = 14, color = '#a78bfa' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 21h18M3 10h18M5 10v8M9 10v8M15 10v8M19 10v8M12 3L2 8h20L12 3z" />
+  </svg>
+);
+
+const IconBarChart = ({ size = 14, color = '#38bdf8' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="20" x2="18" y2="10" />
+    <line x1="12" y1="20" x2="12" y2="4" />
+    <line x1="6" y1="20" x2="6" y2="14" />
+    <path d="M3 20h18" />
+  </svg>
+);
+
+const IconForex = ({ size = 14, color = '#34d399' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="9" />
+    <path d="M14.5 9.5a2.5 2.5 0 0 0-5 0c0 1.5 2.5 2 2.5 3.5a1.5 1.5 0 0 1-3 0" />
+    <line x1="12" y1="6" x2="12" y2="7.5" />
+    <line x1="12" y1="16.5" x2="12" y2="18" />
+  </svg>
+);
+
+const IconSearch = ({ size = 14, color = '#64748b' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="7.5" />
+    <line x1="21" y1="21" x2="16.3" y2="16.3" />
+  </svg>
+);
+
+const IconTelegram = ({ size = 14, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.52 2.77-1.18 3.35-1.38 3.73-1.39.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z" />
+  </svg>
+);
+
+const IconRefresh = ({ size = 13, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19" />
+  </svg>
+);
+
+const IconZap = ({ size = 13, color = '#fbbf24' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={color} stroke={color} strokeWidth="1">
+    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+  </svg>
+);
+
+const IconCompass = ({ size = 13, color = '#f59e0b' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill={color} fillOpacity="0.25" />
+  </svg>
+);
+
+const IconTag = ({ size = 11, color = '#34d399' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+    <line x1="7" y1="7" x2="7.01" y2="7" />
+  </svg>
+);
+
+const IconCpu = ({ size = 15, color = '#00e5ff' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="4" y="4" width="16" height="16" rx="2" />
+    <rect x="9" y="9" width="6" height="6" />
+    <line x1="9" y1="1" x2="9" y2="4" /><line x1="15" y1="1" x2="15" y2="4" />
+    <line x1="9" y1="20" x2="9" y2="23" /><line x1="15" y1="20" x2="15" y2="23" />
+    <line x1="20" y1="9" x2="23" y2="9" /><line x1="20" y1="14" x2="23" y2="14" />
+    <line x1="1" y1="9" x2="4" y2="9" /><line x1="1" y1="14" x2="4" y2="14" />
+  </svg>
+);
+
+const IconClose = ({ size = 15, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
+
+const IconExternalLink = ({ size = 12, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+    <polyline points="15 3 21 3 21 9" />
+    <line x1="10" y1="14" x2="21" y2="3" />
+  </svg>
+);
+
+const IconChevronRight = ({ size = 13, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="9 18 15 12 9 6" />
+  </svg>
+);
+
+const IconNewspaper = ({ size = 32, color = '#64748b' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2" />
+    <path d="M18 14h-8M15 18h-5M10 6h8v4h-8V6Z" />
+  </svg>
+);
+
+const IconAlertShield = ({ size = 32, color = '#f43f5e' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    <line x1="12" y1="8" x2="12" y2="12" />
+    <line x1="12" y1="16" x2="12.01" y2="16" />
+  </svg>
+);
 
 const NEWS_API_URL = import.meta.env.VITE_NEWS_API_URL || 'https://genzapi-production.up.railway.app';
 
@@ -15,7 +144,6 @@ export default function NewsPage({ onBack }) {
   const t = getStrings(lang).news;
 
   // View & Filter States
-  const [tab, setTab] = useState('news'); // 'news' | 'calendar'
   const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'high' | 'medium' | 'low' | 'CENTRAL BANK' | 'COMMODITIES' | 'MACRO' | 'FOREX' | 'CRYPTO'
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -179,7 +307,7 @@ export default function NewsPage({ onBack }) {
               rel="noopener noreferrer"
               className="gzn-tg-channel-btn"
             >
-              <span>✈️</span>
+              <IconTelegram size={14} />
               <span>{isKhmer ? 'ទទួលដំណឹងតាម Telegram' : 'Live Telegram Alerts'}</span>
             </a>
             <button
@@ -188,7 +316,7 @@ export default function NewsPage({ onBack }) {
               onClick={() => setReloadKey((k) => k + 1)}
               title="Refresh News Feed"
             >
-              <span>↻</span>
+              <IconRefresh size={13} />
               <span>{t.refresh}</span>
             </button>
           </div>
@@ -203,137 +331,120 @@ export default function NewsPage({ onBack }) {
             ? 'ព័ត៌មានសំខាន់ៗដែលធ្វើឱ្យទីផ្សារកម្រើក ត្រូវបានវិភាគជាភាសាខ្មែរ និងវាយតម្លៃឥទ្ធិពលផ្ទាល់លើតម្លៃមាស (XAU/USD) និងរូបិយប័ណ្ណសកល។'
             : 'Real-time market-moving headlines, translated to Khmer and scored for institutional Gold & Forex impact.'}
         </p>
+      </div>
 
-        {/* Tab Switcher: News Feed vs Economic Calendar */}
-        <div className="news-tabs" style={{ marginBottom: 18 }}>
+      {/* =========================================================================
+          CONTROLS & FILTER CHIPS ROW
+          ========================================================================= */}
+      <div className="gzn-controls-row">
+        <div className="gzn-filter-chips-wrap">
           <button
             type="button"
-            className={`news-tab ${tab === 'news' ? 'news-tab-active' : ''}`}
-            onClick={() => setTab('news')}
+            className={`gzn-chip-btn ${activeFilter === 'all' ? 'active' : ''}`}
+            onClick={() => handleFilterChange('all')}
           >
-            📰 {t.tabNews}
+            <IconGrid size={13} color={activeFilter === 'all' ? '#38bdf8' : 'currentColor'} />
+            <span>{isKhmer ? 'ទាំងអស់' : 'All'}</span>
+            <span style={{ opacity: 0.75, fontSize: 11 }}>({processedArticles.length})</span>
           </button>
+
           <button
             type="button"
-            className={`news-tab ${tab === 'calendar' ? 'news-tab-active' : ''}`}
-            onClick={() => setTab('calendar')}
+            className={`gzn-chip-btn ${activeFilter === 'high' ? 'active' : ''}`}
+            onClick={() => handleFilterChange('high')}
           >
-            📅 {t.tabCalendar}
+            <span className="gzn-chip-dot red" />
+            <span>{isKhmer ? 'ឥទ្ធិពលខ្ពស់' : 'High Impact'}</span>
           </button>
+
+          <button
+            type="button"
+            className={`gzn-chip-btn ${activeFilter === 'medium' ? 'active' : ''}`}
+            onClick={() => handleFilterChange('medium')}
+          >
+            <span className="gzn-chip-dot amber" />
+            <span>{isKhmer ? 'ឥទ្ធិពលមធ្យម' : 'Medium'}</span>
+          </button>
+
+          <button
+            type="button"
+            className={`gzn-chip-btn ${activeFilter === 'low' ? 'active' : ''}`}
+            onClick={() => handleFilterChange('low')}
+          >
+            <span className="gzn-chip-dot slate" />
+            <span>{isKhmer ? 'ឥទ្ធិពលទាប' : 'Low'}</span>
+          </button>
+
+          <button
+            type="button"
+            className={`gzn-chip-btn ${activeFilter === 'COMMODITIES' ? 'active' : ''}`}
+            onClick={() => handleFilterChange('COMMODITIES')}
+          >
+            <IconGold size={14} color={activeFilter === 'COMMODITIES' ? '#fbbf24' : '#f59e0b'} />
+            <span>{isKhmer ? 'មាស & ទំនិញ' : 'Gold & Commodities'}</span>
+          </button>
+
+          <button
+            type="button"
+            className={`gzn-chip-btn ${activeFilter === 'CENTRAL BANK' ? 'active' : ''}`}
+            onClick={() => handleFilterChange('CENTRAL BANK')}
+          >
+            <IconBank size={14} color={activeFilter === 'CENTRAL BANK' ? '#c084fc' : '#a78bfa'} />
+            <span>{isKhmer ? 'Fed & ធនាគារកណ្តាល' : 'Central Bank'}</span>
+          </button>
+
+          <button
+            type="button"
+            className={`gzn-chip-btn ${activeFilter === 'MACRO' ? 'active' : ''}`}
+            onClick={() => handleFilterChange('MACRO')}
+          >
+            <IconBarChart size={14} color={activeFilter === 'MACRO' ? '#38bdf8' : '#38bdf8'} />
+            <span>{isKhmer ? 'អតិផរណា Macro' : 'Macro / CPI'}</span>
+          </button>
+
+          <button
+            type="button"
+            className={`gzn-chip-btn ${activeFilter === 'FOREX' ? 'active' : ''}`}
+            onClick={() => handleFilterChange('FOREX')}
+          >
+            <IconForex size={14} color={activeFilter === 'FOREX' ? '#34d399' : '#34d399'} />
+            <span>{isKhmer ? 'រូបិយប័ណ្ណ FX' : 'Forex'}</span>
+          </button>
+        </div>
+
+        {/* Keyword Search Input */}
+        <div className="gzn-search-input-box">
+          <span className="gzn-search-icon">
+            <IconSearch size={14} color="#64748b" />
+          </span>
+          <input
+            type="text"
+            className="gzn-search-input"
+            placeholder={isKhmer ? 'ស្វែងរកព័ត៌មាន (Gold, Fed, CPI)...' : 'Search catalysts (Gold, Fed, CPI)...'}
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
+          />
         </div>
       </div>
 
-      {/* Render Economic Calendar if selected */}
-      {tab === 'calendar' && <EconomicCalendar />}
-
-      {/* Render News Feed */}
-      {tab === 'news' && (
-        <>
-          {/* =========================================================================
-              CONTROLS & FILTER CHIPS ROW
-              ========================================================================= */}
-          <div className="gzn-controls-row">
-            <div className="gzn-filter-chips-wrap">
-              <button
-                type="button"
-                className={`gzn-chip-btn ${activeFilter === 'all' ? 'active' : ''}`}
-                onClick={() => handleFilterChange('all')}
-              >
-                <span>{isKhmer ? 'ទាំងអស់' : 'All'}</span>
-                <span>({processedArticles.length})</span>
-              </button>
-
-              <button
-                type="button"
-                className={`gzn-chip-btn ${activeFilter === 'high' ? 'active' : ''}`}
-                onClick={() => handleFilterChange('high')}
-              >
-                <span className="gzn-chip-dot red" />
-                <span>{isKhmer ? 'ឥទ្ធិពលខ្ពស់' : 'High Impact'}</span>
-              </button>
-
-              <button
-                type="button"
-                className={`gzn-chip-btn ${activeFilter === 'medium' ? 'active' : ''}`}
-                onClick={() => handleFilterChange('medium')}
-              >
-                <span className="gzn-chip-dot amber" />
-                <span>{isKhmer ? 'ឥទ្ធិពលមធ្យម' : 'Medium'}</span>
-              </button>
-
-              <button
-                type="button"
-                className={`gzn-chip-btn ${activeFilter === 'low' ? 'active' : ''}`}
-                onClick={() => handleFilterChange('low')}
-              >
-                <span className="gzn-chip-dot slate" />
-                <span>{isKhmer ? 'ឥទ្ធិពលទាប' : 'Low'}</span>
-              </button>
-
-              <button
-                type="button"
-                className={`gzn-chip-btn ${activeFilter === 'COMMODITIES' ? 'active' : ''}`}
-                onClick={() => handleFilterChange('COMMODITIES')}
-              >
-                <span>🥇 {isKhmer ? 'មាស & ទំនិញ' : 'Gold & Commodities'}</span>
-              </button>
-
-              <button
-                type="button"
-                className={`gzn-chip-btn ${activeFilter === 'CENTRAL BANK' ? 'active' : ''}`}
-                onClick={() => handleFilterChange('CENTRAL BANK')}
-              >
-                <span>🏦 {isKhmer ? 'Fed & ធនាគារកណ្តាល' : 'Central Bank'}</span>
-              </button>
-
-              <button
-                type="button"
-                className={`gzn-chip-btn ${activeFilter === 'MACRO' ? 'active' : ''}`}
-                onClick={() => handleFilterChange('MACRO')}
-              >
-                <span>📊 {isKhmer ? 'អតិផរណា Macro' : 'Macro / CPI'}</span>
-              </button>
-
-              <button
-                type="button"
-                className={`gzn-chip-btn ${activeFilter === 'FOREX' ? 'active' : ''}`}
-                onClick={() => handleFilterChange('FOREX')}
-              >
-                <span>💵 {isKhmer ? 'រូបិយប័ណ្ណ FX' : 'Forex'}</span>
-              </button>
-            </div>
-
-            {/* Keyword Search Input */}
-            <div className="gzn-search-input-box">
-              <span className="gzn-search-icon">🔍</span>
-              <input
-                type="text"
-                className="gzn-search-input"
-                placeholder={isKhmer ? 'ស្វែងរកព័ត៌មាន (Gold, Fed, CPI...)' : 'Search catalysts (Gold, Fed, CPI)...'}
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1);
-                }}
-              />
-            </div>
+      {/* =========================================================================
+          PIP AI RADAR • HOT BREAKING CATALYSTS (Featured Top Alert Box)
+          ========================================================================= */}
+      {hotBreakingArticles.length > 0 && activeFilter === 'all' && !searchQuery.trim() && (
+        <div className="gzn-hot-reads-box">
+          <div className="gzn-hot-header">
+            <span className="gzn-hot-title">
+              <IconZap size={14} color="#fbbf24" />
+              <span>{isKhmer ? 'PIP AI RADAR • ព័ត៌មានក្ដៅៗដែលជះឥទ្ធិពលខ្លាំង' : 'PIP AI RADAR • HOT BREAKING CATALYSTS'}</span>
+            </span>
+            <span className="gzn-hot-live-tag">
+              <span className="gzn-live-pulse-dot" />
+              <span>{isKhmer ? 'ផ្សាយផ្ទាល់' : 'LIVE'}</span>
+            </span>
           </div>
-
-          {/* =========================================================================
-              PIP AI RADAR • HOT BREAKING CATALYSTS (Featured Top Alert Box)
-              ========================================================================= */}
-          {hotBreakingArticles.length > 0 && activeFilter === 'all' && !searchQuery.trim() && (
-            <div className="gzn-hot-reads-box">
-              <div className="gzn-hot-header">
-                <span className="gzn-hot-title">
-                  <span>⚡</span>
-                  <span>{isKhmer ? 'PIP AI RADAR • ព័ត៌មានក្ដៅៗដែលជះឥទ្ធិពលខ្លាំង' : 'PIP AI RADAR • HOT BREAKING CATALYSTS'}</span>
-                </span>
-                <span className="gzn-hot-live-tag">
-                  <span className="gzn-live-pulse-dot" />
-                  <span>{isKhmer ? 'ផ្សាយផ្ទាល់' : 'LIVE'}</span>
-                </span>
-              </div>
 
               <div className="gzn-hot-items-list">
                 {hotBreakingArticles.map((article) => (
@@ -373,14 +484,18 @@ export default function NewsPage({ onBack }) {
               ========================================================================= */}
           {status === 'loading' && (
             <div className="empty-state">
-              <div className="empty-icon">📰</div>
+              <div className="empty-icon" style={{ display: 'flex', justifyContent: 'center' }}>
+                <IconNewspaper size={36} color="#38bdf8" />
+              </div>
               <div className="empty-title">{t.loading}</div>
             </div>
           )}
 
           {status === 'error' && (
             <div className="empty-state">
-              <div className="empty-icon">⚠️</div>
+              <div className="empty-icon" style={{ display: 'flex', justifyContent: 'center' }}>
+                <IconAlertShield size={36} color="#f43f5e" />
+              </div>
               <div className="empty-title">{isKhmer ? 'មិនអាចទាញយកព័ត៌មានបានទេ' : 'Could not fetch news feed'}</div>
               <button
                 type="button"
@@ -388,14 +503,17 @@ export default function NewsPage({ onBack }) {
                 style={{ marginTop: 12 }}
                 onClick={() => setReloadKey((k) => k + 1)}
               >
-                ↻ {t.refresh}
+                <IconRefresh size={13} />
+                <span>{t.refresh}</span>
               </button>
             </div>
           )}
 
           {status === 'loaded' && paginatedArticles.length === 0 && (
             <div className="empty-state">
-              <div className="empty-icon">🔍</div>
+              <div className="empty-icon" style={{ display: 'flex', justifyContent: 'center' }}>
+                <IconSearch size={36} color="#64748b" />
+              </div>
               <div className="empty-title">
                 {isKhmer ? 'រកមិនឃើញព័ត៌មានដែលត្រូវនឹងតម្រងនេះទេ' : 'No news found matching this filter'}
               </div>
@@ -408,7 +526,8 @@ export default function NewsPage({ onBack }) {
                   setSearchQuery('');
                 }}
               >
-                {isKhmer ? 'បង្ហាញព័ត៌មានទាំងអស់វិញ' : 'Show All Catalysts'}
+                <IconRefresh size={13} />
+                <span>{isKhmer ? 'បង្ហាញព័ត៌មានទាំងអស់វិញ' : 'Show All Catalysts'}</span>
               </button>
             </div>
           )}
@@ -458,8 +577,14 @@ export default function NewsPage({ onBack }) {
                       {/* Dedicated Gold & Macro Transmission Callout */}
                       <div className="gzn-card-transmission-box">
                         <div className="gzn-transmission-header">
-                          <span>🏆 {article.goldImpact.impactTitle}</span>
-                          <span style={{ fontSize: 10.5, color: '#34d399' }}>📌 {article.goldImpact.driverTag}</span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                            <IconCompass size={13} color="#f59e0b" />
+                            <span>{article.goldImpact.impactTitle}</span>
+                          </span>
+                          <span style={{ fontSize: 10.5, color: '#34d399', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <IconTag size={11} color="#34d399" />
+                            <span>{article.goldImpact.driverTag}</span>
+                          </span>
                         </div>
                         <p className="gzn-transmission-text">{article.goldImpact.explanation}</p>
                       </div>
@@ -468,8 +593,9 @@ export default function NewsPage({ onBack }) {
                     {/* Card Footer: Source and Action */}
                     <div className="gzn-card-footer">
                       <span className="gzn-card-source">{article.source || 'Market Feed'}</span>
-                      <span className="gzn-card-action-btn">
-                        {isKhmer ? 'មើលការវិភាគ AI លម្អិត ▸' : 'AI Deep Breakdown ▸'}
+                      <span className="gzn-card-action-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                        <span>{isKhmer ? 'មើលការវិភាគ AI លម្អិត' : 'AI Deep Breakdown'}</span>
+                        <IconChevronRight size={13} />
                       </span>
                     </div>
                   </div>
@@ -525,8 +651,6 @@ export default function NewsPage({ onBack }) {
               </div>
             </>
           )}
-        </>
-      )}
 
       {/* =========================================================================
           DETAILED AI ARTICLE ANALYSIS MODAL
@@ -547,7 +671,7 @@ export default function NewsPage({ onBack }) {
                 className="gzn-modal-close-btn"
                 onClick={() => setSelectedArticle(null)}
               >
-                ✕
+                <IconClose size={15} />
               </button>
             </div>
 
@@ -556,8 +680,9 @@ export default function NewsPage({ onBack }) {
             {/* AI Analysis Container */}
             <div className="gzn-modal-ai-box">
               <div className="gzn-modal-ai-header">
-                <span className="gzn-modal-ai-tag">
-                  🤖 PIP AI INSTITUTIONAL AUDIT
+                <span className="gzn-modal-ai-tag" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <IconCpu size={15} color="#00e5ff" />
+                  <span>{isKhmer ? 'ការវិភាគស៊ីជម្រៅ PIP AI' : 'PIP AI INSTITUTIONAL AUDIT'}</span>
                 </span>
                 {modalAnalysis?.confidence && (
                   <span style={{ fontSize: 11, fontWeight: 700, color: '#34d399' }}>
@@ -613,7 +738,7 @@ export default function NewsPage({ onBack }) {
                 className="gzn-modal-source-link"
               >
                 <span>{isKhmer ? 'អានប្រភពដើមលើ ' : 'Read on '} {selectedArticle.source || 'Publisher'}</span>
-                <span>↗</span>
+                <IconExternalLink size={12} />
               </a>
             </div>
           </div>
