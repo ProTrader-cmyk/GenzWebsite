@@ -28,6 +28,82 @@ import PairLogo, {
 } from './ui/PairLogo.jsx';
 import '../styles/aiTradingPage.css';
 
+// =========================================================================
+// INSTITUTIONAL SVG ICONS (Replaces generic OS emojis with high-tech fintech UI)
+// =========================================================================
+const IconGlobe = ({ size = 14, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <line x1="2" y1="12" x2="22" y2="12" />
+    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+  </svg>
+);
+
+const IconZap = ({ size = 14, color = '#F59E0B' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill={color} fillOpacity="0.25" />
+  </svg>
+);
+
+const IconTrendline = ({ size = 14, color = '#38BDF8' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+    <polyline points="16 7 22 7 22 13" />
+  </svg>
+);
+
+const IconBullion = ({ size = 15, color = '#F59E0B' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 17h18l-2.5-7h-13L3 17z" fill={color} fillOpacity="0.25" />
+    <path d="M6 10l2-5h8l2 5" />
+    <line x1="9" y1="17" x2="10.5" y2="10" />
+    <line x1="15" y1="17" x2="13.5" y2="10" />
+  </svg>
+);
+
+const IconForexArrows = ({ size = 15, color = '#34D399' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M7 17V5m0 0L3 9m4-4l4 4" />
+    <path d="M17 7v12m0 0l4-4m-4 4l-4-4" />
+  </svg>
+);
+
+const IconCryptoToken = ({ size = 15, color = '#A78BFA' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="9.5" />
+    <path d="M9.5 8.5h4a2 2 0 0 1 0 4H9.5m0 0h4.5a2 2 0 0 1 0 4H9.5m0-8v8m2-9.5v1.5m2-1.5v1.5m-2 14.5v1.5m2-1.5v1.5" />
+  </svg>
+);
+
+const IconChevronDown = ({ size = 13, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="6 9 12 15 18 9" />
+  </svg>
+);
+
+const IconCheckMini = ({ size = 13, color = '#00F2FE' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
+const IconRadarScan = ({ size = 38, color = '#00F2FE' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" strokeOpacity="0.4" />
+    <circle cx="12" cy="12" r="6" strokeOpacity="0.6" />
+    <circle cx="12" cy="12" r="2" />
+    <line x1="12" y1="12" x2="19" y2="5" strokeWidth="2.2" />
+    <path d="M12 2A10 10 0 0 1 19 5" strokeWidth="2.5" />
+  </svg>
+);
+
+const IconSendPlane = ({ size = 14, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="22" y1="2" x2="11" y2="13" />
+    <polygon points="22 2 15 22 11 13 2 9 22 2" />
+  </svg>
+);
+
 const SCANNER_PAIRS = [
   {
     symbol: 'XAUUSD',
@@ -95,15 +171,9 @@ function ScannerPairDropdown({ selectedPair, onSelectPair, livePrices }) {
             </span>
           )}
         </div>
-        <svg
-          className={`ait-pair-chevron ${isOpen ? 'rotated' : ''}`}
-          width="14"
-          height="14"
-          viewBox="0 0 20 20"
-          fill="currentColor"
-        >
-          <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.27a.75.75 0 01.02-1.06z" clipRule="evenodd" />
-        </svg>
+        <span className={`ait-pair-chevron ${isOpen ? 'rotated' : ''}`}>
+          <IconChevronDown size={14} />
+        </span>
       </button>
 
       {isOpen && (
@@ -134,7 +204,11 @@ function ScannerPairDropdown({ selectedPair, onSelectPair, livePrices }) {
                   </div>
                   <span className="ait-pair-item-cat">{item.category}</span>
                 </div>
-                {isSelected && <span className="ait-pair-check">✓</span>}
+                {isSelected && (
+                  <span className="ait-pair-check">
+                    <IconCheckMini size={13} color="#00F2FE" />
+                  </span>
+                )}
               </button>
             );
           })}
@@ -824,7 +898,7 @@ export default function AITradingPage({
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  <span>✈️</span>
+                  <IconSendPlane size={15} />
                   <span>{isKhmer ? 'ផ្ញើសារទៅកាន់ Admin (@huarrrrr)' : 'DM Admin on Telegram (@huarrrrr)'}</span>
                 </button>
                 {onOpenTerminal && (
@@ -961,7 +1035,7 @@ export default function AITradingPage({
                 className="ait-btn-gold-action"
                 onClick={() => setShowReferralModal(true)}
               >
-                <span>✈️</span>
+                <IconSendPlane size={15} />
                 <span>{isKhmer ? 'ផ្ញើសារទៅ Admin ឥឡូវនេះ (@huarrrrr)' : 'DM Admin on Telegram (@huarrrrr)'}</span>
               </button>
             </div>
@@ -1535,15 +1609,6 @@ export default function AITradingPage({
                 }}
               />
 
-              <button
-                type="button"
-                className="ait-scanner-manual-btn"
-                onClick={handleTriggerMarketScan}
-              >
-                <SparkleIcon style={{ width: 15, height: 15 }} />
-                <span>{isKhmer ? `វិភាគ & ទទួល Signal ${scanTargetPair}` : `Scan & Analyze ${scanTargetPair} Setup`}</span>
-              </button>
-
               <div className="ait-scanner-auto-badge">
                 <span className="ait-auto-pulse-dot" />
                 <div className="ait-auto-badge-text">
@@ -1560,7 +1625,7 @@ export default function AITradingPage({
 
           {pipScanNotice && (
             <div className="ait-scanner-success-notice ait-mono">
-              <span>⚡</span>
+              <IconZap size={14} color="#10B981" />
               <span>
                 <strong>PIP AI BROADCAST:</strong> Real institutional signal generated for <strong>{pipScanNotice.pair}</strong> ({pipScanNotice.dir}) @ <strong>{pipScanNotice.entry}</strong> ({pipScanNotice.time})
               </span>
@@ -1583,7 +1648,7 @@ export default function AITradingPage({
                     setCurrentPage(1);
                   }}
                 >
-                  <span>🌐</span>
+                  <span className="ait-style-icon"><IconGlobe size={15} /></span>
                   <span>{isKhmer ? 'គ្រប់បែប' : 'All Trades'}</span>
                   <span className="ait-style-count">{styleCounts.all}</span>
                 </button>
@@ -1596,7 +1661,7 @@ export default function AITradingPage({
                     setCurrentPage(1);
                   }}
                 >
-                  <span className="ait-style-icon">⚡</span>
+                  <span className="ait-style-icon"><IconZap size={15} color="#F59E0B" /></span>
                   <div className="ait-style-pill-texts">
                     <span className="ait-style-pill-main">{isKhmer ? 'Scalping' : 'Scalping'}</span>
                     <span className="ait-style-pill-sub">1M–5M Rapid ICT</span>
@@ -1612,7 +1677,7 @@ export default function AITradingPage({
                     setCurrentPage(1);
                   }}
                 >
-                  <span className="ait-style-icon">📈</span>
+                  <span className="ait-style-icon"><IconTrendline size={15} color="#38BDF8" /></span>
                   <div className="ait-style-pill-texts">
                     <span className="ait-style-pill-main">{isKhmer ? 'Day Trade' : 'Day Trade'}</span>
                     <span className="ait-style-pill-sub">15M–1H Intraday SMC</span>
@@ -1632,7 +1697,7 @@ export default function AITradingPage({
                   setCurrentPage(1);
                 }}
               >
-                <span>🌐</span>
+                <span className="ait-sig-filter-icon"><IconGlobe size={15} /></span>
                 <span>{isKhmer ? 'គ្រប់ទ្រព្យ' : 'All Assets'}</span>
               </button>
               <button
@@ -1643,7 +1708,7 @@ export default function AITradingPage({
                   setCurrentPage(1);
                 }}
               >
-                <span>🥇</span>
+                <span className="ait-sig-filter-icon"><IconBullion size={15} color="#F59E0B" /></span>
                 <span>Gold & Silver (XAU/XAG)</span>
               </button>
               <button
@@ -1654,7 +1719,7 @@ export default function AITradingPage({
                   setCurrentPage(1);
                 }}
               >
-                <span>💶</span>
+                <span className="ait-sig-filter-icon"><IconForexArrows size={15} color="#34D399" /></span>
                 <span>Major Forex (EUR, GBP)</span>
               </button>
               <button
@@ -1665,7 +1730,7 @@ export default function AITradingPage({
                   setCurrentPage(1);
                 }}
               >
-                <span>₿</span>
+                <span className="ait-sig-filter-icon"><IconCryptoToken size={15} color="#A78BFA" /></span>
                 <span>Crypto & Indices (BTC, US30)</span>
               </button>
             </div>
@@ -1692,7 +1757,7 @@ export default function AITradingPage({
                   className="ait-btn-gold-action"
                   onClick={() => setShowReferralModal(true)}
                 >
-                  <span>✈️</span>
+                  <IconSendPlane size={15} />
                   <span>{isKhmer ? 'ផ្ញើសារទៅ Admin ដោះសោ Signal (@huarrrrr)' : 'DM Admin on Telegram to Unlock (@huarrrrr)'}</span>
                 </button>
               </div>
@@ -1702,7 +1767,9 @@ export default function AITradingPage({
           {/* 3-Column Signal Cards Grid */}
           {filteredSignals.length === 0 ? (
             <div className="ait-signals-empty-state">
-              <div className="ait-empty-radar-icon">📡</div>
+              <div className="ait-empty-radar-icon">
+                <IconRadarScan size={44} color="#00F2FE" />
+              </div>
               <h3 className="ait-empty-title">
                 {isKhmer ? 'មិនទាន់មាន Signal ក្នុងតម្រងនេះនៅឡើយទេ' : 'No Active Setups for This Category'}
               </h3>
@@ -1856,11 +1923,11 @@ export default function AITradingPage({
                       {/* Second Row: Strategy Style Tag & Source Badge */}
                       <div className="ait-card-tags-row">
                         <span className={`ait-pill-style ${isScalp ? 'scalp' : 'daytrade'}`}>
-                          <span className="ait-pill-style-icon">{isScalp ? '⚡' : '📈'}</span>
+                          <span className="ait-pill-style-icon">{isScalp ? <IconZap size={11} color="#F59E0B" /> : <IconTrendline size={11} color="#38BDF8" />}</span>
                           <span className="ait-pill-style-text">{isScalp ? 'SCALPING' : 'DAY TRADE'}</span>
                         </span>
                         <span className="ait-pill-source">
-                          <span className="ait-source-verified-icon">✓</span>
+                          <span className="ait-source-verified-icon"><IconCheckMini size={10} color="#00F2FE" /></span>
                           <span>{source} • 0.03 LOT</span>
                         </span>
                       </div>
@@ -1931,13 +1998,18 @@ export default function AITradingPage({
                     <div className="ait-confluence-box">
                       <div className="ait-conf-header">
                         <div className="ait-conf-title-left">
-                          <span className="ait-conf-ai-pill">🤖 PIP AI AUDIT</span>
+                          <span className="ait-conf-ai-pill">
+                            <SparkleIcon style={{ width: 11, height: 11 }} />
+                            <span>PIP AI AUDIT</span>
+                          </span>
                           <span className="ait-conf-model-name">
                             {sig.model?.replace(/\s*\(\d+\/\d+\)/, '') || (isScalp ? '1M–5M FVG Scalp' : '3-Candle CRT Model')}
                           </span>
                         </div>
                         <span className="ait-conf-verified-chip">
-                          <span className="ait-check-mini">✓</span>
+                          <span className="ait-check-mini">
+                            <IconCheckMini size={11} color="#10B981" />
+                          </span>
                           <span>{displayConfluences.length}/{displayConfluences.length} Verified</span>
                         </span>
                       </div>
@@ -1958,7 +2030,10 @@ export default function AITradingPage({
                     <div className="ait-card-footer-redesigned">
                       <div className="ait-footer-meta-row">
                         <div className="ait-footer-conf-group">
-                          <span className="ait-footer-conf-label">🧠 AI Confidence:</span>
+                          <span className="ait-footer-conf-label">
+                            <BrainIcon style={{ width: 13, height: 13 }} />
+                            <span>AI Confidence:</span>
+                          </span>
                           <span className="ait-footer-conf-pct">{conf}%</span>
                           <div className="ait-meter-bars mini">
                             {[1, 2, 3, 4, 5].map((bar) => (
