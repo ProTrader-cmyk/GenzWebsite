@@ -582,28 +582,38 @@ async function fetchForexPrice(pair) {
  * Evaluates whether an active signal has crossed its Take Profit or Stop Loss level.
  * @param {Object} signal
  * @param {number} currentPrice
+ * @param {number} [previousPrice]
  * @returns {'tp' | 'sl' | 'active'}
  */
 export function evaluateSignalOutcome(signal, currentPrice, previousPrice) {
-  // A price already beyond a target when the signal is first observed is not
-  // evidence that this signal hit it. Require a live tick to cross the level.
-  if (!signal || !currentPrice || !previousPrice || signal.status !== 'active') {
+  if (!signal || !currentPrice) {
     return signal?.status || 'active';
+  }
+
+  const status = String(signal.status || 'active').toLowerCase();
+  if (status !== 'active') {
+    return status;
   }
 
   const isBuy = String(signal.direction).toLowerCase() === 'buy';
   const isSell = String(signal.direction).toLowerCase() === 'sell';
-  const tp = parseFloat(signal.tp);
-  const sl = parseFloat(signal.sl);
+  const entry = parseFloat(signal.entry ?? signal.entry_price ?? signal.entryPrice ?? signal.price);
+  const tp = parseFloat(signal.tp ?? signal.take_profit ?? signal.takeProfit);
+  const sl = parseFloat(signal.sl ?? signal.stop_loss ?? signal.stopLoss);
 
   if (!tp || !sl) return 'active';
 
+  // Sanity check: prevent evaluating against the wrong asset feed (e.g. BTC price against Gold signal)
+  if (entry > 0 && Math.abs(currentPrice - entry) / entry > 0.25) {
+    return 'active';
+  }
+
   if (isBuy) {
-    if (previousPrice < tp && currentPrice >= tp) return 'tp';
-    if (previousPrice > sl && currentPrice <= sl) return 'sl';
+    if (currentPrice >= tp) return 'tp';
+    if (currentPrice <= sl) return 'sl';
   } else if (isSell) {
-    if (previousPrice > tp && currentPrice <= tp) return 'tp';
-    if (previousPrice < sl && currentPrice >= sl) return 'sl';
+    if (currentPrice <= tp) return 'tp';
+    if (currentPrice >= sl) return 'sl';
   }
 
   return 'active';

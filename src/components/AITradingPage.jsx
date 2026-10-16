@@ -12,8 +12,8 @@ import {
 } from './ui/CategoryIcons.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
-import { fetchLivePrice, formatSpotPrice, subscribeLiveTicks } from '../services/marketPriceService.js';
-import { subscribeSignals } from '../data/signals.js';
+import { fetchLivePrice, formatSpotPrice, subscribeLiveTicks, evaluateSignalOutcome } from '../services/marketPriceService.js';
+import { subscribeSignals, updateSignalStatus } from '../data/signals.js';
 import { getUserPlan } from '../data/auth.js';
 import { clearStoredPipSignals, generateRealPipSignal, buildVerifiedTradeConfluences } from '../services/pipLiveSignalService.js';
 import AILiveChartTerminal from './AILiveChartTerminal.jsx';
@@ -509,6 +509,46 @@ export default function AITradingPage({
     return deduplicateActiveSignals(pool);
   }, [firestoreSignals, serverSignals]);
 
+  // Automated Real-Time TP & SL Outcome Detection on live price updates
+  useEffect(() => {
+    if (!signalsLoaded || deduplicatedSignals.length === 0) return;
+
+    deduplicatedSignals.forEach((sig) => {
+      const currentStatus = String(sig.status || 'active').toLowerCase();
+      if (currentStatus !== 'active') return;
+
+      const asset = (sig.pair || sig.symbol || 'XAUUSD').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      const curPrice = Number(asset.includes('XAU') ? (liveGoldPrice || liveForexPrices.XAUUSD) : liveForexPrices[asset]);
+      if (!curPrice || isNaN(curPrice) || curPrice <= 0) return;
+
+      const outcome = evaluateSignalOutcome(sig, curPrice);
+      if (outcome === 'tp' || outcome === 'sl') {
+        // Sync to Firestore if id exists
+        if (sig.id) {
+          updateSignalStatus(sig.id, outcome).catch((err) => {
+            console.warn('[AITradingPage] Auto outcome sync notice:', err);
+          });
+        }
+        // Update local firestoreSignals state so UI flips instantly
+        setFirestoreSignals((prev) =>
+          prev.map((s) => {
+            if (s.id === sig.id) {
+              const isTp = outcome === 'tp';
+              return {
+                ...s,
+                status: outcome,
+                badgeClass: isTp ? 'win' : 'loss',
+                resultBadge: isTp ? '✓ TP HIT' : '✕ STOP LOSS',
+                statusLabel: isTp ? 'Completed (TP Hit)' : 'Closed (Stopped Out)',
+              };
+            }
+            return s;
+          })
+        );
+      }
+    });
+  }, [liveGoldPrice, liveForexPrices, deduplicatedSignals, signalsLoaded]);
+
   // Dynamic Real Verified Statistics derived 100% from authentic signals (Firestore & verified setups)
   const verifiedStats = useMemo(() => {
     const pool = deduplicatedSignals.length > 0
@@ -517,10 +557,29 @@ export default function AITradingPage({
 
     const totalTracked = pool.length;
 
-    // Categorize by outcome status
-    const wins = pool.filter((s) => s.status === 'tp' || s.status === 'win' || s.badgeClass === 'win');
-    const losses = pool.filter((s) => s.status === 'sl' || s.status === 'loss' || s.badgeClass === 'loss');
-    const active = pool.filter((s) => s.status === 'active' || (!s.status && !s.resultType));
+    // Categorize by outcome status (including real-time live price evaluation)
+    const wins = [];
+    const losses = [];
+    const active = [];
+
+    pool.forEach((s) => {
+      let isWin = s.status === 'tp' || s.status === 'win' || s.badgeClass === 'win';
+      let isLoss = s.status === 'sl' || s.status === 'loss' || s.badgeClass === 'loss';
+
+      if (!isWin && !isLoss) {
+        const pairNorm = (s.pair || s.symbol || 'XAUUSD').toUpperCase().replace(/[^A-Z0-9]/g, '');
+        const p = Number(pairNorm.includes('XAU') ? (liveGoldPrice || liveForexPrices.XAUUSD) : liveForexPrices[pairNorm]);
+        if (p && p > 0) {
+          const outcome = evaluateSignalOutcome(s, p);
+          if (outcome === 'tp') isWin = true;
+          else if (outcome === 'sl') isLoss = true;
+        }
+      }
+
+      if (isWin) wins.push(s);
+      else if (isLoss) losses.push(s);
+      else active.push(s);
+    });
     const closedCount = wins.length + losses.length;
 
     // 1. Dynamic Win Rate
@@ -544,8 +603,18 @@ export default function AITradingPage({
       const entry = parseFloat(sig.entry ?? sig.entry_price ?? sig.entryPrice) || 0;
       const sl = parseFloat(sig.sl ?? sig.stop_loss ?? sig.stopLoss) || 0;
       const tp = parseFloat(sig.tp ?? sig.take_profit ?? sig.takeProfit) || 0;
-      const isWin = sig.status === 'tp' || sig.status === 'win' || sig.badgeClass === 'win';
-      const isLoss = sig.status === 'sl' || sig.status === 'loss' || sig.badgeClass === 'loss';
+      let isWin = sig.status === 'tp' || sig.status === 'win' || sig.badgeClass === 'win';
+      let isLoss = sig.status === 'sl' || sig.status === 'loss' || sig.badgeClass === 'loss';
+
+      if (!isWin && !isLoss) {
+        const pNorm = (sig.pair || sig.symbol || 'XAUUSD').toUpperCase().replace(/[^A-Z0-9]/g, '');
+        const p = Number(pNorm.includes('XAU') ? (liveGoldPrice || liveForexPrices.XAUUSD) : liveForexPrices[pNorm]);
+        if (p && p > 0) {
+          const outcome = evaluateSignalOutcome(sig, p);
+          if (outcome === 'tp') isWin = true;
+          else if (outcome === 'sl') isLoss = true;
+        }
+      }
 
       if (isWin) {
         if (entry > 0 && tp > 0) {
@@ -619,7 +688,7 @@ export default function AITradingPage({
       profitFactorDisplay,
       isRealData: totalTracked > 0,
     };
-  }, [deduplicatedSignals, firestoreSignals]);
+  }, [deduplicatedSignals, firestoreSignals, liveGoldPrice, liveForexPrices]);
 
   // Count by trading style: 'scalping' vs 'daytrade'
   const styleCounts = useMemo(() => {
@@ -1704,11 +1773,21 @@ export default function AITradingPage({
                 const source = sig.source || (sig.isFirestore ? 'GENZ VIP SIGNALS' : sig.isRealAiGenerated ? 'PIP AI (GEMINI 3.8)' : 'PIP AI SMC');
                 const opened = sig.opened || sig.timestamp || 'Today, Active';
                 const session = sig.session || activeSession.name;
-                const isTp = sig.status === 'tp' || sig.status === 'win';
-                const isSl = sig.status === 'sl' || sig.status === 'loss';
-                const badgeClass = sig.badgeClass || (isTp ? 'win' : isSl ? 'loss' : 'active');
-                const resultBadge = sig.resultBadge || (isTp ? '✓ TP HIT' : isSl ? '✕ STOP LOSS' : 'ACTIVE SETUP');
-                const statusLabel = sig.statusLabel || (isTp ? 'Completed (TP Hit)' : isSl ? 'Closed (Stopped Out)' : 'In-Progress');
+                const curPrice = Number(asset.includes('XAU') ? (liveGoldPrice || liveForexPrices.XAUUSD) : liveForexPrices[asset]) || null;
+                const statusLower = String(sig.status || '').toLowerCase();
+                let isTp = statusLower === 'tp' || statusLower === 'win';
+                let isSl = statusLower === 'sl' || statusLower === 'loss';
+
+                // Real-time evaluation against current price
+                if (!isTp && !isSl && curPrice && curPrice > 0 && tpNum > 0 && slNum > 0) {
+                  const evalRes = evaluateSignalOutcome(sig, curPrice);
+                  if (evalRes === 'tp') isTp = true;
+                  else if (evalRes === 'sl') isSl = true;
+                }
+
+                const badgeClass = isTp ? 'win' : isSl ? 'loss' : 'active';
+                const resultBadge = isTp ? '✓ TP HIT' : isSl ? '✕ STOP LOSS' : 'ACTIVE SETUP';
+                const statusLabel = isTp ? 'Completed (TP Hit)' : isSl ? 'Closed (Stopped Out)' : 'In-Progress';
 
                 return (
                   <div key={sig.id || `${asset}-${tf}-${dir}-${entry}`} className={`ait-sig-card ${isBuy ? 'buy-card' : 'sell-card'}`}>
