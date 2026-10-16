@@ -7168,50 +7168,429 @@
     0 0 24px -4px rgba(124, 58, 237, 0.45) !important;
 }
 
-/* 5. ULTRA-PREMIUM OBSIDIAN GLASS SIGNAL CARDS */
+/* ==========================================================================
+   5. MINIMALIST INSTITUTIONAL AI SIGNAL CARDS (MATCHING REFERENCE UI)
+   ========================================================================== */
 .ait-sig-card {
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(165deg, rgba(13, 21, 40, 0.94), rgba(6, 10, 22, 0.98)) !important;
-  border: 1px solid rgba(148, 163, 184, 0.16) !important;
-  border-radius: 20px !important;
-  box-shadow:
-    0 20px 48px -16px rgba(0, 0, 0, 0.8),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
-  backdrop-filter: blur(16px);
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease, box-shadow 0.25s ease !important;
+  position: relative !important;
+  background: #0E1015 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 18px !important;
+  padding: 22px 22px 20px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.45) !important;
+  transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease !important;
+  width: 100% !important;
+  max-width: 440px !important;
+  overflow: visible !important;
+  backdrop-filter: none !important;
 }
 
 .ait-sig-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2.5px;
-  background: linear-gradient(90deg, transparent, #00F2FE, #10B981, transparent);
-  opacity: 0.9;
-}
-
-.ait-sig-card.sell-card::before {
-  background: linear-gradient(90deg, transparent, #F43F5E, #A855F7, transparent);
+  display: none !important;
 }
 
 .ait-sig-card:hover {
-  transform: translateY(-4px);
-  border-color: rgba(56, 189, 248, 0.42) !important;
-  box-shadow:
-    0 26px 60px -16px rgba(0, 0, 0, 0.88),
-    0 0 36px -10px rgba(0, 242, 254, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
+  transform: translateY(-3px) !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6) !important;
+}
+
+.ait-sig-card.buy-card:hover {
+  border-color: rgba(16, 185, 129, 0.3) !important;
 }
 
 .ait-sig-card.sell-card:hover {
-  border-color: rgba(244, 63, 94, 0.42) !important;
-  box-shadow:
-    0 26px 60px -16px rgba(0, 0, 0, 0.88),
-    0 0 36px -10px rgba(244, 63, 94, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+}
+
+/* Card Top Row */
+.ait-card-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.ait-card-asset-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ait-card-asset-icon {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ait-card-asset-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ait-card-symbol-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: #FFFFFF;
+  letter-spacing: 0.03em;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.ait-card-symbol-sub {
+  font-size: 12px;
+  color: #94A3B8;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.ait-card-timeframe-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748B;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Centered Direction & Desk Badges */
+.ait-card-center-badges {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 10px 0 18px;
+}
+
+.ait-dir-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 16px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+}
+
+.ait-dir-pill.buy {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.32);
+  color: #10B981;
+}
+
+.ait-dir-pill.sell {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.32);
+  color: #EF4444;
+}
+
+.ait-dir-dot {
+  font-size: 8px;
+  line-height: 1;
+}
+
+.ait-dir-pill.buy .ait-dir-dot {
+  color: #10B981;
+}
+
+.ait-dir-pill.sell .ait-dir-dot {
+  color: #EF4444;
+}
+
+.ait-desk-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5px 12px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ait-desk-pill.buy {
+  background: rgba(16, 185, 129, 0.07);
+  border: 1px solid rgba(16, 185, 129, 0.22);
+  color: #34D399;
+}
+
+.ait-desk-pill.sell {
+  background: rgba(239, 68, 68, 0.07);
+  border: 1px solid rgba(239, 68, 68, 0.22);
+  color: #F87171;
+}
+
+/* Price Levels (Vertical Clean List) */
+.ait-card-levels-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  margin-bottom: 15px;
+}
+
+.ait-level-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ait-level-key {
+  font-size: 13.5px;
+  color: #94A3B8;
+  font-weight: 500;
+}
+
+.ait-level-val {
+  font-size: 15.5px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.ait-level-val.entry {
+  color: #F8FAFC;
+}
+
+.ait-level-val.target {
+  color: #10B981;
+}
+
+.ait-level-val.stop {
+  color: #EF4444;
+}
+
+/* Setup Conviction Pill with Chevron */
+.ait-card-setup-toggle-wrapper {
+  display: flex;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.ait-card-setup-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(16, 185, 129, 0.10);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  border-radius: 8px;
+  padding: 4.5px 12px;
+  color: #10B981;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ait-card-setup-pill:hover {
+  background: rgba(16, 185, 129, 0.16);
+  border-color: rgba(16, 185, 129, 0.45);
+}
+
+.ait-setup-dot {
+  font-size: 8px;
+  color: #10B981;
+}
+
+.ait-setup-chevron {
+  font-size: 13px;
+  line-height: 1;
+  transition: transform 0.2s ease;
+  margin-left: 2px;
+  opacity: 0.8;
+}
+
+.ait-setup-chevron.rotated {
+  transform: rotate(180deg);
+}
+
+/* Expandable Confluences Drawer */
+.ait-card-expanded-drawer {
+  background: rgba(16, 21, 30, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: aitDrawerFadeIn 0.2s ease;
+}
+
+@keyframes aitDrawerFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.ait-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ait-drawer-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ait-drawer-model {
+  font-size: 10.5px;
+  color: #38BDF8;
+  font-weight: 700;
+}
+
+.ait-drawer-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ait-drawer-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+.ait-drawer-tag {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1.5px 6px;
+  border-radius: 4px;
+  background: rgba(0, 242, 254, 0.12);
+  color: #38BDF8;
+  border: 1px solid rgba(0, 242, 254, 0.22);
+  flex-shrink: 0;
+  margin-top: 1px;
+  text-transform: uppercase;
+}
+
+.ait-drawer-desc {
+  color: #E2E8F0;
+  font-weight: 500;
+}
+
+.ait-drawer-item.highlight .ait-drawer-tag {
+  background: rgba(245, 158, 11, 0.14);
+  color: #F59E0B;
+  border-color: rgba(245, 158, 11, 0.28);
+}
+
+/* Card Horizontal Divider */
+.ait-card-hr {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  margin: 2px 0 14px;
+  width: 100%;
+}
+
+/* Meta List (Confidence, Opened, Closed) */
+.ait-card-meta-list {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  margin-bottom: 16px;
+}
+
+.ait-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ait-meta-key {
+  font-size: 13.5px;
+  color: #94A3B8;
+  font-weight: 500;
+}
+
+.ait-meta-val {
+  font-size: 13px;
+  color: #E2E8F0;
+  font-weight: 600;
+}
+
+.ait-meta-val.confidence {
+  display: flex;
+  align-items: center;
+}
+
+.ait-confidence-pct {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #FFFFFF;
+}
+
+.ait-meta-val.date {
+  font-size: 12px;
+  color: #94A3B8;
+  font-weight: 500;
+}
+
+/* Card Footer Tags & Status Banner */
+.ait-card-footer-tags {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ait-tags-chips-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ait-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3.5px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.ait-tag-chip.default {
+  background: #181B22;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94A3B8;
+}
+
+.ait-tag-chip.outline {
+  background: #14171E;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #FFFFFF;
+}
+
+.ait-status-note-banner {
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 6.5px 12px;
+  font-size: 11.5px;
+  color: #94A3B8;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
 }
 
 .ait-card-levels {

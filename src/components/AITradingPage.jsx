@@ -26,6 +26,7 @@ import PairLogo, {
   US30Logo,
   SilverIngotLogo,
 } from './ui/PairLogo.jsx';
+import { GoldAssetEmblem, SignalStrengthBars, formatSignalDate, formatLevelPrice } from './ui/SignalEmblems.jsx';
 import '../styles/aiTradingPage.css';
 
 // =========================================================================
@@ -438,6 +439,7 @@ export default function AITradingPage({
   const [signalFilter, setSignalFilter] = useState('all');
   // Trading style filter: 'all' | 'scalping' | 'daytrade'
   const [tradeStyleFilter, setTradeStyleFilter] = useState('all');
+  const [expandedCardId, setExpandedCardId] = useState(null);
   // Pagination: exactly 6 trades per page
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 6;
@@ -1870,12 +1872,9 @@ export default function AITradingPage({
                 const resultBadge = isTp ? '✓ TP HIT' : isSl ? '✕ STOP LOSS' : 'ACTIVE SETUP';
                 const statusLabel = isTp ? 'Completed (TP Hit)' : isSl ? 'Closed (Stopped Out)' : 'In-Progress';
 
-                const cleanMode = (sig.mode || '')
-                  .replace(/^[\s/]+/, '')
-                  .replace(/\b(15M|5M|1M|1H|4H)\b/gi, '')
-                  .replace(/^[\s/]+/, '')
-                  .trim() || (isScalp ? 'Scalp Setup' : 'Day Trade Setup');
-
+                const cleanTf = (tf.match(/\b(1M|5M|15M|30M|1H|4H|D1)\b/i)?.[0] || tf || '15M').toUpperCase();
+                const timeframeTag = isScalp ? `SCALPING (${cleanTf})` : `INTRADAY (${cleanTf})`;
+                const assetSubtitle = isGoldAsset ? `Gold · ${cleanTf.toLowerCase()}` : `${asset.replace('USD', '')} · ${cleanTf.toLowerCase()}`;
                 const displayConfluences = (confluences || [])
                   .map((item) => {
                     if (!item) return null;
@@ -1901,170 +1900,145 @@ export default function AITradingPage({
                   .filter(Boolean)
                   .slice(0, 3);
 
+                const cardKey = sig.id || `${asset}-${tf}-${dir}-${entry}`;
+                const isExpanded = expandedCardId === cardKey;
+
                 return (
-                  <div key={sig.id || `${asset}-${tf}-${dir}-${entry}`} className={`ait-sig-card ${isBuy ? 'buy-card' : 'sell-card'}`}>
-                    {/* Redesigned Card Header Box */}
-                    <div className="ait-card-header-box">
-                      <div className="ait-card-header-main-row">
-                        <div className="ait-card-asset-left">
-                          <PairLogo pair={sig.pair || sig.symbol || sig.name || asset} />
-                          <div className="ait-card-title-group">
-                            <span className="ait-card-sym-name">{sig.name || (asset === 'XAUUSD' ? 'Gold (XAU/USD)' : asset)}</span>
-                            <div className="ait-card-meta-line">
-                              <span className="ait-meta-tf-pill">{tf.toUpperCase()}</span>
-                              <span className="ait-meta-mode-text">{cleanMode}</span>
+                  <div key={cardKey} className={`ait-sig-card ${isBuy ? 'buy-card' : 'sell-card'}`}>
+                    {/* Top Row: Asset Icon & Title + Timeframe Tag */}
+                    <div className="ait-card-top-row">
+                      <div className="ait-card-asset-info">
+                        <div className="ait-card-asset-icon">
+                          {isGoldAsset ? (
+                            <GoldAssetEmblem size={42} />
+                          ) : (
+                            <PairLogo pair={asset} />
+                          )}
+                        </div>
+                        <div className="ait-card-asset-titles">
+                          <h4 className="ait-card-symbol-title">{asset}</h4>
+                          <span className="ait-card-symbol-sub">{assetSubtitle}</span>
+                        </div>
+                      </div>
+                      <div className="ait-card-timeframe-tag">{timeframeTag}</div>
+                    </div>
+
+                    {/* Centered Direction & Desk Badges */}
+                    <div className="ait-card-center-badges">
+                      <span className={`ait-dir-pill ${isBuy ? 'buy' : 'sell'}`}>
+                        <span className="ait-dir-dot">●</span>
+                        <span>{dir}</span>
+                      </span>
+                      <span className={`ait-desk-pill ${isBuy ? 'buy' : 'sell'}`}>DESK</span>
+                    </div>
+
+                    {/* Price Levels: Entry, Target, Stop */}
+                    <div className="ait-card-levels-vertical ait-mono">
+                      <div className="ait-level-row">
+                        <span className="ait-level-key">{isKhmer ? 'ចំណុចចូល (Entry)' : 'Entry'}</span>
+                        <span className="ait-level-val entry">{isVipUser ? formatLevelPrice(entry, asset) : '••••••'}</span>
+                      </div>
+                      <div className="ait-level-row">
+                        <span className="ait-level-key">{isKhmer ? 'គោលដៅ (Target)' : 'Target'}</span>
+                        <span className="ait-level-val target">{isVipUser ? formatLevelPrice(tp, asset) : '••••••'}</span>
+                      </div>
+                      <div className="ait-level-row">
+                        <span className="ait-level-key">{isKhmer ? 'បញ្ឈប់ខាត (Stop)' : 'Stop'}</span>
+                        <span className="ait-level-val stop">{isVipUser ? formatLevelPrice(sl, asset) : '••••••'}</span>
+                      </div>
+                    </div>
+
+                    {/* Setup Conviction Pill with Chevron Dropdown */}
+                    <div className="ait-card-setup-toggle-wrapper">
+                      <button
+                        type="button"
+                        className={`ait-card-setup-pill ${isExpanded ? 'open' : ''}`}
+                        onClick={() => setExpandedCardId(isExpanded ? null : cardKey)}
+                        title="Click to view setup confluences & thesis"
+                      >
+                        <span className="ait-setup-dot">●</span>
+                        <span className="ait-setup-text">
+                          {isScalp ? 'High conviction scalp' : 'High conviction setup'}
+                        </span>
+                        <span className={`ait-setup-chevron ${isExpanded ? 'rotated' : ''}`}>⌄</span>
+                      </button>
+                    </div>
+
+                    {/* Expandable Confluences Drawer */}
+                    {isExpanded && (
+                      <div className="ait-card-expanded-drawer">
+                        <div className="ait-drawer-head">
+                          <span className="ait-drawer-title">{isKhmer ? 'លក្ខខណ្ឌវិភាគស្ថាប័ន' : 'Institutional Confluences'}</span>
+                          <span className="ait-drawer-model">{sig.model?.replace(/\s*\(\d+\/\\d+\)/, '') || (isScalp ? '1M–5M FVG Scalp' : '3-Candle CRT Model')}</span>
+                        </div>
+                        <div className="ait-drawer-items">
+                          {displayConfluences.map((item, idx) => (
+                            <div key={idx} className="ait-drawer-item">
+                              <span className="ait-drawer-tag">{item.tag}</span>
+                              <span className="ait-drawer-desc">{item.text}</span>
                             </div>
-                          </div>
-                        </div>
-
-                        {/* Prominent Direction Badge */}
-                        <div className="ait-card-dir-wrapper">
-                          <span className={`ait-pill-dir ${isBuy ? 'buy' : 'sell'}`}>
-                            <span className="ait-dir-arrow">{isBuy ? '▲' : '▼'}</span>
-                            <span>{dir}</span>
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Second Row: Strategy Style Tag & Source Badge */}
-                      <div className="ait-card-tags-row">
-                        <span className={`ait-pill-style ${isScalp ? 'scalp' : 'daytrade'}`}>
-                          <span className="ait-pill-style-icon">{isScalp ? <IconZap size={11} color="#F59E0B" /> : <IconTrendline size={11} color="#38BDF8" />}</span>
-                          <span className="ait-pill-style-text">{isScalp ? 'SCALPING' : 'DAY TRADE'}</span>
-                        </span>
-                        <span className="ait-pill-source">
-                          <span className="ait-source-verified-icon"><IconCheckMini size={10} color="#00F2FE" /></span>
-                          <span>{source} • 0.03 LOT</span>
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Redesigned Sleek 2x2 Levels Grid */}
-                    <div className="ait-card-levels-grid ait-mono">
-                      {/* Entry Price */}
-                      <div className="ait-level-tile ait-tile-entry">
-                        <div className="ait-tile-head">
-                          <span className="ait-level-dot neutral" />
-                          <span className="ait-tile-label">ENTRY</span>
-                        </div>
-                        <div className="ait-tile-val">{isVipUser ? entry : '••••••'}</div>
-                      </div>
-
-                      {/* Risk / Reward */}
-                      <div className="ait-level-tile ait-tile-rr">
-                        <div className="ait-tile-head">
-                          <span className="ait-level-dot cyan" />
-                          <span className="ait-tile-label">RISK / REWARD</span>
-                        </div>
-                        <div className="ait-tile-val rr">{rr}</div>
-                      </div>
-
-                      {/* Take Profit (TP) */}
-                      <div className="ait-level-tile ait-tile-tp">
-                        <div className="ait-tile-head">
-                          <span className="ait-level-dot target" />
-                          <span className="ait-tile-label">TARGET (TP)</span>
-                        </div>
-                        <div className="ait-tile-val-row">
-                          <span className="ait-tile-val target">{isVipUser ? tp : '••••••'}</span>
-                          {isVipUser && <span className="ait-pnl-chip profit">+{tpPts} pts (+${tpUsd})</span>}
-                        </div>
-                      </div>
-
-                      {/* Stop Loss (SL) */}
-                      <div className="ait-level-tile ait-tile-sl">
-                        <div className="ait-tile-head">
-                          <span className="ait-level-dot stop" />
-                          <span className="ait-tile-label">STOP LOSS (SL)</span>
-                        </div>
-                        <div className="ait-tile-val-row">
-                          <span className="ait-tile-val stop">{isVipUser ? sl : '••••••'}</span>
-                          {isVipUser && <span className="ait-pnl-chip loss">-{slPts} pts (-${slUsd})</span>}
-                        </div>
-                      </div>
-
-                      {/* Break-Even Bar */}
-                      {bePriceVal && (
-                        <div className="ait-tile-be-row">
-                          <div className="ait-tile-be-left">
-                            <span className="ait-level-dot amber" />
-                            <span className="ait-tile-label">BREAK-EVEN (1:1):</span>
-                          </div>
-                          <div className="ait-tile-be-right">
-                            <span className="ait-tile-val amber">
-                              {isVipUser ? getDynamicSignalPrice(bePriceVal, asset) : '••••••'}
+                          ))}
+                          <div className="ait-drawer-item highlight">
+                            <span className="ait-drawer-tag">Risk Math</span>
+                            <span className="ait-drawer-desc">
+                              0.03 Lot (${slUsd} Risk / +${tpUsd} Target) • R:R {rr}
                             </span>
-                            {isVipUser && <span className="ait-pnl-chip neutral">+$${slUsd} Risk-Free</span>}
                           </div>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
 
-                    {/* Redesigned Clean Confluences / Audit Box */}
-                    <div className="ait-confluence-box">
-                      <div className="ait-conf-header">
-                        <div className="ait-conf-title-left">
-                          <span className="ait-conf-ai-pill">
-                            <SparkleIcon style={{ width: 11, height: 11 }} />
-                            <span>PIP AI AUDIT</span>
-                          </span>
-                          <span className="ait-conf-model-name">
-                            {sig.model?.replace(/\s*\(\d+\/\d+\)/, '') || (isScalp ? '1M–5M FVG Scalp' : '3-Candle CRT Model')}
-                          </span>
+                    {/* Horizontal Divider */}
+                    <div className="ait-card-hr" />
+
+                    {/* Meta Section: Confidence, Opened, Closed */}
+                    <div className="ait-card-meta-list">
+                      <div className="ait-meta-row">
+                        <span className="ait-meta-key">{isKhmer ? 'ទំនុកចិត្ត (Confidence)' : 'Confidence'}</span>
+                        <div className="ait-meta-val confidence">
+                          <SignalStrengthBars activeCount={Math.min(4, Math.max(2, Math.round((conf / 100) * 4)))} />
+                          <span className="ait-confidence-pct">{conf}%</span>
                         </div>
-                        <span className="ait-conf-verified-chip">
-                          <span className="ait-check-mini">
-                            <IconCheckMini size={11} color="#10B981" />
-                          </span>
-                          <span>{displayConfluences.length}/{displayConfluences.length} Verified</span>
+                      </div>
+
+                      <div className="ait-meta-row">
+                        <span className="ait-meta-key">{isKhmer ? 'ពេលវេលាបើក (Opened)' : 'Opened'}</span>
+                        <span className="ait-meta-val date ait-mono">
+                          {formatSignalDate(sig.publishedAt || sig.opened || sig.timestamp)}
                         </span>
                       </div>
 
-                      <div className="ait-conf-list-clean">
-                        {displayConfluences.map((item, cIdx) => (
-                          <div key={cIdx} className="ait-conf-row-clean">
-                            <span className={`ait-conf-chip-badge ${item.tag.toLowerCase().replace(/\s+/g, '-')}`}>
-                              {item.tag}
-                            </span>
-                            <span className="ait-conf-text-clean">{item.text}</span>
-                          </div>
-                        ))}
+                      <div className="ait-meta-row">
+                        <span className="ait-meta-key">{isKhmer ? 'ពេលវេលាបិទ (Closed)' : 'Closed'}</span>
+                        <span className="ait-meta-val date ait-mono">
+                          {isTp || isSl
+                            ? formatSignalDate(sig.closedAt || sig.updatedAt || Date.now())
+                            : (isKhmer ? 'សកម្ម (Active)' : 'Active · In-Progress')}
+                        </span>
                       </div>
                     </div>
 
-                    {/* Streamlined Card Footer */}
-                    <div className="ait-card-footer-redesigned">
-                      <div className="ait-footer-meta-row">
-                        <div className="ait-footer-conf-group">
-                          <span className="ait-footer-conf-label">
-                            <BrainIcon style={{ width: 13, height: 13 }} />
-                            <span>AI Confidence:</span>
-                          </span>
-                          <span className="ait-footer-conf-pct">{conf}%</span>
-                          <div className="ait-meter-bars mini">
-                            {[1, 2, 3, 4, 5].map((bar) => (
-                              <span
-                                key={bar}
-                                className={`ait-bar-tick ${bar <= Math.round(conf / 20) ? 'active' : ''}`}
-                                style={{ height: `${bar * 2 + 3}px` }}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                        <div className="ait-footer-session-group ait-mono">
-                          <span>{opened}</span>
-                          <span className="ait-session-dot">•</span>
-                          <span className="ait-session-name">{session}</span>
-                        </div>
+                    {/* Bottom Tags & Status Note */}
+                    <div className="ait-card-footer-tags">
+                      <div className="ait-tags-chips-row">
+                        <span className="ait-tag-chip default">
+                          {isScalp ? 'Scalping' : 'Trending'}
+                        </span>
+                        <span className="ait-tag-chip outline">
+                          Auto (AI picks best)
+                        </span>
                       </div>
 
-                      <div className="ait-footer-action-row">
-                        <span className="ait-footer-status-text">
-                          Status: <strong style={{ color: isTp ? '#10B981' : isSl ? '#EF4444' : 'var(--text)' }}>
-                            {statusLabel}
-                          </strong>
+                      <div className="ait-status-note-banner">
+                        <span>
+                          {isTp
+                            ? `Take Profit target reached — trade won (+${tpUsd})`
+                            : isSl
+                            ? `Stopped out at risk limit (-${slUsd})`
+                            : sig.status === 'cancelled' || sig.status === 'no_trade'
+                            ? 'Entry never reached — no trade'
+                            : 'Active setup — tracking market liquidity'}
                         </span>
-                        <span className={`ait-footer-res-badge ${badgeClass}`}>{resultBadge}</span>
                       </div>
                     </div>
                   </div>

@@ -8,6 +8,8 @@ import {
   subscribeLiveTicks,
   formatSpotPrice,
 } from '../../services/marketPriceService.js';
+import { GoldAssetEmblem, SignalStrengthBars, formatSignalDate, formatLevelPrice } from '../../components/ui/SignalEmblems.jsx';
+import PairLogo from '../../components/ui/PairLogo.jsx';
 
 const STATUS_FILTERS = [
   { key: 'all', label: 'All Signals' },
@@ -70,120 +72,142 @@ function extractConfluenceTags(signal) {
 function SignalCard({ signal, livePrice }) {
   const [open, setOpen] = useState(false);
 
-  const isGold = (signal.pair || '').toUpperCase().includes('XAU') || (signal.pair || '').toUpperCase().includes('GOLD');
-  const pipMultiplier = isGold ? 10 : 10000;
+  const asset = (signal.pair || 'XAUUSD').toUpperCase();
+  const isGold = asset.includes('XAU') || asset.includes('GOLD');
+  const dir = (signal.direction || 'BUY').toUpperCase();
+  const isBuy = dir === 'BUY';
+  const tf = (signal.timeframe || signal.mode || '15m').toUpperCase();
+  const cleanTf = (tf.match(/\b(1M|5M|15M|30M|1H|4H|D1)\b/i)?.[0] || '15M').toUpperCase();
+  const timeframeTag = `INTRADAY (${cleanTf})`;
+  const assetSubtitle = isGold ? `Gold · ${cleanTf.toLowerCase()}` : `${asset.replace('USD', '')} · ${cleanTf.toLowerCase()}`;
+
   const entryNum = parseFloat(signal.entry) || 0;
   const slNum = parseFloat(signal.sl) || 0;
   const tpNum = parseFloat(signal.tp) || 0;
-  const slPips = Math.round(Math.abs(entryNum - slNum) * pipMultiplier * 10) / 10;
-  const tpPips = Math.round(Math.abs(tpNum - entryNum) * pipMultiplier * 10) / 10;
-
-  const displayRr = signal.rr ? (String(signal.rr).includes(':') ? signal.rr : `1:${signal.rr}`) : '1:2';
-  const formatVal = (val) => {
-    if (!val || isNaN(val)) return '—';
-    return isGold ? val.toFixed(2) : (val < 10 ? val.toFixed(4) : val.toFixed(2));
-  };
 
   const isWin = signal.status === 'tp';
   const isLoss = signal.status === 'sl';
   const isActive = signal.status === 'active';
-  const confluenceTags = extractConfluenceTags(signal);
+  const conf = signal.confidence || (isBuy ? 88 : 84);
 
   return (
-    <div className={`terminal-signal-card ${signal.status}`}>
-      <div className="signal-card-header">
-        <div className="signal-header-left">
-          <span className={`signal-dir-tag ${signal.direction}`}>
-            {signal.direction === 'buy' ? '▲ BUY' : '▼ SELL'}
-          </span>
-          <span className="signal-asset-title">{signal.pair}</span>
-          <span className="signal-rr-badge">{displayRr} R:R Target</span>
-        </div>
-
-        <div className="signal-header-right">
-          <span className={`signal-status-pill ${signal.status}`}>
-            {isActive && <span className="status-live-pulse" />}
-            {isActive ? 'ACTIVE SIGNAL' : isWin ? '✓ TAKE PROFIT HIT' : 'STOPPED OUT'}
-          </span>
-          <span className="signal-time-ago">{formatRelativeTime(signal.minutesAgo)}</span>
-        </div>
-      </div>
-
-      <div className="signal-matrix-grid">
-        <div className="signal-cell entry">
-          <div className="cell-label">ENTRY LEVEL</div>
-          <div className="cell-value">{formatVal(entryNum)}</div>
-          <div className="cell-sub">Execution Price</div>
-        </div>
-
-        <div className="signal-cell sl">
-          <div className="cell-label">STOP LOSS</div>
-          <div className="cell-value sl-val">{formatVal(slNum)}</div>
-          <div className="cell-sub">Risk: {slPips} pips</div>
-        </div>
-
-        <div className="signal-cell tp">
-          <div className="cell-label">TAKE PROFIT</div>
-          <div className="cell-value tp-val">{formatVal(tpNum)}</div>
-          <div className="cell-sub">Target: {tpPips} pips</div>
-        </div>
-
-        <div className="signal-cell calc">
-          <div className="cell-label">RISK : REWARD</div>
-          <div className="cell-value lot-val">{displayRr}</div>
-          <div className="cell-sub">{signal.session || 'Institutional Setup'}</div>
-        </div>
-      </div>
-
-      {/* LIVE MARKET SPOT TRACKER & TP PROGRESS */}
-      {isActive && livePrice && (
-        <div className="signal-live-tracker-strip">
-          <div className="tracker-strip-info">
-            <div className="live-spot-val">
-              <span className="spot-dot" /> Live Spot: <strong>${formatSpotPrice(signal.pair, livePrice)}</strong>
-            </div>
-            <div className="live-progress-val">
-              {calcTradeProgress(signal, livePrice).progressPct}% to Target ({calcTradeProgress(signal, livePrice).pipsToTp} pips remaining)
-            </div>
+    <div className={`ait-sig-card ${isBuy ? 'buy-card' : 'sell-card'}`} style={{ margin: '0 auto 16px' }}>
+      {/* Top Row: Asset Icon & Title + Timeframe Tag */}
+      <div className="ait-card-top-row">
+        <div className="ait-card-asset-info">
+          <div className="ait-card-asset-icon">
+            {isGold ? <GoldAssetEmblem size={42} /> : <PairLogo pair={asset} />}
           </div>
-          <div className="tracker-progress-track">
-            <div
-              className="tracker-progress-fill"
-              style={{ width: `${calcTradeProgress(signal, livePrice).progressPct}%` }}
-            />
+          <div className="ait-card-asset-titles">
+            <h4 className="ait-card-symbol-title">{asset}</h4>
+            <span className="ait-card-symbol-sub">{assetSubtitle}</span>
           </div>
         </div>
-      )}
+        <div className="ait-card-timeframe-tag">{timeframeTag}</div>
+      </div>
 
-      <div className="signal-bottom-bar">
-        <div className="signal-confluence-tags">
-          {confluenceTags.map((tag, idx) => (
-            <span key={idx} className="confluence-tag">
-              {tag}
-            </span>
-          ))}
+      {/* Centered Direction & Desk Badges */}
+      <div className="ait-card-center-badges">
+        <span className={`ait-dir-pill ${isBuy ? 'buy' : 'sell'}`}>
+          <span className="ait-dir-dot">●</span>
+          <span>{dir}</span>
+        </span>
+        <span className={`ait-desk-pill ${isBuy ? 'buy' : 'sell'}`}>DESK</span>
+      </div>
+
+      {/* Price Levels: Entry, Target, Stop */}
+      <div className="ait-card-levels-vertical ait-mono">
+        <div className="ait-level-row">
+          <span className="ait-level-key">Entry</span>
+          <span className="ait-level-val entry">{formatLevelPrice(entryNum, asset)}</span>
         </div>
-
-        <div className="signal-action-buttons">
-          <button
-            type="button"
-            className="signal-details-btn"
-            onClick={() => setOpen((o) => !o)}
-          >
-            {open ? 'Hide Analysis ↑' : 'Trade Rationale ↓'}
-          </button>
+        <div className="ait-level-row">
+          <span className="ait-level-key">Target</span>
+          <span className="ait-level-val target">{formatLevelPrice(tpNum, asset)}</span>
+        </div>
+        <div className="ait-level-row">
+          <span className="ait-level-key">Stop</span>
+          <span className="ait-level-val stop">{formatLevelPrice(slNum, asset)}</span>
         </div>
       </div>
 
+      {/* Setup Conviction Pill with Chevron Dropdown */}
+      <div className="ait-card-setup-toggle-wrapper">
+        <button
+          type="button"
+          className={`ait-card-setup-pill ${open ? 'open' : ''}`}
+          onClick={() => setOpen((o) => !o)}
+          title="Click to view setup confluences & thesis"
+        >
+          <span className="ait-setup-dot">●</span>
+          <span className="ait-setup-text">High conviction setup</span>
+          <span className={`ait-setup-chevron ${open ? 'rotated' : ''}`}>⌄</span>
+        </button>
+      </div>
+
+      {/* Expandable Confluences Drawer */}
       {open && (
-        <div className="signal-expansion-panel">
-          <div className="expansion-label">Institutional Setup Rationale:</div>
-          <p className="expansion-text">{signal.reason || 'Institutional SMC setup with liquidity raid and displacement confirmation.'}</p>
-          <div className="expansion-rules">
-            <strong>Management Rule:</strong> When price hits 1:1 Risk-to-Reward, move Stop Loss to Breakeven (BE). Take 50% partials at TP1.
+        <div className="ait-card-expanded-drawer">
+          <div className="ait-drawer-head">
+            <span className="ait-drawer-title">Setup Rationale</span>
+            <span className="ait-drawer-model">{signal.session || 'London KZ'}</span>
+          </div>
+          <div className="ait-drawer-items">
+            <div className="ait-drawer-item">
+              <span className="ait-drawer-tag">Rationale</span>
+              <span className="ait-drawer-desc">{signal.reason || 'Institutional SMC setup with liquidity raid and displacement confirmation.'}</span>
+            </div>
+            <div className="ait-drawer-item highlight">
+              <span className="ait-drawer-tag">Rule</span>
+              <span className="ait-drawer-desc">When price hits 1:1 R:R, move Stop Loss to BE. Strict 0.03 Lot size execution.</span>
+            </div>
           </div>
         </div>
       )}
+
+      {/* Horizontal Divider */}
+      <div className="ait-card-hr" />
+
+      {/* Meta Section: Confidence, Opened, Closed */}
+      <div className="ait-card-meta-list">
+        <div className="ait-meta-row">
+          <span className="ait-meta-key">Confidence</span>
+          <div className="ait-meta-val confidence">
+            <SignalStrengthBars activeCount={Math.min(4, Math.max(2, Math.round((conf / 100) * 4)))} />
+            <span className="ait-confidence-pct">{conf}%</span>
+          </div>
+        </div>
+
+        <div className="ait-meta-row">
+          <span className="ait-meta-key">Opened</span>
+          <span className="ait-meta-val date ait-mono">{formatSignalDate(signal.publishedAt || signal.timestamp)}</span>
+        </div>
+
+        <div className="ait-meta-row">
+          <span className="ait-meta-key">Closed</span>
+          <span className="ait-meta-val date ait-mono">
+            {isWin ? 'Completed · Target Hit' : isLoss ? 'Closed · Stopped Out' : 'Active · In-Progress'}
+          </span>
+        </div>
+      </div>
+
+      {/* Bottom Tags & Status Note */}
+      <div className="ait-card-footer-tags">
+        <div className="ait-tags-chips-row">
+          <span className="ait-tag-chip default">Trending</span>
+          <span className="ait-tag-chip outline">Auto (AI picks best)</span>
+        </div>
+
+        <div className="ait-status-note-banner">
+          <span>
+            {isWin
+              ? 'Target reached — trade won'
+              : isLoss
+              ? 'Stopped out at risk limit'
+              : 'Active setup — tracking market liquidity'}
+          </span>
+        </div>
+      </div>
     </div>
   );
 }
