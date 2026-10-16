@@ -1,41 +1,18 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import '../styles/howPipWorks.css';
 
 export default function HowPipWorks({ isKhmer }) {
   const [activeStep, setActiveStep] = useState(1);
-  const [isPaused, setIsPaused] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const autoPlayRef = useRef(null);
 
-  const STEP_DURATION = 5200;
+  const STEP_DURATION = 4000; // Exactly 4 seconds for 1->2, 2->3, 3->4, 4->1
 
-  // Auto-cycle through the 4 steps every 5.2 seconds unless paused by user interaction
+  // Auto-cycle continuously through the 4 steps every 4 seconds (autonomous engine)
   useEffect(() => {
-    if (isPaused) return;
-    autoPlayRef.current = setInterval(() => {
+    const timer = setInterval(() => {
       setActiveStep((prev) => (prev >= 4 ? 1 : prev + 1));
     }, STEP_DURATION);
-    return () => clearInterval(autoPlayRef.current);
-  }, [isPaused, activeStep]);
-
-  const handleStepClick = (step) => {
-    setActiveStep(step);
-    setIsPaused(true);
-    if (autoPlayRef.current) clearInterval(autoPlayRef.current);
-    // Resume auto-play after 14 seconds of user inactivity
-    autoPlayRef.current = setTimeout(() => {
-      setIsPaused(false);
-    }, 14000);
-  };
-
-  const handleCopySignal = () => {
-    const text = `🎯 PIP AI LIVE SIGNAL\nPair: XAUUSD (15m)\nAction: SELL\nEntry: 3,998.40\nStop Loss: 4,014.90\nTake Profit 1: 3,982.00\nTake Profit 2: 3,974.10\nRisk/Reward: 1:3.2\nConfidence: 88%\nStatus: Verified by Multi-Agent Consensus`;
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2400);
-    }
-  };
+    return () => clearInterval(timer);
+  }, []);
 
   // Rail progress width percentage based on activeStep
   const railProgressWidth =
@@ -62,12 +39,8 @@ export default function HowPipWorks({ isKhmer }) {
           </p>
         </div>
 
-        {/* Main Console Board */}
-        <div
-          className="pip-engine-console"
-          onMouseEnter={() => setIsPaused(true)}
-          onMouseLeave={() => setIsPaused(false)}
-        >
+        {/* Main Console Board (Autonomous Continuous Stream) */}
+        <div className="pip-engine-console">
           {/* Top Laser Accent Strip */}
           <div className="pip-top-laser-line" />
 
@@ -85,7 +58,7 @@ export default function HowPipWorks({ isKhmer }) {
             </div>
           </div>
 
-          {/* Unified Fluid Pipeline Stepper (Seamless Continuous Rail) */}
+          {/* Unified Fluid Pipeline Stepper (Autonomous Read-Only Stepper) */}
           <div className="pip-pipeline-track">
             {/* Continuous Energy Rail Layer */}
             <div className="pip-pipeline-rail-container">
@@ -99,14 +72,7 @@ export default function HowPipWorks({ isKhmer }) {
             </div>
 
             {/* Step 1: WAKE */}
-            <div
-              className={`pip-pipe-node ${activeStep === 1 ? 'is-active' : ''} ${activeStep > 1 ? 'is-done' : ''}`}
-              onClick={() => handleStepClick(1)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleStepClick(1); }}
-              role="button"
-              tabIndex={0}
-              aria-label="Stage 1: WAKE"
-            >
+            <div className={`pip-pipe-node ${activeStep === 1 ? 'is-active' : ''} ${activeStep > 1 ? 'is-done' : ''}`}>
               <div className="pip-pipe-capsule">
                 <div className="pip-pipe-icon-box">
                   {/* Custom SVG Icon 1: Quantum Synaptic Reactor */}
@@ -126,14 +92,7 @@ export default function HowPipWorks({ isKhmer }) {
             </div>
 
             {/* Step 2: SCAN */}
-            <div
-              className={`pip-pipe-node ${activeStep === 2 ? 'is-active' : ''} ${activeStep > 2 ? 'is-done' : ''}`}
-              onClick={() => handleStepClick(2)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleStepClick(2); }}
-              role="button"
-              tabIndex={0}
-              aria-label="Stage 2: SCAN"
-            >
+            <div className={`pip-pipe-node ${activeStep === 2 ? 'is-active' : ''} ${activeStep > 2 ? 'is-done' : ''}`}>
               <div className="pip-pipe-capsule">
                 <div className="pip-pipe-icon-box">
                   {/* Custom SVG Icon 2: Deep SMC Crosshair Radar */}
@@ -155,14 +114,7 @@ export default function HowPipWorks({ isKhmer }) {
             </div>
 
             {/* Step 3: DEBATE */}
-            <div
-              className={`pip-pipe-node ${activeStep === 3 ? 'is-active' : ''} ${activeStep > 3 ? 'is-done' : ''}`}
-              onClick={() => handleStepClick(3)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleStepClick(3); }}
-              role="button"
-              tabIndex={0}
-              aria-label="Stage 3: DEBATE"
-            >
+            <div className={`pip-pipe-node ${activeStep === 3 ? 'is-active' : ''} ${activeStep > 3 ? 'is-done' : ''}`}>
               <div className="pip-pipe-capsule">
                 <div className="pip-pipe-icon-box">
                   {/* Custom SVG Icon 3: 4-Node Consensus Matrix */}
@@ -185,14 +137,7 @@ export default function HowPipWorks({ isKhmer }) {
             </div>
 
             {/* Step 4: PUBLISH */}
-            <div
-              className={`pip-pipe-node ${activeStep === 4 ? 'is-active' : ''}`}
-              onClick={() => handleStepClick(4)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleStepClick(4); }}
-              role="button"
-              tabIndex={0}
-              aria-label="Stage 4: PUBLISH"
-            >
+            <div className={`pip-pipe-node ${activeStep === 4 ? 'is-active' : ''}`}>
               <div className="pip-pipe-capsule">
                 <div className="pip-pipe-icon-box">
                   {/* Custom SVG Icon 4: Lightning Broadcast Beacon */}
@@ -209,6 +154,7 @@ export default function HowPipWorks({ isKhmer }) {
               </div>
             </div>
           </div>
+
 
           {/* Console Main Body (Left Stage & Right Consensus Card) */}
           <div className="pip-console-body">
@@ -309,56 +255,86 @@ export default function HowPipWorks({ isKhmer }) {
                     <span>⚡ ASIAN HIGH SWEPT</span>
                   </div>
 
-                  {/* Candlestick Wave Graphic with Real Order Flow Rejection */}
+                  {/* Candlestick Wave Graphic with Real Order Flow Rejection (Animated Stream) */}
                   <svg className="pip-scan-candles-svg" viewBox="0 0 680 180" preserveAspectRatio="none">
                     {/* Asian Accumulation Range */}
-                    <line x1="40" y1="110" x2="40" y2="135" stroke="#10b981" strokeWidth="1.6" />
-                    <rect x="36" y="115" width="8" height="15" rx="1.5" fill="#10b981" />
+                    <g className="pip-candle" style={{ '--c-idx': 1 }}>
+                      <line x1="40" y1="110" x2="40" y2="135" stroke="#10b981" strokeWidth="1.6" />
+                      <rect x="36" y="115" width="8" height="15" rx="1.5" fill="#10b981" />
+                    </g>
 
-                    <line x1="80" y1="95" x2="80" y2="128" stroke="#10b981" strokeWidth="1.6" />
-                    <rect x="76" y="102" width="8" height="18" rx="1.5" fill="#10b981" />
+                    <g className="pip-candle" style={{ '--c-idx': 2 }}>
+                      <line x1="80" y1="95" x2="80" y2="128" stroke="#10b981" strokeWidth="1.6" />
+                      <rect x="76" y="102" width="8" height="18" rx="1.5" fill="#10b981" />
+                    </g>
 
-                    <line x1="120" y1="92" x2="120" y2="125" stroke="#ef4444" strokeWidth="1.6" />
-                    <rect x="116" y="98" width="8" height="16" rx="1.5" fill="#f87171" />
+                    <g className="pip-candle" style={{ '--c-idx': 3 }}>
+                      <line x1="120" y1="92" x2="120" y2="125" stroke="#ef4444" strokeWidth="1.6" />
+                      <rect x="116" y="98" width="8" height="16" rx="1.5" fill="#f87171" />
+                    </g>
 
-                    <line x1="160" y1="80" x2="160" y2="118" stroke="#10b981" strokeWidth="1.6" />
-                    <rect x="156" y="86" width="8" height="20" rx="1.5" fill="#10b981" />
+                    <g className="pip-candle" style={{ '--c-idx': 4 }}>
+                      <line x1="160" y1="80" x2="160" y2="118" stroke="#10b981" strokeWidth="1.6" />
+                      <rect x="156" y="86" width="8" height="20" rx="1.5" fill="#10b981" />
+                    </g>
 
-                    <line x1="200" y1="72" x2="200" y2="108" stroke="#10b981" strokeWidth="1.6" />
-                    <rect x="196" y="78" width="8" height="22" rx="1.5" fill="#10b981" />
+                    <g className="pip-candle" style={{ '--c-idx': 5 }}>
+                      <line x1="200" y1="72" x2="200" y2="108" stroke="#10b981" strokeWidth="1.6" />
+                      <rect x="196" y="78" width="8" height="22" rx="1.5" fill="#10b981" />
+                    </g>
 
                     {/* Liquidity Sweep Spike into Supply */}
-                    <line x1="240" y1="45" x2="240" y2="95" stroke="#10b981" strokeWidth="1.6" />
-                    <rect x="236" y="52" width="8" height="24" rx="1.5" fill="#10b981" />
+                    <g className="pip-candle" style={{ '--c-idx': 6 }}>
+                      <line x1="240" y1="45" x2="240" y2="95" stroke="#10b981" strokeWidth="1.6" />
+                      <rect x="236" y="52" width="8" height="24" rx="1.5" fill="#10b981" />
+                    </g>
 
-                    <line x1="280" y1="40" x2="280" y2="92" stroke="#10b981" strokeWidth="1.6" />
-                    <rect x="276" y="48" width="8" height="26" rx="1.5" fill="#10b981" />
+                    <g className="pip-candle" style={{ '--c-idx': 7 }}>
+                      <line x1="280" y1="40" x2="280" y2="92" stroke="#10b981" strokeWidth="1.6" />
+                      <rect x="276" y="48" width="8" height="26" rx="1.5" fill="#10b981" />
+                    </g>
 
                     {/* Clean Rejection Pin Bar at 4,014 Supply */}
-                    <line x1="320" y1="36" x2="320" y2="98" stroke="#f87171" strokeWidth="1.8" />
-                    <rect x="316" y="62" width="8" height="18" rx="1.5" fill="#f87171" />
+                    <g className="pip-candle" style={{ '--c-idx': 8 }}>
+                      <line x1="320" y1="36" x2="320" y2="98" stroke="#f87171" strokeWidth="1.8" />
+                      <rect x="316" y="62" width="8" height="18" rx="1.5" fill="#f87171" />
+                    </g>
 
                     {/* Bearish Displacement Candles */}
-                    <line x1="365" y1="65" x2="365" y2="110" stroke="#f87171" strokeWidth="1.6" />
-                    <rect x="361" y="72" width="8" height="24" rx="1.5" fill="#f87171" />
+                    <g className="pip-candle" style={{ '--c-idx': 9 }}>
+                      <line x1="365" y1="65" x2="365" y2="110" stroke="#f87171" strokeWidth="1.6" />
+                      <rect x="361" y="72" width="8" height="24" rx="1.5" fill="#f87171" />
+                    </g>
 
-                    <line x1="410" y1="78" x2="410" y2="120" stroke="#f87171" strokeWidth="1.6" />
-                    <rect x="406" y="85" width="8" height="24" rx="1.5" fill="#f87171" />
+                    <g className="pip-candle" style={{ '--c-idx': 10 }}>
+                      <line x1="410" y1="78" x2="410" y2="120" stroke="#f87171" strokeWidth="1.6" />
+                      <rect x="406" y="85" width="8" height="24" rx="1.5" fill="#f87171" />
+                    </g>
 
-                    <line x1="455" y1="90" x2="455" y2="135" stroke="#f87171" strokeWidth="1.6" />
-                    <rect x="451" y="98" width="8" height="26" rx="1.5" fill="#f87171" />
+                    <g className="pip-candle" style={{ '--c-idx': 11 }}>
+                      <line x1="455" y1="90" x2="455" y2="135" stroke="#f87171" strokeWidth="1.6" />
+                      <rect x="451" y="98" width="8" height="26" rx="1.5" fill="#f87171" />
+                    </g>
 
-                    <line x1="500" y1="105" x2="500" y2="148" stroke="#f87171" strokeWidth="1.6" />
-                    <rect x="496" y="112" width="8" height="25" rx="1.5" fill="#f87171" />
+                    <g className="pip-candle" style={{ '--c-idx': 12 }}>
+                      <line x1="500" y1="105" x2="500" y2="148" stroke="#f87171" strokeWidth="1.6" />
+                      <rect x="496" y="112" width="8" height="25" rx="1.5" fill="#f87171" />
+                    </g>
 
-                    <line x1="545" y1="118" x2="545" y2="158" stroke="#f87171" strokeWidth="1.6" />
-                    <rect x="541" y="125" width="8" height="24" rx="1.5" fill="#f87171" />
+                    <g className="pip-candle" style={{ '--c-idx': 13 }}>
+                      <line x1="545" y1="118" x2="545" y2="158" stroke="#f87171" strokeWidth="1.6" />
+                      <rect x="541" y="125" width="8" height="24" rx="1.5" fill="#f87171" />
+                    </g>
 
-                    <line x1="590" y1="126" x2="590" y2="168" stroke="#f87171" strokeWidth="1.6" />
-                    <rect x="586" y="132" width="8" height="26" rx="1.5" fill="#f87171" />
+                    <g className="pip-candle" style={{ '--c-idx': 14 }}>
+                      <line x1="590" y1="126" x2="590" y2="168" stroke="#f87171" strokeWidth="1.6" />
+                      <rect x="586" y="132" width="8" height="26" rx="1.5" fill="#f87171" />
+                    </g>
 
-                    <line x1="635" y1="135" x2="635" y2="175" stroke="#f87171" strokeWidth="1.6" />
-                    <rect x="631" y="140" width="8" height="26" rx="1.5" fill="#f87171" />
+                    <g className="pip-candle" style={{ '--c-idx': 15 }}>
+                      <line x1="635" y1="135" x2="635" y2="175" stroke="#f87171" strokeWidth="1.6" />
+                      <rect x="631" y="140" width="8" height="26" rx="1.5" fill="#f87171" />
+                    </g>
                   </svg>
                 </div>
 
@@ -683,18 +659,14 @@ export default function HowPipWorks({ isKhmer }) {
                   </div>
                 </div>
 
-                {/* Published Status & Copy Action Buttons */}
+                {/* Published Status & Real-time Autonomous Stream Telemetry */}
                 <div className="pip-card-actions">
                   <div className="pip-published-btn">
                     <span>✓ PUBLISHED & TRACKED LIVE</span>
                   </div>
-                  <button
-                    className="pip-copy-setup-btn"
-                    onClick={handleCopySignal}
-                    type="button"
-                  >
-                    {copied ? '✓ COPIED TO CLIPBOARD!' : '📋 COPY SIGNAL SETUP'}
-                  </button>
+                  <div className="pip-auto-broadcast-pill">
+                    <span>⚡ 24/7 AUTONOMOUS SIGNAL BROADCAST</span>
+                  </div>
                 </div>
               </div>
             </div>
