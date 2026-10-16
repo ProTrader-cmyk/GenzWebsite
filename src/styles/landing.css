@@ -1137,6 +1137,10 @@
 }
 
 /* Mobile Responsive */
+@media (max-width: 860px) {
+  .lnd-how-pip-section { display: none !important; }
+}
+
 @media (max-width: 768px) {
   .lnd-hero-section { padding: 48px 0 40px; }
   .lnd-hero-visuals-grid { grid-template-columns: 1fr; gap: 16px; }

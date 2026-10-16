@@ -1604,7 +1604,14 @@
 
 /* =========================================================================
    RESPONSIVE DESIGN
+   Hide complex animated pipeline section on mobile screens
    ========================================================================= */
+@media (max-width: 860px) {
+  .lnd-how-pip-section {
+    display: none !important;
+  }
+}
+
 @media (max-width: 992px) {
   .pip-pipeline-track {
     padding: 24px 24px 20px;
