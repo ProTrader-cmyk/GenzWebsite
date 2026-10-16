@@ -12,9 +12,6 @@ import NewProductHome from './components/NewProductHome.jsx';
 import AdvancedHome from './components/AdvancedHome.jsx';
 import AccessGrantedModal from './components/AccessGrantedModal.jsx';
 import LessonFeedbackModal from './components/LessonFeedbackModal.jsx';
-import NewsPage from './components/NewsPage.jsx';
-import AITradingPage from './components/AITradingPage.jsx';
-import ContactPage from './components/ContactPage.jsx';
 import Login from './pages/Login.jsx';
 import Signup from './pages/Signup.jsx';
 import VerifyOtp from './pages/VerifyOtp.jsx';
@@ -50,6 +47,9 @@ const NAV_KEY = 'gzt_nav';
 // site below wraps its usage in <Suspense fallback={<BootScreen />}>.
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard.jsx'));
 const Profile = lazy(() => import('./components/Profile.jsx'));
+const NewsPage = lazy(() => import('./components/NewsPage.jsx'));
+const AITradingPage = lazy(() => import('./components/AITradingPage.jsx'));
+const ContactPage = lazy(() => import('./components/ContactPage.jsx'));
 // Dev/admin-only mock preview of the paid member area (Dashboard + Signals)
 // — gated below by isAdmin since it shows fabricated data, never real
 // numbers, and must never be reachable by an actual paying member.
@@ -723,28 +723,34 @@ export default function App() {
             onRequireAuth={() => setAuthView('signup')}
           />
         )}
-        {approved && section === 'news' && <NewsPage onBack={backToCategories} />}
+        {approved && section === 'news' && (
+          <Suspense fallback={<BootScreen />}>
+            <NewsPage onBack={backToCategories} />
+          </Suspense>
+        )}
         {section === 'ai-trading' && (
-          <AITradingPage
-            onBack={() => {
-              setSection('home');
-              setView('home');
-            }}
-            user={user}
-            hasActivePlan={hasActivePlan}
-            referralNoticeTick={aiTradingReferralTick}
-            onOpenTerminal={() => setSection('member-preview')}
-            onActivated={(activatedPlan) => {
-              if (user && activatedPlan) {
-                setUser((prev) => ({
-                  ...prev,
-                  plan: activatedPlan?.id || activatedPlan,
-                  tier: 'vip',
-                  status: 'approved',
-                }));
-              }
-            }}
-          />
+          <Suspense fallback={<BootScreen />}>
+            <AITradingPage
+              onBack={() => {
+                setSection('home');
+                setView('home');
+              }}
+              user={user}
+              hasActivePlan={hasActivePlan}
+              referralNoticeTick={aiTradingReferralTick}
+              onOpenTerminal={() => setSection('member-preview')}
+              onActivated={(activatedPlan) => {
+                if (user && activatedPlan) {
+                  setUser((prev) => ({
+                    ...prev,
+                    plan: activatedPlan?.id || activatedPlan,
+                    tier: 'vip',
+                    status: 'approved',
+                  }));
+                }
+              }}
+            />
+          </Suspense>
         )}
         {section === 'member-preview' && (
           <Suspense fallback={<BootScreen />}>
@@ -757,7 +763,11 @@ export default function App() {
             />
           </Suspense>
         )}
-        {section === 'contact' && <ContactPage onBack={backToCategories} />}
+        {section === 'contact' && (
+          <Suspense fallback={<BootScreen />}>
+            <ContactPage onBack={backToCategories} />
+          </Suspense>
+        )}
         {approved && hasVisitedNewProduct && (
           <NewProductHome onBack={backToCategories} isActive={section === 'new-product'} />
         )}
