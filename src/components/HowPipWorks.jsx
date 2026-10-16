@@ -28,18 +28,6 @@ export default function HowPipWorks({ isKhmer }) {
     }, 14000);
   };
 
-  const handlePrev = () => {
-    handleStepClick(activeStep <= 1 ? 4 : activeStep - 1);
-  };
-
-  const handleNext = () => {
-    handleStepClick(activeStep >= 4 ? 1 : activeStep + 1);
-  };
-
-  const togglePause = () => {
-    setIsPaused((prev) => !prev);
-  };
-
   const handleCopySignal = () => {
     const text = `🎯 PIP AI LIVE SIGNAL\nPair: XAUUSD (15m)\nAction: SELL\nEntry: 3,998.40\nStop Loss: 4,014.90\nTake Profit 1: 3,982.00\nTake Profit 2: 3,974.10\nRisk/Reward: 1:3.2\nConfidence: 88%\nStatus: Verified by Multi-Agent Consensus`;
     if (navigator.clipboard) {
@@ -85,55 +73,16 @@ export default function HowPipWorks({ isKhmer }) {
 
           {/* Console Header Bar */}
           <div className="pip-console-header">
-            <div className="pip-header-left">
-              <div className="pip-engine-status">
-                <span className="pip-live-pulse-dot" />
-                <span className="pip-status-txt">ENGINE LIVE • PIP AI V4.2</span>
-              </div>
-              <div className="pip-live-ticker-badge">
-                <span className="pip-pair-name">XAUUSD</span>
-                <span className="pip-pair-tf">15m</span>
-                <span className="pip-pair-price">3,998.40</span>
-                <span className="pip-pair-change">+0.38%</span>
-              </div>
+            <div className="pip-engine-status">
+              <span className="pip-live-pulse-dot" />
+              <span className="pip-status-txt">ENGINE LIVE</span>
             </div>
-
-            {/* Quick Playback Controls */}
-            <div className="pip-console-controls">
-              <button
-                className="pip-ctrl-btn pip-prev-btn"
-                onClick={handlePrev}
-                title="Previous Stage"
-                aria-label="Previous Stage"
-              >
-                ‹
-              </button>
-              <button
-                className={`pip-ctrl-btn pip-play-btn ${isPaused ? 'is-paused' : ''}`}
-                onClick={togglePause}
-                title={isPaused ? 'Resume Auto-Play' : 'Pause Auto-Play'}
-                aria-label={isPaused ? 'Resume Auto-Play' : 'Pause Auto-Play'}
-              >
-                {isPaused ? '▶' : '❚❚'}
-              </button>
-              <button
-                className="pip-ctrl-btn pip-next-btn"
-                onClick={handleNext}
-                title="Next Stage"
-                aria-label="Next Stage"
-              >
-                ›
-              </button>
+            <div className="pip-live-ticker-badge">
+              <span className="pip-pair-name">XAUUSD</span>
+              <span className="pip-pair-tf">15m</span>
+              <span className="pip-pair-price">3,998.40</span>
+              <span className="pip-pair-change">+0.38%</span>
             </div>
-          </div>
-
-          {/* Smooth Auto-Cycle Progress Indicator Bar */}
-          <div className="pip-timer-bar-track">
-            <div
-              key={`${activeStep}-${isPaused}`}
-              className={`pip-timer-bar-fill ${isPaused ? 'is-paused' : ''}`}
-              style={{ animationDuration: `${STEP_DURATION}ms` }}
-            />
           </div>
 
           {/* Unified Fluid Pipeline Stepper (Seamless Continuous Rail) */}
