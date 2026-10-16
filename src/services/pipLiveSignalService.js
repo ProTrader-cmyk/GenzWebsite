@@ -319,20 +319,18 @@ export function buildVerifiedTradeConfluences({
 
     if (isScalp) {
       return [
-        `Why We ${isBuy ? 'BUY' : 'SELL'}: 5M liquidity sweep ${isBuy ? `below micro swing low ($${formatSpotPrice(normPair, entryNum - 2.2)})` : `above micro swing high ($${formatSpotPrice(normPair, entryNum + 2.2)})`} with immediate rejection`,
-        `Entry Trigger: 1M–5M Market Structure Shift (MSS) & Fair Value Gap (FVG) tap at $${entryStr} (We trade 0.03 Lot per trade)`,
-        `0.03 Lot TP & SL Math: TP at $${tpStr} (+${tpPts.toLocaleString()} pts = +$${tpUsd} profit) | SL at $${slStr} (-${slPts.toLocaleString()} pts = -$${slUsd} risk) • 1:${rrVal} RR`,
-        `Break-Even Rule (0.03 Lot): At +${slPts.toLocaleString()} pts ($${beStr} / +$${slUsd} profit at 1:1 RR), move Stop Loss to Entry ($${entryStr}) for 0 risk`,
+        `Liquidity Sweep: 5M liquidity sweep ${isBuy ? `below micro swing low ($${formatSpotPrice(normPair, entryNum - 2.2)})` : `above micro swing high ($${formatSpotPrice(normPair, entryNum + 2.2)})`} with immediate rejection`,
+        `Entry Trigger: 1M–5M Market Structure Shift (MSS) & Fair Value Gap (FVG) tap at $${entryStr}`,
+        `Risk Rule: Move Stop Loss to Break-Even at 1:1 RR ($${beStr}) for 0 risk`,
       ];
     }
 
     return [
       isBuy
-        ? `Why We BUY: Price swept Sell-Side Liquidity (SSL) below 1H/4H Reference Low ($${rLow}) and closed back inside range ($${rLow}–$${rHigh})`
-        : `Why We SELL: Price swept Buy-Side Liquidity (BSL) above 1H/4H Reference High ($${rHigh}) and rejected back inside range ($${rLow}–$${rHigh})`,
-      `Entry Trigger: 5M Market Structure Shift (MSS) displacement confirmed with valid FVG entry at $${entryStr} (We trade 0.03 Lot per trade)`,
-      `0.03 Lot TP & SL Math: TP at $${tpStr} (+${tpPts.toLocaleString()} pts = +$${tpUsd} profit) | SL at $${slStr} (-${slPts.toLocaleString()} pts = -$${slUsd} risk) • 1:${rrVal} RR`,
-      `Break-Even Rule (0.03 Lot): At +${slPts.toLocaleString()} pts ($${beStr} / +$${slUsd} profit at 1:1 RR), move Stop Loss to Entry ($${entryStr}) for 0 risk`,
+        ? `Liquidity Sweep: Swept Sell-Side Liquidity (SSL) below Ref Low ($${rLow}) & reclaimed range ($${rLow}–$${rHigh})`
+        : `Liquidity Sweep: Swept Buy-Side Liquidity (BSL) above Ref High ($${rHigh}) & rejected into range ($${rLow}–$${rHigh})`,
+      `Entry Trigger: 5M Market Structure Shift (MSS) displacement confirmed with valid FVG at $${entryStr}`,
+      `Risk Rule: Move Stop Loss to Break-Even at 1:1 RR ($${beStr}) for 0 risk`,
     ];
   }
 
@@ -344,10 +342,9 @@ export function buildVerifiedTradeConfluences({
     const tpUsd = (tpPips * 0.30).toFixed(2);
 
     return [
-      `Why We ${isBuy ? 'BUY' : 'SELL'}: Session ${isBuy ? 'Sell-Side Liquidity (SSL) swept below swing low' : 'Buy-Side Liquidity (BSL) swept above swing high'} with institutional rejection`,
-      `Entry Trigger: ${(timeframe || '15m').toUpperCase()} Market Structure Shift (MSS) & FVG tap at ${entryStr} (We trade 0.03 Lot per trade)`,
-      `0.03 Lot TP & SL Math: TP at ${tpStr} (+${tpPips} pips = +$${tpUsd} profit) | SL at ${slStr} (-${slPips} pips = -$${slUsd} risk) • 1:${rrVal} RR`,
-      `Break-Even Rule (0.03 Lot): At +${slPips} pips (${beStr} / +$${slUsd} profit at 1:1 RR), move Stop Loss to Entry (${entryStr}) for 0 risk`,
+      `Liquidity Sweep: Session ${isBuy ? 'Sell-Side Liquidity (SSL) swept below swing low' : 'Buy-Side Liquidity (BSL) swept above swing high'} with institutional rejection`,
+      `Entry Trigger: ${(timeframe || '15m').toUpperCase()} Market Structure Shift (MSS) & FVG tap at ${entryStr}`,
+      `Risk Rule: Move Stop Loss to Break-Even at 1:1 RR (${beStr}) for 0 risk`,
     ];
   }
 
@@ -357,10 +354,9 @@ export function buildVerifiedTradeConfluences({
   const tpUsd = (tpDist * 0.03).toFixed(2);
 
   return [
-    `Why We ${isBuy ? 'BUY' : 'SELL'}: Institutional liquidity sweep with ${(timeframe || '15m').toUpperCase()} structure confirmation`,
-    `Entry Trigger: Market Structure Shift (MSS) & FVG mitigation at $${entryStr} (We trade 0.03 Lot per trade)`,
-    `0.03 Lot TP & SL Math: TP at $${tpStr} (+${tpPts} pts = +$${tpUsd} profit) | SL at $${slStr} (-${slPts} pts = -$${slUsd} risk) • 1:${rrVal} RR`,
-    `Break-Even Rule (0.03 Lot): At $${beStr} (+$${slUsd} profit at 1:1 RR), move Stop Loss to Entry ($${entryStr}) for 0 risk`,
+    `Liquidity Sweep: Institutional liquidity sweep with ${(timeframe || '15m').toUpperCase()} structure confirmation`,
+    `Entry Trigger: Market Structure Shift (MSS) & FVG mitigation at $${entryStr}`,
+    `Risk Rule: Move Stop Loss to Break-Even at 1:1 RR ($${beStr}) for 0 risk`,
   ];
 }
 

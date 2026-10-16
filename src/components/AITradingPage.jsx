@@ -1797,6 +1797,37 @@ export default function AITradingPage({
                 const resultBadge = isTp ? '✓ TP HIT' : isSl ? '✕ STOP LOSS' : 'ACTIVE SETUP';
                 const statusLabel = isTp ? 'Completed (TP Hit)' : isSl ? 'Closed (Stopped Out)' : 'In-Progress';
 
+                const cleanMode = (sig.mode || '')
+                  .replace(/^[\s/]+/, '')
+                  .replace(/\b(15M|5M|1M|1H|4H)\b/gi, '')
+                  .replace(/^[\s/]+/, '')
+                  .trim() || (isScalp ? 'Scalp Setup' : 'Day Trade Setup');
+
+                const displayConfluences = (confluences || [])
+                  .map((item) => {
+                    if (!item) return null;
+                    const str = typeof item === 'object' && item.text ? item.text : String(item);
+                    if (str.includes('TP & SL Math')) return null;
+
+                    let tag = 'Audit';
+                    if (/Why We (BUY|SELL)|Liquidity/i.test(str)) tag = 'Liquidity';
+                    else if (/Entry Trigger|Trigger|MSS|FVG/i.test(str)) tag = 'Trigger';
+                    else if (/Break-Even|Risk Rule/i.test(str)) tag = 'Risk Rule';
+
+                    const text = str
+                      .replace(/^Why We (BUY|SELL):\s*/i, '')
+                      .replace(/^Entry Trigger:\s*/i, '')
+                      .replace(/^Break-Even Rule.*:\s*/i, '')
+                      .replace(/^Risk Rule:\s*/i, '')
+                      .replace(/^Liquidity Sweep:\s*/i, '')
+                      .replace(/\(We trade 0\.03 Lot per trade\)/gi, '')
+                      .trim();
+
+                    return { tag, text };
+                  })
+                  .filter(Boolean)
+                  .slice(0, 3);
+
                 return (
                   <div key={sig.id || `${asset}-${tf}-${dir}-${entry}`} className={`ait-sig-card ${isBuy ? 'buy-card' : 'sell-card'}`}>
                     {/* Redesigned Card Header Box */}
@@ -1808,7 +1839,7 @@ export default function AITradingPage({
                             <span className="ait-card-sym-name">{sig.name || (asset === 'XAUUSD' ? 'Gold (XAU/USD)' : asset)}</span>
                             <div className="ait-card-meta-line">
                               <span className="ait-meta-tf-pill">{tf.toUpperCase()}</span>
-                              <span className="ait-meta-mode-text">{sig.mode?.replace(/\b(15M|5M|1M)\b/gi, '').trim() || 'Intraday (ICT)'}</span>
+                              <span className="ait-meta-mode-text">{cleanMode}</span>
                             </div>
                           </div>
                         </div>
@@ -1827,7 +1858,6 @@ export default function AITradingPage({
                         <span className={`ait-pill-style ${isScalp ? 'scalp' : 'daytrade'}`}>
                           <span className="ait-pill-style-icon">{isScalp ? '⚡' : '📈'}</span>
                           <span className="ait-pill-style-text">{isScalp ? 'SCALPING' : 'DAY TRADE'}</span>
-                          <span className="ait-pill-style-dot" />
                         </span>
                         <span className="ait-pill-source">
                           <span className="ait-source-verified-icon">✓</span>
@@ -1836,102 +1866,125 @@ export default function AITradingPage({
                       </div>
                     </div>
 
-                    {/* Levels */}
-                    <div className="ait-card-levels ait-mono">
-                      <div className="ait-level-row">
-                        <span className="ait-level-label">
+                    {/* Redesigned Sleek 2x2 Levels Grid */}
+                    <div className="ait-card-levels-grid ait-mono">
+                      {/* Entry Price */}
+                      <div className="ait-level-tile ait-tile-entry">
+                        <div className="ait-tile-head">
                           <span className="ait-level-dot neutral" />
-                          <span>ENTRY (0.03 LOT):</span>
-                        </span>
-                        <span className="ait-level-val">{isVipUser ? entry : '••••••'}</span>
+                          <span className="ait-tile-label">ENTRY</span>
+                        </div>
+                        <div className="ait-tile-val">{isVipUser ? entry : '••••••'}</div>
                       </div>
-                      <div className="ait-level-row">
-                        <span className="ait-level-label">
+
+                      {/* Risk / Reward */}
+                      <div className="ait-level-tile ait-tile-rr">
+                        <div className="ait-tile-head">
+                          <span className="ait-level-dot cyan" />
+                          <span className="ait-tile-label">RISK / REWARD</span>
+                        </div>
+                        <div className="ait-tile-val rr">{rr}</div>
+                      </div>
+
+                      {/* Take Profit (TP) */}
+                      <div className="ait-level-tile ait-tile-tp">
+                        <div className="ait-tile-head">
                           <span className="ait-level-dot target" />
-                          <span>TARGET (TP):</span>
-                        </span>
-                        <span className="ait-level-val target">
-                          {isVipUser ? `${tp} (+$${tpUsd})` : '••••••'}
-                        </span>
+                          <span className="ait-tile-label">TARGET (TP)</span>
+                        </div>
+                        <div className="ait-tile-val-row">
+                          <span className="ait-tile-val target">{isVipUser ? tp : '••••••'}</span>
+                          {isVipUser && <span className="ait-pnl-chip profit">+{tpPts} pts (+${tpUsd})</span>}
+                        </div>
                       </div>
-                      <div className="ait-level-row">
-                        <span className="ait-level-label">
+
+                      {/* Stop Loss (SL) */}
+                      <div className="ait-level-tile ait-tile-sl">
+                        <div className="ait-tile-head">
                           <span className="ait-level-dot stop" />
-                          <span>STOP LOSS (SL):</span>
-                        </span>
-                        <span className="ait-level-val stop">
-                          {isVipUser ? `${sl} (-$${slUsd})` : '••••••'}
-                        </span>
+                          <span className="ait-tile-label">STOP LOSS (SL)</span>
+                        </div>
+                        <div className="ait-tile-val-row">
+                          <span className="ait-tile-val stop">{isVipUser ? sl : '••••••'}</span>
+                          {isVipUser && <span className="ait-pnl-chip loss">-{slPts} pts (-${slUsd})</span>}
+                        </div>
                       </div>
+
+                      {/* Break-Even Bar */}
                       {bePriceVal && (
-                        <div className="ait-level-row">
-                          <span className="ait-level-label">
+                        <div className="ait-tile-be-row">
+                          <div className="ait-tile-be-left">
                             <span className="ait-level-dot amber" />
-                            <span>BREAK-EVEN (1:1):</span>
-                          </span>
-                          <span className="ait-level-val amber">
-                            {isVipUser
-                              ? `${getDynamicSignalPrice(bePriceVal, asset)} (+$${slUsd})`
-                              : '••••••'}
-                          </span>
+                            <span className="ait-tile-label">BREAK-EVEN (1:1):</span>
+                          </div>
+                          <div className="ait-tile-be-right">
+                            <span className="ait-tile-val amber">
+                              {isVipUser ? getDynamicSignalPrice(bePriceVal, asset) : '••••••'}
+                            </span>
+                            {isVipUser && <span className="ait-pnl-chip neutral">+$${slUsd} Risk-Free</span>}
+                          </div>
                         </div>
                       )}
-                      <div className="ait-level-row">
-                        <span className="ait-level-label">
-                          <span className="ait-level-dot cyan" />
-                          <span>RISK/REWARD:</span>
-                        </span>
-                        <span className="ait-level-val rr">{rr} (0.03 Lot)</span>
-                      </div>
                     </div>
 
-                    {/* Confluences */}
+                    {/* Redesigned Clean Confluences / Audit Box */}
                     <div className="ait-confluence-box">
-                      <div className="ait-conf-tag">
-                        <span className="ait-conf-ai-pill">🤖 PIP AI NEURAL AUDIT</span>
-                        <span>{sig.model || '3-Candle CRT Liquidation Model'} ({confluences.length}/{confluences.length})</span>
+                      <div className="ait-conf-header">
+                        <div className="ait-conf-title-left">
+                          <span className="ait-conf-ai-pill">🤖 PIP AI AUDIT</span>
+                          <span className="ait-conf-model-name">
+                            {sig.model?.replace(/\s*\(\d+\/\d+\)/, '') || (isScalp ? '1M–5M FVG Scalp' : '3-Candle CRT Model')}
+                          </span>
+                        </div>
+                        <span className="ait-conf-verified-chip">
+                          <span className="ait-check-mini">✓</span>
+                          <span>{displayConfluences.length}/{displayConfluences.length} Verified</span>
+                        </span>
                       </div>
-                      <ul className="ait-conf-list">
-                        {confluences.slice(0, 4).map((item, cIdx) => (
-                          <li key={cIdx}>
-                            <span className="ait-conf-bullet">▸</span>
-                            <span>{item}</span>
-                          </li>
+
+                      <div className="ait-conf-list-clean">
+                        {displayConfluences.map((item, cIdx) => (
+                          <div key={cIdx} className="ait-conf-row-clean">
+                            <span className={`ait-conf-chip-badge ${item.tag.toLowerCase().replace(/\s+/g, '-')}`}>
+                              {item.tag}
+                            </span>
+                            <span className="ait-conf-text-clean">{item.text}</span>
+                          </div>
                         ))}
-                      </ul>
+                      </div>
                     </div>
 
-                    {/* Confidence Meter */}
-                    <div className="ait-conf-meter-row">
-                      <span>🧠 AI Neural Confidence</span>
-                      <div className="ait-meter-val">
-                        <span>{conf}%</span>
-                        <div className="ait-meter-bars">
-                          {[1, 2, 3, 4, 5].map((bar) => (
-                            <span
-                              key={bar}
-                              className={`ait-bar-tick ${bar <= Math.round(conf / 20) ? 'active' : ''}`}
-                              style={{ height: `${bar * 2 + 4}px` }}
-                            />
-                          ))}
+                    {/* Streamlined Card Footer */}
+                    <div className="ait-card-footer-redesigned">
+                      <div className="ait-footer-meta-row">
+                        <div className="ait-footer-conf-group">
+                          <span className="ait-footer-conf-label">🧠 AI Confidence:</span>
+                          <span className="ait-footer-conf-pct">{conf}%</span>
+                          <div className="ait-meter-bars mini">
+                            {[1, 2, 3, 4, 5].map((bar) => (
+                              <span
+                                key={bar}
+                                className={`ait-bar-tick ${bar <= Math.round(conf / 20) ? 'active' : ''}`}
+                                style={{ height: `${bar * 2 + 3}px` }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                        <div className="ait-footer-session-group ait-mono">
+                          <span>{opened}</span>
+                          <span className="ait-session-dot">•</span>
+                          <span className="ait-session-name">{session}</span>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Timestamps */}
-                    <div className="ait-card-timestamps ait-mono">
-                      <span>{opened}</span>
-                      <span style={{ color: '#10B981' }}>{session}</span>
-                    </div>
-
-                    {/* Footer Result Pill */}
-                    <div className="ait-card-footer-pill">
-                      <span style={{ color: 'var(--mute)', fontSize: 11.5 }}>
-                        Status: <strong style={{ color: isTp ? '#10B981' : isSl ? '#EF4444' : 'var(--text)' }}>
-                          {statusLabel}
-                        </strong>
-                      </span>
-                      <span className={`ait-footer-res-badge ${badgeClass}`}>{resultBadge}</span>
+                      <div className="ait-footer-action-row">
+                        <span className="ait-footer-status-text">
+                          Status: <strong style={{ color: isTp ? '#10B981' : isSl ? '#EF4444' : 'var(--text)' }}>
+                            {statusLabel}
+                          </strong>
+                        </span>
+                        <span className={`ait-footer-res-badge ${badgeClass}`}>{resultBadge}</span>
+                      </div>
                     </div>
                   </div>
                 );

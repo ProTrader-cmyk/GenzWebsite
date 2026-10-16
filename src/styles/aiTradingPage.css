@@ -1729,36 +1729,54 @@
   font-weight: 900;
 }
 
-/* Card Numerical Levels */
-.ait-card-levels {
+/* ==========================================================================
+   REDESIGNED INSTITUTIONAL SIGNAL CARD BLOCKS (CLEAN HUD AESTHETIC)
+   ========================================================================== */
+
+/* 1. Sleek 2x2 Levels Grid */
+.ait-card-levels-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  background: rgba(4, 8, 18, 0.72);
+  border: 1px solid rgba(56, 189, 248, 0.16);
+  border-radius: 14px;
+  padding: 10px;
+  margin-bottom: 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.ait-level-tile {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 8px 10px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
-  padding: 12px 14px;
-  margin-bottom: 14px;
-  font-size: 13px;
-  transition: border-color 0.2s ease;
-}
-.ait-card-levels:hover {
-  border-color: rgba(0, 242, 254, 0.25);
-}
-.ait-level-row {
-  display: flex;
   justify-content: space-between;
-  align-items: center;
+  gap: 5px;
+  transition: all 0.2s ease;
 }
-.ait-level-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--mute);
-  font-size: 11.5px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+
+.ait-level-tile:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(56, 189, 248, 0.22);
 }
+
+.ait-tile-head {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ait-tile-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--mute, #94a3b8);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
 .ait-level-dot {
   width: 5px;
   height: 5px;
@@ -1771,98 +1789,263 @@
 .ait-level-dot.cyan { background: #00F2FE; box-shadow: 0 0 6px #00F2FE; }
 .ait-level-dot.amber { background: #F59E0B; box-shadow: 0 0 6px #F59E0B; }
 
-.ait-level-val {
+.ait-tile-val {
   font-weight: 800;
-  font-size: 13.5px;
-  color: var(--text);
+  font-size: 14px;
+  color: #F8FAFC;
   letter-spacing: 0.02em;
 }
-.ait-level-val.target { color: #10B981; }
-.ait-level-val.stop { color: #EF4444; }
-.ait-level-val.amber { color: #F59E0B; }
-.ait-level-val.rr {
+
+.ait-tile-val.rr {
   color: #00F2FE;
-  background: rgba(0, 242, 254, 0.1);
-  border: 1px solid rgba(0, 242, 254, 0.25);
-  padding: 1px 7px;
+  background: rgba(0, 242, 254, 0.12);
+  border: 1px solid rgba(0, 242, 254, 0.28);
+  padding: 1.5px 8px;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: 12.5px;
+  display: inline-block;
+  align-self: flex-start;
 }
 
-/* Confluences Checklist */
-.ait-confluence-box {
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 11px 13px;
-  margin-bottom: 14px;
-  font-size: 11.5px;
+.ait-tile-val.target { color: #10B981; }
+.ait-tile-val.stop { color: #F43F5E; }
+.ait-tile-val.amber { color: #F59E0B; }
+
+.ait-tile-val-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px;
+  flex-wrap: wrap;
 }
-.ait-conf-tag {
-  color: #00F2FE;
-  font-weight: 800;
-  margin-bottom: 8px;
+
+.ait-pnl-chip {
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 5px;
+  letter-spacing: 0.02em;
+}
+
+.ait-pnl-chip.profit {
+  background: rgba(16, 185, 129, 0.16);
+  color: #10B981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.ait-pnl-chip.loss {
+  background: rgba(244, 63, 94, 0.16);
+  color: #F43F5E;
+  border: 1px solid rgba(244, 63, 94, 0.3);
+}
+
+.ait-pnl-chip.neutral {
+  background: rgba(245, 158, 11, 0.14);
+  color: #F59E0B;
+  border: 1px solid rgba(245, 158, 11, 0.28);
+}
+
+.ait-tile-be-row {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px dashed rgba(245, 158, 11, 0.28);
+  border-radius: 8px;
+  padding: 5px 9px;
+  font-size: 11px;
+}
+
+.ait-tile-be-left {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ait-tile-be-right {
   display: flex;
   align-items: center;
   gap: 6px;
-  letter-spacing: 0.03em;
-  font-size: 11px;
 }
-.ait-conf-icon {
-  font-size: 12px;
-  color: #00F2FE;
+
+/* 2. Redesigned Confluences / Audit Box */
+.ait-confluence-box {
+  background: linear-gradient(155deg, rgba(8, 14, 28, 0.88), rgba(13, 20, 36, 0.72)) !important;
+  border: 1px solid rgba(56, 189, 248, 0.2) !important;
+  border-left: 3px solid #00F2FE !important;
+  border-radius: 12px !important;
+  padding: 9px 12px !important;
+  margin-bottom: 12px !important;
 }
-.ait-conf-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+
+.ait-conf-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ait-conf-title-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ait-conf-model-name {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #E2E8F0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ait-conf-verified-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9.5px;
+  font-weight: 800;
+  color: #10B981;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  padding: 1.5px 6px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.ait-check-mini {
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.ait-conf-list-clean {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
-.ait-conf-list li {
+
+.ait-conf-row-clean {
   display: flex;
   align-items: flex-start;
   gap: 7px;
-  color: var(--mute);
-  line-height: 1.45;
-  font-size: 11.5px;
-}
-.ait-conf-bullet {
-  color: #00F2FE;
-  font-weight: 900;
-  font-size: 10px;
-  line-height: 1.6;
+  font-size: 11px;
+  line-height: 1.4;
 }
 
-/* Confidence Row */
-.ait-conf-meter-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-  font-size: 12px;
-  color: var(--mute);
-}
-.ait-meter-val {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.ait-conf-chip-badge {
+  font-size: 9px;
   font-weight: 800;
-  color: var(--text);
+  letter-spacing: 0.03em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(0, 242, 254, 0.12);
+  color: #38BDF8;
+  border: 1px solid rgba(0, 242, 254, 0.22);
+  flex-shrink: 0;
+  margin-top: 1px;
+  text-transform: uppercase;
 }
-.ait-meter-bars {
+
+.ait-conf-chip-badge.liquidity {
+  background: rgba(0, 242, 254, 0.14);
+  color: #38BDF8;
+  border-color: rgba(0, 242, 254, 0.28);
+}
+
+.ait-conf-chip-badge.trigger {
+  background: rgba(168, 85, 247, 0.14);
+  color: #C084FC;
+  border-color: rgba(168, 85, 247, 0.28);
+}
+
+.ait-conf-chip-badge.risk-rule {
+  background: rgba(245, 158, 11, 0.14);
+  color: #FBBF24;
+  border-color: rgba(245, 158, 11, 0.28);
+}
+
+.ait-conf-text-clean {
+  color: #CBD5E1;
+  font-size: 11px;
+  font-weight: 500;
+  flex: 1;
+}
+
+/* 3. Streamlined Card Footer */
+.ait-card-footer-redesigned {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.ait-footer-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--mute, #94a3b8);
+}
+
+.ait-footer-conf-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ait-footer-conf-label {
+  font-size: 10.5px;
+  color: var(--mute, #94a3b8);
+}
+
+.ait-footer-conf-pct {
+  font-size: 11px;
+  font-weight: 800;
+  color: #F8FAFC;
+}
+
+.ait-meter-bars.mini {
   display: inline-flex;
   gap: 2px;
   align-items: flex-end;
-  height: 12px;
+  height: 10px;
 }
-.ait-bar-tick {
-  width: 3px;
-  border-radius: 1px;
-  background: var(--faint);
+
+.ait-footer-session-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  color: var(--mute, #94a3b8);
 }
-.ait-bar-tick.active { background: #10B981; }
+
+.ait-session-dot {
+  opacity: 0.4;
+}
+
+.ait-session-name {
+  color: #10B981;
+  font-weight: 700;
+}
+
+.ait-footer-action-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ait-footer-status-text {
+  font-size: 11px;
+  color: var(--mute, #94a3b8);
+}
 
 /* Opened / Timestamps */
 .ait-card-timestamps {
@@ -7068,9 +7251,31 @@
 }
 
 :root[data-theme='light'] .ait-card-levels,
+:root[data-theme='light'] .ait-card-levels-grid,
 :root[data-theme='light'] .ait-confluence-box {
   background: #F8FAFC !important;
   border-color: #E2E8F0 !important;
+}
+
+:root[data-theme='light'] .ait-level-tile {
+  background: #FFFFFF !important;
+  border-color: #E2E8F0 !important;
+}
+
+:root[data-theme='light'] .ait-tile-val {
+  color: #0F172A !important;
+}
+
+:root[data-theme='light'] .ait-conf-model-name {
+  color: #0F172A !important;
+}
+
+:root[data-theme='light'] .ait-conf-text-clean {
+  color: #334155 !important;
+}
+
+:root[data-theme='light'] .ait-footer-conf-pct {
+  color: #0F172A !important;
 }
 
 /* ==========================================================================
