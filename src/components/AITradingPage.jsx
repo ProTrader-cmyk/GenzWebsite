@@ -1719,6 +1719,8 @@ export default function AITradingPage({
                 const dir = (sig.direction || sig.action || 'BUY').toUpperCase();
                 const isBuy = dir === 'BUY';
                 const rawEntry = sig.entry ?? sig.entry_price ?? sig.entryPrice ?? sig.price;
+                const rawTp = sig.tp ?? sig.take_profit ?? sig.takeProfit ?? sig.target;
+                const rawSl = sig.sl ?? sig.stop_loss ?? sig.stopLoss;
                 const isScalp = isSignalScalp(sig);
                 const entryNum = parseFloat(String(rawEntry ?? '').replace(/,/g, '')) || 0;
                 let slNum = parseFloat(String(rawSl ?? '').replace(/,/g, '')) || 0;
