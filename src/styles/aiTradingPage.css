@@ -7624,5 +7624,1037 @@
   cursor: wait;
 }
 
+/* ==========================================================================
+   PIP MACHINE AI SCANNER - INSTITUTIONAL CYBER TERMINAL & RADAR HUD
+   ========================================================================== */
+.ait-pip-machine-root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: linear-gradient(175deg, #070B14 0%, #0A101D 50%, #050811 100%);
+  border: 1px solid rgba(0, 242, 254, 0.18);
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 16px 48px -8px rgba(0, 0, 0, 0.7), 0 0 32px -4px rgba(0, 242, 254, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.ait-pip-machine-root::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #00F2FE 30%, #10B981 70%, transparent);
+  pointer-events: none;
+}
+
+/* 1. Chassis Top Header */
+.ait-pm-chassis-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.ait-pm-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ait-pm-orb {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(16, 185, 129, 0.15));
+  border: 1px solid rgba(0, 242, 254, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow: 0 0 14px rgba(0, 242, 254, 0.25);
+}
+
+.ait-pm-orb-core {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #00F2FE;
+  box-shadow: 0 0 12px #00F2FE, 0 0 20px rgba(0, 242, 254, 0.6);
+  animation: aitPulseRing 2s infinite;
+}
+
+.ait-pm-brand-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ait-pm-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ait-pm-title {
+  font-size: 16px;
+  font-weight: 900;
+  color: #FFFFFF;
+  margin: 0;
+  letter-spacing: 0.04em;
+  background: linear-gradient(90deg, #FFFFFF, #E2E8F0);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.ait-pm-version {
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(0, 242, 254, 0.12);
+  border: 1px solid rgba(0, 242, 254, 0.35);
+  color: #00F2FE;
+  letter-spacing: 0.05em;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.ait-pm-sub {
+  font-size: 11px;
+  color: #64748B;
+  letter-spacing: 0.01em;
+}
+
+.ait-pm-telemetry-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+}
+
+.ait-pm-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10B981;
+  box-shadow: 0 0 8px #10B981;
+  animation: aitPulseDot 1.5s infinite;
+}
+
+.ait-pm-live-txt {
+  color: #CBD5E1;
+  font-weight: 700;
+}
+
+/* 2. Mode Selector: Pip Scalp vs Pip Intra Trade */
+.ait-pm-mode-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.ait-pm-mode-tab {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(13, 20, 36, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  text-align: left;
+  position: relative;
+  overflow: hidden;
+  font-family: inherit;
+}
+
+.ait-pm-mode-tab:hover {
+  background: rgba(18, 28, 50, 0.8);
+  border-color: rgba(255, 255, 255, 0.16);
+  transform: translateY(-1px);
+}
+
+.ait-pm-mode-tab.active.scalp {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(15, 23, 42, 0.9));
+  border-color: rgba(245, 158, 11, 0.5);
+  box-shadow: 0 4px 20px -4px rgba(245, 158, 11, 0.25), inset 0 0 16px rgba(245, 158, 11, 0.08);
+}
+
+.ait-pm-mode-tab.active.intra {
+  background: linear-gradient(135deg, rgba(0, 242, 254, 0.12), rgba(15, 23, 42, 0.9));
+  border-color: rgba(0, 242, 254, 0.5);
+  box-shadow: 0 4px 20px -4px rgba(0, 242, 254, 0.25), inset 0 0 16px rgba(0, 242, 254, 0.08);
+}
+
+.ait-pm-mode-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ait-pm-mode-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ait-pm-mode-title {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #F8FAFC;
+}
+
+.ait-pm-mode-sub {
+  font-size: 10.5px;
+  color: #94A3B8;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ait-pm-pill-tag {
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.ait-pm-pill-tag.amber {
+  background: rgba(245, 158, 11, 0.16);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #F59E0B;
+}
+
+.ait-pm-pill-tag.cyan {
+  background: rgba(0, 242, 254, 0.16);
+  border: 1px solid rgba(0, 242, 254, 0.4);
+  color: #00F2FE;
+}
+
+/* 3. Central Radar HUD & Scan Console */
+.ait-pm-radar-hud {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 20px;
+  align-items: center;
+  background: rgba(6, 11, 22, 0.85);
+  border: 1px solid rgba(0, 242, 254, 0.16);
+  border-radius: 14px;
+  padding: 16px 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.ait-pm-radar-hud::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 200px;
+  height: 100%;
+  background: radial-gradient(circle at right, rgba(0, 242, 254, 0.06), transparent 70%);
+  pointer-events: none;
+}
+
+.ait-pm-radar-visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ait-pm-radar-circle {
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 242, 254, 0.35);
+  position: relative;
+  background: radial-gradient(circle, rgba(0, 242, 254, 0.06) 0%, rgba(2, 6, 16, 0.95) 75%);
+  box-shadow: inset 0 0 20px rgba(0, 242, 254, 0.15), 0 0 16px rgba(0, 242, 254, 0.12);
+  overflow: hidden;
+}
+
+.ait-pm-radar-circle::before {
+  content: '';
+  position: absolute;
+  inset: 18px;
+  border-radius: 50%;
+  border: 1px dashed rgba(0, 242, 254, 0.25);
+}
+
+.ait-pm-radar-circle::after {
+  content: '';
+  position: absolute;
+  inset: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 242, 254, 0.2);
+}
+
+.ait-pm-radar-sweep {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg at 50% 50%, rgba(0, 242, 254, 0) 0deg, rgba(0, 242, 254, 0) 270deg, rgba(0, 242, 254, 0.45) 360deg);
+  animation: aitRadarSweep 3s linear infinite;
+  pointer-events: none;
+}
+
+.ait-pm-radar-hud.scanning .ait-pm-radar-sweep {
+  animation-duration: 1.2s;
+  background: conic-gradient(from 0deg at 50% 50%, rgba(16, 185, 129, 0) 0deg, rgba(0, 242, 254, 0) 250deg, rgba(16, 185, 129, 0.7) 360deg);
+}
+
+.ait-pm-radar-crosshair-h {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: rgba(0, 242, 254, 0.2);
+  transform: translateY(-50%);
+}
+
+.ait-pm-radar-crosshair-v {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 1px;
+  height: 100%;
+  background: rgba(0, 242, 254, 0.2);
+  transform: translateX(-50%);
+}
+
+.ait-pm-radar-ping {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10B981;
+  box-shadow: 0 0 8px #10B981;
+  animation: aitRadarPing 2s infinite ease-in-out;
+}
+
+.ait-pm-radar-ping.ping-1 {
+  top: 28px;
+  right: 26px;
+  animation-delay: 0.4s;
+}
+
+.ait-pm-radar-ping.ping-2 {
+  bottom: 24px;
+  left: 30px;
+  animation-delay: 1.1s;
+}
+
+.ait-pm-radar-center-core {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #08101E;
+  border: 1.5px solid #00F2FE;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.5);
+  z-index: 3;
+}
+
+.ait-pm-core-icon {
+  font-size: 11px;
+}
+
+/* Radar Info / Controls Side */
+.ait-pm-radar-info {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ait-pm-status-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ait-pm-status-pill {
+  font-size: 10px;
+  font-weight: 900;
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.06em;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.ait-pm-status-pill.ready {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #10B981;
+}
+
+.ait-pm-status-pill.scanning {
+  background: rgba(0, 242, 254, 0.15);
+  border: 1px solid rgba(0, 242, 254, 0.5);
+  color: #00F2FE;
+  animation: aitGlowShift 1s infinite alternate;
+}
+
+.ait-pm-mode-flag {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #64748B;
+  letter-spacing: 0.04em;
+}
+
+.ait-pm-telemetry-text {
+  min-height: 22px;
+}
+
+.ait-pm-t-active {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ait-pm-spin-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #00F2FE;
+  box-shadow: 0 0 8px #00F2FE;
+  animation: aitPulseDot 0.8s infinite;
+}
+
+.ait-pm-t-idle {
+  margin: 0;
+  font-size: 12px;
+  color: #94A3B8;
+  line-height: 1.45;
+}
+
+/* Progress bar during scan */
+.ait-pm-progress-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ait-pm-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00F2FE, #10B981);
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.6);
+  transition: width 0.15s ease-out;
+}
+
+.ait-pm-progress-pct {
+  position: absolute;
+  right: 6px;
+  font-size: 9px;
+  font-weight: 900;
+  color: #FFFFFF;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* HUD Action Buttons */
+.ait-pm-hud-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ait-pm-scan-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #00F2FE 0%, #0284C7 100%);
+  color: #001020;
+  font-size: 12.5px;
+  font-weight: 800;
+  padding: 9px 18px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 16px rgba(0, 242, 254, 0.35);
+  font-family: inherit;
+  position: relative;
+  overflow: hidden;
+}
+
+.ait-pm-scan-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(0, 242, 254, 0.55);
+  filter: brightness(1.08);
+}
+
+.ait-pm-scan-btn.busy {
+  background: linear-gradient(135deg, #10B981 0%, #047857 100%);
+  color: #FFFFFF;
+  cursor: wait;
+}
+
+.ait-pm-condition-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  color: #94A3B8;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-family: inherit;
+}
+
+.ait-pm-condition-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #E2E8F0;
+}
+
+.ait-pm-condition-toggle-btn.active {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  color: #10B981;
+}
+
+.ait-pm-condition-toggle-btn strong {
+  font-weight: 800;
+}
+
+/* 4. Signal Output Result Card (Scalp & Intra Themes) */
+.ait-pm-signal-result {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: rgba(8, 14, 28, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 14px;
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.ait-pm-signal-result.scalp-theme {
+  border-color: rgba(245, 158, 11, 0.35);
+  box-shadow: 0 8px 30px -8px rgba(245, 158, 11, 0.2);
+}
+
+.ait-pm-signal-result.intra-theme {
+  border-color: rgba(0, 242, 254, 0.35);
+  box-shadow: 0 8px 30px -8px rgba(0, 242, 254, 0.2);
+}
+
+.ait-pm-res-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.ait-pm-res-badge-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ait-pm-res-icon {
+  font-size: 20px;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ait-pm-res-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ait-pm-res-dir {
+  font-size: 11px;
+  font-weight: 900;
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ait-pm-res-dir.buy {
+  background: rgba(16, 185, 129, 0.18);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  color: #10B981;
+}
+
+.ait-pm-res-dir.sell {
+  background: rgba(239, 68, 68, 0.18);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  color: #EF4444;
+}
+
+.ait-pm-res-pair {
+  font-size: 15px;
+  font-weight: 900;
+  color: #FFFFFF;
+}
+
+.ait-pm-res-model {
+  font-size: 11px;
+  color: #94A3B8;
+  font-weight: 600;
+}
+
+.ait-pm-res-time {
+  font-size: 10.5px;
+  color: #64748B;
+  display: block;
+  margin-top: 2px;
+}
+
+.ait-pm-res-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ait-pm-conf-badge {
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #10B981;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.ait-pm-conf-badge.cyan {
+  background: rgba(0, 242, 254, 0.14);
+  border-color: rgba(0, 242, 254, 0.35);
+  color: #00F2FE;
+}
+
+.ait-pm-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #CBD5E1;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.ait-pm-copy-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #FFFFFF;
+}
+
+/* 4-Box Clean Matrix (Entry, SL, TP1, Final TP2) */
+.ait-pm-boxes-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.ait-pm-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  background: rgba(4, 8, 18, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  transition: all 0.2s ease;
+}
+
+.ait-pm-box.entry {
+  border-color: rgba(0, 242, 254, 0.28);
+}
+
+.ait-pm-box.sl {
+  border-color: rgba(239, 68, 68, 0.35);
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.05), rgba(4, 8, 18, 0.7));
+}
+
+.ait-pm-box.tp {
+  border-color: rgba(16, 185, 129, 0.35);
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.05), rgba(4, 8, 18, 0.7));
+}
+
+.ait-pm-box.runner {
+  border-color: rgba(16, 185, 129, 0.35);
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.08), rgba(4, 8, 18, 0.7));
+}
+
+.ait-pm-box-tag {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #94A3B8;
+  text-transform: uppercase;
+}
+
+.ait-pm-box-num {
+  font-size: 15px;
+  font-weight: 900;
+  color: #FFFFFF;
+  letter-spacing: -0.01em;
+}
+
+.ait-pm-box-hint {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+/* Why Scalp Triggered Card */
+.ait-pm-why-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.ait-pm-why-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #F8FAFC;
+}
+
+.ait-pm-chk {
+  color: #10B981;
+  font-weight: 900;
+}
+
+.ait-pm-why-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: #94A3B8;
+  line-height: 1.4;
+}
+
+/* 5. No Signal State (For Intra Trade when conditions NOT met) */
+.ait-pm-no-signal-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.06), rgba(8, 14, 28, 0.85));
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 8px 30px -8px rgba(245, 158, 11, 0.15);
+}
+
+.ait-pm-no-sig-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.ait-pm-warning-hex {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ait-pm-no-sig-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ait-pm-no-sig-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 900;
+  color: #F59E0B;
+  letter-spacing: 0.02em;
+}
+
+.ait-pm-no-sig-desc {
+  margin: 0;
+  font-size: 12px;
+  color: #CBD5E1;
+  line-height: 1.45;
+}
+
+/* Condition Checklist Table */
+.ait-pm-condition-matrix {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(4, 8, 18, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.ait-pm-cond-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ait-pm-cond-row:last-child {
+  border-bottom: none;
+}
+
+.ait-pm-cond-status-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+.ait-pm-cond-status-icon.fail {
+  background: rgba(239, 68, 68, 0.18);
+  color: #EF4444;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.ait-pm-cond-status-icon.pass {
+  background: rgba(16, 185, 129, 0.18);
+  color: #10B981;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.ait-pm-cond-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.ait-pm-cond-body strong {
+  display: block;
+  font-size: 11.5px;
+  color: #F1F5F9;
+  margin-bottom: 2px;
+}
+
+.ait-pm-cond-body p {
+  margin: 0;
+  font-size: 10.5px;
+  color: #94A3B8;
+  line-height: 1.35;
+}
+
+.ait-pm-cond-tag {
+  font-size: 9.5px;
+  font-weight: 900;
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+  font-family: 'JetBrains Mono', monospace;
+  flex-shrink: 0;
+}
+
+.ait-pm-cond-tag.fail {
+  background: rgba(239, 68, 68, 0.16);
+  color: #EF4444;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.ait-pm-cond-tag.pass {
+  background: rgba(16, 185, 129, 0.16);
+  color: #10B981;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+/* Advice Box */
+.ait-pm-advice-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.ait-pm-advice-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #F59E0B;
+}
+
+.ait-pm-bulb {
+  font-size: 14px;
+}
+
+.ait-pm-advice-text {
+  margin: 0;
+  font-size: 11.5px;
+  color: #CBD5E1;
+  line-height: 1.5;
+}
+
+.ait-pm-advice-text strong {
+  color: #FFFFFF;
+}
+
+.ait-pm-advice-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.ait-pm-switch-scalp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+  color: #000000;
+  font-size: 11.5px;
+  font-weight: 800;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-family: inherit;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.ait-pm-switch-scalp-btn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.ait-pm-retry-scan-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #CBD5E1;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 7px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-family: inherit;
+}
+
+.ait-pm-retry-scan-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #FFFFFF;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Mobile & Tablet Responsiveness for Pip Machine */
+@media (max-width: 768px) {
+  .ait-pm-mode-selector {
+    grid-template-columns: 1fr;
+  }
+  .ait-pm-radar-hud {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+  .ait-pm-radar-visual {
+    margin: 0 auto;
+  }
+  .ait-pm-status-line {
+    justify-content: center;
+  }
+  .ait-pm-hud-actions {
+    justify-content: center;
+  }
+  .ait-pm-boxes-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .ait-pm-boxes-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
 
 
