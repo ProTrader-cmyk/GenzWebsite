@@ -27,15 +27,15 @@ export default function HowPipWorks({ isKhmer }) {
         <div className="lnd-section-header">
           <span className="lnd-section-pill">
             <span className="pip-header-sparkle">✦</span>
-            {isKhmer ? 'ស្ថាបត្យកម្ម PIP AI • ដំណើរការស្វ័យប្រវត្តិ' : 'HOW PIP WORKS • MULTI-AGENT CONSENSUS ENGINE'}
+            {isKhmer ? 'ប្រព័ន្ធស្វ័យប្រវត្ត PIP • បច្ចេកវិទ្យាជំនាន់ថ្មី' : 'GENZ PIP PROTOCOL • AUTONOMOUS INTELLIGENCE'}
           </span>
           <h2 className="lnd-section-title">
-            {isKhmer ? 'របៀបដែល Pip ស្កេន និងបញ្ចេញ Signal' : 'How Pip Scans & Publishes Signals'}
+            {isKhmer ? 'របៀបដែល Pip បង្កើតឱកាសជួញដូរផ្ទាល់' : 'How Pip Engine Generates Real-Time Setups'}
           </h2>
           <p className="lnd-section-sub">
             {isKhmer
-              ? 'ចាប់ពីការចាប់យកទិន្នន័យរហូតដល់ការបញ្ចេញ Signal ផ្ទាល់ — មើលរបៀបដែល Pip AI វិភាគរចនាសម្ព័ន្ធទីផ្សារ ជជែកវាយតម្លៃ និងបង្កើតសញ្ញាជួញដូរប្រកបដោយភាពច្បាស់លាស់។'
-              : 'From real-time tick ingestion to execution — explore how Pip’s 4-agent consensus engine analyzes institutional order flow, debates high-probability setups, and publishes verified signals in 14ms.'}
+              ? 'ស្វែងយល់ពីប្រព័ន្ធដំណើរការផ្ទាល់របស់ Pip — ការប្រមូលទិន្នន័យទីផ្សារពិភពលោក ការផ្ទៀងផ្ទាត់តំបន់ទុនធំ និងការបញ្ជូនសញ្ញាជួញដូរច្បាស់លាស់។'
+              : 'Experience Pip’s proprietary pipeline in action — aggregating global liquidity, cross-validating smart money patterns, aligning algorithmic models, and dispatching surgical entries.'}
           </p>
         </div>
 
@@ -48,13 +48,13 @@ export default function HowPipWorks({ isKhmer }) {
           <div className="pip-console-header">
             <div className="pip-engine-status">
               <span className="pip-live-pulse-dot" />
-              <span className="pip-status-txt">ENGINE LIVE</span>
+              <span className="pip-status-txt">PIP NEURAL RADAR</span>
             </div>
             <div className="pip-live-ticker-badge">
               <span className="pip-pair-name">XAUUSD</span>
               <span className="pip-pair-tf">15m</span>
-              <span className="pip-pair-price">3,998.40</span>
-              <span className="pip-pair-change">+0.38%</span>
+              <span className="pip-pair-price">2,946.50</span>
+              <span className="pip-pair-change">+0.48%</span>
             </div>
           </div>
 
@@ -71,7 +71,7 @@ export default function HowPipWorks({ isKhmer }) {
               </div>
             </div>
 
-            {/* Step 1: WAKE */}
+            {/* Step 1: INGEST */}
             <div className={`pip-pipe-node ${activeStep === 1 ? 'is-active' : ''} ${activeStep > 1 ? 'is-done' : ''}`}>
               <div className="pip-pipe-capsule">
                 <div className="pip-pipe-icon-box">
@@ -85,13 +85,13 @@ export default function HowPipWorks({ isKhmer }) {
                 </div>
                 <div className="pip-pipe-meta">
                   <span className="pip-pipe-num">01</span>
-                  <span className="pip-pipe-title">WAKE</span>
-                  <span className="pip-pipe-sub">Data Ingestion</span>
+                  <span className="pip-pipe-title">INGEST</span>
+                  <span className="pip-pipe-sub">Market Stream</span>
                 </div>
               </div>
             </div>
 
-            {/* Step 2: SCAN */}
+            {/* Step 2: DETECT */}
             <div className={`pip-pipe-node ${activeStep === 2 ? 'is-active' : ''} ${activeStep > 2 ? 'is-done' : ''}`}>
               <div className="pip-pipe-capsule">
                 <div className="pip-pipe-icon-box">
@@ -107,13 +107,13 @@ export default function HowPipWorks({ isKhmer }) {
                 </div>
                 <div className="pip-pipe-meta">
                   <span className="pip-pipe-num">02</span>
-                  <span className="pip-pipe-title">SCAN</span>
-                  <span className="pip-pipe-sub">Structure & SMC</span>
+                  <span className="pip-pipe-title">DETECT</span>
+                  <span className="pip-pipe-sub">Liquidity & SMC</span>
                 </div>
               </div>
             </div>
 
-            {/* Step 3: DEBATE */}
+            {/* Step 3: VALIDATE */}
             <div className={`pip-pipe-node ${activeStep === 3 ? 'is-active' : ''} ${activeStep > 3 ? 'is-done' : ''}`}>
               <div className="pip-pipe-capsule">
                 <div className="pip-pipe-icon-box">
@@ -130,13 +130,13 @@ export default function HowPipWorks({ isKhmer }) {
                 </div>
                 <div className="pip-pipe-meta">
                   <span className="pip-pipe-num">03</span>
-                  <span className="pip-pipe-title">DEBATE</span>
-                  <span className="pip-pipe-sub">4-Agent Nexus</span>
+                  <span className="pip-pipe-title">VALIDATE</span>
+                  <span className="pip-pipe-sub">Council Consensus</span>
                 </div>
               </div>
             </div>
 
-            {/* Step 4: PUBLISH */}
+            {/* Step 4: DISPATCH */}
             <div className={`pip-pipe-node ${activeStep === 4 ? 'is-active' : ''}`}>
               <div className="pip-pipe-capsule">
                 <div className="pip-pipe-icon-box">
@@ -148,8 +148,8 @@ export default function HowPipWorks({ isKhmer }) {
                 </div>
                 <div className="pip-pipe-meta">
                   <span className="pip-pipe-num">04</span>
-                  <span className="pip-pipe-title">PUBLISH</span>
-                  <span className="pip-pipe-sub">14ms Broadcast</span>
+                  <span className="pip-pipe-title">DISPATCH</span>
+                  <span className="pip-pipe-sub">8.4ms Delivery</span>
                 </div>
               </div>
             </div>
@@ -191,7 +191,7 @@ export default function HowPipWorks({ isKhmer }) {
                   <span className="pip-eq-bar eq-3" />
                   <span className="pip-eq-bar eq-4" />
                   <span className="pip-eq-bar eq-5" />
-                  <span className="pip-eq-label">14,200 TICKS / SEC INGESTION</span>
+                  <span className="pip-eq-label">28,500 TICKS / SEC STREAM</span>
                 </div>
 
                 {/* Floating Telemetry Pods */}
@@ -199,10 +199,10 @@ export default function HowPipWorks({ isKhmer }) {
                   <div className="pip-pod-item">
                     <div className="pip-pod-header">
                       <span className="pip-pod-dot cyan" />
-                      <span className="pip-pod-tag">ORDER BOOKS</span>
+                      <span className="pip-pod-tag">DEEP LIQUIDITY</span>
                     </div>
-                    <strong className="pip-pod-val">14 Institutional Feeds</strong>
-                    <span className="pip-pod-sub">CME • LMAX • Binance</span>
+                    <strong className="pip-pod-val">Tier-1 Interbank Feeds</strong>
+                    <span className="pip-pod-sub">Currenex • EBS • FastMatch</span>
                   </div>
 
                   <div className="pip-pod-item">
@@ -210,8 +210,8 @@ export default function HowPipWorks({ isKhmer }) {
                       <span className="pip-pod-dot amber" />
                       <span className="pip-pod-tag">PATTERN MEMORY</span>
                     </div>
-                    <strong className="pip-pod-val">14,280 SMC Setups</strong>
-                    <span className="pip-pod-sub">Synced 99.8% Recall</span>
+                    <strong className="pip-pod-val">45,000+ Backtested Regimes</strong>
+                    <span className="pip-pod-sub">99.4% Structural Match</span>
                   </div>
 
                   <div className="pip-pod-item">
@@ -219,15 +219,15 @@ export default function HowPipWorks({ isKhmer }) {
                       <span className="pip-pod-dot emerald" />
                       <span className="pip-pod-tag">RISK CEILING</span>
                     </div>
-                    <strong className="pip-pod-val">0.8% Max Drawdown</strong>
-                    <span className="pip-pod-sub">Guaranteed Shield</span>
+                    <strong className="pip-pod-val">1.0% Hard Stop Limit</strong>
+                    <span className="pip-pod-sub">Capital Preservation Shield</span>
                   </div>
                 </div>
 
                 {/* Animated Terminal Bar */}
                 <div className="pip-terminal-prompt">
-                  <span className="pip-term-prefix">[PIP-CORE]</span>
-                  <span className="pip-term-text">synaptic mesh active • 14 order books streaming • volatility normal</span>
+                  <span className="pip-term-prefix">[PIP-INGEST]</span>
+                  <span className="pip-term-text">multi-venue feed active • interbank spread 0.2 pips • network latency 1.8ms</span>
                   <span className="pip-term-cursor">█</span>
                 </div>
               </div>
@@ -246,13 +246,13 @@ export default function HowPipWorks({ isKhmer }) {
                   <div className="pip-order-block-band">
                     <div className="pip-ob-tag">
                       <span className="pip-ob-pulse-dot" />
-                      <span>ORDER BLOCK • SUPPLY 4,014.00</span>
+                      <span>BEARISH MITIGATION • 2,958.50</span>
                     </div>
                   </div>
 
-                  {/* Asian Session High Sweep Marker */}
+                  {/* London Session High Sweep Marker */}
                   <div className="pip-sweep-marker">
-                    <span>⚡ ASIAN HIGH SWEPT</span>
+                    <span>⚡ LONDON SESSION HIGH SWEPT</span>
                   </div>
 
                   {/* Candlestick Wave Graphic with Real Order Flow Rejection (Animated Stream) */}
@@ -342,25 +342,25 @@ export default function HowPipWorks({ isKhmer }) {
                 <div className="pip-confluences-row">
                   <div className="pip-conf-tag-pill active">
                     <span className="pip-conf-icon">⚡</span>
-                    <span>Asian High Swept</span>
+                    <span>Buyside Liquidity Swept</span>
                   </div>
                   <div className="pip-conf-tag-pill active">
                     <span className="pip-conf-icon">🎯</span>
-                    <span>Supply Rejection (4,014)</span>
+                    <span>Premium Supply Tapped (2,958)</span>
                   </div>
                   <div className="pip-conf-tag-pill active">
                     <span className="pip-conf-icon">📉</span>
-                    <span>15m ChoCh Confirmed</span>
+                    <span>Market Structure Shift (MSS)</span>
                   </div>
                   <div className="pip-conf-tag-pill">
                     <span className="pip-conf-icon">📊</span>
-                    <span>FVG Imbalance Zone</span>
+                    <span>15m Fair Value Gap Fill</span>
                   </div>
                 </div>
 
                 <div className="pip-terminal-prompt">
-                  <span className="pip-term-prefix">[PIP-SCAN]</span>
-                  <span className="pip-term-text">order block confirmed at 4,014.00 • liquidity pool absorbed • initiating debate</span>
+                  <span className="pip-term-prefix">[PIP-DETECT]</span>
+                  <span className="pip-term-text">buyside sweep confirmed at 2,958.50 • institutional mitigation detected • convening council</span>
                   <span className="pip-term-cursor">█</span>
                 </div>
               </div>
@@ -372,99 +372,99 @@ export default function HowPipWorks({ isKhmer }) {
                 }`}
               >
                 <div className="pip-agent-arena-grid">
-                  {/* Agent 1: Quant SMC */}
+                  {/* Agent 1: Price Action */}
                   <div className="pip-arena-card cyan-theme" style={{ '--card-delay': '0.04s' }}>
                     <div className="pip-arena-top">
                       <div className="pip-arena-avatar cyan">
                         <span>⚡</span>
                       </div>
                       <div className="pip-arena-info">
-                        <strong className="pip-arena-name">Quant SMC Engine</strong>
-                        <span className="pip-arena-role">Market Structure</span>
+                        <strong className="pip-arena-name">Algorithmic Price Action Model</strong>
+                        <span className="pip-arena-role">Liquidity & Order Flow</span>
                       </div>
                       <span className="pip-arena-vote sell">SELL</span>
                     </div>
                     <p className="pip-arena-arg">
-                      Asian liquidity swept clean. 15m Fair Value Gap displacement confirms institutional distribution.
+                      Clean buyside purge above London peak. Bearish displacement through equilibrium confirms smart money distribution.
                     </p>
                     <div className="pip-arena-confidence">
                       <span>Confidence</span>
-                      <strong>92%</strong>
+                      <strong>94%</strong>
                     </div>
                     <div className="pip-arena-bar-track">
-                      <div className="pip-arena-bar-fill cyan" style={{ width: activeStep === 3 ? '92%' : '0%' }} />
+                      <div className="pip-arena-bar-fill cyan" style={{ width: activeStep === 3 ? '94%' : '0%' }} />
                     </div>
                   </div>
 
-                  {/* Agent 2: Macro Sentinel */}
+                  {/* Agent 2: Cross-Asset Matrix */}
                   <div className="pip-arena-card purple-theme" style={{ '--card-delay': '0.10s' }}>
                     <div className="pip-arena-top">
                       <div className="pip-arena-avatar purple">
                         <span>🌐</span>
                       </div>
                       <div className="pip-arena-info">
-                        <strong className="pip-arena-name">Macro Sentinel</strong>
-                        <span className="pip-arena-role">Yields & Dollar Index</span>
+                        <strong className="pip-arena-name">Cross-Asset Matrix</strong>
+                        <span className="pip-arena-role">Treasury Yields & DXY Index</span>
                       </div>
                       <span className="pip-arena-vote sell">SELL</span>
                     </div>
                     <p className="pip-arena-arg">
-                      US 10Y Yields firm at 4.28%, DXY bullish expansion capping Gold upside pressure.
+                      Treasury curve firming; US Dollar index testing 104.60 resistance, capping Gold upside expansion pressure.
                     </p>
                     <div className="pip-arena-confidence">
                       <span>Confidence</span>
-                      <strong>88%</strong>
+                      <strong>89%</strong>
                     </div>
                     <div className="pip-arena-bar-track">
-                      <div className="pip-arena-bar-fill purple" style={{ width: activeStep === 3 ? '88%' : '0%' }} />
+                      <div className="pip-arena-bar-fill purple" style={{ width: activeStep === 3 ? '89%' : '0%' }} />
                     </div>
                   </div>
 
-                  {/* Agent 3: Sentiment AI */}
+                  {/* Agent 3: Volume Profile */}
                   <div className="pip-arena-card blue-theme" style={{ '--card-delay': '0.16s' }}>
                     <div className="pip-arena-top">
                       <div className="pip-arena-avatar blue">
                         <span>📊</span>
                       </div>
                       <div className="pip-arena-info">
-                        <strong className="pip-arena-name">Orderbook Sentiment</strong>
-                        <span className="pip-arena-role">Retail Positioning</span>
+                        <strong className="pip-arena-name">Volume Profile Analytics</strong>
+                        <span className="pip-arena-role">Retail Positioning & Delta</span>
                       </div>
                       <span className="pip-arena-vote sell">SELL</span>
                     </div>
                     <p className="pip-arena-arg">
-                      Retail crowd 74% net-long near highs. Prime institutional liquidity trap scenario.
+                      Retail crowd 76% net-long near resistance. Cumulative volume delta turns heavily negative with sell absorption.
                     </p>
                     <div className="pip-arena-confidence">
                       <span>Confidence</span>
-                      <strong>91%</strong>
+                      <strong>93%</strong>
                     </div>
                     <div className="pip-arena-bar-track">
-                      <div className="pip-arena-bar-fill blue" style={{ width: activeStep === 3 ? '91%' : '0%' }} />
+                      <div className="pip-arena-bar-fill blue" style={{ width: activeStep === 3 ? '93%' : '0%' }} />
                     </div>
                   </div>
 
-                  {/* Agent 4: Risk Guardian */}
+                  {/* Agent 4: Risk Sentinel */}
                   <div className="pip-arena-card emerald-theme" style={{ '--card-delay': '0.22s' }}>
                     <div className="pip-arena-top">
                       <div className="pip-arena-avatar emerald">
                         <span>🛡️</span>
                       </div>
                       <div className="pip-arena-info">
-                        <strong className="pip-arena-name">Capital Guardian</strong>
-                        <span className="pip-arena-role">Drawdown Shield</span>
+                        <strong className="pip-arena-name">Risk & Asymmetry Sentinel</strong>
+                        <span className="pip-arena-role">Portfolio Preservation</span>
                       </div>
-                      <span className="pip-arena-vote pass">APPROVED</span>
+                      <span className="pip-arena-vote pass">PASSED</span>
                     </div>
                     <p className="pip-arena-arg">
-                      Stop loss placed above 4,014.90 wick structure provides 1:3.2 Risk-to-Reward. Approved.
+                      Invalidation anchored at 2,962.20 structure wick. Favorable 1:3.5 Risk-to-Reward ratio. Trade parameters approved.
                     </p>
                     <div className="pip-arena-confidence">
                       <span>Confidence</span>
-                      <strong>96%</strong>
+                      <strong>97%</strong>
                     </div>
                     <div className="pip-arena-bar-track">
-                      <div className="pip-arena-bar-fill emerald" style={{ width: activeStep === 3 ? '96%' : '0%' }} />
+                      <div className="pip-arena-bar-fill emerald" style={{ width: activeStep === 3 ? '97%' : '0%' }} />
                     </div>
                   </div>
                 </div>
@@ -472,21 +472,21 @@ export default function HowPipWorks({ isKhmer }) {
                 {/* Consensus Nexus Bar */}
                 <div className="pip-consensus-nexus-box">
                   <div className="pip-nexus-header">
-                    <span className="pip-nexus-label">Consensus Chamber Tally:</span>
-                    <strong className="pip-nexus-stat">3 of 4 Agents Agree (75%)</strong>
-                    <span className="pip-nexus-badge">✓ SUPERMAJORITY REACHED</span>
+                    <span className="pip-nexus-label">Council Decision Metric:</span>
+                    <strong className="pip-nexus-stat">4 of 4 Algorithmic Models Aligned (100%)</strong>
+                    <span className="pip-nexus-badge">✓ UNANIMOUS CONSENSUS VERIFIED</span>
                   </div>
                   <div className="pip-nexus-track">
                     <div
                       className="pip-nexus-fill"
-                      style={{ width: activeStep === 3 ? '75%' : '0%' }}
+                      style={{ width: activeStep === 3 ? '100%' : '0%' }}
                     />
                   </div>
                 </div>
 
                 <div className="pip-terminal-prompt">
-                  <span className="pip-term-prefix">[PIP-DEBATE]</span>
-                  <span className="pip-term-text">supermajority agreement verified • risk parameters signed • compiling dispatch</span>
+                  <span className="pip-term-prefix">[PIP-COUNCIL]</span>
+                  <span className="pip-term-text">unanimous alignment verified • invalidation bounds confirmed • routing to execution hub</span>
                   <span className="pip-term-cursor">█</span>
                 </div>
               </div>
@@ -503,11 +503,11 @@ export default function HowPipWorks({ isKhmer }) {
                     <div className="pip-dispatch-identity">
                       <span className="pip-dispatch-beacon" />
                       <div>
-                        <h4 className="pip-dispatch-title">High-Frequency Execution Broadcast</h4>
-                        <span className="pip-dispatch-sub">Dispatched simultaneously across VIP channels in 14ms</span>
+                        <h4 className="pip-dispatch-title">Sub-Second Algorithmic Broadcast</h4>
+                        <span className="pip-dispatch-sub">Proprietary multichannel delivery completed in 8.4ms</span>
                       </div>
                     </div>
-                    <span className="pip-latency-tag">14ms SPEED</span>
+                    <span className="pip-latency-tag">8.4ms LATENCY</span>
                   </div>
 
                   {/* Multi-Channel Distribution Grid */}
@@ -515,15 +515,15 @@ export default function HowPipWorks({ isKhmer }) {
                     <div className="pip-d-channel">
                       <span className="pip-channel-icon">✈️</span>
                       <div className="pip-channel-info">
-                        <span className="pip-channel-name">VIP TELEGRAM</span>
-                        <strong className="pip-channel-status">✓ 2,400+ SENT</strong>
+                        <span className="pip-channel-name">VIP TELEGRAM BOT</span>
+                        <strong className="pip-channel-status">✓ 3,800+ SENT</strong>
                       </div>
                     </div>
 
                     <div className="pip-d-channel">
                       <span className="pip-channel-icon">📱</span>
                       <div className="pip-channel-info">
-                        <span className="pip-channel-name">MOBILE APP PUSH</span>
+                        <span className="pip-channel-name">VIP MOBILE APP</span>
                         <strong className="pip-channel-status">✓ INSTANT NOTIFIED</strong>
                       </div>
                     </div>
@@ -539,8 +539,8 @@ export default function HowPipWorks({ isKhmer }) {
                     <div className="pip-d-channel">
                       <span className="pip-channel-icon">🛡️</span>
                       <div className="pip-channel-info">
-                        <span className="pip-channel-name">SLIPPAGE GUARD</span>
-                        <strong className="pip-channel-status gold">ZERO SLIP</strong>
+                        <span className="pip-channel-name">SPREAD PROTECTOR</span>
+                        <strong className="pip-channel-status gold">0.0 PIP SLIPPAGE</strong>
                       </div>
                     </div>
                   </div>
@@ -549,22 +549,22 @@ export default function HowPipWorks({ isKhmer }) {
                   <div className="pip-dispatch-checklist">
                     <div className="pip-check-row">
                       <span className="pip-check-bullet">✓</span>
-                      <span>SMC order block confluence confirmed with 88% collective confidence</span>
+                      <span>Validated by 4 distinct algorithmic models with 91% collective confidence score</span>
                     </div>
                     <div className="pip-check-row">
                       <span className="pip-check-bullet">✓</span>
-                      <span>Asymmetric 1:3.2 Risk-to-Reward locked with predefined TP1 / TP2 levels</span>
+                      <span>Asymmetric 1:3.5 Risk/Reward profile locked with exact target milestones</span>
                     </div>
                     <div className="pip-check-row">
                       <span className="pip-check-bullet">✓</span>
-                      <span>Automated 24/7 WebSocket tracker activated for real-time TP hit alerts</span>
+                      <span>Live autonomous tracker initialized for automated Take-Profit & Break-Even triggers</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="pip-terminal-prompt">
-                  <span className="pip-term-prefix">[PIP-EXECUTE]</span>
-                  <span className="pip-term-text">signal broadcast live • entry, SL & TP monitored 24/7 across WebSocket</span>
+                  <span className="pip-term-prefix">[PIP-DISPATCH]</span>
+                  <span className="pip-term-text">execution payload transmitted • autonomous price monitor active on 24/7 stream</span>
                   <span className="pip-term-cursor">█</span>
                 </div>
               </div>
@@ -590,9 +590,9 @@ export default function HowPipWorks({ isKhmer }) {
                 <div className="pip-waiting-label">
                   <span className="pip-wait-spinner" />
                   <span>
-                    {activeStep === 1 && 'Ingesting institutional order flow...'}
-                    {activeStep === 2 && 'Scanning liquidity & SMC structure...'}
-                    {activeStep === 3 && 'Agents debating trade consensus...'}
+                    {activeStep === 1 && 'Stream-indexing global price ticks & order books...'}
+                    {activeStep === 2 && 'Detecting liquidity pools & market displacement...'}
+                    {activeStep === 3 && 'Aligning algorithmic models & risk thresholds...'}
                   </span>
                 </div>
               </div>
@@ -602,33 +602,33 @@ export default function HowPipWorks({ isKhmer }) {
                 <div className="pip-pub-header">
                   <div>
                     <h4 className="pip-pub-pair">XAUUSD</h4>
-                    <span className="pip-pub-sub">GOLD • 15M • INSTITUTIONAL SMC</span>
+                    <span className="pip-pub-sub">SPOT GOLD • 15M • GENZ QUANT FRAMEWORK</span>
                   </div>
                   <span className="pip-pub-badge-sell">
-                    <span className="pip-badge-pulse-dot" /> SELL ORDER
+                    <span className="pip-badge-pulse-dot" /> SELL SETUP
                   </span>
                 </div>
 
                 <div className="pip-pub-metrics">
                   <div className="pip-pub-metric-row">
                     <span>Entry Zone</span>
-                    <strong className="pip-val-entry">3,998.40</strong>
+                    <strong className="pip-val-entry">2,946.50</strong>
                   </div>
                   <div className="pip-pub-metric-row">
                     <span>Stop Loss (Risk)</span>
-                    <strong className="pip-text-sl">4,014.90</strong>
+                    <strong className="pip-text-sl">2,962.20</strong>
                   </div>
                   <div className="pip-pub-metric-row">
                     <span>Take Profit 1</span>
-                    <strong className="pip-text-tp">3,982.00</strong>
+                    <strong className="pip-text-tp">2,925.00</strong>
                   </div>
                   <div className="pip-pub-metric-row">
                     <span>Take Profit 2</span>
-                    <strong className="pip-text-tp">3,974.10</strong>
+                    <strong className="pip-text-tp">2,908.00</strong>
                   </div>
                   <div className="pip-pub-metric-row pip-rr-row">
                     <span>Risk / Reward Ratio</span>
-                    <strong className="pip-val-gold">1 : 3.2</strong>
+                    <strong className="pip-val-gold">1 : 3.5</strong>
                   </div>
                 </div>
 
@@ -645,17 +645,17 @@ export default function HowPipWorks({ isKhmer }) {
                         stroke="#10b981"
                         strokeWidth="3.2"
                         strokeDasharray="113"
-                        strokeDashoffset={activeStep === 4 ? 13.5 : 113}
+                        strokeDashoffset={activeStep === 4 ? 10 : 113}
                         strokeLinecap="round"
                         transform="rotate(-90 22 22)"
                         className="pip-conf-circle-progress"
                       />
                     </svg>
-                    <span className="pip-conf-pct">88%</span>
+                    <span className="pip-conf-pct">91%</span>
                   </div>
                   <div className="pip-conf-info">
-                    <strong>88% AI Confidence</strong>
-                    <span>Verified by 4-agent consensus</span>
+                    <strong>91% Model Alignment</strong>
+                    <span>Validated across 4 AI specialized models</span>
                   </div>
                 </div>
 
@@ -668,6 +668,7 @@ export default function HowPipWorks({ isKhmer }) {
                     <span>⚡ 24/7 AUTONOMOUS SIGNAL BROADCAST</span>
                   </div>
                 </div>
+
               </div>
             </div>
           </div>
