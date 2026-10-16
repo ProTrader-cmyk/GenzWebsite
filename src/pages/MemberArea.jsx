@@ -46,10 +46,10 @@ function BotIcon(props) {
 }
 
 const NAV_ITEMS = [
-  { key: 'dashboard', label: 'Terminal Overview', shortLabel: 'Overview', Icon: TerminalIcon },
-  { key: 'signals', label: 'VIP Signals Stream', shortLabel: 'Signals', Icon: TrendUpIcon, badge: 'Live' },
-  { key: 'pip', label: 'Pip Trading Coach', shortLabel: 'Pip AI', Icon: BotIcon, badge: 'STARTER+', proOnly: true },
-  { key: 'perks', label: 'VIP Perks & Playbooks', shortLabel: 'Perks', Icon: DiamondIcon, badge: 'PRO+', proOnly: true },
+  { key: 'dashboard', label: 'Overview', shortLabel: 'Overview', Icon: TerminalIcon },
+  { key: 'signals', label: 'VIP Signals', shortLabel: 'Signals', Icon: TrendUpIcon, badge: 'Live' },
+  { key: 'pip', label: 'Pip AI Coach', shortLabel: 'Pip AI', Icon: BotIcon, badge: 'STARTER+', proOnly: true },
+  { key: 'perks', label: 'VIP Perks', shortLabel: 'Perks', Icon: DiamondIcon, badge: 'PRO+', proOnly: true },
 ];
 
 const PLAN_OPTIONS = [

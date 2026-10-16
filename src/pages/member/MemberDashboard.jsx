@@ -129,7 +129,7 @@ export default function MemberDashboard({ user, onNavigate }) {
             {greeting()}, {firstName(user)}
           </h1>
           <p className="terminal-sub">
-            Gold setups with clear entry, stop loss, target and trade rationale. Market times are shown in Cambodia time (GMT+7).
+            Live Gold trade setups with entry, target, and stop loss. Times in GMT+7.
           </p>
 
           <div className="terminal-sessions-strip">
@@ -150,8 +150,8 @@ export default function MemberDashboard({ user, onNavigate }) {
               <TelegramIcon width={24} height={24} />
             </div>
             <div>
-              <div className="tg-card-title">VIP Telegram Stream</div>
-              <div className="tg-card-sub">Instant push alerts & audio commentary</div>
+              <div className="tg-card-title">VIP Telegram</div>
+              <div className="tg-card-sub">Instant alerts & commentary</div>
             </div>
             <a
               href={TELEGRAM_VIP_URL}
@@ -181,7 +181,7 @@ export default function MemberDashboard({ user, onNavigate }) {
           <div className="metric-foot">
             {totalClosed === 0
               ? 'Awaiting first closed setup'
-              : `${tpSignals.length} win${tpSignals.length === 1 ? '' : 's'} / ${totalClosed} total closed setup${totalClosed === 1 ? '' : 's'}`}
+              : `${tpSignals.length} win${tpSignals.length === 1 ? '' : 's'} / ${totalClosed} closed`}
           </div>
         </div>
 
@@ -191,7 +191,7 @@ export default function MemberDashboard({ user, onNavigate }) {
             <span className="metric-tag brand">1:2 Setup</span>
           </div>
           <div className="metric-num">{avgRrDisplay}</div>
-          <div className="metric-foot">Strict 1:2 Risk to Reward standard</div>
+          <div className="metric-foot">1:2 R:R standard</div>
         </div>
 
         <div className="metric-box">
@@ -204,8 +204,8 @@ export default function MemberDashboard({ user, onNavigate }) {
           <div className="metric-num">{activeSignals.length}</div>
           <div className="metric-foot">
             {activeSignals.length > 0
-              ? 'Gold (XAU/USD) institutional setups'
-              : 'Waiting for next Killzone setup'}
+              ? 'Live Gold setups'
+              : 'Waiting for next setup'}
           </div>
         </div>
 
@@ -223,8 +223,8 @@ export default function MemberDashboard({ user, onNavigate }) {
           <div className="metric-num">{profitFactorDisplay}</div>
           <div className="metric-foot">
             {totalClosed > 0
-              ? `${tpSignals.length} TP hit • ${slSignals.length} SL hit (-${grossLossR.toFixed(1)}R)`
-              : 'Gross profits vs gross losses ratio'}
+              ? `${tpSignals.length} TP • ${slSignals.length} SL (-${grossLossR.toFixed(1)}R)`
+              : 'Profit to loss ratio'}
           </div>
         </div>
       </div>
@@ -236,7 +236,7 @@ export default function MemberDashboard({ user, onNavigate }) {
           <div className="panel-header">
             <div>
               <div className="panel-title">Gold Signals</div>
-              <div className="panel-sub">Published XAU/USD entries, invalidation and targets</div>
+              <div className="panel-sub">Active entries, targets, and stops</div>
             </div>
             <button
               type="button"

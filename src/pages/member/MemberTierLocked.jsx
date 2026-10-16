@@ -20,19 +20,19 @@ export default function MemberTierLocked({ feature, onUpgrade, onNavigate, isAdm
         </div>
 
         <h2 className="tier-locked-title">
-          {isPip ? 'Unlock Pip Trading Coach' : 'Unlock VIP Perks & Playbooks'}
+          {isPip ? 'Unlock Pip AI Coach' : 'Unlock VIP Perks'}
         </h2>
 
         <p className="tier-locked-sub">
           {isPip
-            ? '24/7 Institutional SMC Analysis, Lot Sizing & Chart Reviews taught by GenZ'
-            : 'Downloadable Institutional Playbooks, Weekly Live Zooms & Mentorship'}
+            ? '24/7 SMC chart reviews and risk management.'
+            : 'Downloadable playbooks, live zooms, and mentorship.'}
         </p>
 
         <p className="tier-locked-desc">
           {isPip
-            ? 'Pip is our dedicated trading coach taught directly by GenZ Trader to help all users master SMC dealing ranges, liquidity sweeps, Killzones, and Gold risk models. This feature is reserved for Pro VIP and Elite VIP tiers.'
-            : 'Access our high-probability ICT playbooks (BOS, CHoCH, PD Array Matrix), live weekly Zoom killzone breakdowns with Veng Sophea, and direct chart submission reviews reserved for Pro VIP & Elite VIP tiers.'}
+            ? 'Pip is our dedicated AI coach trained on GenZ SMC methods to help you review charts and risk. Available on Pro and Elite VIP.'
+            : 'Access high-probability playbooks, weekly live Zoom breakdowns, and chart reviews. Available on Pro and Elite VIP.'}
         </p>
 
         {/* FEATURE COMPARISON PILLS */}

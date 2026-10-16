@@ -50,10 +50,10 @@ export default function MemberComingSoon({
           <div className="mcs-top-left">
             <div className="mcs-classified-badge">
               <span className="mcs-beacon-dot" />
-              <span>{isKhmer ? 'CLASSIFIED // កម្រិតសម្ងាត់ LEVEL 5' : 'CLASSIFIED // LEVEL 5 ACCESS'}</span>
+              <span>{isKhmer ? 'សមាជិក VIP' : 'VIP PORTAL'}</span>
             </div>
             <span className="mcs-clearance-code">
-              [PROTO_OMEGA // {telemetryTime || '00:00:00'} ICT]
+              [{telemetryTime || '00:00:00'} ICT]
             </span>
           </div>
 
@@ -76,31 +76,22 @@ export default function MemberComingSoon({
         <section className="mcs-hero">
           <div className="mcs-sub-badge">
             <span>⚡</span>
-            <span>{isKhmer ? 'ប្រព័ន្ធស្ថាប័នជំនាន់ក្រោយ' : 'NEXT-GEN INSTITUTIONAL ARCHITECTURE'}</span>
+            <span>{isKhmer ? 'មកដល់ឆាប់ៗនេះ' : 'COMING SOON'}</span>
           </div>
 
           <h1 className="mcs-hero-title">
-            {isKhmer ? (
-              <>
-                អ្វីមួយដ៏អស្ចារ្យកំពុងតែមកដល់ <br />
-                <span className="glow-gold">GENZ MEMBER PORTAL 2.0</span>
-              </>
-            ) : (
-              <>
-                SOMETHING MASSIVE IS FORMING <br />
-                <span className="glow-gold">THE INSTITUTIONAL MEMBER PORTAL</span>
-              </>
-            )}
+            GENZ MEMBER PORTAL <br />
+            <span className="glow-gold">{isKhmer ? 'មកដល់ឆាប់ៗនេះ' : 'COMING SOON'}</span>
           </h1>
 
           <p className="mcs-hero-desc">
             {isKhmer
-              ? 'បច្ចេកវិទ្យាជួញដូរកម្រិតសម្ងាត់សម្រាប់ស្ថាប័នកំពុងត្រូវបានអភិវឌ្ឍយ៉ាងលម្អិត។ ការតាមដាន Dark Pool Liquidity, ប្រព័ន្ធ Algorithmic Execution គ្មាន Drawdown និងការបញ្ជាទិញផ្ទាល់ពីធនាគារអន្តរជាតិនឹងត្រូវបានបើកសម្ពោធក្នុងពេលឆាប់ៗនេះ។'
-              : 'A clandestine trading ecosystem engineered for quantitative liquidity hunters and high-stakes operators. We are deploying proprietary interbank capabilities that will permanently revolutionize retail market interaction.'}
+              ? 'ប្រព័ន្ធជួញដូរ VIP ជំនាន់ក្រោយជាមួយ AI Signals, Live Coaching និងឧបករណ៍វិភាគទីផ្សារ។'
+              : 'Next-generation VIP portal featuring AI signals, live mentorship, and advanced trading tools.'}
           </p>
         </section>
 
-        {/* High-Tech Decryption Telemetry Terminal */}
+        {/* Decryption Telemetry Terminal */}
         <div className="mcs-terminal-card">
           <div className="mcs-terminal-header">
             <div className="mcs-terminal-dots">
@@ -109,7 +100,7 @@ export default function MemberComingSoon({
               <span />
             </div>
             <div className="mcs-terminal-title">
-              {isKhmer ? 'ប្រព័ន្ធ DECRYPTION កំពុងដំណើរការ' : 'SYSTEM INITIALIZATION TELEMETRY // CORE V3.9'}
+              {isKhmer ? 'ស្ថានភាពរៀបចំប្រព័ន្ធ' : 'SYSTEM STATUS // CORE V3.9'}
             </div>
             <div style={{ width: 40 }} />
           </div>
@@ -118,7 +109,7 @@ export default function MemberComingSoon({
             <div className="mcs-progress-section">
               <div className="mcs-progress-labels">
                 <span className="mcs-progress-label">
-                  {isKhmer ? 'ដំណើរការដោះសោប្រព័ន្ធ (DECRYPTION PHASE)' : 'DECRYPTION & CALIBRATION STATUS'}
+                  {isKhmer ? 'ដំណើរការរៀបចំ' : 'DEPLOYMENT STATUS'}
                 </span>
                 <span className="mcs-progress-value">93.8% COMPLETE</span>
               </div>
@@ -130,66 +121,66 @@ export default function MemberComingSoon({
             <div className="mcs-telemetry-lines">
               <div className="mcs-telemetry-line">
                 <span className="mcs-tl-time">[{telemetryTime || '14:22:04'}]</span>
-                <span className="mcs-tl-prefix">[MATCHING]</span>
+                <span className="mcs-tl-prefix">[LIQUIDITY]</span>
                 <span className="mcs-tl-text">
-                  Establishing direct fiber optic FIX bridge to Tier-1 New York & London liquidity nodes...
+                  Connecting Tier-1 liquidity feeds...
                 </span>
                 <span className="mcs-tl-status">[CONNECTED]</span>
               </div>
               <div className="mcs-telemetry-line">
                 <span className="mcs-tl-time">[{telemetryTime || '14:22:05'}]</span>
-                <span className="mcs-tl-prefix">[ORDERFLOW]</span>
+                <span className="mcs-tl-prefix">[SIGNALS]</span>
                 <span className="mcs-tl-text">
-                  Compiling institutional Smart Money volume absorption & resting limit order matrices...
+                  Calibrating Smart Money volume matrices...
                 </span>
                 <span className="mcs-tl-status">[ACTIVE]</span>
               </div>
               <div className="mcs-telemetry-line">
                 <span className="mcs-tl-time">[{telemetryTime || '14:22:06'}]</span>
-                <span className="mcs-tl-prefix">[PIP_AI]</span>
+                <span className="mcs-tl-prefix">[AI_ENGINE]</span>
                 <span className="mcs-tl-text">
-                  Synchronizing Gemini 3.8 Multi-Modal live chart scanner & cognitive tilt-prevention module...
+                  Syncing Gemini AI chart scanner & alerts...
                 </span>
-                <span className="mcs-tl-status">[CALIBRATED]</span>
+                <span className="mcs-tl-status">[READY]</span>
               </div>
               <div className="mcs-telemetry-line">
                 <span className="mcs-tl-time">[{telemetryTime || '14:22:07'}]</span>
-                <span className="mcs-tl-prefix">[GUARDIAN]</span>
+                <span className="mcs-tl-prefix">[RISK_GUARD]</span>
                 <span className="mcs-tl-text">
-                  Prop-firm 4% max daily drawdown hard-stop protocol initialized and locked...
+                  Loading daily drawdown protection rules...
                 </span>
-                <span className="mcs-tl-status">[ARMED]</span>
+                <span className="mcs-tl-status">[LOCKED]</span>
               </div>
               <div className="mcs-telemetry-line">
                 <span className="mcs-tl-time">[{telemetryTime || '14:22:08'}]</span>
-                <span className="mcs-tl-prefix">[SECURITY]</span>
+                <span className="mcs-tl-prefix">[ACCESS]</span>
                 <span className="mcs-tl-text">
-                  Vault encryption seals active. Priority admission reserved for registered early initiates.
+                  Priority VIP whitelist registration open.
                 </span>
-                <span className="mcs-tl-status pending">[PENDING UNLOCK]</span>
+                <span className="mcs-tl-status pending">[OPEN]</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* 4 Classified Dossier Cards */}
+        {/* 4 Dossier Cards */}
         <div className="mcs-dossier-grid">
           {/* Card 1 */}
           <div className="mcs-dossier-card">
             <span className="mcs-card-corner-tag mcs-tag-redacted">TOP SECRET</span>
             <div className="mcs-card-icon-box">🛰️</div>
             <h3 className="mcs-card-title">
-              {isKhmer ? 'Project Aegis: Dark Pool Radar' : 'Project Aegis: Dark Pool Radar'}
+              {isKhmer ? 'Dark Pool Radar' : 'Dark Pool Radar'}
             </h3>
             <p className="mcs-card-desc">
               {isKhmer
-                ? 'ចាប់សញ្ញាការបញ្ជាទិញធំៗរបស់ធនាគារកណ្តាល និងទីតាំង Liquidity លាក់មុខ មុនពេលទីផ្សារមានការ Sweep ពិតប្រាកដ។'
-                : 'Direct algorithmic detection of institutional resting limit orders and bank absorption blocks before retail liquidity is purged.'}
+                ? 'តាមដានសញ្ញា Liquidity និងការបញ្ជាទិញរបស់ធនាគារក្នុងពេលជាក់ស្តែង។'
+                : 'Track institutional liquidity and bank order flow in real time.'}
             </p>
             <div className="mcs-card-meta">
-              <span>CLEARANCE: LEVEL 5</span>
+              <span>LEVEL 5</span>
               <span>•</span>
-              <span>ICT ORDERFLOW</span>
+              <span>ORDERFLOW</span>
             </div>
           </div>
 
@@ -198,15 +189,15 @@ export default function MemberComingSoon({
             <span className="mcs-card-corner-tag mcs-tag-calibrating">CALIBRATING</span>
             <div className="mcs-card-icon-box">⚡</div>
             <h3 className="mcs-card-title">
-              {isKhmer ? 'Zero-Lag Execution Sentinel' : 'Zero-Lag Execution Sentinel'}
+              {isKhmer ? 'Zero-Lag Execution' : 'Zero-Lag Execution'}
             </h3>
             <p className="mcs-card-desc">
               {isKhmer
-                ? 'ម៉ាស៊ីន Execution ល្បឿន Sub-millisecond ភ្ជាប់ជាមួយប្រព័ន្ធគណិតវិទ្យាការពារទុន មិនឱ្យខាតលើសកំណត់លើគណនី Funded។'
-                : 'Sub-millisecond execution engine with strict mathematical capital preservation locks designed for funded prop firm equity.'}
+                ? 'ប្រព័ន្ធចូល Trade លឿន ជាមួយការការពារទុនសម្រាប់គណនី Funded។'
+                : 'Fast trade execution with built-in prop-firm risk protection.'}
             </p>
             <div className="mcs-card-meta">
-              <span>LATENCY: &lt; 2.4MS</span>
+              <span>&lt; 2.4MS</span>
               <span>•</span>
               <span>PROP FIRM SAFE</span>
             </div>
@@ -217,15 +208,15 @@ export default function MemberComingSoon({
             <span className="mcs-card-corner-tag mcs-tag-synced">NEURAL SYNC</span>
             <div className="mcs-card-icon-box">🧠</div>
             <h3 className="mcs-card-title">
-              {isKhmer ? 'Pip AI Vision & Voice Co-Pilot' : 'Pip AI Vision & Voice Co-Pilot'}
+              {isKhmer ? 'Pip AI Co-Pilot' : 'Pip AI Co-Pilot'}
             </h3>
             <p className="mcs-card-desc">
               {isKhmer
-                ? 'AI វិភាគលើផ្ទាំង Chart ដោយផ្ទាល់ ពិនិត្យភាពស៊ីគ្នានៃទៀន FVG/OTE និងជួយទប់ស្កាត់អារម្មណ៍ Overtrading តាមពេលវេលាជាក់ស្តែង។'
-                : 'Multi-modal AI analyzing real-time chart candles, confirming displacement confluence, and preventing psychological tilt live.'}
+                ? 'AI វិភាគ Chart ផ្ទាល់ និងជួយគ្រប់គ្រងអារម្មណ៍ក្នុងការ Trade។'
+                : 'Real-time chart analysis and discipline coaching powered by AI.'}
             </p>
             <div className="mcs-card-meta">
-              <span>GEMINI 3.8 FLASH</span>
+              <span>GEMINI 3.8</span>
               <span>•</span>
               <span>LIVE VISION</span>
             </div>
@@ -236,12 +227,12 @@ export default function MemberComingSoon({
             <span className="mcs-card-corner-tag mcs-tag-restricted">RESTRICTED</span>
             <div className="mcs-card-icon-box">🏛️</div>
             <h3 className="mcs-card-title">
-              {isKhmer ? 'The Inner Circle Floor' : 'The Inner Circle Floor'}
+              {isKhmer ? 'VIP Trading Desk' : 'VIP Trading Desk'}
             </h3>
             <p className="mcs-card-desc">
               {isKhmer
-                ? 'បន្ទប់ Trade ផ្ទាល់ប្រចាំថ្ងៃជាមួយ Master Trader Sunhour និងឯកសារយុទ្ធសាស្ត្រស្ថាប័នកម្រិតខ្ពស់ដែលមិនធ្លាប់បង្ហាញពីមុនមក។'
-                : 'Synchronized live desk trading sessions with Sunhour, private institutional playbooks, and high-capital account syndication.'}
+                ? 'បន្ទប់ Trade ផ្ទាល់ជាមួយ Master Trader និង Playbooks ពិសេស។'
+                : 'Live trading desk sessions with Master Trader and private playbooks.'}
             </p>
             <div className="mcs-card-meta">
               <span>INVITE ONLY</span>
@@ -254,17 +245,17 @@ export default function MemberComingSoon({
         {/* Action Deck */}
         <section className="mcs-actions-deck">
           <div className="mcs-action-badge">
-            {isKhmer ? '★ ទទួលបានសិទ្ធិចូលរួមមុនគេ' : '★ EARLY CLEARANCE REGISTRATION'}
+            {isKhmer ? '★ ចូលរួមមុនគេ' : '★ VIP EARLY ACCESS'}
           </div>
 
           <h2 className="mcs-action-heading">
-            {isKhmer ? 'ត្រៀមខ្លួនសម្រាប់បទពិសោធន៍ថ្មី' : 'Secure Priority Access Before Global Release'}
+            {isKhmer ? 'ចុះឈ្មោះចូល VIP មុនគេ' : 'Join the VIP Early Access List'}
           </h2>
 
           <p className="mcs-action-sub">
             {isKhmer
-              ? 'ចំនួនសមាជិកដំបូងនឹងត្រូវបានកំណត់យ៉ាងតឹងរ៉ឹងដើម្បីធានាគុណភាពនៃ Terminal។ ទាក់ទង Admin តាម Telegram ដើម្បីចុះឈ្មោះក្នុងបញ្ជីអាទិភាព VIP។'
-              : 'Initial member allocations are strictly capped to ensure institutional server throughput. DM Admin to secure early whitelist priority.'}
+              ? 'កន្លែងមានកំណត់។ ផ្ញើសារទៅ Admin ឥឡូវនេះដើម្បីទទួលបានសិទ្ធិចូលរួម។'
+              : 'Spots are limited. Direct message Admin on Telegram to secure your access.'}
           </p>
 
           <div className="mcs-btns-row">
@@ -275,7 +266,7 @@ export default function MemberComingSoon({
               className="mcs-btn-primary"
             >
               <span>✈️</span>
-              <span>{isKhmer ? 'ផ្ញើសារស្នើសុំចូលបញ្ជីអាទិភាព VIP (@Vengsopheagenz)' : 'Request Priority Whitelist on Telegram (@Vengsopheagenz)'}</span>
+              <span>{isKhmer ? 'ផ្ញើសារទៅកាន់ Admin (@Vengsopheagenz)' : 'Message Admin on Telegram (@Vengsopheagenz)'}</span>
             </a>
 
             {onExploreAI && (
@@ -285,7 +276,7 @@ export default function MemberComingSoon({
                 onClick={onExploreAI}
               >
                 <span>📡</span>
-                <span>{isKhmer ? 'សាកល្បង Live AI Trading Terminal' : 'Explore Live AI Trading'}</span>
+                <span>{isKhmer ? 'សាកល្បង AI Trading' : 'Explore AI Trading'}</span>
               </button>
             )}
           </div>
