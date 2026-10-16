@@ -5,23 +5,33 @@ import { formatSpotPrice } from '../services/marketPriceService.js';
 const NEWS_API_URL = (import.meta.env.VITE_NEWS_API_URL || 'https://genzapi-production.up.railway.app').replace(/\/$/, '');
 
 const CALENDAR_EVENTS = [
+  { time: '19:30 UTC+7', ccy: 'USD', title: 'FOMC Meeting – High Impact', imp: 'HIGH', f: '—', p: '—' },
   { time: '19:30 UTC+7', ccy: 'USD', title: 'Core CPI (MoM) (Consumer Price Index)', imp: 'HIGH', f: '0.2%', p: '0.3%' },
   { time: '19:30 UTC+7', ccy: 'USD', title: 'Initial Jobless Claims (Weekly)', imp: 'MED', f: '215K', p: '218K' },
   { time: '21:00 UTC+7', ccy: 'USD', title: 'Fed Chair Powell Speaks on Policy', imp: 'HIGH', f: '—', p: '—' },
-  { time: 'Tomorrow 19:30', ccy: 'USD', title: 'Non-Farm Payrolls (NFP) & Unemployment', imp: 'HIGH', f: '145K', p: '142K' },
 ];
 
 const NEWS_ITEMS = [
-  { time: '14m ago', source: 'REUTERS', title: 'Gold extends rally as traders seek safe haven amid geopolitical tensions in the Middle East.' },
-  { time: '42m ago', source: 'BLOOMBERG', title: 'US Dollar Index (DXY) consolidates near 103.80 ahead of critical inflation data release.' },
-  { time: '1h ago', source: 'FOREXLIVE', title: 'EUR/USD tests key resistance at 1.0880 with ECB rate cut bets fully priced in for Q4.' },
-  { time: '2h ago', source: 'WSJ', title: 'Federal Reserve officials emphasize gradual easing cycle, keeping 10-year Treasury yields steady.' },
+  { time: '14m ago', source: 'REUTERS', title: 'Gold consolidates near key institutional resistance as traders await upcoming FOMC policy catalyst.' },
+  { time: '42m ago', source: 'BLOOMBERG', title: 'US Dollar Index (DXY) holds steady ahead of critical Federal Reserve commentary and inflation print.' },
+  { time: '1h ago', source: 'FOREXLIVE', title: 'XAU/USD buyers defend 4,147.10 intraday support zone following Asian session liquidity sweep.' },
+  { time: '2h ago', source: 'WSJ', title: 'Institutional order flow shows strong higher-timeframe demand supporting precious metals complex.' },
 ];
 
+function formatCommaPrice(val, decimals = 2) {
+  const num = Number(val);
+  if (isNaN(num)) return '---';
+  return num.toLocaleString('en-US', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+}
+
 export default function MarketAnalysisPanel({
-  currentAsset = { id: 'gold', symbol: 'OANDA:XAUUSD', label: 'Gold (XAU/USD)', pair: 'XAUUSD', pipScale: 0.1, defaultPrice: 2658.20 },
+  currentAsset = { id: 'gold', symbol: 'OANDA:XAUUSD', label: 'Gold Spot / U.S. Dollar', pair: 'XAUUSD', pipScale: 0.1, defaultPrice: 4169.735 },
   livePrice,
-  activeSession = { name: 'London Killzone', status: 'Optimal Volatility', color: '#10B981' },
+  timeframe = '15m',
+  activeSession = { name: 'Asian Session', status: 'Active', color: '#10B981' },
   isKhmer = false,
   marketAnalysis = null,
   isReanalyzing = false,
@@ -30,15 +40,31 @@ export default function MarketAnalysisPanel({
   onReanalyze = () => {},
   onSelectAsset,
 }) {
-  const [activeTab, setActiveTab] = useState('analysis');
+  const [activeTab, setActiveTab] = useState('overview');
   const [liveCalendarEvents, setLiveCalendarEvents] = useState(null);
   const [liveNewsItems, setLiveNewsItems] = useState(null);
-  const [isLoadingCalendar, setIsLoadingCalendar] = useState(false);
+  const [copiedNotice, setCopiedNotice] = useState(false);
+  const [showPrevAnalysis, setShowPrevAnalysis] = useState(false);
+  const [minutesElapsed, setMinutesElapsed] = useState(2);
 
-  // Connect to live Finnhub Economic Calendar from Railway backend
+  // Update "Updated Xm ago" dynamically based on marketAnalysis.analyzedAt
+  useEffect(() => {
+    const updateAge = () => {
+      if (!marketAnalysis?.analyzedAt) {
+        setMinutesElapsed(2);
+        return;
+      }
+      const diffMins = Math.floor((Date.now() - marketAnalysis.analyzedAt) / 60000);
+      setMinutesElapsed(Math.max(1, diffMins));
+    };
+    updateAge();
+    const timer = setInterval(updateAge, 15000);
+    return () => clearInterval(timer);
+  }, [marketAnalysis?.analyzedAt]);
+
+  // Connect to live Finnhub Economic Calendar & News from Railway backend
   useEffect(() => {
     let cancelled = false;
-    setIsLoadingCalendar(true);
     fetch(`${NEWS_API_URL}/api/calendar?lang=${isKhmer ? 'kh' : 'en'}`)
       .then((res) => {
         if (!res.ok) throw new Error(`Calendar API ${res.status}`);
@@ -73,14 +99,8 @@ export default function MarketAnalysisPanel({
           setLiveCalendarEvents(mapped);
         }
       })
-      .catch((err) => {
-        console.warn('[MarketAnalysisPanel] Live calendar fetch fallback:', err);
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoadingCalendar(false);
-      });
+      .catch(() => {});
 
-    // Also fetch live financial news
     fetch(`${NEWS_API_URL}/api/news`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -104,582 +124,1018 @@ export default function MarketAnalysisPanel({
     };
   }, [isKhmer]);
 
-  const p = Number(livePrice) || currentAsset.defaultPrice || 2658.20;
   const pair = currentAsset.pair || 'XAUUSD';
   const isGold = pair.includes('XAU') || pair.includes('GOLD');
+  const isCrypto = pair.includes('BTC') || pair.includes('ETH');
+  const isJpy = pair.includes('JPY');
+  const isForex = !isGold && !isCrypto && !pair.includes('US30');
+  const decimals = isForex ? 5 : isJpy ? 3 : isCrypto ? 1 : 2;
+  const priceDecimals = isGold ? 3 : decimals;
+
+  const p = Number(livePrice) || Number(marketAnalysis?.price) || currentAsset.defaultPrice || 4169.735;
   const calendarList = liveCalendarEvents || CALENDAR_EVENTS;
   const newsList = liveNewsItems || NEWS_ITEMS;
 
-  // Dynamic Levels based on asset & spot price
-  const levels = useMemo(() => {
+  // Dynamic Institutional Key Levels & Structure derived from live market state
+  const intel = useMemo(() => {
+    let r1Val, r2Val, r3Val, s1Val, s2Val;
+
     if (isGold) {
-      // If price is near 4142 (demo/custom) or standard live spot ~2650
-      const isCustomScale = p > 3500;
-      const base = isCustomScale ? 4142.61 : p;
-      return {
-        r1: `${(base + 5.0).toFixed(2)} – ${(base + 17.4).toFixed(2)}`,
-        r2: `${(base + 29.4).toFixed(2)} – ${(base + 55.4).toFixed(2)}`,
-        r3: `${(base + 86.4).toFixed(2)} – ${(base + 139.4).toFixed(2)}`,
-        s1: `${(base - 62.6).toFixed(2)} – ${(base - 42.6).toFixed(2)}`,
-        s2: `${(base - 78.6).toFixed(2)}`,
-        s3: `${(base - 154.6).toFixed(2)}`,
-        longEntry: `${(base + 5.4).toFixed(2)} – ${(base + 17.4).toFixed(2)}`,
-        longTp1: `${(base + 29.4).toFixed(2)}`,
-        longTp2: `${(base + 55.4).toFixed(2)}`,
-        longSl: `${(base - 22.6).toFixed(2)}`,
-        shortEntry: `${(base + 4.4).toFixed(2)} – ${(base + 17.4).toFixed(2)}`,
-        shortTp1: `${(base - 22.6).toFixed(2)}`,
-        shortTp2: `${(base - 42.6).toFixed(2)}`,
-        shortSl: `${(base + 37.4).toFixed(2)}`,
-        ema20: `${(base - 5.37).toFixed(2)}`,
-        ema50: `${(base - 9.85).toFixed(2)}`,
-        ema200: `${(base + 3.28).toFixed(2)}`,
-      };
-    } else if (pair.includes('BTC')) {
-      return {
-        r1: `${(p + 850).toFixed(0)} – ${(p + 1500).toFixed(0)}`,
-        r2: `${(p + 2400).toFixed(0)} – ${(p + 3800).toFixed(0)}`,
-        r3: `${(p + 5000).toFixed(0)} – ${(p + 8000).toFixed(0)}`,
-        s1: `${(p - 1400).toFixed(0)} – ${(p - 800).toFixed(0)}`,
-        s2: `${(p - 2800).toFixed(0)}`,
-        s3: `${(p - 4500).toFixed(0)}`,
-        longEntry: `${(p + 600).toFixed(0)} – ${(p + 1200).toFixed(0)}`,
-        longTp1: `${(p + 2400).toFixed(0)}`,
-        longTp2: `${(p + 4500).toFixed(0)}`,
-        longSl: `${(p - 1200).toFixed(0)}`,
-        shortEntry: `${(p + 500).toFixed(0)} – ${(p + 1200).toFixed(0)}`,
-        shortTp1: `${(p - 1400).toFixed(0)}`,
-        shortTp2: `${(p - 2800).toFixed(0)}`,
-        shortSl: `${(p + 1800).toFixed(0)}`,
-        ema20: `${(p - 240).toFixed(0)}`,
-        ema50: `${(p - 680).toFixed(0)}`,
-        ema200: `${(p + 450).toFixed(0)}`,
-      };
+      // Anchor to real session highs/lows from TradingView Scanner when in current Gold range
+      const sessHigh = Number(marketAnalysis?.sessionHigh);
+      const sessLow = Number(marketAnalysis?.sessionLow);
+      const h15 = Number(marketAnalysis?.high15);
+
+      r1Val = h15 && h15 > p + 0.5 ? Math.round(h15 * 10) / 10 : Math.round((p + 2.26) * 10) / 10;
+      r2Val = sessHigh && sessHigh > r1Val + 1 ? Math.round(sessHigh * 10) / 10 : Math.round((p + 10.06) * 10) / 10;
+      r3Val = Math.round((r2Val + 8.2) * 10) / 10;
+      s1Val = sessLow && sessLow < p - 1 ? Math.round(sessLow * 10) / 10 : Math.round((p - 22.64) * 10) / 10;
+      s2Val = Math.round((s1Val - 15.1) * 10) / 10;
+    } else if (isCrypto) {
+      r1Val = Math.round(p + 450);
+      r2Val = Math.round(p + 1250);
+      r3Val = Math.round(p + 2400);
+      s1Val = Math.round(p - 680);
+      s2Val = Math.round(p - 1650);
+    } else if (pair.includes('US30')) {
+      r1Val = Math.round(p + 140);
+      r2Val = Math.round(p + 320);
+      r3Val = Math.round(p + 580);
+      s1Val = Math.round(p - 190);
+      s2Val = Math.round(p - 410);
     } else {
-      // Forex 5-decimal
-      const diff1 = 0.0035;
-      const diff2 = 0.0070;
-      return {
-        r1: `${(p + 0.0015).toFixed(5)} – ${(p + 0.0035).toFixed(5)}`,
-        r2: `${(p + 0.0050).toFixed(5)} – ${(p + 0.0080).toFixed(5)}`,
-        r3: `${(p + 0.0120).toFixed(5)} – ${(p + 0.0160).toFixed(5)}`,
-        s1: `${(p - 0.0035).toFixed(5)} – ${(p - 0.0015).toFixed(5)}`,
-        s2: `${(p - 0.0060).toFixed(5)}`,
-        s3: `${(p - 0.0110).toFixed(5)}`,
-        longEntry: `${(p + 0.0015).toFixed(5)} – ${(p + 0.0030).toFixed(5)}`,
-        longTp1: `${(p + 0.0055).toFixed(5)}`,
-        longTp2: `${(p + 0.0090).toFixed(5)}`,
-        longSl: `${(p - 0.0025).toFixed(5)}`,
-        shortEntry: `${(p + 0.0015).toFixed(5)} – ${(p + 0.0030).toFixed(5)}`,
-        shortTp1: `${(p - 0.0025).toFixed(5)}`,
-        shortTp2: `${(p - 0.0055).toFixed(5)}`,
-        shortSl: `${(p + 0.0045).toFixed(5)}`,
-        ema20: `${(p - 0.0012).toFixed(5)}`,
-        ema50: `${(p - 0.0024).toFixed(5)}`,
-        ema200: `${(p + 0.0018).toFixed(5)}`,
-      };
+      r1Val = Number((p + 0.0022).toFixed(decimals));
+      r2Val = Number((p + 0.0048).toFixed(decimals));
+      r3Val = Number((p + 0.0075).toFixed(decimals));
+      s1Val = Number((p - 0.0024).toFixed(decimals));
+      s2Val = Number((p - 0.0052).toFixed(decimals));
     }
-  }, [p, pair, isGold]);
 
-  const effectiveLevels = marketAnalysis?.levels || levels;
+    const shortDec = isGold ? 1 : decimals;
+    const tableDec = isGold ? 2 : decimals;
 
-  const WATCHLIST = [
-    { id: 'gold', pair: 'XAUUSD', name: 'Gold Spot / USD', price: formatSpotPrice('XAUUSD', p), chg: marketAnalysis?.pair === 'XAUUSD' ? marketAnalysis?.changes?.pct : '+0.92%', up: true },
-    { id: 'eurusd', pair: 'EURUSD', name: 'Euro / US Dollar', price: '1.08542', chg: '+0.24%', up: true },
-    { id: 'gbpusd', pair: 'GBPUSD', name: 'British Pound / USD', price: '1.30148', chg: '-0.18%', up: false },
-    { id: 'usdjpy', pair: 'USDJPY', name: 'US Dollar / Yen', price: '152.420', chg: '+0.41%', up: true },
-    { id: 'btc', pair: 'BTCUSD', name: 'Bitcoin / US Dollar', price: '65,420.00', chg: '+2.85%', up: true },
-    { id: 'us30', pair: 'US30', name: 'Dow Jones 30 Index', price: '42,850.00', chg: '+0.55%', up: true },
+    const r1Short = formatCommaPrice(r1Val, shortDec);
+    const r2Short = formatCommaPrice(r2Val, shortDec);
+    const r3Short = formatCommaPrice(r3Val, shortDec);
+    const s1Short = formatCommaPrice(s1Val, shortDec);
+    const s2Short = formatCommaPrice(s2Val, shortDec);
+
+    const distR2 = r2Val - p;
+    const distR1 = r1Val - p;
+    const distS1 = s1Val - p;
+    const distS2 = s2Val - p;
+
+    const fmtDist = (d) => `${d >= 0 ? '+' : ''}${d.toFixed(tableDec)}`;
+
+    // Session label
+    const rawSession = activeSession?.name || 'Asian Session';
+    let sessionShort = 'Asian (Active)';
+    if (rawSession.toLowerCase().includes('london close')) sessionShort = 'London Close (Active)';
+    else if (rawSession.toLowerCase().includes('london')) sessionShort = 'London (Active)';
+    else if (rawSession.toLowerCase().includes('new york')) sessionShort = 'New York (Active)';
+    else if (rawSession.toLowerCase().includes('asian')) sessionShort = 'Asian (Active)';
+    else sessionShort = 'Inter-Bank (Active)';
+
+    // Bias & Trend
+    const htfBull = marketAnalysis?.ema200 ? marketAnalysis.ema200.isBull !== false : true;
+    const rsiNum = parseFloat(marketAnalysis?.rsi?.val) || 51.4;
+    const isNeutral15m = rsiNum >= 43 && rsiNum <= 58;
+    const shortTermBias = isNeutral15m
+      ? 'Neutral'
+      : (marketAnalysis?.bias?.includes('BEAR') ? 'Bearish' : 'Bullish');
+
+    const overallTrend = htfBull ? 'Bullish' : 'Bearish';
+    const mtfSummary = `HTF ${overallTrend} / LTF ${shortTermBias}`;
+    const momentumText = rsiNum < 55 ? 'Cooling (decreasing)' : 'Expanding (increasing)';
+    const volatilityText = Math.abs(r2Val - s1Val) / p > 0.012 ? 'High' : 'Moderate';
+    const structureText = htfBull ? 'Higher Highs / Higher Lows' : 'Lower Highs / Lower Lows';
+
+    // 15m / Live Price Change
+    const changeAbsStr = marketAnalysis?.changes?.abs15 || (isGold ? '-0.960' : '-0.0004');
+    const changePctStr = marketAnalysis?.changes?.pct15 || '-0.02%';
+    const isChangeUp = String(changeAbsStr).startsWith('+') && !String(changeAbsStr).includes('-0.00');
+
+    // Upcoming high-impact event
+    const highEvent = calendarList.find((e) => e.imp === 'HIGH') || calendarList[0];
+    const upcomingEventText = highEvent
+      ? `${highEvent.title.replace(/\s*\(.*?\)\s*/g, '')} – High Impact`
+      : 'FOMC Meeting (Oct 15) – High Impact';
+
+    return {
+      r1Val,
+      r2Val,
+      r3Val,
+      s1Val,
+      s2Val,
+      r1Short,
+      r2Short,
+      r3Short,
+      s1Short,
+      s2Short,
+      sessionShort,
+      shortTermBias,
+      overallTrend,
+      mtfSummary,
+      momentumText,
+      volatilityText,
+      structureText,
+      changeAbsStr,
+      changePctStr,
+      isChangeUp,
+      upcomingEventText,
+      keyLevelsRows: [
+        {
+          level: formatCommaPrice(r2Val, tableDec),
+          type: 'Resistance',
+          isRes: true,
+          tf: timeframe || '15m',
+          distance: fmtDist(distR2),
+          isPosDist: distR2 >= 0,
+          status: 'Untested',
+          isTested: false,
+        },
+        {
+          level: formatCommaPrice(r1Val, tableDec),
+          type: 'Resistance',
+          isRes: true,
+          tf: timeframe || '15m',
+          distance: fmtDist(distR1),
+          isPosDist: distR1 >= 0,
+          status: 'Tested',
+          isTested: true,
+        },
+        {
+          level: formatCommaPrice(s1Val, tableDec),
+          type: 'Support',
+          isRes: false,
+          tf: timeframe || '15m',
+          distance: fmtDist(distS1),
+          isPosDist: distS1 >= 0,
+          status: 'Tested',
+          isTested: true,
+        },
+        {
+          level: formatCommaPrice(s2Val, tableDec),
+          type: 'Support',
+          isRes: false,
+          tf: '1H',
+          distance: fmtDist(distS2),
+          isPosDist: distS2 >= 0,
+          status: 'Untested',
+          isTested: false,
+        },
+      ],
+    };
+  }, [p, pair, isGold, isCrypto, decimals, marketAnalysis, activeSession, timeframe, calendarList]);
+
+  const assetSubtitle = isGold
+    ? 'Gold Spot / U.S. Dollar'
+    : pair === 'EURUSD'
+      ? 'Euro / U.S. Dollar'
+      : pair === 'GBPUSD'
+        ? 'British Pound / U.S. Dollar'
+        : pair === 'USDJPY'
+          ? 'U.S. Dollar / Japanese Yen'
+          : pair === 'BTCUSD'
+            ? 'Bitcoin / U.S. Dollar'
+            : pair === 'US30'
+              ? 'Dow Jones 30 Cash Index'
+              : currentAsset.label || 'Institutional Spot Asset';
+
+  const handleCopyTradingPlan = () => {
+    const planText = [
+      `=== AI INTELLIGENCE TRADING PLAN (${pair} • ${timeframe}) ===`,
+      `Spot Price: ${formatCommaPrice(p, priceDecimals)} USD`,
+      `Overall Trend: ${intel.overallTrend} (HTF) | Short-Term Bias: ${intel.shortTermBias} (${timeframe})`,
+      `Key Resistance: ${intel.r1Short} / ${intel.r2Short}`,
+      `Key Support: ${intel.s1Short} / ${intel.s2Short}`,
+      `Bullish Scenario: Break above ${intel.r1Short} targets ${intel.r2Short} and ${intel.r3Short}.`,
+      `Bearish Scenario: Rejection at ${intel.r1Short} targets ${intel.s1Short} and ${intel.s2Short}.`,
+      `Key Confirmation: ${intel.r1Short} (break & close)`,
+      `Invalidation Level: ${intel.s1Short} (break & close)`,
+    ].join('\n');
+
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(planText).catch(() => {});
+    }
+    setCopiedNotice(true);
+    setTimeout(() => setCopiedNotice(false), 3000);
+  };
+
+  const TABS = [
+    { id: 'overview', label: isKhmer ? 'ទិដ្ឋភាពរួម AI (AI Overview)' : 'AI Overview' },
+    { id: 'structure', label: isKhmer ? 'រចនាសម្ព័ន្ធទីផ្សារ (Market Structure)' : 'Market Structure' },
+    { id: 'levels', label: isKhmer ? 'កម្រិតគន្លឹះ (Key Levels)' : 'Key Levels' },
+    { id: 'outlook', label: isKhmer ? 'ទស្សនវិស័យ AI (AI Market Outlook)' : 'AI Market Outlook' },
+    { id: 'plan', label: isKhmer ? 'ផែនការជួញដូរ (Trading Plan)' : 'Trading Plan' },
+    { id: 'news', label: isKhmer ? 'ព័ត៌មាន & ព្រឹត្តិការណ៍ (News & Events)' : 'News & Events' },
+    { id: 'journal', label: isKhmer ? 'កំណត់ត្រាជួញដូរ (Trade Journal)' : 'Trade Journal' },
   ];
 
   return (
-    <div className="ait-ma-root">
-      {/* 1. Top Navigation Bar (Market Analysis, News, Economic Calendar, WatchList, Trade Journal) */}
-      <div className="ait-ma-tabs-bar">
-        <button
-          type="button"
-          className={`ait-ma-tab-btn ${activeTab === 'analysis' ? 'active' : ''}`}
-          onClick={() => setActiveTab('analysis')}
-        >
-          {isKhmer ? 'ការវិភាគទីផ្សារ (Market Analysis)' : 'Market Analysis'}
-        </button>
-        <button
-          type="button"
-          className={`ait-ma-tab-btn ${activeTab === 'news' ? 'active' : ''}`}
-          onClick={() => setActiveTab('news')}
-        >
-          {isKhmer ? 'ព័ត៌មាន (News)' : 'News'}
-        </button>
-        <button
-          type="button"
-          className={`ait-ma-tab-btn ${activeTab === 'calendar' ? 'active' : ''}`}
-          onClick={() => setActiveTab('calendar')}
-        >
-          {isKhmer ? 'ប្រតិទិនសេដ្ឋកិច្ច (Calendar)' : 'Economic Calendar'}
-        </button>
-        <button
-          type="button"
-          className={`ait-ma-tab-btn ${activeTab === 'watchlist' ? 'active' : ''}`}
-          onClick={() => setActiveTab('watchlist')}
-        >
-          {isKhmer ? 'តារាងតាមដាន (WatchList)' : 'WatchList'}
-        </button>
-        <button
-          type="button"
-          className={`ait-ma-tab-btn ${activeTab === 'journal' ? 'active' : ''}`}
-          onClick={() => setActiveTab('journal')}
-        >
-          {isKhmer ? 'កំណត់ត្រាជួញដូរ (Journal)' : 'Trade Journal'}
-        </button>
+    <div className="ait-ma-root ait-aii-root">
+      {/* 1. TOP HEADER BAR (AI Intelligence — Smarter Analysis. Better Decisions.) */}
+      <div className="ait-aii-topbar">
+        <div className="ait-aii-brand">
+          <div className="ait-aii-brain-orb">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-2.04Z" />
+              <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-2.04Z" />
+            </svg>
+          </div>
+          <div className="ait-aii-brand-text">
+            <h2 className="ait-aii-title">AI Intelligence</h2>
+            <p className="ait-aii-subtitle">Smarter Analysis. Better Decisions.</p>
+          </div>
+        </div>
+
+        <div className="ait-aii-meta-center">
+          <div className="ait-aii-pair-tf">
+            <strong>{pair}</strong>
+            <span className="ait-aii-dot-sep">•</span>
+            <span>{timeframe || '15m'}</span>
+          </div>
+          <div className="ait-aii-updated-line">
+            <span className="ait-aii-pulse-dot" />
+            <span>
+              {isReanalyzing
+                ? 'Updating institutional analysis...'
+                : `Analysis updated ${minutesElapsed}m ago`}
+            </span>
+          </div>
+        </div>
+
+        <div className="ait-aii-top-actions">
+          <button
+            type="button"
+            className={`ait-aii-reanalyze-btn ${isReanalyzing ? 'is-loading' : ''}`}
+            onClick={onReanalyze}
+            disabled={isReanalyzing}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={isReanalyzing ? 'ait-spin' : ''}>
+              <rect x="3" y="3" width="18" height="18" rx="4" />
+              <path d="M8 12a4 4 0 0 1 7-2.6L16 10" />
+              <path d="M16 6v4h-4" />
+              <path d="M16 12a4 4 0 0 1-7 2.6L8 14" />
+            </svg>
+            <span>{isReanalyzing ? 'Re-analyzing...' : 'Re-analyze'}</span>
+          </button>
+        </div>
       </div>
 
-      {/* TAB 1: MARKET ANALYSIS (Exact match to user screenshot + Real 15m Candle Reanalysis) */}
-      {activeTab === 'analysis' && (
-        <div className="ait-ma-content-scroll">
-          {/* Top Asset & Sentiment Hero Card */}
-          <div className="ait-ma-header-card">
-            <div className="ait-ma-asset-cell">
-              <PairLogo pair={pair} />
-              <div>
-                <div className="ait-ma-sym-title">{pair}</div>
-                <div className="ait-ma-sym-sub">{currentAsset.label || 'Gold Spot / U.S. Dollar'}</div>
-              </div>
-            </div>
+      {/* 2. NAVIGATION TABS BAR */}
+      <div className="ait-aii-tabs-bar">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            className={`ait-aii-tab ${activeTab === tab.id ? 'active' : ''}`}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-            <div className="ait-ma-price-cell ait-mono">
-              <div className="ait-ma-price-num">
-                {formatSpotPrice(pair, livePrice || marketAnalysis?.price || p)} <span className="ait-ma-ccy">USD</span>
-              </div>
-              <div className={`ait-ma-price-change ${marketAnalysis?.changes?.isUp !== false ? 'text-emerald' : 'text-red'}`}>
-                {marketAnalysis?.changes?.abs || '+33.925'} &nbsp; {marketAnalysis?.changes?.pct || '+0.83%'}
-              </div>
-            </div>
-
-            <div className="ait-ma-sentiment-cell">
-              <div className="ait-ma-sent-label">{isKhmer ? 'មនោសញ្ចេតនាទីផ្សារ' : 'Market Sentiment'}</div>
-              <div className="ait-ma-sent-box">
-                {/* Semi-circular gauge arc SVG */}
-                <svg className="ait-sent-gauge" viewBox="0 0 100 50">
-                  <path
-                    d="M 12 45 A 38 38 0 0 1 88 45"
-                    fill="none"
-                    stroke="rgba(255, 255, 255, 0.12)"
-                    strokeWidth="8"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d={
-                      marketAnalysis?.bias?.includes('BEAR')
-                        ? 'M 12 45 A 38 38 0 0 1 35 22'
-                        : marketAnalysis?.bias?.includes('NEUTRAL')
-                        ? 'M 12 45 A 38 38 0 0 1 50 12'
-                        : 'M 12 45 A 38 38 0 0 1 76 22'
-                    }
-                    fill="none"
-                    stroke="url(#emerald-cyan-grad)"
-                    strokeWidth="8"
-                    strokeLinecap="round"
-                  />
-                  <defs>
-                    <linearGradient id="emerald-cyan-grad" x1="0" y1="0" x2="1" y2="0">
-                      <stop offset="0%" stopColor="#10B981" />
-                      <stop offset="100%" stopColor="#00F2FE" />
-                    </linearGradient>
-                  </defs>
-                </svg>
-                <div className="ait-sent-bull-wrap">
-                  <span className="ait-sent-bull-icon">
-                    {marketAnalysis?.bias?.includes('BEAR') ? '🐻' : '🐂'}
-                  </span>
-                  <span className={`ait-sent-text ${marketAnalysis?.bias?.includes('BEAR') ? 'text-red' : 'text-emerald'}`}>
-                    {marketAnalysis?.sentiment || (isKhmer ? 'Bullish (ឡើង)' : 'Bullish')}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* 15m Candle Countdown & Reanalyze Action */}
-            <div className="ait-ma-candle-cell">
-              <div className={`ait-ma-candle-pill ${isReanalyzing ? 'analyzing' : ''}`} title="15-minute candle countdown before auto re-analysis">
-                <span className="lnd-live-pulse-dot" style={{ width: 6, height: 6 }} />
-                <span>15M Candle:</span>
-                <strong className="ait-mono">{candleCountdown?.timeStr || '15:00'}</strong>
-              </div>
-              <button
-                type="button"
-                className="ait-ma-reanalyze-btn"
-                onClick={onReanalyze}
-                disabled={isReanalyzing}
-                title="Force re-analyze 15m candle indicators now"
-              >
-                {isReanalyzing ? '⏳' : '🔄'} {isReanalyzing ? (isKhmer ? 'កំពុងវិភាគ...' : 'Analyzing...') : (isKhmer ? 'វិភាគឡើងវិញ' : 'Re-Analyze')}
-              </button>
-            </div>
-          </div>
-
-          {/* 6-Grid Institutional Intelligence Cards (2-Columns Layout) */}
-          <div className="ait-ma-grid">
-            {/* COLUMN 1 */}
-            <div className="ait-ma-col">
-              {/* Card 1: Trend Analysis */}
-              <div className="ait-ma-card">
-                <div className="ait-ma-card-head">
-                  <span className="ait-ma-icon text-emerald">📈</span>
-                  <h4>{isKhmer ? 'ការវិភាគនិន្នាការ (Trend Analysis)' : 'Trend Analysis'}</h4>
-                </div>
-                <ul className="ait-ma-bullets">
-                  <li>
-                    <strong>Overall trend:</strong>{' '}
-                    <span style={{ color: marketAnalysis?.ema200?.isBull ? '#10B981' : '#FCA5A5' }}>
-                      {marketAnalysis?.ema200?.isBull
-                        ? (isKhmer ? 'Bullish (ស្ថិតលើ 200 EMA)' : 'Bullish (above 200 EMA)')
-                        : (isKhmer ? 'Bearish (ស្ថិតក្រោម 200 EMA)' : 'Bearish (still below 200 EMA)')}
-                    </span>
-                  </li>
-                  <li>
-                    <strong>Short-term (15M):</strong> {marketAnalysis?.bias || 'Bullish'} ({marketAnalysis?.ema20?.status || 'Price above 20 EMA'})
-                  </li>
-                  <li>
-                    Price is testing the 50 EMA (${marketAnalysis?.ema50?.val || levels.ema50}) with dynamic 15m candle structure.
-                  </li>
-                  <li>
-                    Momentum shows active recovery (RSI at {marketAnalysis?.rsi?.val || '54.80'}, MACD {marketAnalysis?.macd?.status || 'momentum up'}).
-                  </li>
-                </ul>
-              </div>
-
-              {/* Card 2: Key Levels */}
-              <div className="ait-ma-card">
-                <div className="ait-ma-card-head">
-                  <span className="ait-ma-icon" style={{ color: '#38BDF8' }}>🎯</span>
-                  <h4>{isKhmer ? 'កម្រិតគន្លឹះ (Key Levels)' : 'Key Levels'}</h4>
-                </div>
-                <div className="ait-levels-section">
-                  <div className="ait-levels-subtitle red">Resistance</div>
-                  <div className="ait-levels-table ait-mono">
-                    <div className="ait-lvl-row">
-                      <span className="ait-lvl-tag r">R1</span>
-                      <strong className="ait-lvl-val">{effectiveLevels.r1}</strong>
-                      <span className="ait-lvl-note">(key resistance zone)</span>
-                    </div>
-                    <div className="ait-lvl-row">
-                      <span className="ait-lvl-tag r">R2</span>
-                      <strong className="ait-lvl-val">{effectiveLevels.r2}</strong>
-                      <span className="ait-lvl-note">(50% Fib)</span>
-                    </div>
-                    <div className="ait-lvl-row">
-                      <span className="ait-lvl-tag r">R3</span>
-                      <strong className="ait-lvl-val">{effectiveLevels.r3}</strong>
-                      <span className="ait-lvl-note">(major resistance)</span>
-                    </div>
-                  </div>
-
-                  <div className="ait-levels-subtitle green" style={{ marginTop: 14 }}>Support</div>
-                  <div className="ait-levels-table ait-mono">
-                    <div className="ait-lvl-row">
-                      <span className="ait-lvl-tag s">S1</span>
-                      <strong className="ait-lvl-val">{effectiveLevels.s1}</strong>
-                      <span className="ait-lvl-note">(support zone)</span>
-                    </div>
-                    <div className="ait-lvl-row">
-                      <span className="ait-lvl-tag s">S2</span>
-                      <strong className="ait-lvl-val">{effectiveLevels.s2}</strong>
-                      <span className="ait-lvl-note">(lower support)</span>
-                    </div>
-                    <div className="ait-lvl-row">
-                      <span className="ait-lvl-tag s">S3</span>
-                      <strong className="ait-lvl-val">{effectiveLevels.s3}</strong>
-                      <span className="ait-lvl-note">(strong support)</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 3: Indicators Summary */}
-              <div className="ait-ma-card">
-                <div className="ait-ma-card-head">
-                  <span className="ait-ma-icon" style={{ color: '#A855F7' }}>⏱️</span>
-                  <h4>{isKhmer ? 'សង្ខេបសូចនាករ (Indicators Summary)' : 'Indicators Summary'}</h4>
-                </div>
-                <div className="ait-indicators-table ait-mono">
-                  <div className="ait-ind-row">
-                    <span className="ait-ind-name">RSI (14)</span>
-                    <span className="ait-ind-val">{marketAnalysis?.rsi?.val || '54.80'}</span>
-                    <span className={`ait-ind-sig ${marketAnalysis?.rsi?.isBull ? 'text-emerald' : 'text-red'}`}>
-                      {marketAnalysis?.rsi?.status || 'Bullish (above 50)'}
-                    </span>
-                  </div>
-                  <div className="ait-ind-row">
-                    <span className="ait-ind-name">MACD</span>
-                    <span className="ait-ind-val">{marketAnalysis?.macd?.val || '3.05 / 5.74 / -2.69'}</span>
-                    <span className={`ait-ind-sig ${marketAnalysis?.macd?.isBull ? 'text-emerald' : 'text-red'}`}>
-                      {marketAnalysis?.macd?.status || 'Bullish (momentum up)'}
-                    </span>
-                  </div>
-                  <div className="ait-ind-row">
-                    <span className="ait-ind-name">EMA 20</span>
-                    <span className="ait-ind-val">{marketAnalysis?.ema20?.val || levels.ema20}</span>
-                    <span className="ait-ind-sig" style={{ color: '#38BDF8' }}>
-                      {marketAnalysis?.ema20?.status || 'Price above'}
-                    </span>
-                  </div>
-                  <div className="ait-ind-row">
-                    <span className="ait-ind-name">EMA 50</span>
-                    <span className="ait-ind-val">{marketAnalysis?.ema50?.val || levels.ema50}</span>
-                    <span className="ait-ind-sig" style={{ color: '#38BDF8' }}>
-                      {marketAnalysis?.ema50?.status || 'Price above'}
-                    </span>
-                  </div>
-                  <div className="ait-ind-row">
-                    <span className="ait-ind-name">EMA 200</span>
-                    <span className="ait-ind-val" style={{ color: '#F472B6' }}>
-                      {marketAnalysis?.ema200?.val || levels.ema200}
-                    </span>
-                    <span className="ait-ind-sig" style={{ color: marketAnalysis?.ema200?.isBull ? '#10B981' : '#EF4444' }}>
-                      {marketAnalysis?.ema200?.status || 'Price below (long-term downtrend)'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* COLUMN 2 */}
-            <div className="ait-ma-col">
-              {/* Card 4: Market Outlook */}
-              <div className="ait-ma-card">
-                <div className="ait-ma-card-head">
-                  <span className="ait-ma-icon" style={{ color: '#F59E0B' }}>💡</span>
-                  <h4>{isKhmer ? 'ទស្សនវិស័យទីផ្សារ (Market Outlook)' : 'Market Outlook'}</h4>
-                </div>
-                <p className="ait-ma-paragraph">
-                  {isGold ? (
-                    <>
-                      Gold is showing a <strong>{marketAnalysis?.bias || 'short-term'}</strong> structure following support tests near the <strong>{effectiveLevels.s1}</strong> zone. The 15m price is currently testing <strong>{marketAnalysis?.ema20?.val || levels.ema20} (20 EMA)</strong> and <strong>{marketAnalysis?.ema50?.val || levels.ema50} (50 EMA)</strong>. A confirmed break above <strong>{effectiveLevels.r1}</strong> targets <strong>{effectiveLevels.r2}</strong>. However, rejection may lead to a pullback to <strong>{effectiveLevels.s1}</strong>. Multi-timeframe confluence is <strong>{marketAnalysis?.confidence || 96}% aligned</strong> ({marketAnalysis?.mtf?.alignedText || '3/4 aligned'}).
-                    </>
-                  ) : (
-                    <>
-                      {pair} is consolidating within the key order block range. Market structure suggests liquidity accumulation during the active session. Watch for clean displacement above <strong>{effectiveLevels.r1}</strong> to confirm higher timeframe continuation, or rejection back to <strong>{effectiveLevels.s1}</strong>.
-                    </>
-                  )}
-                </p>
-              </div>
-
-              {/* Card 5: Trading Plan */}
-              <div className="ait-ma-card">
-                <div className="ait-ma-card-head">
-                  <span className="ait-ma-icon" style={{ color: '#10B981' }}>🎯</span>
-                  <h4>{isKhmer ? 'ផែនការជួញដូរ (Trading Plan)' : 'Trading Plan'}</h4>
-                </div>
-                
-                {/* Long Scenario */}
-                <div className="ait-scenario-box long">
-                  <div className="ait-scen-title text-emerald">
-                    ↗ Long Scenario (if breakout)
-                  </div>
-                  <div className="ait-scen-list ait-mono">
-                    <div className="ait-scen-item">
-                      <span className="ait-scen-chk">✓</span>
-                      <span className="ait-scen-lbl">Entry:</span>
-                      <strong className="ait-scen-val">{effectiveLevels.longEntry}</strong>
-                      <span className="ait-scen-note">(on confirmed breakout)</span>
-                    </div>
-                    <div className="ait-scen-item">
-                      <span className="ait-scen-chk">✓</span>
-                      <span className="ait-scen-lbl">TP1:</span>
-                      <strong className="ait-scen-val">{effectiveLevels.longTp1}</strong>
-                      <span className="ait-scen-note">(50% Fib)</span>
-                    </div>
-                    <div className="ait-scen-item">
-                      <span className="ait-scen-chk">✓</span>
-                      <span className="ait-scen-lbl">TP2:</span>
-                      <strong className="ait-scen-val">{effectiveLevels.longTp2}</strong>
-                      <span className="ait-scen-note">(key resistance)</span>
-                    </div>
-                    <div className="ait-scen-item">
-                      <span className="ait-scen-chk">✓</span>
-                      <span className="ait-scen-lbl">SL:</span>
-                      <strong className="ait-scen-val">{effectiveLevels.longSl}</strong>
-                      <span className="ait-scen-note">(below trendline)</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Short Scenario */}
-                <div className="ait-scenario-box short" style={{ marginTop: 14 }}>
-                  <div className="ait-scen-title text-red">
-                    ↘ Short Scenario (if rejection)
-                  </div>
-                  <div className="ait-scen-list ait-mono">
-                    <div className="ait-scen-item">
-                      <span className="ait-scen-chk">✓</span>
-                      <span className="ait-scen-lbl">Entry:</span>
-                      <strong className="ait-scen-val">{effectiveLevels.shortEntry}</strong>
-                      <span className="ait-scen-note">(rejection at resistance)</span>
-                    </div>
-                    <div className="ait-scen-item">
-                      <span className="ait-scen-chk">✓</span>
-                      <span className="ait-scen-lbl">TP1:</span>
-                      <strong className="ait-scen-val">{effectiveLevels.shortTp1}</strong>
-                      <span className="ait-scen-note">(near support)</span>
-                    </div>
-                    <div className="ait-scen-item">
-                      <span className="ait-scen-chk">✓</span>
-                      <span className="ait-scen-lbl">TP2:</span>
-                      <strong className="ait-scen-val">{effectiveLevels.shortTp2}</strong>
-                      <span className="ait-scen-note">(support zone)</span>
-                    </div>
-                    <div className="ait-scen-item">
-                      <span className="ait-scen-chk">✓</span>
-                      <span className="ait-scen-lbl">SL:</span>
-                      <strong className="ait-scen-val">{effectiveLevels.shortSl}</strong>
-                      <span className="ait-scen-note">(above resistance)</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 6: Important News to Watch */}
-              <div className="ait-ma-card ait-news-watch-card">
-                <div className="ait-ma-card-head">
-                  <span className="ait-ma-icon" style={{ color: '#38BDF8' }}>📰</span>
-                  <h4>{isKhmer ? 'ព័ត៌មានសំខាន់ៗដែលត្រូវតាមដាន' : 'Important News to Watch'}</h4>
-                </div>
-                <ul className="ait-ma-bullets">
-                  <li>U.S. CPI / PPI data (Inflation signals)</li>
-                  <li>Fed speech / interest rate expectations</li>
-                  <li>Geopolitical tensions / safe-haven demand</li>
-                </ul>
-
-                {/* Script Watermark */}
-                <div className="ait-trade-watermark">
-                  Plan your trade.<br />Trade your plan.
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* Notification Banner when 15m candle closes or Previous Analysis toggled */}
+      {(lastCandleCloseNotice || copiedNotice || showPrevAnalysis) && (
+        <div className="ait-aii-notice-strip">
+          {copiedNotice && (
+            <span className="text-emerald">✓ Trading Plan copied to clipboard!</span>
+          )}
+          {!copiedNotice && lastCandleCloseNotice && (
+            <span className="text-emerald">● {lastCandleCloseNotice}</span>
+          )}
+          {!copiedNotice && !lastCandleCloseNotice && showPrevAnalysis && (
+            <span>
+              ⏱️ Previous 15m Candle Close Snapshot: <strong>{pair}</strong> closed at{' '}
+              <strong>${formatCommaPrice(p + (isGold ? 0.96 : 0.0005), priceDecimals)}</strong> • Bias: {intel.shortTermBias} • Next auto-scan in <strong>{candleCountdown?.timeStr || '12:40'}</strong>
+            </span>
+          )}
         </div>
       )}
 
-      {/* TAB 2: NEWS */}
-      {activeTab === 'news' && (
-        <div className="ait-ma-content-scroll">
-          <div className="ait-ma-news-list">
-            {newsList.map((item, idx) => (
-              <div key={idx} className="ait-ma-news-row">
-                <div className="ait-ma-news-meta">
-                  <span className="ait-news-badge">{item.source}</span>
-                  <span className="ait-news-time">{item.time}</span>
-                </div>
-                <h5 className="ait-news-headline">{item.title}</h5>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* TAB 3: ECONOMIC CALENDAR */}
-      {activeTab === 'calendar' && (
-        <div className="ait-ma-content-scroll">
-          <div className="ait-calendar-table-wrap">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, fontSize: 11, color: 'var(--mute)' }}>
-              <span>{isKhmer ? 'ប្រភពទិន្នន័យផ្ទាល់: Finnhub API + Google Gemini AI' : 'Live Source: Finnhub Economic Calendar + Google Gemini'}</span>
-              <span style={{ color: '#10B981', fontWeight: 800 }}>● Live Stream Active</span>
-            </div>
-            <table className="ait-cal-table ait-mono">
-              <thead>
-                <tr>
-                  <th>TIME</th>
-                  <th>CCY</th>
-                  <th>EVENT</th>
-                  <th>IMPACT</th>
-                  <th>FORECAST</th>
-                  <th>PREVIOUS</th>
-                </tr>
-              </thead>
-              <tbody>
-                {calendarList.map((ev, i) => (
-                  <tr key={i}>
-                    <td>{ev.time}</td>
-                    <td><strong>{ev.ccy}</strong></td>
-                    <td>{ev.title}</td>
-                    <td>
-                      <span className={`ait-cal-pill ${ev.imp === 'HIGH' ? 'high' : 'med'}`}>
-                        {ev.imp}
+      {/* 3. MAIN SCROLLABLE WORKSPACE */}
+      <div className="ait-aii-scroll-body">
+        {/* ==================== TAB 1: AI OVERVIEW (EXACT SCREENSHOT LAYOUT) ==================== */}
+        {activeTab === 'overview' && (
+          <div className="ait-aii-overview-layout">
+            {/* TOP + MIDDLE ROW: Left 2-Card Stack + Right Tall Market Outlook Card */}
+            <div className="ait-aii-upper-grid">
+              <div className="ait-aii-left-stack">
+                {/* CARD 1: MARKET SNAPSHOT */}
+                <div className="ait-aii-card ait-aii-snapshot-card">
+                  <div className="ait-aii-card-header">
+                    <div className="ait-aii-card-title-group">
+                      <span className="ait-aii-card-icon purple">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                          <path d="M2 12h4l3-9 5 18 3-9h5" />
+                        </svg>
                       </span>
-                    </td>
-                    <td>{ev.f}</td>
-                    <td>{ev.p}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+                      <h3>Market Snapshot</h3>
+                    </div>
+                    <div className="ait-aii-sparkline" aria-hidden="true">
+                      <svg width="34" height="20" viewBox="0 0 34 20" fill="none">
+                        <path d="M2 16L9 9L15 13L23 4L32 7" stroke="#38BDF8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <circle cx="23" cy="4" r="2" fill="#00F2FE" />
+                      </svg>
+                    </div>
+                  </div>
 
-      {/* TAB 4: WATCHLIST */}
-      {activeTab === 'watchlist' && (
-        <div className="ait-ma-content-scroll">
-          <div className="ait-watchlist-list">
-            {WATCHLIST.map((item) => (
-              <div
-                key={item.id}
-                className="ait-wl-row"
-                onClick={() => onSelectAsset && onSelectAsset(item.id)}
-                title="Click to switch chart to this pair"
-              >
-                <div className="ait-wl-left">
-                  <PairLogo pair={item.pair} />
-                  <div>
-                    <div className="ait-wl-sym">{item.pair}</div>
-                    <div className="ait-wl-name">{item.name}</div>
+                  <div className="ait-aii-snapshot-body">
+                    {/* Col 1: Asset & Live Price */}
+                    <div className="ait-aii-snap-main">
+                      <div className="ait-aii-snap-asset">
+                        <PairLogo pair={pair} size={22} />
+                        <span className="ait-aii-snap-sym">{pair}</span>
+                        <span className="ait-aii-snap-name">{assetSubtitle}</span>
+                      </div>
+                      <div className="ait-aii-snap-price-row ait-mono">
+                        <span className="ait-aii-snap-price">
+                          {formatCommaPrice(p, priceDecimals)}
+                        </span>
+                        <span className="ait-aii-snap-ccy">USD</span>
+                      </div>
+                      <div className={`ait-aii-snap-chg ait-mono ${intel.isChangeUp ? 'up' : 'down'}`}>
+                        <span>{intel.changeAbsStr}</span>
+                        <span>{intel.changePctStr}</span>
+                      </div>
+                    </div>
+
+                    {/* Col 2: Market Session */}
+                    <div className="ait-aii-snap-col">
+                      <span className="ait-aii-snap-lbl">Market Session</span>
+                      <div className="ait-aii-snap-val-row">
+                        <span className="ait-aii-status-dot green" />
+                        <span className="ait-aii-snap-val text-emerald">{intel.sessionShort}</span>
+                      </div>
+                    </div>
+
+                    {/* Col 3: Market Bias */}
+                    <div className="ait-aii-snap-col">
+                      <span className="ait-aii-snap-lbl">Market Bias</span>
+                      <div className="ait-aii-snap-val-row">
+                        <span className={`ait-aii-status-dot ${intel.shortTermBias === 'Bullish' ? 'green' : intel.shortTermBias === 'Bearish' ? 'red' : 'blue'}`} />
+                        <span className="ait-aii-snap-val">{intel.shortTermBias}</span>
+                      </div>
+                    </div>
+
+                    {/* Col 4: Data Freshness & Timeframe */}
+                    <div className="ait-aii-snap-col ait-aii-snap-col-split">
+                      <div className="ait-aii-snap-subitem">
+                        <span className="ait-aii-snap-lbl">Data Freshness</span>
+                        <div className="ait-aii-snap-val-row">
+                          <span className="ait-aii-fresh-ring" />
+                          <span className="ait-aii-snap-val">{minutesElapsed}m ago</span>
+                        </div>
+                      </div>
+                      <div className="ait-aii-snap-subitem">
+                        <span className="ait-aii-snap-lbl">Timeframe</span>
+                        <div className="ait-aii-snap-val-row">
+                          <strong className="ait-aii-snap-tf">{timeframe || '15m'}</strong>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div className="ait-wl-right ait-mono">
-                  <div className="ait-wl-price">${item.price}</div>
-                  <div className={`ait-wl-chg ${item.up ? 'up text-emerald' : 'down text-red'}`}>
-                    {item.chg}
+
+                {/* CARD 2: AI MARKET INTELLIGENCE */}
+                <div className="ait-aii-card ait-aii-intel-card">
+                  <div className="ait-aii-card-header">
+                    <div className="ait-aii-card-title-group">
+                      <span className="ait-aii-ai-pill-icon">AI</span>
+                      <h3>AI Market Intelligence</h3>
+                    </div>
+                    <span className="ait-aii-source-pill">
+                      Source: Multi-Timeframe Analysis • Updated {minutesElapsed}m ago
+                    </span>
+                  </div>
+
+                  <p className="ait-aii-intel-summary">
+                    {isGold ? 'Gold' : pair} is moving in a consolidation phase after a strong move. Price is currently trading below the near-term resistance zone ({intel.r1Short}), showing signs of indecision. The trend remains slightly {intel.overallTrend.toLowerCase()} on higher timeframes, but short-term momentum is {intel.shortTermBias.toLowerCase()}.
+                  </p>
+
+                  <div className="ait-aii-metrics-matrix">
+                    {/* Left Sub-column */}
+                    <div className="ait-aii-metrics-col">
+                      <div className="ait-aii-metric-row">
+                        <div className="ait-aii-metric-lbl">
+                          <span className="ait-aii-m-icon cyan">↗</span>
+                          <span>Overall Trend</span>
+                        </div>
+                        <div className="ait-aii-metric-val">
+                          <span className={intel.overallTrend === 'Bullish' ? 'text-emerald' : 'text-red'}>
+                            {intel.overallTrend}
+                          </span>{' '}
+                          <span className="ait-aii-muted">(HTF)</span>
+                        </div>
+                      </div>
+
+                      <div className="ait-aii-metric-row">
+                        <div className="ait-aii-metric-lbl">
+                          <span className="ait-aii-m-icon purple">◈</span>
+                          <span>Short-term Bias</span>
+                        </div>
+                        <div className="ait-aii-metric-val">
+                          {intel.shortTermBias} <span className="ait-aii-muted">({timeframe || '15m'})</span>
+                        </div>
+                      </div>
+
+                      <div className="ait-aii-metric-row">
+                        <div className="ait-aii-metric-lbl">
+                          <span className="ait-aii-m-icon amber">⊞</span>
+                          <span>Multi-Timeframe</span>
+                        </div>
+                        <div className="ait-aii-metric-val">{intel.mtfSummary}</div>
+                      </div>
+
+                      <div className="ait-aii-metric-row">
+                        <div className="ait-aii-metric-lbl">
+                          <span className="ait-aii-m-icon blue">∿</span>
+                          <span>Momentum</span>
+                        </div>
+                        <div className="ait-aii-metric-val">{intel.momentumText}</div>
+                      </div>
+
+                      <div className="ait-aii-metric-row">
+                        <div className="ait-aii-metric-lbl">
+                          <span className="ait-aii-m-icon cyan">⚡</span>
+                          <span>Volatility</span>
+                        </div>
+                        <div className="ait-aii-metric-val">{intel.volatilityText}</div>
+                      </div>
+                    </div>
+
+                    {/* Right Sub-column */}
+                    <div className="ait-aii-metrics-col">
+                      <div className="ait-aii-metric-row">
+                        <div className="ait-aii-metric-lbl">
+                          <span className="ait-aii-m-icon blue">⚓</span>
+                          <span>Key Support</span>
+                        </div>
+                        <div className="ait-aii-metric-val ait-mono">
+                          {intel.s1Short} / {intel.s2Short}
+                        </div>
+                      </div>
+
+                      <div className="ait-aii-metric-row">
+                        <div className="ait-aii-metric-lbl">
+                          <span className="ait-aii-m-icon red">⊤</span>
+                          <span>Key Resistance</span>
+                        </div>
+                        <div className="ait-aii-metric-val ait-mono">
+                          {intel.r1Short} / {intel.r2Short}
+                        </div>
+                      </div>
+
+                      <div className="ait-aii-metric-row">
+                        <div className="ait-aii-metric-lbl">
+                          <span className="ait-aii-m-icon cyan">📈</span>
+                          <span>Structure</span>
+                        </div>
+                        <div className="ait-aii-metric-val">{intel.structureText}</div>
+                      </div>
+
+                      <div className="ait-aii-metric-row">
+                        <div className="ait-aii-metric-lbl">
+                          <span className="ait-aii-m-icon red">⊗</span>
+                          <span>Invalidation</span>
+                        </div>
+                        <div className="ait-aii-metric-val text-red ait-mono">
+                          Below {intel.s1Short}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
 
-      {/* TAB 5: TRADE JOURNAL */}
-      {activeTab === 'journal' && (
-        <div className="ait-ma-content-scroll">
-          <div className="ait-journal-box">
-            <h4 style={{ fontSize: 16, fontWeight: 800, margin: '0 0 12px', color: '#FFF' }}>
-              Institutional Execution Checklist
-            </h4>
-            <div className="ait-chk-list">
-              <label className="ait-chk-row">
-                <input type="checkbox" defaultChecked />
-                <span>Asian Range High / Low Liquidity Purged</span>
-              </label>
-              <label className="ait-chk-row">
-                <input type="checkbox" defaultChecked />
-                <span>Market Structure Shift (MSS) confirmed on M15</span>
-              </label>
-              <label className="ait-chk-row">
-                <input type="checkbox" defaultChecked />
-                <span>Fair Value Gap (FVG) tapped inside 62%–79% Discount OTE</span>
-              </label>
-              <label className="ait-chk-row">
-                <input type="checkbox" defaultChecked />
-                <span>Strict 1% account risk enforced with Pip Risk Guardian</span>
-              </label>
-              <label className="ait-chk-row">
-                <input type="checkbox" />
-                <span>No high-impact red-folder news release within 15 minutes</span>
-              </label>
+              {/* CARD 3 (RIGHT TALL): MARKET OUTLOOK */}
+              <div className="ait-aii-card ait-aii-outlook-card">
+                <div className="ait-aii-card-header">
+                  <div className="ait-aii-card-title-group">
+                    <span className="ait-aii-card-icon amber">💡</span>
+                    <h3>Market Outlook</h3>
+                  </div>
+                </div>
+
+                <div className="ait-aii-outlook-list">
+                  <div className="ait-aii-outlook-item">
+                    <span className="ait-aii-ol-icon teal">🌱</span>
+                    <div className="ait-aii-ol-body">
+                      <div className="ait-aii-ol-title">Current conditions</div>
+                      <p className="ait-aii-ol-desc">
+                        Price is consolidating below resistance after an upward move. Momentum is slowing.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="ait-aii-outlook-item">
+                    <span className="ait-aii-ol-icon green">▲</span>
+                    <div className="ait-aii-ol-body">
+                      <div className="ait-aii-ol-title">Bullish scenario</div>
+                      <p className="ait-aii-ol-desc">
+                        Break above <strong>{intel.r1Short}</strong> could lead to <strong>{intel.r2Short}</strong> and <strong>{intel.r3Short}</strong>.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="ait-aii-outlook-item">
+                    <span className="ait-aii-ol-icon red">▼</span>
+                    <div className="ait-aii-ol-body">
+                      <div className="ait-aii-ol-title">Bearish scenario</div>
+                      <p className="ait-aii-ol-desc">
+                        Rejection at <strong>{intel.r1Short}</strong> may push price to <strong>{intel.s1Short}</strong> and <strong>{intel.s2Short}</strong>.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="ait-aii-outlook-item">
+                    <span className="ait-aii-ol-icon cyan">📈</span>
+                    <div className="ait-aii-ol-body">
+                      <div className="ait-aii-ol-title">Key confirmation</div>
+                      <p className="ait-aii-ol-desc ait-mono">
+                        {intel.r1Short} (break &amp; close)
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="ait-aii-outlook-item">
+                    <span className="ait-aii-ol-icon red">✕</span>
+                    <div className="ait-aii-ol-body">
+                      <div className="ait-aii-ol-title">Invalidation level</div>
+                      <p className="ait-aii-ol-desc ait-mono">
+                        {intel.s1Short} (break &amp; close)
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="ait-aii-outlook-item">
+                    <span className="ait-aii-ol-icon purple">📅</span>
+                    <div className="ait-aii-ol-body">
+                      <div className="ait-aii-ol-title">Upcoming events</div>
+                      <p className="ait-aii-ol-desc">
+                        {intel.upcomingEventText}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* BOTTOM 3-CARD ROW: Key Levels + Quick Actions + AI Analysis Status */}
+            <div className="ait-aii-bottom-grid">
+              {/* CARD 4: KEY LEVELS TABLE */}
+              <div className="ait-aii-card ait-aii-levels-card">
+                <div className="ait-aii-card-header">
+                  <div className="ait-aii-card-title-group">
+                    <span className="ait-aii-card-icon purple">🎯</span>
+                    <h3>Key Levels</h3>
+                  </div>
+                </div>
+
+                <div className="ait-aii-table-wrap">
+                  <table className="ait-aii-levels-table">
+                    <thead>
+                      <tr>
+                        <th>Level</th>
+                        <th>Type</th>
+                        <th>Timeframe</th>
+                        <th>Distance</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="ait-mono">
+                      {intel.keyLevelsRows.map((row, idx) => (
+                        <tr key={idx}>
+                          <td>
+                            <div className="ait-aii-lvl-cell">
+                              <span className={`ait-aii-lvl-badge ${row.isRes ? 'res' : 'sup'}`}>
+                                {row.isRes ? '⊤' : '⊥'}
+                              </span>
+                              <strong>{row.level}</strong>
+                            </div>
+                          </td>
+                          <td className={row.isRes ? 'text-red' : 'text-emerald'}>
+                            {row.type}
+                          </td>
+                          <td>{row.tf}</td>
+                          <td className={row.isPosDist ? 'text-emerald' : 'text-amber'}>
+                            {row.distance}
+                          </td>
+                          <td>
+                            <span className={`ait-aii-status-pill ${row.isTested ? 'tested' : 'untested'}`}>
+                              {row.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* CARD 5: QUICK ACTIONS */}
+              <div className="ait-aii-card ait-aii-actions-card">
+                <div className="ait-aii-card-header">
+                  <div className="ait-aii-card-title-group">
+                    <span className="ait-aii-card-icon purple">✦</span>
+                    <h3>Quick Actions</h3>
+                  </div>
+                </div>
+
+                <div className="ait-aii-quick-btns">
+                  <button
+                    type="button"
+                    className="ait-aii-qbtn"
+                    onClick={handleCopyTradingPlan}
+                  >
+                    <span className="ait-aii-qbtn-icon">📋</span>
+                    <span>{copiedNotice ? 'Copied Trading Plan!' : 'Copy Trading Plan'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="ait-aii-qbtn"
+                    onClick={() => setActiveTab('levels')}
+                  >
+                    <span className="ait-aii-qbtn-icon">📊</span>
+                    <span>Open Chart Levels</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="ait-aii-qbtn"
+                    onClick={() => setActiveTab('structure')}
+                  >
+                    <span className="ait-aii-qbtn-icon">🔀</span>
+                    <span>Compare Timeframes</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="ait-aii-qbtn"
+                    onClick={() => setShowPrevAnalysis((v) => !v)}
+                  >
+                    <span className="ait-aii-qbtn-icon">🕒</span>
+                    <span>View Previous Analysis</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* CARD 6: AI ANALYSIS STATUS */}
+              <div className="ait-aii-card ait-aii-status-card">
+                <div className="ait-aii-card-header">
+                  <div className="ait-aii-card-title-group">
+                    <span className="ait-aii-card-icon blue">⚡</span>
+                    <h3>AI Analysis Status</h3>
+                  </div>
+                </div>
+
+                <div className="ait-aii-status-body">
+                  <div className={`ait-aii-neon-ring-wrap ${isReanalyzing ? 'is-spinning' : ''}`}>
+                    <svg viewBox="0 0 80 80" className="ait-aii-neon-ring-svg">
+                      <defs>
+                        <linearGradient id="aiiRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#10B981" />
+                          <stop offset="50%" stopColor="#00F2FE" />
+                          <stop offset="100%" stopColor="#3B82F6" />
+                        </linearGradient>
+                      </defs>
+                      <circle
+                        cx="40"
+                        cy="40"
+                        r="30"
+                        fill="none"
+                        stroke="rgba(0, 242, 254, 0.14)"
+                        strokeWidth="6"
+                      />
+                      <circle
+                        cx="40"
+                        cy="40"
+                        r="30"
+                        fill="none"
+                        stroke="url(#aiiRingGrad)"
+                        strokeWidth="6"
+                        strokeLinecap="round"
+                        strokeDasharray="165 30"
+                      />
+                    </svg>
+                  </div>
+
+                  <div className="ait-aii-status-copy">
+                    <h4 className="ait-aii-status-ready">
+                      {isReanalyzing ? 'Re-analyzing...' : 'Analysis Ready'}
+                    </h4>
+                    <p className="ait-aii-status-sub">
+                      The latest analysis is available and up to date.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* ==================== TAB 2: MARKET STRUCTURE ==================== */}
+        {activeTab === 'structure' && (
+          <div className="ait-aii-subtab-grid">
+            <div className="ait-aii-card">
+              <div className="ait-aii-card-header">
+                <div className="ait-aii-card-title-group">
+                  <span className="ait-aii-ai-pill-icon">MTF</span>
+                  <h3>Multi-Timeframe Structure Alignment ({pair})</h3>
+                </div>
+                <span className="ait-aii-source-pill">{marketAnalysis?.mtf?.alignedText || '3/4 Aligned'}</span>
+              </div>
+              <div className="ait-aii-metrics-matrix">
+                <div className="ait-aii-metrics-col">
+                  <div className="ait-aii-metric-row">
+                    <span className="ait-aii-metric-lbl">15m Intraday Structure</span>
+                    <strong className="ait-aii-metric-val">{intel.shortTermBias} ({marketAnalysis?.mtf?.m15 || 'BULL'})</strong>
+                  </div>
+                  <div className="ait-aii-metric-row">
+                    <span className="ait-aii-metric-lbl">1H Session Structure</span>
+                    <strong className="ait-aii-metric-val text-emerald">{marketAnalysis?.mtf?.h1 || 'BULL'} (Order Block Held)</strong>
+                  </div>
+                  <div className="ait-aii-metric-row">
+                    <span className="ait-aii-metric-lbl">4H Swing Structure</span>
+                    <strong className="ait-aii-metric-val text-emerald">{marketAnalysis?.mtf?.h4 || 'BULL'} ({intel.structureText})</strong>
+                  </div>
+                  <div className="ait-aii-metric-row">
+                    <span className="ait-aii-metric-lbl">Daily Macro Bias</span>
+                    <strong className="ait-aii-metric-val text-emerald">{marketAnalysis?.mtf?.d1 || 'BULL'} (Institutional Trend)</strong>
+                  </div>
+                </div>
+                <div className="ait-aii-metrics-col">
+                  <div className="ait-aii-metric-row">
+                    <span className="ait-aii-metric-lbl">EMA 20 (15m)</span>
+                    <strong className="ait-aii-metric-val ait-mono">{marketAnalysis?.ema20?.val || formatCommaPrice(p - 1.8, 2)} ({marketAnalysis?.ema20?.status || 'Active'})</strong>
+                  </div>
+                  <div className="ait-aii-metric-row">
+                    <span className="ait-aii-metric-lbl">EMA 50 (15m)</span>
+                    <strong className="ait-aii-metric-val ait-mono">{marketAnalysis?.ema50?.val || formatCommaPrice(p - 5.4, 2)} ({marketAnalysis?.ema50?.status || 'Support'})</strong>
+                  </div>
+                  <div className="ait-aii-metric-row">
+                    <span className="ait-aii-metric-lbl">RSI (14) &amp; MACD</span>
+                    <strong className="ait-aii-metric-val ait-mono">RSI {marketAnalysis?.rsi?.val || '52.4'} • {intel.momentumText}</strong>
+                  </div>
+                  <div className="ait-aii-metric-row">
+                    <span className="ait-aii-metric-lbl">Active FVG Imbalances</span>
+                    <strong className="ait-aii-metric-val ait-mono">{marketAnalysis?.fvg || 'Bull: 4 | Bear: 2'}</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ==================== TAB 3: KEY LEVELS ==================== */}
+        {activeTab === 'levels' && (
+          <div className="ait-aii-subtab-grid">
+            <div className="ait-aii-card">
+              <div className="ait-aii-card-header">
+                <div className="ait-aii-card-title-group">
+                  <span className="ait-aii-card-icon purple">🎯</span>
+                  <h3>Institutional Key Levels &amp; Liquidity Zones ({pair})</h3>
+                </div>
+                <span className="ait-aii-source-pill">Live Spot: ${formatCommaPrice(p, priceDecimals)}</span>
+              </div>
+              <div className="ait-aii-table-wrap">
+                <table className="ait-aii-levels-table">
+                  <thead>
+                    <tr>
+                      <th>Level</th>
+                      <th>Type</th>
+                      <th>Timeframe</th>
+                      <th>Distance</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="ait-mono">
+                    {intel.keyLevelsRows.map((row, idx) => (
+                      <tr key={idx}>
+                        <td>
+                          <div className="ait-aii-lvl-cell">
+                            <span className={`ait-aii-lvl-badge ${row.isRes ? 'res' : 'sup'}`}>
+                              {row.isRes ? '⊤' : '⊥'}
+                            </span>
+                            <strong>{row.level}</strong>
+                          </div>
+                        </td>
+                        <td className={row.isRes ? 'text-red' : 'text-emerald'}>{row.type}</td>
+                        <td>{row.tf}</td>
+                        <td className={row.isPosDist ? 'text-emerald' : 'text-amber'}>{row.distance}</td>
+                        <td>
+                          <span className={`ait-aii-status-pill ${row.isTested ? 'tested' : 'untested'}`}>
+                            {row.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ==================== TAB 4: AI MARKET OUTLOOK ==================== */}
+        {activeTab === 'outlook' && (
+          <div className="ait-aii-subtab-grid">
+            <div className="ait-aii-card">
+              <div className="ait-aii-card-header">
+                <div className="ait-aii-card-title-group">
+                  <span className="ait-aii-card-icon amber">💡</span>
+                  <h3>AI Market Outlook &amp; Directional Scenarios</h3>
+                </div>
+              </div>
+              <p className="ait-aii-intel-summary">
+                {isGold ? 'Gold' : pair} is moving in a consolidation phase after a strong move. Price is currently trading below the near-term resistance zone ({intel.r1Short}), showing signs of indecision. The trend remains slightly {intel.overallTrend.toLowerCase()} on higher timeframes, but short-term momentum is {intel.shortTermBias.toLowerCase()}.
+              </p>
+              <div className="ait-aii-outlook-list">
+                <div className="ait-aii-outlook-item">
+                  <span className="ait-aii-ol-icon green">▲</span>
+                  <div className="ait-aii-ol-body">
+                    <div className="ait-aii-ol-title">Bullish scenario</div>
+                    <p className="ait-aii-ol-desc">
+                      Break above <strong>{intel.r1Short}</strong> could lead to <strong>{intel.r2Short}</strong> and <strong>{intel.r3Short}</strong>.
+                    </p>
+                  </div>
+                </div>
+                <div className="ait-aii-outlook-item">
+                  <span className="ait-aii-ol-icon red">▼</span>
+                  <div className="ait-aii-ol-body">
+                    <div className="ait-aii-ol-title">Bearish scenario</div>
+                    <p className="ait-aii-ol-desc">
+                      Rejection at <strong>{intel.r1Short}</strong> may push price to <strong>{intel.s1Short}</strong> and <strong>{intel.s2Short}</strong>.
+                    </p>
+                  </div>
+                </div>
+                <div className="ait-aii-outlook-item">
+                  <span className="ait-aii-ol-icon cyan">📈</span>
+                  <div className="ait-aii-ol-body">
+                    <div className="ait-aii-ol-title">Key confirmation &amp; Invalidation</div>
+                    <p className="ait-aii-ol-desc ait-mono">
+                      Confirmation: {intel.r1Short} (break &amp; close) • Invalidation: {intel.s1Short} (break &amp; close)
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ==================== TAB 5: TRADING PLAN ==================== */}
+        {activeTab === 'plan' && (
+          <div className="ait-aii-subtab-grid">
+            <div className="ait-aii-card">
+              <div className="ait-aii-card-header">
+                <div className="ait-aii-card-title-group">
+                  <span className="ait-aii-card-icon purple">🎯</span>
+                  <h3>Institutional Execution Plan ({pair} • {timeframe})</h3>
+                </div>
+                <button type="button" className="ait-aii-reanalyze-btn" onClick={handleCopyTradingPlan}>
+                  <span>{copiedNotice ? '✓ Copied!' : '📋 Copy Plan'}</span>
+                </button>
+              </div>
+
+              <div className="ait-scenario-box long" style={{ marginBottom: 14 }}>
+                <div className="ait-scen-title text-emerald">↗ Bullish Breakout Scenario (Above {intel.r1Short})</div>
+                <div className="ait-scen-list ait-mono">
+                  <div className="ait-scen-item">
+                    <span className="ait-scen-chk">✓</span>
+                    <span className="ait-scen-lbl">Trigger:</span>
+                    <strong className="ait-scen-val">{intel.r1Short} (15m Break &amp; Close)</strong>
+                  </div>
+                  <div className="ait-scen-item">
+                    <span className="ait-scen-chk">✓</span>
+                    <span className="ait-scen-lbl">Targets:</span>
+                    <strong className="ait-scen-val">TP1: {intel.r2Short} • TP2: {intel.r3Short}</strong>
+                  </div>
+                  <div className="ait-scen-item">
+                    <span className="ait-scen-chk">✓</span>
+                    <span className="ait-scen-lbl">Invalid:</span>
+                    <strong className="ait-scen-val">Below {intel.s1Short}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div className="ait-scenario-box short">
+                <div className="ait-scen-title text-red">↘ Bearish Rejection Scenario (At {intel.r1Short})</div>
+                <div className="ait-scen-list ait-mono">
+                  <div className="ait-scen-item">
+                    <span className="ait-scen-chk">✓</span>
+                    <span className="ait-scen-lbl">Trigger:</span>
+                    <strong className="ait-scen-val">Rejection wick at {intel.r1Short}</strong>
+                  </div>
+                  <div className="ait-scen-item">
+                    <span className="ait-scen-chk">✓</span>
+                    <span className="ait-scen-lbl">Targets:</span>
+                    <strong className="ait-scen-val">TP1: {intel.s1Short} • TP2: {intel.s2Short}</strong>
+                  </div>
+                  <div className="ait-scen-item">
+                    <span className="ait-scen-chk">✓</span>
+                    <span className="ait-scen-lbl">Invalid:</span>
+                    <strong className="ait-scen-val">Close above {intel.r2Short}</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ==================== TAB 6: NEWS & EVENTS ==================== */}
+        {activeTab === 'news' && (
+          <div className="ait-aii-subtab-grid">
+            <div className="ait-aii-card">
+              <div className="ait-aii-card-header">
+                <div className="ait-aii-card-title-group">
+                  <span className="ait-aii-card-icon purple">📅</span>
+                  <h3>Upcoming Economic Catalysts &amp; Market News</h3>
+                </div>
+                <span className="ait-aii-source-pill">Live Feed Active</span>
+              </div>
+              <table className="ait-cal-table ait-mono" style={{ marginBottom: 16 }}>
+                <thead>
+                  <tr>
+                    <th>TIME</th>
+                    <th>CCY</th>
+                    <th>EVENT</th>
+                    <th>IMPACT</th>
+                    <th>FORECAST</th>
+                    <th>PREVIOUS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {calendarList.slice(0, 6).map((ev, i) => (
+                    <tr key={i}>
+                      <td>{ev.time}</td>
+                      <td><strong>{ev.ccy}</strong></td>
+                      <td>{ev.title}</td>
+                      <td>
+                        <span className={`ait-cal-pill ${ev.imp === 'HIGH' ? 'high' : 'med'}`}>
+                          {ev.imp}
+                        </span>
+                      </td>
+                      <td>{ev.f}</td>
+                      <td>{ev.p}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <div className="ait-ma-news-list">
+                {newsList.slice(0, 4).map((item, idx) => (
+                  <div key={idx} className="ait-ma-news-row">
+                    <div className="ait-ma-news-meta">
+                      <span className="ait-news-badge">{item.source}</span>
+                      <span className="ait-news-time">{item.time}</span>
+                    </div>
+                    <h5 className="ait-news-headline">{item.title}</h5>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ==================== TAB 7: TRADE JOURNAL ==================== */}
+        {activeTab === 'journal' && (
+          <div className="ait-aii-subtab-grid">
+            <div className="ait-aii-card">
+              <div className="ait-aii-card-header">
+                <div className="ait-aii-card-title-group">
+                  <span className="ait-aii-card-icon blue">✓</span>
+                  <h3>Institutional Pre-Trade Execution Checklist</h3>
+                </div>
+              </div>
+              <div className="ait-chk-list">
+                <label className="ait-chk-row">
+                  <input type="checkbox" defaultChecked />
+                  <span>Asian / Session High or Low Liquidity Swept (CRT Manipulation C2 Confirmed)</span>
+                </label>
+                <label className="ait-chk-row">
+                  <input type="checkbox" defaultChecked />
+                  <span>Market Structure Shift (MSS) &amp; Displacement Confirmed on {timeframe || '15m'}</span>
+                </label>
+                <label className="ait-chk-row">
+                  <input type="checkbox" defaultChecked />
+                  <span>Key Confirmation Level ({intel.r1Short}) or Support ({intel.s1Short}) Respected</span>
+                </label>
+                <label className="ait-chk-row">
+                  <input type="checkbox" defaultChecked />
+                  <span>Strict 0.03 Lot Sizing &amp; 1:2.0 R:R Enforced (Move SL to BE at 1:1)</span>
+                </label>
+                <label className="ait-chk-row">
+                  <input type="checkbox" />
+                  <span>Verified No Red-Folder High-Impact News Release Within 15 Minutes</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
-

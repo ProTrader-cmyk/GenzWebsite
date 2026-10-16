@@ -1263,6 +1263,7 @@ export default function AILiveChartTerminal({
             <MarketAnalysisPanel
               currentAsset={currentAsset}
               livePrice={livePrice}
+              timeframe={TIMEFRAMES.find((tf) => tf.id === timeframe)?.label || '15m'}
               activeSession={activeSession}
               isKhmer={isKhmer}
               marketAnalysis={marketAnalysis}
