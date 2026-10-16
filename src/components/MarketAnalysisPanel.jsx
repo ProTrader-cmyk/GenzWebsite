@@ -111,10 +111,10 @@ function buildDefaultSignal(pair, price, style = 'scalp') {
       time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Phnom_Penh' }),
     };
   } else {
-    // Day trade CRT standard: 1000 pts SL ($10.00), 2000 pts TP ($20.00)
+    // Day trade CRT standard: 1000 pts SL ($10.00), strictly 1:2+ R:R (2000–2500 pts TP = $20.00–$25.00)
     const slDist = isGold ? 10.0 : 0.0035;
-    const tp1Dist = isGold ? 15.0 : 0.0055;
-    const tp2Dist = isGold ? 20.0 : 0.0080;
+    const tp1Dist = isGold ? 20.0 : 0.0070; // 20.0 / 10.0 = 1:2.0 RR (strictly 1:2+)
+    const tp2Dist = isGold ? 25.0 : 0.0090; // 25.0 / 10.0 = 1:2.5 RR
     const beDist = isGold ? 10.0 : 0.0035;
     const tpVal = Number((p + tp1Dist).toFixed(decimals));
     return {
@@ -1312,7 +1312,7 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                       <strong className="ait-pm-sr-val text-emerald ait-mono">
                         ${formatCommaPrice(dayTradeSignal.tp1, decimals)}
                       </strong>
-                      <span className="ait-pm-sr-tag-badge text-emerald">+15 Pts</span>
+                      <span className="ait-pm-sr-tag-badge text-emerald">{isGold ? '+20 Pts (1:2 RR)' : '+70 Pips'}</span>
                     </div>
                   </div>
 
@@ -1324,7 +1324,7 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                       <strong className="ait-pm-sr-val text-emerald ait-mono">
                         ${formatCommaPrice(dayTradeSignal.tp2, decimals)}
                       </strong>
-                      <span className="ait-pm-sr-tag-badge text-emerald">+20 Pts</span>
+                      <span className="ait-pm-sr-tag-badge text-emerald">{isGold ? '+25 Pts (1:2.5 RR)' : '+90 Pips'}</span>
                     </div>
                   </div>
 

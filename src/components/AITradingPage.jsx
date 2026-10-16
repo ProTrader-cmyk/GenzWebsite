@@ -1719,17 +1719,24 @@ export default function AITradingPage({
                 const dir = (sig.direction || sig.action || 'BUY').toUpperCase();
                 const isBuy = dir === 'BUY';
                 const rawEntry = sig.entry ?? sig.entry_price ?? sig.entryPrice ?? sig.price;
-                const rawTp = sig.tp ?? sig.take_profit ?? sig.takeProfit ?? sig.target;
-                const rawSl = sig.sl ?? sig.stop_loss ?? sig.stopLoss;
-                const entry = getDynamicSignalPrice(rawEntry, asset);
-                const tp = getDynamicSignalPrice(rawTp, asset);
-                const sl = getDynamicSignalPrice(rawSl, asset);
-
+                const isScalp = isSignalScalp(sig);
                 const entryNum = parseFloat(String(rawEntry ?? '').replace(/,/g, '')) || 0;
-                const tpNum = parseFloat(String(rawTp ?? '').replace(/,/g, '')) || 0;
-                const slNum = parseFloat(String(rawSl ?? '').replace(/,/g, '')) || 0;
-                const slDist = entryNum > 0 && slNum > 0 ? Math.abs(entryNum - slNum) : 10.0;
-                const tpDist = entryNum > 0 && tpNum > 0 ? Math.abs(tpNum - entryNum) : 20.0;
+                let slNum = parseFloat(String(rawSl ?? '').replace(/,/g, '')) || 0;
+                let tpNum = parseFloat(String(rawTp ?? '').replace(/,/g, '')) || 0;
+
+                let slDist = entryNum > 0 && slNum > 0 ? Math.abs(entryNum - slNum) : (isScalp ? 2.5 : 10.0);
+                let tpDist = entryNum > 0 && tpNum > 0 ? Math.abs(tpNum - entryNum) : (isScalp ? 3.0 : 20.0);
+
+                // 🛑 STRICT REQUIREMENT: Intra trade (Day Trade) must have R:R >= 1:2.0+
+                if (!isScalp && entryNum > 0 && slDist > 0 && tpDist < slDist * 2.0) {
+                  tpDist = slDist * 2.0;
+                  tpNum = isBuy ? entryNum + tpDist : entryNum - tpDist;
+                }
+
+                const entry = getDynamicSignalPrice(rawEntry, asset);
+                const tp = getDynamicSignalPrice(tpNum > 0 ? tpNum : rawTp, asset);
+                const sl = getDynamicSignalPrice(slNum > 0 ? slNum : rawSl, asset);
+
                 const isGoldAsset = asset.includes('XAU') || asset.includes('GOLD');
                 const isForexAsset = asset.includes('EUR') || asset.includes('GBP') || asset.includes('AUD') || asset.includes('JPY');
                 const pipMult = isGoldAsset ? 100 : asset.includes('JPY') ? 100 : isForexAsset ? 10000 : 1;
@@ -1754,7 +1761,6 @@ export default function AITradingPage({
                 const conf = sig.confidence || (isBuy ? 91 : 89);
 
                 const tf = sig.timeframe || sig.mode || '15m';
-                const isScalp = isSignalScalp(sig);
 
                 // Always generate verified institutional confluences that explain WHY we trade,
                 // state 0.03 Lot per trade, and calculate exact TP & SL from the signal's real levels
