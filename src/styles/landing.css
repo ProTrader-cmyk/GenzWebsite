@@ -1563,21 +1563,19 @@ body.light-mode .lnd-ai-telemetry-chip {
 /* =========================================================================
    EXECUTIVE LEADERSHIP TEAM STYLES (CEO, COO, DEV)
    ========================================================================= */
+/* =========================================================================
+   EXECUTIVE LEADERSHIP TEAM STYLES (CEO, COO, DEV) - CRISP & RAZOR-SHARP
+   ========================================================================= */
 .lnd-team-section {
   position: relative;
-  padding: 80px 0 60px;
-}
-
-.lnd-team-section {
-  position: relative;
-  padding: 100px 0 110px;
-  background: radial-gradient(ellipse at 50% 20%, rgba(14, 165, 233, 0.05) 0%, transparent 60%);
+  padding: 90px 0 100px;
+  background: #030712;
 }
 
 .lnd-team-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 28px;
+  gap: 26px;
   max-width: 1160px;
   margin: 0 auto;
 }
@@ -1585,162 +1583,102 @@ body.light-mode .lnd-ai-telemetry-chip {
 .lnd-team-card {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(175deg, rgba(14, 21, 38, 0.88) 0%, rgba(7, 11, 20, 0.96) 100%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 24px;
-  padding: 38px 24px 28px;
+  background: #090e1a !important;
+  border: 1px solid rgba(255, 255, 255, 0.09) !important;
+  border-radius: 20px;
+  padding: 34px 22px 26px;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  transform: translateZ(0);
-  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.28s ease, box-shadow 0.28s ease;
-  box-shadow:
-    0 24px 50px -20px rgba(0, 0, 0, 0.85),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.24s ease, box-shadow 0.24s ease;
+  box-shadow: 0 16px 36px -12px rgba(0, 0, 0, 0.8) !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Atmospheric Top Light Bars */
+/* Atmospheric Top Accent Bars (Crisp & Solid) */
 .lnd-team-card::before {
   content: '';
   position: absolute;
   top: 0;
-  left: 15%;
-  right: 15%;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(0, 242, 254, 0.8), transparent);
-  pointer-events: none;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #00f2fe;
   z-index: 3;
 }
 
 .lnd-team-card-coo::before {
-  background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.85), transparent);
+  background: #10b981;
 }
 
 .lnd-team-card-dev::before {
-  background: linear-gradient(90deg, transparent, rgba(168, 85, 247, 0.85), transparent);
-}
-
-/* Top Ambient Radial Glow inside Card */
-.lnd-team-card-ambient {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 240px;
-  height: 140px;
-  border-radius: 50%;
-  pointer-events: none;
-  opacity: 0.5;
-  filter: blur(35px);
-  transition: opacity 0.3s ease;
-}
-
-.lnd-team-card-ceo .lnd-team-card-ambient {
-  background: radial-gradient(circle, rgba(0, 242, 254, 0.35) 0%, transparent 70%);
-}
-
-.lnd-team-card-coo .lnd-team-card-ambient {
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.35) 0%, transparent 70%);
-}
-
-.lnd-team-card-dev .lnd-team-card-ambient {
-  background: radial-gradient(circle, rgba(168, 85, 247, 0.35) 0%, transparent 70%);
+  background: #a855f7;
 }
 
 .lnd-team-card:hover {
-  transform: translateY(-8px);
+  transform: translateY(-6px);
 }
 
 .lnd-team-card-ceo:hover {
-  border-color: rgba(0, 242, 254, 0.45) !important;
+  border-color: rgba(0, 242, 254, 0.4) !important;
   box-shadow:
-    0 32px 64px -16px rgba(0, 0, 0, 0.9),
-    0 0 35px rgba(0, 242, 254, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+    0 22px 48px -12px rgba(0, 0, 0, 0.85),
+    0 0 24px rgba(0, 242, 254, 0.15) !important;
 }
 
 .lnd-team-card-coo:hover {
-  border-color: rgba(16, 185, 129, 0.45) !important;
+  border-color: rgba(16, 185, 129, 0.4) !important;
   box-shadow:
-    0 32px 64px -16px rgba(0, 0, 0, 0.9),
-    0 0 35px rgba(16, 185, 129, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+    0 22px 48px -12px rgba(0, 0, 0, 0.85),
+    0 0 24px rgba(16, 185, 129, 0.15) !important;
 }
 
 .lnd-team-card-dev:hover {
-  border-color: rgba(168, 85, 247, 0.45) !important;
+  border-color: rgba(168, 85, 247, 0.4) !important;
   box-shadow:
-    0 32px 64px -16px rgba(0, 0, 0, 0.9),
-    0 0 35px rgba(168, 85, 247, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+    0 22px 48px -12px rgba(0, 0, 0, 0.85),
+    0 0 24px rgba(168, 85, 247, 0.15) !important;
 }
 
-/* Avatar Containers & Glow */
+/* Avatar Containers & Crisp Rings */
 .lnd-team-avatar-container {
   position: relative;
-  width: 112px;
-  height: 112px;
-  margin-bottom: 18px;
-}
-
-.lnd-team-avatar-glow {
-  position: absolute;
-  inset: -6px;
-  border-radius: 50%;
-  pointer-events: none;
-  opacity: 0.6;
-  filter: blur(12px);
-  transition: opacity 0.3s ease;
-}
-
-.lnd-team-card:hover .lnd-team-avatar-glow {
-  opacity: 0.9;
-}
-
-.lnd-glow-ceo {
-  background: radial-gradient(circle, rgba(0, 242, 254, 0.6), transparent 70%);
-}
-
-.lnd-glow-coo {
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.6), transparent 70%);
-}
-
-.lnd-glow-dev {
-  background: radial-gradient(circle, rgba(168, 85, 247, 0.6), transparent 70%);
+  width: 108px;
+  height: 108px;
+  margin-bottom: 16px;
 }
 
 .lnd-team-avatar-img {
-  width: 112px;
-  height: 112px;
+  width: 108px;
+  height: 108px;
   border-radius: 50%;
   object-fit: cover;
   object-position: center 15%;
   display: block;
   position: relative;
   z-index: 2;
-  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .lnd-team-card:hover .lnd-team-avatar-img {
-  transform: scale(1.04);
+  transform: scale(1.03);
 }
 
 .lnd-avatar-ceo {
   border: 3px solid #00f2fe;
-  box-shadow: 0 0 22px rgba(0, 242, 254, 0.4);
+  box-shadow: 0 0 0 4px rgba(0, 242, 254, 0.18), 0 8px 20px rgba(0, 0, 0, 0.6);
 }
 
 .lnd-avatar-coo {
   border: 3px solid #10b981;
-  box-shadow: 0 0 22px rgba(16, 185, 129, 0.4);
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.18), 0 8px 20px rgba(0, 0, 0, 0.6);
 }
 
 .lnd-avatar-dev {
   border: 3px solid #a855f7;
-  box-shadow: 0 0 22px rgba(168, 85, 247, 0.4);
+  box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.18), 0 8px 20px rgba(0, 0, 0, 0.6);
 }
 
 /* Status Dot with Radar Pulse */
@@ -1828,11 +1766,12 @@ body.light-mode .lnd-ai-telemetry-chip {
 
 .lnd-team-bio {
   font-size: 13px;
-  line-height: 1.65;
+  line-height: 1.55;
   color: #94a3b8;
-  margin: 0 0 18px;
+  margin: 0 0 16px;
   flex: 1;
   z-index: 2;
+  max-width: 290px;
 }
 
 /* Core Focus Badges */

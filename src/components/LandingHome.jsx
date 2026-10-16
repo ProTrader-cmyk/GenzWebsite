@@ -976,17 +976,15 @@ export default function LandingHome({
             </h2>
             <p className="lnd-section-sub">
               {isKhmer
-                ? 'រួមបញ្ចូលគ្នារវាងអ្នកជំនាញយុទ្ធសាស្ត្រទីផ្សារស្ថាប័ន SMC អ្នកគ្រប់គ្រងហានិភ័យ និងវិស្វករប្រព័ន្ធ AI ដើម្បីផ្តល់ប្រៀបឈ្នះពិតប្រាកដដល់អ្នកជួញដូរ។'
-                : 'Combining institutional SMC market strategy, disciplined risk operations, and high-speed AI engineering to give you an undeniable edge.'}
+                ? 'យុទ្ធសាស្ត្រស្ថាប័ន SMC ការគ្រប់គ្រងហានិភ័យ និងបច្ចេកវិទ្យា AI ជំនាន់ថ្មី។'
+                : 'Institutional SMC strategy, capital risk control, and high-speed AI engineering.'}
             </p>
           </div>
 
           <div className="lnd-team-grid">
             {/* Member 1: CEO - Veng Sophea */}
             <div className="lnd-team-card lnd-team-card-ceo">
-              <div className="lnd-team-card-ambient" />
               <div className="lnd-team-avatar-container">
-                <div className="lnd-team-avatar-glow lnd-glow-ceo" />
                 <img
                   src={pheaImg}
                   alt="Veng Sophea - CEO & Founder"
@@ -1007,8 +1005,8 @@ export default function LandingHome({
 
               <p className="lnd-team-bio">
                 {isKhmer
-                  ? 'ឯកទេសវិភាគរចនាសម្ព័ន្ធទីផ្សារ SMC/ICT កំណត់តំបន់ទុនស្ថាប័ន និងបណ្តុះបណ្តាលផ្នត់គំនិតជួញដូរប្រកបដោយវិន័យខ្ពស់។'
-                  : 'Specializes in institutional SMC/ICT order flow, liquidity mapping, and developing disciplined execution psychology.'}
+                  ? 'ឯកទេសរចនាសម្ព័ន្ធទីផ្សារ SMC/ICT និងការគ្រប់គ្រងផ្នត់គំនិតជួញដូរ។'
+                  : 'Specializes in institutional SMC/ICT order flow, liquidity mapping & trading psychology.'}
               </p>
 
               {/* Core Focus Badges */}
@@ -1034,9 +1032,7 @@ export default function LandingHome({
 
             {/* Member 2: COO - Lim Sunhour */}
             <div className="lnd-team-card lnd-team-card-coo">
-              <div className="lnd-team-card-ambient" />
               <div className="lnd-team-avatar-container">
-                <div className="lnd-team-avatar-glow lnd-glow-coo" />
                 <img
                   src={hourImg}
                   alt="Lim Sunhour - COO & Strategy Lead"
@@ -1057,8 +1053,8 @@ export default function LandingHome({
 
               <p className="lnd-team-bio">
                 {isKhmer
-                  ? 'ដឹកនាំការគ្រប់គ្រងហានិភ័យដើមទុន វិន័យជួញដូរជាក់ស្តែង និងត្រួតពិនិត្យប្រតិបត្តិការប្រព័ន្ធជួញដូរទូទាំងស្ថាប័ន។'
-                  : 'Directs trade execution discipline, strict capital risk management, and overall platform operational infrastructure.'}
+                  ? 'គ្រប់គ្រងហានិភ័យដើមទុន វិន័យជួញដូរ និងប្រតិបត្តិការ Trading Desk។'
+                  : 'Directs trade execution discipline, capital risk management & desk operations.'}
               </p>
 
               {/* Core Focus Badges */}
@@ -1078,9 +1074,7 @@ export default function LandingHome({
 
             {/* Member 3: DEV - Sen Visal */}
             <div className="lnd-team-card lnd-team-card-dev">
-              <div className="lnd-team-card-ambient" />
               <div className="lnd-team-avatar-container">
-                <div className="lnd-team-avatar-glow lnd-glow-dev" />
                 <img
                   src={visalImg}
                   alt="Sen Visal - Lead AI & Software Engineer"
@@ -1101,8 +1095,8 @@ export default function LandingHome({
 
               <p className="lnd-team-bio">
                 {isKhmer
-                  ? 'អភិវឌ្ឍន៍ប្រព័ន្ធក្បួនដោះស្រាយ Pip Engine AI ស្ថានីយវិភាគបន្តផ្ទាល់ និងប្រព័ន្ធទិន្នន័យទីផ្សារស្វ័យប្រវត្តិ។'
-                  : 'Architects the Pip Engine AI models, real-time live charting terminal, and high-frequency market pipelines.'}
+                  ? 'អភិវឌ្ឍន៍ប្រព័ន្ធ Pip AI ស្ថានីយវិភាគផ្ទាល់ និងប្រព័ន្ធទិន្នន័យទីផ្សារ។'
+                  : 'Architects Pip Engine AI models, live charting terminal & data streams.'}
               </p>
 
               {/* Core Focus Badges */}
