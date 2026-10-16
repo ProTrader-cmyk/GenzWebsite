@@ -466,6 +466,8 @@ export default function AITradingPage({
               opened: `${dateStr}, ${timeStr} GMT+7`,
               publishedAt: timeMs,
               _timeMs: timeMs,
+              lotSize: data.lot_size || data.lotSize || 0.03,
+              lot: data.lot_size || data.lotSize || 0.03,
               isFirestore: true,
               isReal: true,
             });

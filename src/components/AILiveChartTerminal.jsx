@@ -309,27 +309,58 @@ export default function AILiveChartTerminal({
         ? 1
         : 2;
 
-  // Real-time live P&L and target distance meter for the active position
+  // Real-time live P&L and target distance meter for the active position (Locked strictly to 0.03 lot size)
+  const POSITION_LOT_SIZE = 0.03;
+
   const setupPnl = useMemo(() => {
     if (!currentActiveSetup || !livePrice) return null;
     const isBuy = (currentActiveSetup.direction || 'BUY').toUpperCase() === 'BUY';
     const entry = Number(currentActiveSetup.entry);
     const tp = Number(currentActiveSetup.tp);
+    const sl = Number(currentActiveSetup.sl);
     const curr = Number(livePrice);
     const isGold = currentPairNorm.includes('XAU');
-    const isForex = currentPairNorm.includes('EUR') || currentPairNorm.includes('GBP');
-    const mult = isGold ? 10 : isForex ? 10000 : 1;
+    const isForex = currentPairNorm.includes('EUR') || currentPairNorm.includes('GBP') || currentPairNorm.includes('AUD');
+    const isJpy = currentPairNorm.includes('JPY');
+
+    const mult = isGold ? 10 : isForex ? 10000 : isJpy ? 100 : 1;
 
     const diff = isBuy ? curr - entry : entry - curr;
     const pips = diff * mult;
     const targetDiff = Math.abs(tp - entry);
+    const riskDiff = Math.abs(entry - sl);
     const progressPct = targetDiff > 0 ? Math.min(100, Math.max(0, Math.round((Math.max(0, diff) / targetDiff) * 100))) : 50;
+
+    // Real Dollar P&L calculation strictly for 0.03 LOT SIZE
+    // For Gold (XAUUSD): 1 standard lot = 100 oz ($100/pt). 0.03 lot = 3 oz ($3.00/pt)
+    // For Forex: 1 standard lot = 100,000 units ($10/pip). 0.03 lot = $0.30/pip
+    let dollarPnl = 0;
+    let tpProfitUsd = 0;
+    let slLossUsd = 0;
+
+    if (isGold) {
+      dollarPnl = diff * 100 * POSITION_LOT_SIZE; // $3.00 per point
+      tpProfitUsd = targetDiff * 100 * POSITION_LOT_SIZE;
+      slLossUsd = riskDiff * 100 * POSITION_LOT_SIZE;
+    } else if (isForex || isJpy) {
+      dollarPnl = pips * 0.30;
+      tpProfitUsd = (targetDiff * mult) * 0.30;
+      slLossUsd = (riskDiff * mult) * 0.30;
+    } else {
+      dollarPnl = diff * POSITION_LOT_SIZE;
+      tpProfitUsd = targetDiff * POSITION_LOT_SIZE;
+      slLossUsd = riskDiff * POSITION_LOT_SIZE;
+    }
 
     return {
       pips: pips >= 0 ? `+${pips.toFixed(1)}` : pips.toFixed(1),
-      isProfit: pips >= 0,
+      isProfit: dollarPnl >= 0,
       progressPct,
-      pts: diff >= 0 ? `+$${diff.toFixed(2)}` : `-$${Math.abs(diff).toFixed(2)}`,
+      pts: diff >= 0 ? `+${diff.toFixed(2)} pts` : `-${Math.abs(diff).toFixed(2)} pts`,
+      dollarPnl: dollarPnl >= 0 ? `+$${dollarPnl.toFixed(2)}` : `-$${Math.abs(dollarPnl).toFixed(2)}`,
+      tpProfitUsd: tpProfitUsd > 0 ? `+$${tpProfitUsd.toFixed(2)}` : '',
+      slLossUsd: slLossUsd > 0 ? `-$${slLossUsd.toFixed(2)}` : '',
+      lotSize: POSITION_LOT_SIZE,
     };
   }, [currentActiveSetup, livePrice, currentPairNorm]);
 
@@ -348,6 +379,11 @@ export default function AILiveChartTerminal({
 
     const hitTp = isBuy ? curr >= tp : curr <= tp;
     const hitSl = isBuy ? curr <= sl : curr >= sl;
+    const isGold = currentPairNorm.includes('XAU');
+    const tpPts = Math.abs(tp - entry);
+    const slPts = Math.abs(entry - sl);
+    const tpProfitUsd = isGold ? tpPts * 100 * 0.03 : tpPts * 10;
+    const slLossUsd = isGold ? slPts * 100 * 0.03 : slPts * 10;
 
     if (hitTp) {
       setClosedSignalIds((prev) => new Set(prev).add(sId));
@@ -355,8 +391,8 @@ export default function AILiveChartTerminal({
       setRecentOutcomeNotice({
         type: 'tp',
         text: isKhmer
-          ? `✓ TAKE PROFIT HIT • +${Math.abs(tp - entry).toFixed(1)} Pts • Position Closed!`
-          : `✓ TAKE PROFIT HIT • +${Math.abs(tp - entry).toFixed(1)} Pts • Position Closed!`,
+          ? `✓ TAKE PROFIT HIT • +$${tpProfitUsd.toFixed(2)} (0.03 Lot) • Position Closed!`
+          : `✓ TAKE PROFIT HIT • +$${tpProfitUsd.toFixed(2)} (0.03 Lot) • Position Closed!`,
       });
       try {
         updateSignalStatus(sId, 'tp').catch(() => {});
@@ -370,8 +406,8 @@ export default function AILiveChartTerminal({
       setRecentOutcomeNotice({
         type: 'sl',
         text: isKhmer
-          ? `✕ STOP LOSS HIT • -${Math.abs(entry - sl).toFixed(1)} Pts • Position Closed!`
-          : `✕ STOP LOSS HIT • -${Math.abs(entry - sl).toFixed(1)} Pts • Position Closed!`,
+          ? `✕ STOP LOSS HIT • -$${slLossUsd.toFixed(2)} (0.03 Lot) • Position Closed!`
+          : `✕ STOP LOSS HIT • -$${slLossUsd.toFixed(2)} (0.03 Lot) • Position Closed!`,
       });
       try {
         updateSignalStatus(sId, 'sl').catch(() => {});
@@ -381,7 +417,7 @@ export default function AILiveChartTerminal({
       }, 4500);
       return () => clearTimeout(timer);
     }
-  }, [livePrice, currentActiveSetup, isMuted, isKhmer]);
+  }, [livePrice, currentActiveSetup, isMuted, isKhmer, currentPairNorm]);
 
   const handleCloseSetupManual = (e) => {
     e?.stopPropagation?.();
@@ -1021,6 +1057,7 @@ export default function AILiveChartTerminal({
                     <span className="pip-auto-setup-pulse" />
                     <span className="pip-auto-setup-title">AUTO SETUP</span>
                     <span style={{ fontSize: 9, color: 'var(--mute)' }}>{currentAsset.pair}</span>
+                    <span className="pip-setup-lot-badge">0.03 LOT</span>
                   </div>
                   <div className="pip-auto-setup-actions">
                     <button
@@ -1050,6 +1087,9 @@ export default function AILiveChartTerminal({
                       <span className="pip-setup-dir-tag">
                         {currentActiveSetup.direction?.toUpperCase() === 'SELL' ? '▼ SELL / SHORT' : '▲ BUY / LONG'}
                       </span>
+                      <span className="pip-setup-lot-tag">
+                        0.03 LOT
+                      </span>
                       <span className="pip-setup-rr-tag">
                         R:R {currentActiveSetup.rr || '1:2.0'}
                       </span>
@@ -1059,12 +1099,12 @@ export default function AILiveChartTerminal({
                     <div className="pip-setup-matrix">
                       <div className="pip-setup-matrix-row tp-row">
                         <span className="pip-setup-matrix-lbl">TAKE PROFIT (TP)</span>
-                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span className="pip-setup-matrix-val">
                             ${formatSpotPrice(currentAsset.pair, currentActiveSetup.tp)}
                           </span>
-                          <span className="pip-setup-matrix-dist" style={{ color: '#10B981' }}>
-                            +{Math.abs(Number(currentActiveSetup.tp) - Number(currentActiveSetup.entry)).toFixed(decimals)}
+                          <span className="pip-setup-matrix-dist" style={{ color: '#10B981', fontWeight: 700 }}>
+                            {setupPnl?.tpProfitUsd ? `${setupPnl.tpProfitUsd} (+${Math.abs(Number(currentActiveSetup.tp) - Number(currentActiveSetup.entry)).toFixed(decimals)})` : `+${Math.abs(Number(currentActiveSetup.tp) - Number(currentActiveSetup.entry)).toFixed(decimals)}`}
                           </span>
                         </div>
                       </div>
@@ -1078,12 +1118,12 @@ export default function AILiveChartTerminal({
 
                       <div className="pip-setup-matrix-row sl-row">
                         <span className="pip-setup-matrix-lbl">STOP LOSS (SL)</span>
-                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span className="pip-setup-matrix-val">
                             ${formatSpotPrice(currentAsset.pair, currentActiveSetup.sl)}
                           </span>
-                          <span className="pip-setup-matrix-dist" style={{ color: '#EF4444' }}>
-                            -{Math.abs(Number(currentActiveSetup.entry) - Number(currentActiveSetup.sl)).toFixed(decimals)}
+                          <span className="pip-setup-matrix-dist" style={{ color: '#EF4444', fontWeight: 700 }}>
+                            {setupPnl?.slLossUsd ? `${setupPnl.slLossUsd} (-${Math.abs(Number(currentActiveSetup.entry) - Number(currentActiveSetup.sl)).toFixed(decimals)})` : `-${Math.abs(Number(currentActiveSetup.entry) - Number(currentActiveSetup.sl)).toFixed(decimals)}`}
                           </span>
                         </div>
                       </div>
@@ -1102,9 +1142,9 @@ export default function AILiveChartTerminal({
                     {setupPnl && (
                       <div className="pip-setup-pnl-box">
                         <div className="pip-setup-pnl-top">
-                          <span className="pip-setup-pnl-lbl">LIVE STATUS:</span>
+                          <span className="pip-setup-pnl-lbl">LIVE STATUS (0.03 LOT):</span>
                           <span className={`pip-setup-pnl-val ${setupPnl.isProfit ? 'profit' : 'loss'}`}>
-                            {setupPnl.pts} ({setupPnl.pips} pips)
+                            {setupPnl.dollarPnl} ({setupPnl.pips} pips)
                           </span>
                         </div>
                         <div className="pip-setup-pnl-progress">
