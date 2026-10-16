@@ -981,12 +981,12 @@ export default function LandingHome({
             </span>
             <h2 className="lnd-section-title">
               {isKhmer
-                ? 'ថ្នាក់ដឹកនាំនៅពីក្រោយភាពជោគជ័យនៃ GenZ Trader'
+                ? 'ក្រុមដឹកនាំនៅពីក្រោយភាពជោគជ័យរបស់ GenZ Trader'
                 : 'The Leadership Driving Your Trading Edge'}
             </h2>
             <p className="lnd-section-sub">
               {isKhmer
-                ? 'យុទ្ធសាស្ត្រស្ថាប័ន SMC ការគ្រប់គ្រងហានិភ័យ និងបច្ចេកវិទ្យា AI ជំនាន់ថ្មី។'
+                ? 'យុទ្ធសាស្ត្រ SMC កម្រិតស្ថាប័ន ការគ្រប់គ្រងហានិភ័យ និងបច្ចេកវិទ្យា AI ជំនាន់ថ្មី។'
                 : 'Institutional SMC strategy, capital risk control, and high-speed AI engineering.'}
             </p>
           </div>
@@ -1015,7 +1015,7 @@ export default function LandingHome({
 
               <p className="lnd-team-bio">
                 {isKhmer
-                  ? 'ឯកទេសរចនាសម្ព័ន្ធទីផ្សារ SMC/ICT និងការគ្រប់គ្រងផ្នត់គំនិតជួញដូរ។'
+                  ? 'ជំនាញឯកទេសខាងរចនាសម្ព័ន្ធទីផ្សារ SMC/ICT និងចិត្តវិទ្យាជួញដូរផ្សារ។'
                   : 'Specializes in institutional SMC/ICT order flow, liquidity mapping & trading psychology.'}
               </p>
 
@@ -1058,12 +1058,12 @@ export default function LandingHome({
 
               <h3 className="lnd-team-name">Lim Sunhour</h3>
               <p className="lnd-team-title">
-                {isKhmer ? 'COO & ប្រធានយុទ្ធសាស្ត្រប្រតិបត្តិការ' : 'COO & Strategy Lead'}
+                {isKhmer ? 'COO & ប្រធានផ្នែកយុទ្ធសាស្ត្រ និងប្រតិបត្តិការ' : 'COO & Strategy Lead'}
               </p>
 
               <p className="lnd-team-bio">
                 {isKhmer
-                  ? 'គ្រប់គ្រងហានិភ័យដើមទុន វិន័យជួញដូរ និងប្រតិបត្តិការ Trading Desk។'
+                  ? 'ទទួលបន្ទុកការគ្រប់គ្រងហានិភ័យដើមទុន និងវិស័យប្រតិបត្តិនៅ Trading Desk។'
                   : 'Directs trade execution discipline, capital risk management & desk operations.'}
               </p>
 
@@ -1100,19 +1100,19 @@ export default function LandingHome({
 
               <h3 className="lnd-team-name">Sen Visal</h3>
               <p className="lnd-team-title">
-                {isKhmer ? 'ប្រធានវិស្វករ AI & Software' : 'Lead AI & Software Engineer'}
+                {isKhmer ? 'ប្រធានផ្នែក AI និង Software' : 'Lead AI & Software Engineer'}
               </p>
 
               <p className="lnd-team-bio">
                 {isKhmer
-                  ? 'អភិវឌ្ឍន៍ប្រព័ន្ធ Pip AI ស្ថានីយវិភាគផ្ទាល់ និងប្រព័ន្ធទិន្នន័យទីផ្សារ។'
+                  ? 'អភិវឌ្ឍប្រព័ន្ធ Pip AI សម្រាប់ស្កេនទីផ្សារបែបពេលវេលាជាក់ស្តែង និងវិភាគទិន្នន័យទីផ្សារ។'
                   : 'Architects Pip Engine AI models, live charting terminal & data streams.'}
               </p>
 
               {/* Core Focus Badges */}
               <div className="lnd-team-focus-tags">
                 <span className="lnd-focus-tag">{isKhmer ? 'Pip AI Engine' : 'Pip AI Engine'}</span>
-                <span className="lnd-focus-tag">{isKhmer ? 'ទិន្នន័យផ្ទាល់ Real-Time' : 'Live Data Streams'}</span>
+                <span className="lnd-focus-tag">{isKhmer ? 'ទិន្នន័យទាន់ពេលវេលា (Real-Time)' : 'Live Data Streams'}</span>
                 <span className="lnd-focus-tag">{isKhmer ? 'Full-Stack Architecture' : 'Full-Stack Systems'}</span>
               </div>
 
