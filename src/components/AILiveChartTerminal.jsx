@@ -92,6 +92,47 @@ function loadTradingViewScript() {
   return tvScriptPromise;
 }
 
+// Strict Helper: In-Chart Auto Setup is EXCLUSIVELY for Intra Trade / Day Trade (Never for Scalp)
+export function isIntraTradeSignal(sig) {
+  if (!sig) return false;
+  // If explicitly daytrade or intra
+  if (sig.style === 'daytrade' || sig.style === 'intra' || sig.style === 'intraday') return true;
+  // If explicitly scalping
+  if (sig.style === 'scalping' || sig.style === 'scalp') return false;
+
+  const model = String(sig.model || '').toLowerCase();
+  const mode = String(sig.mode || '').toLowerCase();
+  const id = String(sig.id || '').toLowerCase();
+  const tf = String(sig.timeframe || '').toLowerCase();
+
+  // 1. Strictly exclude any scalp characteristics
+  if (
+    id.includes('scalp') ||
+    model.includes('scalp') ||
+    mode.includes('scalp') ||
+    tf.includes('1m') ||
+    tf.includes('5m')
+  ) {
+    return false;
+  }
+
+  // 2. Identify intra trade / day trade / CRT models
+  if (
+    id.includes('daytrade') ||
+    model.includes('crt') ||
+    mode.includes('crt') ||
+    model.includes('intraday') ||
+    mode.includes('day trade') ||
+    tf.includes('15m') ||
+    tf.includes('1h') ||
+    tf.includes('4h')
+  ) {
+    return true;
+  }
+
+  return true;
+}
+
 export default function AILiveChartTerminal({
   user,
   onSignalDispatched,
@@ -286,15 +327,36 @@ export default function AILiveChartTerminal({
   const [marketExtremes, setMarketExtremes] = useState(null);
   const [marketAnalysis, setMarketAnalysis] = useState(null);
 
-  // Locate active trade setup for the currently displayed chart asset
+  // Locate active trade setup for the currently displayed chart asset (STRICTLY INTRA TRADE ONLY)
   const currentActiveSetup = useMemo(() => {
-    const list = activeSignals && activeSignals.length > 0 ? activeSignals : liveSignals;
-    return list.find((s) => {
+    let candidateSignals = [];
+    const baseList = activeSignals && activeSignals.length > 0 ? activeSignals : liveSignals;
+    if (Array.isArray(baseList)) {
+      candidateSignals.push(...baseList);
+    }
+
+    // Include locked intra trade signal from localStorage if available
+    try {
+      const storedDayTradeRaw =
+        localStorage.getItem(`genz_locked_daytrade_${currentAsset.pair}`) ||
+        localStorage.getItem(`genz_locked_daytrade_${currentPairNorm}`);
+      if (storedDayTradeRaw) {
+        const storedDay = JSON.parse(storedDayTradeRaw);
+        if (storedDay && !candidateSignals.some((s) => s?.id === storedDay.id)) {
+          candidateSignals.push(storedDay);
+        }
+      }
+    } catch {}
+
+    return candidateSignals.find((s) => {
       if (!s) return false;
       const sPair = (s.pair || s.symbol || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
       const isMatch = sPair === currentPairNorm || 
         (currentPairNorm === 'XAUUSD' && (sPair.includes('XAU') || sPair.includes('GOLD')));
       if (!isMatch) return false;
+
+      // 🛑 STRICT REQUIREMENT: Auto setup on the chart is ONLY for Intra Trade, NEVER for Scalp!
+      if (!isIntraTradeSignal(s)) return false;
 
       if (closedSignalIds.has(s.id)) return false;
       const st = (s.status || 'active').toLowerCase();
@@ -324,7 +386,7 @@ export default function AILiveChartTerminal({
 
       return true;
     }) || null;
-  }, [activeSignals, liveSignals, currentPairNorm, closedSignalIds, marketExtremes, marketAnalysis, livePrice, hasVerifiedLivePrice]);
+  }, [activeSignals, liveSignals, currentPairNorm, currentAsset.pair, closedSignalIds, marketExtremes, marketAnalysis, livePrice, hasVerifiedLivePrice]);
 
   // Precision decimals for current asset
   const decimals = currentPairNorm.includes('EUR') || currentPairNorm.includes('GBP')
@@ -394,10 +456,11 @@ export default function AILiveChartTerminal({
   useEffect(() => {
     if (!hasVerifiedLivePrice) return;
 
-    // Find active setup candidate from list, even if currentActiveSetup already suppressed it
+    // Find active intra trade setup candidate from list, even if currentActiveSetup already suppressed it
     const list = activeSignals && activeSignals.length > 0 ? activeSignals : liveSignals;
     const targetSetup = currentActiveSetup || list.find((s) => {
       if (!s || closedSignalIds.has(s.id)) return false;
+      if (!isIntraTradeSignal(s)) return false;
       const sPair = (s.pair || s.symbol || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
       const isMatch = sPair === currentPairNorm || 
         (currentPairNorm === 'XAUUSD' && (sPair.includes('XAU') || sPair.includes('GOLD')));
@@ -471,23 +534,6 @@ export default function AILiveChartTerminal({
       return () => clearTimeout(timer);
     }
   }, [hasVerifiedLivePrice, livePrice, marketExtremes, marketAnalysis, currentActiveSetup, activeSignals, liveSignals, isMuted, isKhmer, currentPairNorm, closedSignalIds]);
-
-  const handleCloseSetupManual = (e) => {
-    e?.stopPropagation?.();
-    if (!currentActiveSetup) return;
-    const sId = currentActiveSetup.id;
-    setClosedSignalIds((prev) => new Set(prev).add(sId));
-    setRecentOutcomeNotice({
-      type: 'closed',
-      text: isKhmer ? '✓ Position ត្រូវបានបិទដោយជោគជ័យ' : '✓ Position Closed Successfully',
-    });
-    try {
-      updateSignalStatus(sId, 'closed').catch(() => {});
-    } catch {}
-    setTimeout(() => {
-      setRecentOutcomeNotice(null);
-    }, 3500);
-  };
 
   // Real-Time 15M Market Analysis State (Synchronized silently in background across MSOB & Market Analysis Panel)
   const isReanalyzing = false;
@@ -819,9 +865,9 @@ export default function AILiveChartTerminal({
             type="button"
             className={`ait-chart-engine-btn ${autoSetupActive ? 'active' : ''}`}
             onClick={() => setAutoSetupActive((v) => !v)}
-            title="Toggle In-Chart Auto Trade Setup Overlay"
+            title="Toggle In-Chart Intra Trade Auto Setup Overlay"
           >
-            🎯 {isKhmer ? 'Auto Setup' : 'Auto Setup'} {currentActiveSetup ? '(1)' : ''}
+            🎯 {isKhmer ? 'Auto Setup (Intra)' : 'Auto Setup (Intra)'} {currentActiveSetup ? '(1)' : ''}
           </button>
 
           {/* Workstation Split View Toggle */}
@@ -1129,7 +1175,7 @@ export default function AILiveChartTerminal({
                 >
                   <div className="pip-auto-setup-title-wrap">
                     <span className="pip-auto-setup-pulse" />
-                    <span className="pip-auto-setup-title">AUTO SETUP</span>
+                    <span className="pip-auto-setup-title">AUTO SETUP (INTRA)</span>
                     <span style={{ fontSize: 9, color: 'var(--mute)' }}>{currentAsset.pair}</span>
                     <span className="pip-setup-lot-badge">0.03 LOT</span>
                   </div>
@@ -1141,14 +1187,6 @@ export default function AILiveChartTerminal({
                       title={isSetupCollapsed ? 'Expand setup' : 'Collapse setup'}
                     >
                       {isSetupCollapsed ? '▼' : '▲'}
-                    </button>
-                    <button
-                      type="button"
-                      className="pip-setup-action-btn"
-                      onClick={handleCloseSetupManual}
-                      title="Close position & remove setup from chart"
-                    >
-                      ✕
                     </button>
                   </div>
                 </div>
@@ -1237,15 +1275,11 @@ export default function AILiveChartTerminal({
                       </div>
                     )}
 
-                    {/* Close Position Button */}
-                    <button
-                      type="button"
-                      className="pip-setup-close-trade-btn"
-                      onClick={handleCloseSetupManual}
-                    >
-                      <span>✕</span>
-                      <span>{isKhmer ? 'បិទ Position (Close Trade)' : 'Close Position'}</span>
-                    </button>
+                    {/* Institutional Auto-Management Status (Strictly managed by algorithm, no manual closure) */}
+                    <div className="pip-setup-locked-footer">
+                      <span className="pip-setup-locked-dot" />
+                      <span>{isKhmer ? 'ដំណើរការស្វ័យប្រវត្តិតាម TP / SL (Protected)' : 'Institutional Position • Runs until TP or SL'}</span>
+                    </div>
                   </>
                 )}
               </div>
