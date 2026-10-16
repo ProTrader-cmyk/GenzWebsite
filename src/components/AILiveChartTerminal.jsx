@@ -279,6 +279,10 @@ export default function AILiveChartTerminal({
   const currentAsset = SYMBOLS.find((s) => s.id === symbolId) || SYMBOLS[0];
   const currentPairNorm = (currentAsset.pair || 'XAUUSD').toUpperCase().replace(/[^A-Z0-9]/g, '');
 
+  // Live Spot Prices
+  const [livePrice, setLivePrice] = useState(currentAsset.defaultPrice);
+  const [priceChangeDirection, setPriceChangeDirection] = useState('neutral');
+
   // Locate active trade setup for the currently displayed chart asset
   const currentActiveSetup = useMemo(() => {
     const list = activeSignals && activeSignals.length > 0 ? activeSignals : liveSignals;
@@ -395,10 +399,6 @@ export default function AILiveChartTerminal({
       setRecentOutcomeNotice(null);
     }, 3500);
   };
-
-  // Live Spot Prices
-  const [livePrice, setLivePrice] = useState(currentAsset.defaultPrice);
-  const [priceChangeDirection, setPriceChangeDirection] = useState('neutral');
 
   // Real-Time 15M Market Analysis State (Synchronized across MSOB & Market Analysis Panel)
   const [marketAnalysis, setMarketAnalysis] = useState(null);

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase.js';
-import { fetchLivePrice, formatSpotPrice, subscribeLiveTicks } from '../services/marketPriceService.js';
+import { fetchLivePrice, formatSpotPrice, subscribeLiveTicks, fetchGoldQuoteMetrics } from '../services/marketPriceService.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import Footer from './Footer.jsx';
 import {
@@ -45,26 +45,24 @@ export default function LandingHome({
   const [firestoreSignals, setFirestoreSignals] = useState([]);
 
   useEffect(() => {
-    // 1. Fetch initial live spot price
-    fetchLivePrice('XAUUSD').then((p) => {
-      if (p) setLiveGoldPrice(p);
+    // 1. Fetch initial live spot price and official 24h change (CORS-safe)
+    fetchGoldQuoteMetrics().then((quote) => {
+      if (quote) {
+        if (quote.price) setLiveGoldPrice(quote.price);
+        setGoldChange({
+          pct: quote.pct,
+          isUp: quote.isUp,
+        });
+      } else {
+        fetchLivePrice('XAUUSD').then((p) => {
+          if (p) setLiveGoldPrice(p);
+        });
+      }
+    }).catch(() => {
+      fetchLivePrice('XAUUSD').then((p) => {
+        if (p) setLiveGoldPrice(p);
+      });
     });
-
-    // Fetch official day change
-    fetch('https://query1.finance.yahoo.com/v8/finance/chart/GC=F?interval=1m&range=1d')
-      .then((r) => r.json())
-      .then((d) => {
-        const meta = d?.chart?.result?.[0]?.meta;
-        if (meta?.regularMarketPrice && meta?.chartPreviousClose) {
-          const diff = meta.regularMarketPrice - meta.chartPreviousClose;
-          const pct = (diff / meta.chartPreviousClose) * 100;
-          setGoldChange({
-            pct: `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`,
-            isUp: pct >= 0,
-          });
-        }
-      })
-      .catch(() => {});
 
     // 2. Real-time WebSocket tick stream from TradingView OANDA
     const unsubTicks = subscribeLiveTicks(['XAUUSD'], (prices) => {

@@ -107,6 +107,7 @@ class TradingViewStreamer {
 
       this.ws.onopen = () => {
         this.isConnecting = false;
+        this.reconnectAttempts = 0;
         this.send('set_auth_token', ['unauthorized_user_token']);
         this.sessionId = 'qs_' + Math.random().toString(36).substring(2, 8);
         this.send('quote_create_session', [this.sessionId]);
@@ -214,13 +215,18 @@ class TradingViewStreamer {
 
   scheduleReconnect() {
     if (this.reconnectTimer) return;
+    this.reconnectAttempts = (this.reconnectAttempts || 0) + 1;
+    // Exponential backoff capped at 30s to avoid spamming the console on network blocks
+    const delay = this.reconnectAttempts > 3
+      ? Math.min(30000, 3000 * Math.pow(1.5, this.reconnectAttempts - 3))
+      : 3000;
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
       if (this.listeners.size > 0) {
         this.subscribedSymbols.clear();
         this.connect();
       }
-    }, 3000);
+    }, delay);
   }
 }
 
@@ -246,6 +252,59 @@ export function subscribeGoldMarketSnapshot(callback) {
       updatedAt: Date.now(),
     });
   });
+}
+
+/**
+ * Fetches current Gold spot price and 24h change percent via TradingView CFD scanner.
+ * Fully CORS-compliant and browser-safe (no external CORS proxies or blocked Yahoo calls).
+ */
+export async function fetchGoldQuoteMetrics() {
+  try {
+    const res = await fetch('https://scanner.tradingview.com/cfd/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({
+        symbols: { tickers: ['OANDA:XAUUSD'] },
+        columns: ['close', 'change'],
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const row = data.data?.[0]?.d;
+      if (row && typeof row[0] === 'number') {
+        const price = Math.round(row[0] * 100) / 100;
+        const changePercent = typeof row[1] === 'number' ? row[1] : 0;
+        return {
+          price,
+          changePercent,
+          pct: `${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%`,
+          isUp: changePercent >= 0,
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('[marketPriceService] TV Gold metric error:', err);
+  }
+
+  // Fallback via gold-api.com
+  try {
+    const res = await fetch('https://api.gold-api.com/price/XAU', { cache: 'no-cache' });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && typeof data.price === 'number') {
+        const price = Math.round(data.price * 100) / 100;
+        const changePercent = typeof data.change_percent === 'number' ? data.change_percent : 0;
+        return {
+          price,
+          changePercent,
+          pct: `${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%`,
+          isUp: changePercent >= 0,
+        };
+      }
+    }
+  } catch {}
+
+  return null;
 }
 
 /**
@@ -401,22 +460,6 @@ async function fetchGoldPrice() {
       const data = await res.json();
       if (data && typeof data.price === 'number') {
         return Math.round(data.price * 100) / 100;
-      }
-    }
-  } catch {}
-
-  // Fallback: Yahoo Finance COMEX Gold Futures
-  try {
-    const res = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/GC=F?interval=1m&range=1d', {
-      headers: { 'User-Agent': 'Mozilla/5.0' },
-      cache: 'no-cache',
-    });
-    if (res.ok) {
-      const data = await res.json();
-      const meta = data.chart?.result?.[0]?.meta;
-      const price = meta?.regularMarketPrice;
-      if (typeof price === 'number') {
-        return Math.round(price * 100) / 100;
       }
     }
   } catch {}
