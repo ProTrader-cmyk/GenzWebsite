@@ -663,106 +663,8 @@ export default function AITradingPage({
     return filteredSignals.slice(startIndex, startIndex + PAGE_SIZE);
   }, [filteredSignals, startIndex]);
 
-  // =========================================================================
-  // LIVE PIP AI CO-PILOT & NEURAL REASONING ENGINE (100% Real Market Data)
-  // =========================================================================
-  const [aiThoughtIndex, setAiThoughtIndex] = useState(0);
-  const [copilotPromptInput, setCopilotPromptInput] = useState('');
-  const [activeCopilotKey, setActiveCopilotKey] = useState('xau_live');
-  const [customCopilotQuestion, setCustomCopilotQuestion] = useState('');
-  const [streamedChars, setStreamedChars] = useState(9999);
-
   const liveGoldNum = Number(liveGoldPrice || liveForexPrices.XAUUSD || 4169.73);
   const liveGoldFormatted = formatSpotPrice('XAUUSD', liveGoldNum);
-  const latestRealSignal = deduplicatedSignals[0] || null;
-
-  const neuralThoughts = useMemo(() => {
-    const sigText = latestRealSignal
-      ? `Latest Verified Signal: ${latestRealSignal.pair} ${latestRealSignal.direction} @ $${getDynamicSignalPrice(latestRealSignal.entry, latestRealSignal.pair)} (0.03 Lot • ${latestRealSignal.resultBadge || 'ACTIVE'})`
-      : 'Monitoring M15/M5 candle closes for institutional CRT C2 manipulation sweeps';
-    return [
-      `[NEURAL-SMC v4.2] Streaming OANDA XAU/USD @ $${liveGoldFormatted} • Auditing 15m CRT C1–C2–C3 range & liquidity pools`,
-      `[RISK-ENGINE] Position sizing locked to 0.03 Lot ($3.00/pt on XAUUSD) • Strict 1:2.0 R:R & 1:1 Break-Even protection active`,
-      `[FIRESTORE-SYNC] ${verifiedStats.totalTracked} verified signals tracked • ${verifiedStats.winRateDisplay} Win Rate (${verifiedStats.netPipsDisplay} Net Pips)`,
-      `[SESSION-RADAR] ${activeSession.name} (${activeSession.status}) • ${sigText}`,
-    ];
-  }, [liveGoldFormatted, latestRealSignal, verifiedStats, activeSession]);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setAiThoughtIndex((prev) => (prev + 1) % neuralThoughts.length);
-    }, 4200);
-    return () => clearInterval(timer);
-  }, [neuralThoughts.length]);
-
-  const copilotResponseText = useMemo(() => {
-    const r1 = (liveGoldNum + 2.3).toFixed(2);
-    const r2 = (liveGoldNum + 10.1).toFixed(2);
-    const s1 = (liveGoldNum - 10.0).toFixed(2);
-    const s2 = (liveGoldNum - 22.6).toFixed(2);
-
-    const slBuy = (liveGoldNum - 10.0).toFixed(2);
-    const tpBuy = (liveGoldNum + 20.0).toFixed(2);
-    const beBuy = (liveGoldNum + 10.0).toFixed(2);
-
-    if (activeCopilotKey === 'custom' && customCopilotQuestion) {
-      return `🤖 Pip AI Neural Synthesis for "${customCopilotQuestion}":\n• Live Market Anchor: XAU/USD is currently trading at $${liveGoldFormatted} during ${activeSession.name}.\n• Institutional Structure: Near-term resistance sits at $${r1} / $${r2} with key demand support at $${s1} / $${s2}.\n• 0.03 Lot Execution Math: We strictly trade 0.03 Lot per setup ($3.00 per $1.00 move on Gold). A standard 10.00-point Stop Loss ($${slBuy}) risks exactly -$30.00, while a 20.00-point Take Profit ($${tpBuy}) targets +$60.00 (+2.0R), moving SL to Break-Even at $${beBuy} (+$30.00).`;
-    }
-
-    if (activeCopilotKey === 'lot_math') {
-      return `📐 Pip AI 0.03 Lot Position Sizing & Risk Audit (XAU/USD @ $${liveGoldFormatted}):\n• Fixed Institutional Volume: 0.03 Lot per trade (= 3 Troy Ounces = $3.00 per $1.00 price move).\n• Stop Loss (SL) Calculation: $${slBuy} (10.00 points / 1,000 pips distance = -$30.00 exact maximum risk).\n• Take Profit (TP) Calculation: $${tpBuy} (20.00 points / 2,000 pips distance = +$60.00 net target at 1:2.0 R:R).\n• Break-Even Trigger (1:1 R:R): Once price reaches $${beBuy} (+$30.00 floating profit), Pip AI automatically locks Stop Loss to Entry ($${liveGoldFormatted}) for zero-risk execution.`;
-    }
-
-    if (activeCopilotKey === 'crt_model') {
-      return `🕯️ Pip AI 3-Candle CRT (Candle Range Theory) & SMC Protocol:\n• Candle 1 (C1 — Accumulation Range): Establishes the institutional reference High & Low on M15 / M5.\n• Candle 2 (C2 — Manipulation Sweep): Sweeps liquidity beyond the C1 extreme to trap retail breakout traders, then closes back inside the C1 range with displacement.\n• Candle 3 (C3 — Distribution Expansion): Pip AI triggers a 0.03 Lot entry on the C3 open/FVG retest targeting 1:2.0 R:R into opposing liquidity.`;
-    }
-
-    if (activeCopilotKey === 'signal_audit') {
-      if (latestRealSignal) {
-        const sPair = latestRealSignal.pair || 'XAUUSD';
-        const sDir = latestRealSignal.direction || 'BUY';
-        const sEntry = getDynamicSignalPrice(latestRealSignal.entry, sPair);
-        const sTp = getDynamicSignalPrice(latestRealSignal.tp, sPair);
-        const sSl = getDynamicSignalPrice(latestRealSignal.sl, sPair);
-        const eNum = parseFloat(String(latestRealSignal.entry || '').replace(/,/g, '')) || liveGoldNum;
-        const tpNum = parseFloat(String(latestRealSignal.tp || '').replace(/,/g, '')) || eNum + 20;
-        const slNum = parseFloat(String(latestRealSignal.sl || '').replace(/,/g, '')) || eNum - 10;
-        const isG = sPair.includes('XAU');
-        const tpUsdVal = (Math.abs(tpNum - eNum) * (isG ? 100 : 10000) * (isG ? 0.03 : 0.03)).toFixed(2);
-        const slUsdVal = (Math.abs(eNum - slNum) * (isG ? 100 : 10000) * (isG ? 0.03 : 0.03)).toFixed(2);
-        return `📊 Pip AI Live Firestore Signal Audit (${sPair} • ${sDir}):\n• Why We Trade: Institutional CRT C2 liquidity sweep + M15 Market Structure Shift confirmed during ${latestRealSignal.session || activeSession.name}.\n• Verified 0.03 Lot Levels: Entry @ $${sEntry} | Take Profit @ $${sTp} (+$${tpUsdVal}) | Stop Loss @ $${sSl} (-$${slUsdVal}).\n• Track Record: ${verifiedStats.totalTracked} real Firestore setups tracked (${verifiedStats.winsCount} Wins / ${verifiedStats.lossesCount} Losses • ${verifiedStats.winRateDisplay} Win Rate).`;
-      }
-      return `📊 Pip AI Live Firestore Signal Audit:\n• Currently monitoring ${verifiedStats.totalTracked} verified signals in Firestore (${verifiedStats.winRateDisplay} Win Rate).\n• All signals are generated autonomously on M15/M5 candle closes with strict 0.03 Lot sizing and 1:2.0 R:R.`;
-    }
-
-    // Default: 'xau_live'
-    return `⚡ Pip AI Live Neural Scan — XAU/USD ($${liveGoldFormatted} • ${activeSession.name}):\n• Market Structure: Higher-timeframe bias remains Bullish while 15m consolidates between key resistance at $${r1} and institutional demand at $${s1}.\n• AI Execution Plan (0.03 Lot): Watching for a 15m break & close above $${r1} (targeting $${r2}) OR a liquidity sweep & rejection wick at $${s1} with -$30.00 SL (10 pts) and +$60.00 TP (20 pts, 1:2.0 R:R).`;
-  }, [activeCopilotKey, customCopilotQuestion, liveGoldNum, liveGoldFormatted, activeSession.name, latestRealSignal, verifiedStats]);
-
-  // Smooth AI token streaming reveal when user switches prompt or asks a question
-  useEffect(() => {
-    setStreamedChars(18);
-    const totalLen = copilotResponseText.length;
-    const interval = setInterval(() => {
-      setStreamedChars((prev) => {
-        if (prev >= totalLen) {
-          clearInterval(interval);
-          return totalLen;
-        }
-        return prev + 14;
-      });
-    }, 18);
-    return () => clearInterval(interval);
-  }, [copilotResponseText]);
-
-  const handleAskCopilotSubmit = (e) => {
-    e.preventDefault();
-    const trimmed = copilotPromptInput.trim();
-    if (!trimmed) return;
-    setCustomCopilotQuestion(trimmed);
-    setActiveCopilotKey('custom');
-    setCopilotPromptInput('');
-  };
 
   return (
     <div className="ait-page-root">
@@ -890,7 +792,7 @@ export default function AITradingPage({
         )}
 
         {/* =========================================================================
-            SECTION 1: AI NEURAL COMMAND HERO & INTERACTIVE PIP AI CO-PILOT
+            SECTION 1: PREMIUM AI HERO SECTION
             ========================================================================= */}
         <section className="ait-hero">
           {/* Live Neural Status Pill Bar */}
@@ -898,7 +800,7 @@ export default function AITradingPage({
             <div className="ait-pre-badge">
               <span className="ait-pre-badge-dot" />
               <span className="ait-pre-badge-text">
-                {isKhmer ? '🧠 PIP AI NEURAL CORE v4.2 • សកម្ម 24/7' : '🧠 PIP AI NEURAL CORE v4.2 • AUTONOMOUS SMC'}
+                {isKhmer ? '⚡ ម៉ាស៊ីន AI ស្ថាប័ន' : '⚡ PIP AI WORKSTATION'}
               </span>
             </div>
             <span className="ait-neural-chip ait-mono">
@@ -918,115 +820,18 @@ export default function AITradingPage({
           {/* Main Headline */}
           <h1 className="ait-hero-title">
             {isKhmer ? (
-              <>បង្កើនសមត្ថភាពជួញដូរជាមួយ <span className="ait-title-gradient">Pip AI Co-Pilot</span></>
+              <>បង្កើនសមត្ថភាពជួញដូរជាមួយ <span className="ait-title-gradient">Pip AI</span></>
             ) : (
-              <>Institutional Trading Powered by <span className="ait-title-gradient">Pip AI Co-Pilot</span></>
+              <>Precision Trading Powered by <span className="ait-title-gradient">Pip AI</span></>
             )}
           </h1>
 
           {/* Subtitle */}
           <p className="ait-hero-sub">
             {isKhmer
-              ? 'ប្រព័ន្ធបញ្ញាសិប្បនិម្មិត (AI) វិភាគ Smart Money Concepts (SMC) តាមដានទៀន M15/M5 ដោយស្វ័យប្រវត្តិ និងគណនា Entry, TP និង SL យ៉ាងច្បាស់លាស់សម្រាប់ 0.03 Lot។'
-              : 'Autonomous neural market structure scanning, live OANDA price telemetry, and instant AI trade reasoning engineered for 0.03 Lot precision.'}
+              ? 'ការវិភាគ Smart Money Concepts (SMC) ផ្សាយតម្លៃ Spot ផ្ទាល់ និងផ្ដល់ Signal ស្ថាប័នច្បាស់លាស់ 24/7។'
+              : 'Institutional SMC analytics, live OANDA feeds, and automated high-probability signals.'}
           </p>
-
-          {/* Interactive Pip AI Co-Pilot Command Console */}
-          <div className="ait-copilot-console">
-            {/* Top Bar: Neural Stream & Waveform */}
-            <div className="ait-copilot-topbar">
-              <div className="ait-copilot-agent-badge">
-                <div className="ait-copilot-orb">
-                  <BrainIcon style={{ width: 16, height: 16 }} />
-                </div>
-                <div>
-                  <div className="ait-copilot-agent-name">
-                    PIP AI NEURAL CO-PILOT
-                    <span className="ait-copilot-model-tag">GEMINI 3.8 FLASH + ICT CRT</span>
-                  </div>
-                  <div className="ait-copilot-thought-line ait-mono">
-                    <span className="ait-thought-pulse" />
-                    <span>{neuralThoughts[aiThoughtIndex]}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="ait-neural-waveform" aria-hidden="true">
-                <span className="ait-wave-bar b1" />
-                <span className="ait-wave-bar b2" />
-                <span className="ait-wave-bar b3" />
-                <span className="ait-wave-bar b4" />
-                <span className="ait-wave-bar b5" />
-                <span className="ait-wave-lbl ait-mono">NEURAL SYNC</span>
-              </div>
-            </div>
-
-            {/* AI Streaming Output Terminal */}
-            <div className="ait-copilot-output-box">
-              <div className="ait-copilot-output-text">
-                {copilotResponseText.slice(0, streamedChars)}
-                {streamedChars < copilotResponseText.length && (
-                  <span className="ait-ai-stream-cursor">▋</span>
-                )}
-              </div>
-            </div>
-
-            {/* Quick AI Prompt Chips */}
-            <div className="ait-copilot-chips">
-              <button
-                type="button"
-                className={`ait-copilot-chip ${activeCopilotKey === 'xau_live' ? 'active' : ''}`}
-                onClick={() => setActiveCopilotKey('xau_live')}
-              >
-                <span>⚡</span>
-                <span>{isKhmer ? 'វិភាគ XAU/USD 15m ផ្ទាល់' : 'Analyze Live XAU/USD 15m'}</span>
-              </button>
-              <button
-                type="button"
-                className={`ait-copilot-chip ${activeCopilotKey === 'lot_math' ? 'active' : ''}`}
-                onClick={() => setActiveCopilotKey('lot_math')}
-              >
-                <span>📐</span>
-                <span>{isKhmer ? 'គណនា TP & SL សម្រាប់ 0.03 Lot' : '0.03 Lot TP & SL Math'}</span>
-              </button>
-              <button
-                type="button"
-                className={`ait-copilot-chip ${activeCopilotKey === 'signal_audit' ? 'active' : ''}`}
-                onClick={() => setActiveCopilotKey('signal_audit')}
-              >
-                <span>📊</span>
-                <span>{isKhmer ? 'ពិនិត្យ Signal ផ្ទាល់ពី Firestore' : 'Audit Latest Firestore Signal'}</span>
-              </button>
-              <button
-                type="button"
-                className={`ait-copilot-chip ${activeCopilotKey === 'crt_model' ? 'active' : ''}`}
-                onClick={() => setActiveCopilotKey('crt_model')}
-              >
-                <span>🕯️</span>
-                <span>{isKhmer ? 'យុទ្ធសាស្ត្រ 3-Candle CRT' : 'Explain 3-Candle CRT Model'}</span>
-              </button>
-            </div>
-
-            {/* Interactive Ask Pip AI Input Form */}
-            <form className="ait-copilot-input-row" onSubmit={handleAskCopilotSubmit}>
-              <span className="ait-copilot-prompt-icon">✦</span>
-              <input
-                type="text"
-                className="ait-copilot-input"
-                placeholder={
-                  isKhmer
-                    ? 'សួរ Pip AI អំពីតម្លៃមាស XAU/USD, ចំណុច Entry 0.03 Lot ឬការវិភាគទីផ្សារ...'
-                    : 'Ask Pip AI anything about live XAU/USD structure, 0.03 Lot risk math, or active setups...'
-                }
-                value={copilotPromptInput}
-                onChange={(e) => setCopilotPromptInput(e.target.value)}
-              />
-              <button type="submit" className="ait-copilot-send-btn">
-                <SparkleIcon style={{ width: 14, height: 14 }} />
-                <span>{isKhmer ? 'សួរ Pip AI' : 'Ask Pip AI'}</span>
-              </button>
-            </form>
-          </div>
 
           {/* CTA Buttons */}
           <div className="ait-cta-group">
@@ -1045,7 +850,7 @@ export default function AITradingPage({
               <SparkleIcon style={{ width: 16, height: 16 }} />
               <span>
                 {isVipUser
-                  ? (isKhmer ? 'បើកមើល Live AI Chart Workstation' : 'Open Live AI Chart Workstation')
+                  ? (isKhmer ? 'បើកមើល Live Chart Workstation' : 'Open Live Chart Workstation')
                   : (isKhmer ? 'ផ្ញើសារទៅ Admin ដោះសោ VIP' : 'DM Admin to Unlock VIP Access')}
               </span>
               <span>→</span>
@@ -1059,7 +864,7 @@ export default function AITradingPage({
               }}
             >
               <TrendUpIcon style={{ width: 15, height: 15 }} />
-              <span>{isKhmer ? 'មើល Pip AI Signals' : 'View Pip AI Signals →'}</span>
+              <span>{isKhmer ? 'មើល Pip Signals' : 'View Pip Signals →'}</span>
             </button>
           </div>
         </section>

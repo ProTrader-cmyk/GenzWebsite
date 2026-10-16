@@ -6652,51 +6652,67 @@
 }
 
 /* ==========================================================================
-   PIP AI CO-PILOT & NEURAL COMMAND CONSOLE (AI TRADING PAGE UPGRADE)
+   ULTRA-PREMIUM AI DESIGN SYSTEM (OBSIDIAN GLASS, AURORA MESH & SPECULAR GLOW)
    ========================================================================== */
+
+.ait-page-root {
+  background:
+    radial-gradient(ellipse 90% 45% at 50% -5%, rgba(56, 189, 248, 0.14) 0%, rgba(139, 92, 246, 0.08) 42%, transparent 75%),
+    radial-gradient(circle at 88% 34%, rgba(16, 185, 129, 0.07) 0%, transparent 50%),
+    radial-gradient(circle at 12% 62%, rgba(99, 102, 241, 0.08) 0%, transparent 55%);
+}
 
 .ait-neural-grid-backdrop {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 760px;
+  height: 680px;
   pointer-events: none;
   z-index: 0;
   background-image:
-    linear-gradient(to right, rgba(0, 242, 254, 0.045) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(0, 242, 254, 0.045) 1px, transparent 1px);
-  background-size: 44px 44px;
-  mask-image: radial-gradient(ellipse 80% 65% at 50% 25%, #000 35%, transparent 100%);
-  -webkit-mask-image: radial-gradient(ellipse 80% 65% at 50% 25%, #000 35%, transparent 100%);
+    linear-gradient(to right, rgba(56, 189, 248, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(139, 92, 246, 0.05) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 75% 60% at 50% 20%, #000 25%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 75% 60% at 50% 20%, #000 25%, transparent 100%);
 }
 
+/* 1. HERO & TELEMETRY PILLS — IRIDESCENT AI POLISH */
 .ait-neural-status-row {
   display: flex;
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
   gap: 10px;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 
 .ait-neural-status-row .ait-pre-badge {
   margin-bottom: 0;
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.16), rgba(139, 92, 246, 0.18));
+  border: 1px solid rgba(56, 189, 248, 0.42);
+  box-shadow:
+    0 0 28px -6px rgba(0, 242, 254, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(12px);
 }
 
 .ait-neural-chip {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 5px 13px;
+  padding: 5.5px 14px;
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.72);
-  border: 1px solid rgba(56, 189, 248, 0.24);
+  background: linear-gradient(145deg, rgba(15, 23, 42, 0.82), rgba(9, 14, 28, 0.9));
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow:
+    0 8px 20px -6px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
   color: #E2E8F0;
   font-size: 11.5px;
   font-weight: 700;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 4px 14px -4px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
 }
 
 .ait-neural-chip-dot {
@@ -6704,301 +6720,281 @@
   height: 6.5px;
   border-radius: 50%;
 }
-
 .ait-neural-chip-dot.emerald {
   background: #10B981;
-  box-shadow: 0 0 8px #10B981;
+  box-shadow: 0 0 10px #10B981;
 }
-
 .ait-neural-chip-dot.cyan {
   background: #00F2FE;
-  box-shadow: 0 0 8px #00F2FE;
+  box-shadow: 0 0 10px #00F2FE;
 }
-
 .ait-neural-chip-dot.purple {
   background: #A855F7;
-  box-shadow: 0 0 8px #A855F7;
+  box-shadow: 0 0 10px #A855F7;
 }
 
-/* Interactive AI Co-Pilot Console Card */
-.ait-copilot-console {
-  max-width: 920px;
-  margin: 0 auto 24px;
-  background: linear-gradient(155deg, rgba(10, 17, 34, 0.92), rgba(14, 23, 45, 0.88));
-  border: 1px solid rgba(0, 242, 254, 0.32);
-  border-radius: 20px;
-  padding: 18px 20px;
-  text-align: left;
-  position: relative;
-  overflow: hidden;
+.ait-hero-title {
+  letter-spacing: -0.03em;
+  text-shadow: 0 10px 35px rgba(0, 0, 0, 0.5);
+}
+
+.ait-title-gradient {
+  background: linear-gradient(135deg, #FFFFFF 10%, #38BDF8 52%, #A855F7 85%, #10B981 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 28px rgba(56, 189, 248, 0.35));
+}
+
+.ait-primary-cta {
+  background: linear-gradient(135deg, #00C6FF 0%, #0072FF 52%, #7C3AED 100%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
   box-shadow:
-    0 20px 55px -15px rgba(0, 0, 0, 0.72),
-    0 0 38px -10px rgba(0, 242, 254, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(16px);
+    0 12px 32px -6px rgba(0, 198, 255, 0.48),
+    0 0 24px -4px rgba(124, 58, 237, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  padding: 12px 26px;
+  border-radius: 999px;
 }
 
-.ait-copilot-console::before {
+.ait-primary-cta:hover {
+  transform: translateY(-2px) scale(1.01);
+  box-shadow:
+    0 16px 38px -6px rgba(0, 242, 254, 0.62),
+    0 0 30px -2px rgba(139, 92, 246, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.ait-secondary-cta {
+  background: linear-gradient(145deg, rgba(15, 23, 42, 0.78), rgba(15, 23, 42, 0.55));
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  box-shadow:
+    0 8px 24px -8px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  padding: 12px 24px;
+  border-radius: 999px;
+}
+
+.ait-secondary-cta:hover {
+  border-color: rgba(0, 242, 254, 0.55);
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.88), rgba(15, 23, 42, 0.75));
+  box-shadow: 0 10px 28px -6px rgba(0, 242, 254, 0.25);
+}
+
+/* 2. FULL-WIDTH AI WORKSTATION OUTER BEZEL & TELEMETRY */
+.ait-chart-terminal-card {
+  position: relative;
+  border: 1px solid rgba(56, 189, 248, 0.28) !important;
+  border-radius: 22px !important;
+  background: linear-gradient(180deg, rgba(8, 12, 24, 0.98), rgba(4, 7, 15, 0.99)) !important;
+  box-shadow:
+    0 32px 80px -20px rgba(0, 0, 0, 0.85),
+    0 0 60px -15px rgba(0, 242, 254, 0.18),
+    0 0 40px -15px rgba(139, 92, 246, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+}
+
+.ait-chart-terminal-card::before {
   content: '';
   position: absolute;
   top: 0;
-  left: 10%;
-  right: 10%;
+  left: 8%;
+  right: 8%;
   height: 2px;
   background: linear-gradient(90deg, transparent, #00F2FE, #A855F7, #10B981, transparent);
-  opacity: 0.85;
+  z-index: 12;
+  pointer-events: none;
 }
 
-.ait-copilot-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding-bottom: 12px;
-  margin-bottom: 12px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
-  flex-wrap: wrap;
+.ait-chart-terminal-top {
+  background: linear-gradient(90deg, rgba(9, 14, 28, 0.96), rgba(15, 23, 42, 0.92), rgba(9, 14, 28, 0.96)) !important;
+  border-bottom: 1px solid rgba(56, 189, 248, 0.16) !important;
+  backdrop-filter: blur(16px);
 }
 
-.ait-copilot-agent-badge {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-  flex: 1;
+.ait-chart-symbol-pill.active,
+.ait-chart-timeframe-pill.active {
+  background: linear-gradient(135deg, rgba(0, 242, 254, 0.22), rgba(99, 102, 241, 0.24)) !important;
+  border-color: rgba(0, 242, 254, 0.65) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 0 16px -3px rgba(0, 242, 254, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
 }
 
-.ait-copilot-orb {
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(168, 85, 247, 0.24));
-  border: 1px solid rgba(0, 242, 254, 0.45);
-  color: #00F2FE;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  box-shadow: 0 0 18px rgba(0, 242, 254, 0.28);
+.ait-ai-telemetry-strip {
+  background: linear-gradient(90deg, rgba(6, 10, 22, 0.98), rgba(14, 21, 40, 0.95), rgba(6, 10, 22, 0.98)) !important;
+  border-bottom: 1px solid rgba(139, 92, 246, 0.18) !important;
 }
 
-.ait-copilot-agent-name {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12.5px;
-  font-weight: 900;
-  letter-spacing: 0.05em;
-  color: #F8FAFC;
-  flex-wrap: wrap;
+/* 3. "THE 4 POWER ENGINES" — RAYCAST / LINEAR BENTO AI SHOWCASE */
+.ait-sec-pill {
+  background: linear-gradient(135deg, rgba(0, 242, 254, 0.14), rgba(168, 85, 247, 0.16)) !important;
+  border: 1px solid rgba(56, 189, 248, 0.35) !important;
+  box-shadow: 0 0 22px -6px rgba(0, 242, 254, 0.35);
 }
 
-.ait-copilot-model-tag {
-  font-size: 10px;
-  font-weight: 800;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: rgba(168, 85, 247, 0.18);
-  border: 1px solid rgba(168, 85, 247, 0.4);
-  color: #D8B4FE;
-  letter-spacing: 0.04em;
+.ait-engine-tab-btn {
+  background: linear-gradient(160deg, rgba(15, 23, 42, 0.78), rgba(8, 13, 26, 0.92)) !important;
+  border: 1px solid rgba(148, 163, 184, 0.15) !important;
+  border-radius: 18px !important;
+  box-shadow:
+    0 12px 30px -12px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07) !important;
+  backdrop-filter: blur(14px);
+  transition: all 0.24s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
-.ait-copilot-thought-line {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 11.5px;
-  color: #38BDF8;
-  margin-top: 3px;
-  white-space: nowrap;
+.ait-engine-tab-btn:hover {
+  border-color: rgba(56, 189, 248, 0.42) !important;
+  transform: translateY(-3px);
+  box-shadow:
+    0 16px 36px -10px rgba(0, 0, 0, 0.75),
+    0 0 24px -6px rgba(0, 242, 254, 0.22) !important;
+}
+
+.ait-engine-tab-btn.active {
+  background: linear-gradient(145deg, rgba(14, 28, 54, 0.92), rgba(23, 18, 52, 0.9)) !important;
+  border: 1px solid rgba(0, 242, 254, 0.6) !important;
+  box-shadow:
+    0 18px 40px -12px rgba(0, 0, 0, 0.8),
+    0 0 32px -6px rgba(0, 242, 254, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+}
+
+.ait-engine-tab-btn.active .ait-tab-icon {
+  background: linear-gradient(135deg, rgba(0, 242, 254, 0.25), rgba(168, 85, 247, 0.28)) !important;
+  color: #00F2FE !important;
+  box-shadow: 0 0 18px rgba(0, 242, 254, 0.35);
+}
+
+.ait-engine-display-card {
+  background: linear-gradient(165deg, rgba(11, 18, 35, 0.92), rgba(6, 10, 22, 0.96)) !important;
+  border: 1px solid rgba(56, 189, 248, 0.24) !important;
+  border-radius: 22px !important;
+  box-shadow:
+    0 24px 60px -18px rgba(0, 0, 0, 0.82),
+    0 0 45px -15px rgba(0, 242, 254, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.09) !important;
+  backdrop-filter: blur(18px);
+}
+
+/* 4. VERIFIED AI SCORECARD VAULT & NEURAL SCANNER BAR */
+.ait-gold-scorecard {
+  position: relative;
   overflow: hidden;
-  text-overflow: ellipsis;
+  background: linear-gradient(155deg, rgba(12, 20, 39, 0.94), rgba(7, 12, 25, 0.98)) !important;
+  border: 1px solid rgba(0, 242, 254, 0.32) !important;
+  border-radius: 22px !important;
+  box-shadow:
+    0 24px 60px -15px rgba(0, 0, 0, 0.82),
+    0 0 45px -12px rgba(0, 242, 254, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
 }
 
-.ait-thought-pulse {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #10B981;
-  box-shadow: 0 0 8px #10B981;
-  flex-shrink: 0;
-  animation: aitPulse 1.6s infinite ease-in-out;
+.ait-gold-scorecard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 12%;
+  right: 12%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #10B981, #00F2FE, #A855F7, transparent);
 }
 
-/* Animated AI Neural Waveform */
-.ait-neural-waveform {
-  display: inline-flex;
-  align-items: center;
-  gap: 3.5px;
-  padding: 5px 11px;
-  border-radius: 999px;
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.3);
+.ait-pip-scanner-trigger-bar {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(10, 18, 36, 0.95), rgba(16, 20, 44, 0.92), rgba(9, 16, 32, 0.96)) !important;
+  border: 1px solid rgba(56, 189, 248, 0.34) !important;
+  border-radius: 20px !important;
+  box-shadow:
+    0 20px 50px -15px rgba(0, 0, 0, 0.78),
+    0 0 38px -10px rgba(0, 242, 254, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
 }
 
-.ait-wave-bar {
-  width: 3px;
-  height: 12px;
-  border-radius: 3px;
-  background: linear-gradient(180deg, #00F2FE, #10B981);
-  animation: aitWaveBounce 1.2s infinite ease-in-out;
-}
-.ait-wave-bar.b1 { animation-delay: 0s; height: 8px; }
-.ait-wave-bar.b2 { animation-delay: 0.18s; height: 14px; }
-.ait-wave-bar.b3 { animation-delay: 0.35s; height: 10px; }
-.ait-wave-bar.b4 { animation-delay: 0.52s; height: 15px; }
-.ait-wave-bar.b5 { animation-delay: 0.7s; height: 9px; }
-
-@keyframes aitWaveBounce {
-  0%, 100% { transform: scaleY(0.55); opacity: 0.65; }
-  50% { transform: scaleY(1.25); opacity: 1; }
+.ait-scanner-manual-btn {
+  background: linear-gradient(135deg, #00C6FF 0%, #0072FF 55%, #7C3AED 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.24) !important;
+  box-shadow:
+    0 8px 25px -4px rgba(0, 198, 255, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
 }
 
-.ait-wave-lbl {
-  font-size: 10px;
-  font-weight: 800;
-  color: #10B981;
-  margin-left: 5px;
-  letter-spacing: 0.05em;
+.ait-scanner-manual-btn:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 12px 30px -4px rgba(0, 242, 254, 0.6),
+    0 0 24px -4px rgba(124, 58, 237, 0.45) !important;
 }
 
-/* AI Streaming Output Box */
-.ait-copilot-output-box {
-  background: rgba(5, 10, 22, 0.78);
-  border: 1px solid rgba(56, 189, 248, 0.2);
-  border-left: 3px solid #00F2FE;
-  border-radius: 12px;
-  padding: 13px 16px;
-  margin-bottom: 12px;
-  min-height: 92px;
+/* 5. ULTRA-PREMIUM OBSIDIAN GLASS SIGNAL CARDS */
+.ait-sig-card {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(165deg, rgba(13, 21, 40, 0.94), rgba(6, 10, 22, 0.98)) !important;
+  border: 1px solid rgba(148, 163, 184, 0.16) !important;
+  border-radius: 20px !important;
+  box-shadow:
+    0 20px 48px -16px rgba(0, 0, 0, 0.8),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(16px);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease, box-shadow 0.25s ease !important;
 }
 
-.ait-copilot-output-text {
-  font-size: 13px;
-  line-height: 1.62;
-  color: #E2E8F0;
-  white-space: pre-line;
-  font-weight: 500;
+.ait-sig-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2.5px;
+  background: linear-gradient(90deg, transparent, #00F2FE, #10B981, transparent);
+  opacity: 0.9;
 }
 
-.ait-ai-stream-cursor {
-  display: inline-block;
-  margin-left: 3px;
-  color: #00F2FE;
-  font-weight: 900;
-  animation: aitPulse 0.8s infinite;
+.ait-sig-card.sell-card::before {
+  background: linear-gradient(90deg, transparent, #F43F5E, #A855F7, transparent);
 }
 
-/* Prompt Chips */
-.ait-copilot-chips {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
+.ait-sig-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(56, 189, 248, 0.42) !important;
+  box-shadow:
+    0 26px 60px -16px rgba(0, 0, 0, 0.88),
+    0 0 36px -10px rgba(0, 242, 254, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
 }
 
-.ait-copilot-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 13px;
-  border-radius: 999px;
-  background: rgba(30, 41, 59, 0.65);
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  color: #CBD5E1;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.18s ease;
-  font-family: inherit;
+.ait-sig-card.sell-card:hover {
+  border-color: rgba(244, 63, 94, 0.42) !important;
+  box-shadow:
+    0 26px 60px -16px rgba(0, 0, 0, 0.88),
+    0 0 36px -10px rgba(244, 63, 94, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
 }
 
-.ait-copilot-chip:hover {
-  border-color: rgba(0, 242, 254, 0.55);
-  color: #FFFFFF;
-  background: rgba(0, 242, 254, 0.12);
-  transform: translateY(-1px);
+.ait-card-levels {
+  background: rgba(5, 9, 20, 0.72) !important;
+  border: 1px solid rgba(56, 189, 248, 0.14) !important;
+  border-radius: 14px !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
-.ait-copilot-chip.active {
-  background: linear-gradient(135deg, rgba(0, 242, 254, 0.18), rgba(16, 185, 129, 0.18));
-  border-color: #00F2FE;
-  color: #FFFFFF;
-  box-shadow: 0 0 16px -4px rgba(0, 242, 254, 0.45);
+.ait-confluence-box {
+  background: linear-gradient(155deg, rgba(10, 17, 34, 0.82), rgba(15, 23, 42, 0.65)) !important;
+  border: 1px solid rgba(56, 189, 248, 0.2) !important;
+  border-left: 3px solid #00F2FE !important;
+  border-radius: 14px !important;
 }
 
-/* Ask Pip AI Input Form */
-.ait-copilot-input-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: rgba(7, 12, 26, 0.88);
-  border: 1px solid rgba(0, 242, 254, 0.28);
-  border-radius: 14px;
-  padding: 6px 8px 6px 14px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.ait-copilot-input-row:focus-within {
-  border-color: #00F2FE;
-  box-shadow: 0 0 0 3px rgba(0, 242, 254, 0.15);
-}
-
-.ait-copilot-prompt-icon {
-  color: #00F2FE;
-  font-size: 15px;
-  flex-shrink: 0;
-}
-
-.ait-copilot-input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: #F8FAFC;
-  font-size: 13px;
-  font-family: inherit;
-  min-width: 0;
-}
-
-.ait-copilot-input::placeholder {
-  color: #64748B;
-}
-
-.ait-copilot-send-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border-radius: 10px;
-  border: none;
-  background: linear-gradient(135deg, #00C6FF, #0072FF);
-  color: #FFFFFF;
-  font-size: 12.5px;
-  font-weight: 800;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: all 0.2s ease;
-  font-family: inherit;
-  box-shadow: 0 4px 14px rgba(0, 198, 255, 0.35);
-}
-
-.ait-copilot-send-btn:hover {
-  filter: brightness(1.12);
-  transform: translateY(-1px);
-}
-
-/* Signal Card AI Neural Audit Pill */
 .ait-conf-ai-pill {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 8px;
+  padding: 2.5px 8px;
   border-radius: 6px;
-  background: linear-gradient(135deg, rgba(0, 242, 254, 0.18), rgba(168, 85, 247, 0.2));
-  border: 1px solid rgba(0, 242, 254, 0.4);
+  background: linear-gradient(135deg, rgba(0, 242, 254, 0.18), rgba(168, 85, 247, 0.22));
+  border: 1px solid rgba(0, 242, 254, 0.42);
   color: #38BDF8;
   font-size: 10px;
   font-weight: 900;
@@ -7006,52 +7002,36 @@
   flex-shrink: 0;
 }
 
-/* Light theme adjustments for AI Co-Pilot Console */
+/* Light theme compatibility for premium AI styles */
 :root[data-theme='light'] .ait-neural-chip {
   background: #FFFFFF;
   border-color: #CBD5E1;
   color: #0F172A;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
 }
 
-:root[data-theme='light'] .ait-copilot-console {
-  background: linear-gradient(155deg, #FFFFFF, #F8FAFC);
-  border-color: rgba(2, 132, 199, 0.35);
-  box-shadow: 0 18px 40px -15px rgba(15, 23, 42, 0.12);
+:root[data-theme='light'] .ait-title-gradient {
+  background: linear-gradient(135deg, #0284C7 0%, #4F46E5 55%, #7C3AED 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: none;
 }
 
-:root[data-theme='light'] .ait-copilot-agent-name {
-  color: #0F172A;
+:root[data-theme='light'] .ait-engine-tab-btn,
+:root[data-theme='light'] .ait-engine-display-card,
+:root[data-theme='light'] .ait-gold-scorecard,
+:root[data-theme='light'] .ait-pip-scanner-trigger-bar,
+:root[data-theme='light'] .ait-sig-card {
+  background: #FFFFFF !important;
+  border-color: #CBD5E1 !important;
+  box-shadow: 0 12px 32px -10px rgba(15, 23, 42, 0.08) !important;
 }
 
-:root[data-theme='light'] .ait-copilot-output-box {
-  background: #F1F5F9;
-  border-color: #CBD5E1;
-  border-left-color: #0284C7;
+:root[data-theme='light'] .ait-card-levels,
+:root[data-theme='light'] .ait-confluence-box {
+  background: #F8FAFC !important;
+  border-color: #E2E8F0 !important;
 }
 
-:root[data-theme='light'] .ait-copilot-output-text {
-  color: #0F172A;
-}
-
-:root[data-theme='light'] .ait-copilot-chip {
-  background: #F8FAFC;
-  border-color: #CBD5E1;
-  color: #334155;
-}
-
-:root[data-theme='light'] .ait-copilot-chip.active {
-  background: #E0F2FE;
-  border-color: #0284C7;
-  color: #0369A1;
-}
-
-:root[data-theme='light'] .ait-copilot-input-row {
-  background: #FFFFFF;
-  border-color: #CBD5E1;
-}
-
-:root[data-theme='light'] .ait-copilot-input {
-  color: #0F172A;
-}
 
 
