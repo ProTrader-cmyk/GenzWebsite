@@ -121,3 +121,4 @@ export function formatLevelPrice(val, asset = 'XAUUSD') {
   }
   return num.toFixed(5);
 }
+
