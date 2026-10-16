@@ -15,7 +15,7 @@ import { getStrings } from '../i18n/strings.js';
 import { fetchLivePrice, formatSpotPrice, subscribeLiveTicks } from '../services/marketPriceService.js';
 import { subscribeSignals } from '../data/signals.js';
 import { getUserPlan } from '../data/auth.js';
-import { clearStoredPipSignals, generateRealPipSignal } from '../services/pipLiveSignalService.js';
+import { clearStoredPipSignals, generateRealPipSignal, buildVerifiedTradeConfluences } from '../services/pipLiveSignalService.js';
 import AILiveChartTerminal from './AILiveChartTerminal.jsx';
 import ReferralAccessModal from './ReferralAccessModal.jsx';
 import PairLogo, {
@@ -1641,30 +1641,58 @@ export default function AITradingPage({
                 const asset = (sig.pair || sig.symbol || 'XAUUSD').toUpperCase();
                 const dir = (sig.direction || sig.action || 'BUY').toUpperCase();
                 const isBuy = dir === 'BUY';
-                const entry = getDynamicSignalPrice(sig.entry ?? sig.entry_price ?? sig.entryPrice ?? sig.price, asset);
-                const tp = getDynamicSignalPrice(sig.tp ?? sig.take_profit ?? sig.takeProfit ?? sig.target, asset);
-                const sl = getDynamicSignalPrice(sig.sl ?? sig.stop_loss ?? sig.stopLoss, asset);
-                const rr = sig.rr || sig.riskReward || '1:2.8';
-                const conf = sig.confidence || (isBuy ? 89 : 84);
-                const confluences = Array.isArray(sig.confluences) && sig.confluences.length > 0
-                  ? sig.confluences
-                  : sig.reason
-                    ? [sig.reason]
-                    : isBuy
-                      ? [
-                          'Asian Session Liquidity Sweep (SSL Purged)',
-                          'M15 Displacement Candle + Bullish FVG Tap',
-                          'Equilibrium Discount Zone (62%–79% OTE)',
-                        ]
-                      : [
-                          'Previous Session High Swept (BSL Purged)',
-                          'M15 Bearish Displacement leaving fresh FVG',
-                          'Equilibrium Premium Zone (62%–79% OTE)',
-                        ];
+                const rawEntry = sig.entry ?? sig.entry_price ?? sig.entryPrice ?? sig.price;
+                const rawTp = sig.tp ?? sig.take_profit ?? sig.takeProfit ?? sig.target;
+                const rawSl = sig.sl ?? sig.stop_loss ?? sig.stopLoss;
+                const entry = getDynamicSignalPrice(rawEntry, asset);
+                const tp = getDynamicSignalPrice(rawTp, asset);
+                const sl = getDynamicSignalPrice(rawSl, asset);
 
-                const icon = sig.icon || (asset.includes('XAU') || asset.includes('GOLD') ? '🥇' : asset.includes('EUR') ? '💶' : asset.includes('GBP') ? '💷' : asset.includes('BTC') ? '₿' : asset.includes('XAG') ? '🥈' : '⚡');
+                const entryNum = parseFloat(String(rawEntry ?? '').replace(/,/g, '')) || 0;
+                const tpNum = parseFloat(String(rawTp ?? '').replace(/,/g, '')) || 0;
+                const slNum = parseFloat(String(rawSl ?? '').replace(/,/g, '')) || 0;
+                const slDist = entryNum > 0 && slNum > 0 ? Math.abs(entryNum - slNum) : 10.0;
+                const tpDist = entryNum > 0 && tpNum > 0 ? Math.abs(tpNum - entryNum) : 20.0;
+                const isGoldAsset = asset.includes('XAU') || asset.includes('GOLD');
+                const isForexAsset = asset.includes('EUR') || asset.includes('GBP') || asset.includes('AUD') || asset.includes('JPY');
+                const pipMult = isGoldAsset ? 100 : asset.includes('JPY') ? 100 : isForexAsset ? 10000 : 1;
+
+                const slPts = Math.round(slDist * pipMult);
+                const tpPts = Math.round(tpDist * pipMult);
+                // 0.03 Lot USD Math: Gold 0.03 lot = 3 oz ($3.00 per $1.00 move). Forex 0.03 lot = $0.30/pip.
+                const slUsd = isGoldAsset
+                  ? (slDist * 100 * 0.03).toFixed(2)
+                  : isForexAsset
+                    ? (slPts * 0.30).toFixed(2)
+                    : (slDist * 0.03).toFixed(2);
+                const tpUsd = isGoldAsset
+                  ? (tpDist * 100 * 0.03).toFixed(2)
+                  : isForexAsset
+                    ? (tpPts * 0.30).toFixed(2)
+                    : (tpDist * 0.03).toFixed(2);
+
+                const calculatedRrNum = slDist > 0 ? (tpDist / slDist).toFixed(1) : '2.0';
+                const rr = `1:${calculatedRrNum}`;
+                const bePriceVal = entryNum > 0 ? (isBuy ? entryNum + slDist : entryNum - slDist) : null;
+                const conf = sig.confidence || (isBuy ? 91 : 89);
+
                 const tf = sig.timeframe || sig.mode || '15m';
                 const isScalp = isSignalScalp(sig);
+
+                // Always generate verified institutional confluences that explain WHY we trade,
+                // state 0.03 Lot per trade, and calculate exact TP & SL from the signal's real levels
+                const confluences = buildVerifiedTradeConfluences({
+                  pair: asset,
+                  direction: dir,
+                  entry: entryNum,
+                  sl: slNum,
+                  tp: tpNum,
+                  style: isScalp ? 'scalping' : 'daytrade',
+                  timeframe: tf,
+                  refHigh: sig.refCandleHigh,
+                  refLow: sig.refCandleLow,
+                });
+
                 const source = sig.source || (sig.isFirestore ? 'GENZ VIP SIGNALS' : sig.isRealAiGenerated ? 'PIP AI (GEMINI 3.8)' : 'PIP AI SMC');
                 const opened = sig.opened || sig.timestamp || 'Today, Active';
                 const session = sig.session || activeSession.name;
@@ -1708,7 +1736,7 @@ export default function AITradingPage({
                         </span>
                         <span className="ait-pill-source">
                           <span className="ait-source-verified-icon">✓</span>
-                          <span>{source}</span>
+                          <span>{source} • 0.03 LOT</span>
                         </span>
                       </div>
                     </div>
@@ -1718,7 +1746,7 @@ export default function AITradingPage({
                       <div className="ait-level-row">
                         <span className="ait-level-label">
                           <span className="ait-level-dot neutral" />
-                          <span>ENTRY:</span>
+                          <span>ENTRY (0.03 LOT):</span>
                         </span>
                         <span className="ait-level-val">{isVipUser ? entry : '••••••'}</span>
                       </div>
@@ -1727,27 +1755,28 @@ export default function AITradingPage({
                           <span className="ait-level-dot target" />
                           <span>TARGET (TP):</span>
                         </span>
-                        <span className="ait-level-val target">{isVipUser ? tp : '••••••'}</span>
+                        <span className="ait-level-val target">
+                          {isVipUser ? `${tp} (+$${tpUsd})` : '••••••'}
+                        </span>
                       </div>
                       <div className="ait-level-row">
                         <span className="ait-level-label">
                           <span className="ait-level-dot stop" />
                           <span>STOP LOSS (SL):</span>
                         </span>
-                        <span className="ait-level-val stop">{isVipUser ? sl : '••••••'}</span>
+                        <span className="ait-level-val stop">
+                          {isVipUser ? `${sl} (-$${slUsd})` : '••••••'}
+                        </span>
                       </div>
-                      {(sig.beTrigger || sig.breakEvenTrigger || (asset.includes('XAU') && !isScalp)) && (
+                      {bePriceVal && (
                         <div className="ait-level-row">
                           <span className="ait-level-label">
                             <span className="ait-level-dot amber" />
-                            <span>BREAK-EVEN (BE):</span>
+                            <span>BREAK-EVEN (1:1):</span>
                           </span>
                           <span className="ait-level-val amber">
                             {isVipUser
-                              ? getDynamicSignalPrice(
-                                  sig.beTrigger || sig.breakEvenTrigger || (isBuy ? (Number(sig.entry) + 10.0) : (Number(sig.entry) - 10.0)),
-                                  asset
-                                )
+                              ? `${getDynamicSignalPrice(bePriceVal, asset)} (+$${slUsd})`
                               : '••••••'}
                           </span>
                         </div>
@@ -1757,7 +1786,7 @@ export default function AITradingPage({
                           <span className="ait-level-dot cyan" />
                           <span>RISK/REWARD:</span>
                         </span>
-                        <span className="ait-level-val rr">{rr}</span>
+                        <span className="ait-level-val rr">{rr} (0.03 Lot)</span>
                       </div>
                     </div>
 
@@ -1765,7 +1794,7 @@ export default function AITradingPage({
                     <div className="ait-confluence-box">
                       <div className="ait-conf-tag">
                         <span className="ait-conf-icon">⚡</span>
-                        <span>{sig.model || 'INSTITUTIONAL CONFLUENCE'} ({confluences.length}/{confluences.length})</span>
+                        <span>{sig.model || '3-Candle CRT Liquidation Model'} ({confluences.length}/{confluences.length})</span>
                       </div>
                       <ul className="ait-conf-list">
                         {confluences.slice(0, 4).map((item, cIdx) => (
