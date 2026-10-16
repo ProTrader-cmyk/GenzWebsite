@@ -1905,7 +1905,7 @@ export default function AITradingPage({
 
                 return (
                   <div key={cardKey} className={`ait-sig-card ${isBuy ? 'buy-card' : 'sell-card'}`}>
-                    {/* Top Row: Asset Icon & Title + Timeframe Tag */}
+                    {/* Top Row: Asset Icon & Title + Inline Action Badges + Timeframe Tag */}
                     <div className="ait-card-top-row">
                       <div className="ait-card-asset-info">
                         <div className="ait-card-asset-icon">
@@ -1916,20 +1916,18 @@ export default function AITradingPage({
                           )}
                         </div>
                         <div className="ait-card-asset-titles">
-                          <h4 className="ait-card-symbol-title">{asset}</h4>
+                          <div className="ait-card-symbol-badge-line">
+                            <h4 className="ait-card-symbol-title">{asset}</h4>
+                            <span className={`ait-dir-pill ${isBuy ? 'buy' : 'sell'}`}>
+                              <span className="ait-dir-dot">●</span>
+                              <span>{dir}</span>
+                            </span>
+                            <span className={`ait-desk-pill ${isBuy ? 'buy' : 'sell'}`}>DESK</span>
+                          </div>
                           <span className="ait-card-symbol-sub">{assetSubtitle}</span>
                         </div>
                       </div>
                       <div className="ait-card-timeframe-tag">{timeframeTag}</div>
-                    </div>
-
-                    {/* Centered Direction & Desk Badges */}
-                    <div className="ait-card-center-badges">
-                      <span className={`ait-dir-pill ${isBuy ? 'buy' : 'sell'}`}>
-                        <span className="ait-dir-dot">●</span>
-                        <span>{dir}</span>
-                      </span>
-                      <span className={`ait-desk-pill ${isBuy ? 'buy' : 'sell'}`}>DESK</span>
                     </div>
 
                     {/* Price Levels: Entry, Target, Stop */}
