@@ -11,8 +11,8 @@ export const PAIR_CONFIGS = {
     symbol: 'XAU/USD',
     name: 'Gold',
     decimals: 2,
-    minSlDistScalp: 1.5,
-    minTpDistScalp: 3.0,
+    minSlDistScalp: 1.2,
+    minTpDistScalp: 1.8,
     minSlDistDaytrade: 5.0,
     minTpDistDaytrade: 12.0,
     minLivePrice: 1500,
@@ -22,8 +22,8 @@ export const PAIR_CONFIGS = {
     symbol: 'XAG/USD',
     name: 'Silver',
     decimals: 3,
-    minSlDistScalp: 0.1,
-    minTpDistScalp: 0.2,
+    minSlDistScalp: 0.08,
+    minTpDistScalp: 0.12,
     minSlDistDaytrade: 0.35,
     minTpDistDaytrade: 0.8,
     minLivePrice: 10,
@@ -33,10 +33,10 @@ export const PAIR_CONFIGS = {
     symbol: 'BTC/USD',
     name: 'Bitcoin',
     decimals: 1,
-    minSlDistScalp: 200,
-    minTpDistScalp: 400,
-    minSlDistDaytrade: 600,
-    minTpDistDaytrade: 1500,
+    minSlDistScalp: 90,
+    minTpDistScalp: 135,
+    minSlDistDaytrade: 400,
+    minTpDistDaytrade: 800,
     minLivePrice: 15000,
     maxLivePrice: 500000,
   },
@@ -73,6 +73,8 @@ export function validateSignal(candidate, currentPrice, options = {}) {
     maxPriceDeviationPct = 0.0035, // entry must be within 0.35% of live market price
     maxDataAgeMs = 120000, // market data max 2 minutes old
     existingSignals = [],
+    allowOneToOne = false,
+    backtestValidated = false,
   } = options;
 
   if (!candidate || typeof candidate !== 'object') {
@@ -232,9 +234,12 @@ export function validateSignal(candidate, currentPrice, options = {}) {
   const slDist = Math.abs(entry - sl);
   const tpDist = Math.abs(tp - entry);
 
-  const isScalp = style === 'scalp' || String(candidate.style || '').toLowerCase() === 'scalp';
+  const isScalp = style === 'scalp' || String(candidate.style || '').toLowerCase() === 'scalp' || String(candidate.style || '').toLowerCase() === 'scalping';
   const minSlDist = isScalp ? pairConfig.minSlDistScalp : pairConfig.minSlDistDaytrade;
-  const minTpDist = isScalp ? pairConfig.minTpDistScalp : pairConfig.minTpDistDaytrade;
+  const isExplicitOneToOne = Boolean((allowOneToOne && backtestValidated) || (candidate.allowOneToOne && candidate.backtestValidated));
+  const minTpDist = isScalp
+    ? (isExplicitOneToOne ? pairConfig.minSlDistScalp : pairConfig.minTpDistScalp)
+    : pairConfig.minTpDistDaytrade;
 
   if (slDist < minSlDist) {
     return {
@@ -256,7 +261,7 @@ export function validateSignal(candidate, currentPrice, options = {}) {
 
   // 9. Risk/Reward Ratio Requirement
   const calculatedRr = slDist > 0 ? tpDist / slDist : 0;
-  const minRr = isScalp ? 1.5 : 2.0;
+  const minRr = isScalp ? (isExplicitOneToOne ? 1.0 : 1.5) : 2.0;
 
   if (calculatedRr < minRr - 0.05) {
     return {
@@ -299,8 +304,20 @@ export function validateSignal(candidate, currentPrice, options = {}) {
     tp: Number(tp.toFixed(pairConfig.decimals)),
     tp1: Number(tp.toFixed(pairConfig.decimals)),
     tp2: candidate.tp2 ? Number(Number(candidate.tp2).toFixed(pairConfig.decimals)) : null,
+    slDistance: candidate.slDistance ?? Number(slDist.toFixed(pairConfig.decimals)),
+    tpDistance: candidate.tpDistance ?? Number(tpDist.toFixed(pairConfig.decimals)),
+    slDistanceFormatted: candidate.slDistanceFormatted || null,
+    tpDistanceFormatted: candidate.tpDistanceFormatted || null,
     rr: `1:${calculatedRr.toFixed(1)}`,
     rrNumeric: Number(calculatedRr.toFixed(2)),
+    netRr: candidate.netRr || null,
+    netRrNumeric: candidate.netRrNumeric || null,
+    totalCost: candidate.totalCost || null,
+    invalidationLevel: candidate.invalidationLevel || null,
+    invalidationSource: candidate.invalidationSource || null,
+    opposingLevel: candidate.opposingLevel || null,
+    opposingSource: candidate.opposingSource || null,
+    levelExplanations: candidate.levelExplanations || null,
     style: isScalp ? 'scalp' : 'daytrade',
     timeframe: candidate.timeframe || (isScalp ? '5m' : '15m'),
     mode: candidate.mode || (isScalp ? '5M SCALP' : '15M INTRADAY (ICT)'),
@@ -313,6 +330,7 @@ export function validateSignal(candidate, currentPrice, options = {}) {
       ? candidate.confluences
       : ['Fair Value Gap (FVG) Liquidity Sweep', 'Institutional Order Block Retest', 'Discount / Premium Dealing Range Alignment'],
     model: candidate.model || 'ICT SMC Model',
+    confidence: candidate.confidence || null,
   };
 
   return {

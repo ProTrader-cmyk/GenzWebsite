@@ -73,7 +73,8 @@ async function queryTradingViewScanner(pair) {
     'close', 'high', 'low', 'EMA20',
     'Pivot.M.Classic.R1|15', 'Pivot.M.Classic.R2|15', 'Pivot.M.Classic.R3|15',
     'Pivot.M.Classic.S1|15', 'Pivot.M.Classic.S2|15', 'Pivot.M.Classic.S3|15',
-    'change', 'change_abs'
+    'change', 'change_abs',
+    'close|5', 'high|5', 'low|5'
   ];
 
   try {
@@ -120,6 +121,9 @@ async function queryTradingViewScanner(pair) {
         s3: row[25],
         change24h: row[26],
         changeAbs24h: row[27],
+        close5: row[28],
+        high5: row[29],
+        low5: row[30],
         decimals: config.decimals,
       };
     }
@@ -282,6 +286,10 @@ export async function run15mMarketReanalysis(pair = 'XAUUSD', liveSpotPrice = nu
   const sentimentGaugePct = bias.includes('BULL') ? 78 : bias.includes('BEAR') ? 22 : 50;
 
   const candleInfo = get15mCandleTimeRemaining();
+  const range5 = rawData?.high5 != null && rawData?.low5 != null ? Math.abs(rawData.high5 - rawData.low5) : 0;
+  const range15 = rawData?.high15 != null && rawData?.low15 != null ? Math.abs(rawData.high15 - rawData.low15) : 0;
+  const defaultAtr5m = isGold ? 1.85 : isSilver ? 0.115 : 155.0;
+  const atr5m = range5 > 0 ? range5 : (range15 > 0 ? range15 * 0.58 : defaultAtr5m);
 
   return {
     pair: norm,
@@ -289,6 +297,9 @@ export async function run15mMarketReanalysis(pair = 'XAUUSD', liveSpotPrice = nu
     priceFormatted: formatSpotPrice(norm, price),
     high15: rawData?.high15 != null ? rawData.high15 : price,
     low15: rawData?.low15 != null ? rawData.low15 : price,
+    high5: rawData?.high5 != null ? rawData.high5 : (rawData?.high15 != null ? rawData.high15 : price),
+    low5: rawData?.low5 != null ? rawData.low5 : (rawData?.low15 != null ? rawData.low15 : price),
+    atr5m: Number(atr5m.toFixed(decimals)),
     sessionHigh: rawData?.sessionHigh != null ? rawData.sessionHigh : (rawData?.high15 || price),
     sessionLow: rawData?.sessionLow != null ? rawData.sessionLow : (rawData?.low15 || price),
     decimals,

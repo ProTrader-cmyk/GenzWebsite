@@ -11529,3 +11529,74 @@
   }
 }
 
+/* ==========================================================================
+   SIGNAL CARD LEVEL RATIONALE (ENTRY / SL / TP EXPLANATIONS)
+   ========================================================================== */
+.ait-pm-signal-card-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ait-pm-level-explanations {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  background: rgba(6, 11, 22, 0.82);
+  border: 1px solid rgba(56, 189, 248, 0.14);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.ait-pm-le-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.ait-pm-le-badge {
+  align-self: flex-start;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.ait-pm-le-badge.cyan {
+  background: rgba(0, 242, 254, 0.12);
+  color: #00F2FE;
+  border: 1px solid rgba(0, 242, 254, 0.3);
+}
+
+.ait-pm-le-badge.red {
+  background: rgba(239, 68, 68, 0.12);
+  color: #EF4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.ait-pm-le-badge.emerald {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10B981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.ait-pm-le-text {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #CBD5E1;
+}
+
+@media (max-width: 860px) {
+  .ait-pm-level-explanations {
+    grid-template-columns: 1fr;
+  }
+}
+
+

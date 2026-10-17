@@ -5,6 +5,7 @@ import { generateRealPipSignal, saveSignalToFirestore } from '../services/pipLiv
 import { getMarketHoursStatus } from '../services/marketHoursService.js';
 import { evaluateMarketTradingConditions } from '../services/marketAnalysisService.js';
 import { validateSignal, isSupportedPair, normalizePair } from '../services/signalValidationService.js';
+import { calculateStructureScalpTpSl } from '../services/scalpTpSlEngine.js';
 import ScanWorkflowStepper from './ScanWorkflowStepper.jsx';
 import {
   executeScanStep1_MarketData,
@@ -450,64 +451,98 @@ function playSupercarEngineStart(mode = 'scalp') {
   }
 }
 
-function buildDefaultSignal(pair, price, style = 'scalp', direction = 'BUY') {
-  const normPair = (pair || 'XAUUSD').toUpperCase().replace(/[^A-Z0-9]/g, '');
-  const isGold = normPair.includes('XAU') || normPair.includes('GOLD');
-  const isSilver = normPair.includes('XAG') || normPair.includes('SILVER');
-  const isBtc = normPair.includes('BTC');
+function buildDefaultSignal(pair, price, style = 'scalp', direction = 'BUY', marketAnalysis = null) {
+  const normPair = normalizePair(pair || 'XAUUSD');
+  const isGold = normPair === 'XAUUSD';
+  const isSilver = normPair === 'XAGUSD';
+  const isBtc = normPair === 'BTCUSD';
 
   const decimals = isSilver ? 3 : isBtc ? 1 : 2;
-
-  let p = Number(price);
+  const p = Number(price);
   if (!p || isNaN(p) || p <= 0) {
-    p = isBtc ? 81632.50 : isGold ? 4171.25 : isSilver ? 57.00 : 4171.25;
+    return {
+      ok: false,
+      code: 'NO_TRADE',
+      reasonCode: 'INVALID_PRICE',
+      error: 'Valid live spot price is required to compute TP/SL.',
+    };
   }
 
-  const isScalp = style === 'scalp';
+  const isScalp = style === 'scalp' || style === 'scalping';
   const isBuy = String(direction).toUpperCase() === 'BUY';
   const dirStr = isBuy ? 'BUY' : 'SELL';
 
-  let slDist, tp1Dist, tp2Dist, beDist, pipsGain;
+  // For Scalping: strictly compute structure-based & ATR-filtered TP/SL
   if (isScalp) {
-    if (isGold) {
-      slDist = 2.5; // $2.50 SL
-      tp1Dist = 5.0; // $5.00 TP1 (1:2.0 RR)
-      tp2Dist = 7.5;
-      pipsGain = '+50 Pips ($5.00)';
-    } else if (isSilver) {
-      slDist = 0.150; // $0.150 SL
-      tp1Dist = 0.300; // $0.300 TP1 (1:2.0 RR)
-      tp2Dist = 0.450;
-      pipsGain = '+30 Pts ($0.30)';
-    } else {
-      // BTC
-      slDist = 350.0; // $350 SL
-      tp1Dist = 700.0; // $700 TP (1:2.0 RR)
-      tp2Dist = 1050.0;
-      pipsGain = '+700 Pts ($700.00)';
+    const scalpResult = calculateStructureScalpTpSl({
+      pair: normPair,
+      direction: dirStr,
+      entryPrice: p,
+      marketAnalysis,
+    });
+
+    if (!scalpResult.ok) {
+      return scalpResult; // { ok: false, code: 'NO_TRADE', reasonCode, error }
     }
+
+    return {
+      ok: true,
+      id: `sig-scalp-${normPair.toLowerCase()}-${Date.now()}`,
+      pair: normPair,
+      symbol: normPair,
+      direction: dirStr,
+      timeframe: '1m / 5m',
+      style: 'scalping',
+      mode: '1M/5M QUICK SCALP',
+      model: '1M-5M Liquidity Sweep + Fast FVG Tap',
+      entry: scalpResult.entry,
+      sl: scalpResult.sl,
+      tp: scalpResult.tp,
+      tp1: scalpResult.tp1,
+      tp2: scalpResult.tp2,
+      slDistance: scalpResult.slDistance,
+      tpDistance: scalpResult.tpDistance,
+      slDistanceFormatted: scalpResult.slDistanceFormatted,
+      tpDistanceFormatted: scalpResult.tpDistanceFormatted,
+      breakEvenTrigger: scalpResult.breakEvenTrigger,
+      rr: scalpResult.rr,
+      rrNumeric: scalpResult.rrNumeric,
+      netRr: scalpResult.netRr,
+      netRrNumeric: scalpResult.netRrNumeric,
+      totalCost: scalpResult.totalCost,
+      invalidationLevel: scalpResult.invalidationLevel,
+      invalidationSource: scalpResult.invalidationSource,
+      opposingLevel: scalpResult.opposingLevel,
+      opposingSource: scalpResult.opposingSource,
+      levelExplanations: scalpResult.levelExplanations,
+      session: 'Active Institutional Overlap',
+      status: 'active',
+      confluences: scalpResult.confluences,
+      time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Phnom_Penh' }),
+    };
+  }
+
+  // Day trade (Intraday)
+  let slDist, tp1Dist, tp2Dist, beDist, pipsGain;
+  if (isGold) {
+    slDist = 10.0; // $10.00 SL
+    tp1Dist = 20.0; // $20.00 TP1 (1:2.0 RR)
+    tp2Dist = 25.0;
+    beDist = 10.0;
+    pipsGain = '+200 Pips ($20.00)';
+  } else if (isSilver) {
+    slDist = 0.400; // $0.400 SL
+    tp1Dist = 0.800; // $0.800 TP1 (1:2.0 RR)
+    tp2Dist = 1.200;
+    beDist = 0.400;
+    pipsGain = '+80 Pts ($0.80)';
   } else {
-    // Day trade (Intraday)
-    if (isGold) {
-      slDist = 10.0; // $10.00 SL
-      tp1Dist = 20.0; // $20.00 TP1 (1:2.0 RR)
-      tp2Dist = 25.0;
-      beDist = 10.0;
-      pipsGain = '+200 Pips ($20.00)';
-    } else if (isSilver) {
-      slDist = 0.400; // $0.400 SL
-      tp1Dist = 0.800; // $0.800 TP1 (1:2.0 RR)
-      tp2Dist = 1.200;
-      beDist = 0.400;
-      pipsGain = '+80 Pts ($0.80)';
-    } else {
-      // BTC
-      slDist = 850.0; // $850 SL
-      tp1Dist = 1700.0; // $1,700 TP1 (1:2.0 RR)
-      tp2Dist = 2200.0;
-      beDist = 850.0;
-      pipsGain = '+1,700 Pts ($1,700.00)';
-    }
+    // BTC
+    slDist = 850.0; // $850 SL
+    tp1Dist = 1700.0; // $1,700 TP1 (1:2.0 RR)
+    tp2Dist = 2200.0;
+    beDist = 850.0;
+    pipsGain = '+1,700 Pts ($1,700.00)';
   }
 
   const entryVal = Number(p.toFixed(decimals));
@@ -516,34 +551,48 @@ function buildDefaultSignal(pair, price, style = 'scalp', direction = 'BUY') {
   const tp2Val = Number((isBuy ? entryVal + tp2Dist : entryVal - tp2Dist).toFixed(decimals));
   const beVal = beDist ? Number((isBuy ? entryVal + beDist : entryVal - beDist).toFixed(decimals)) : null;
 
-  const modelName = isScalp
-    ? '1M-5M Liquidity Sweep + Fast FVG Tap'
-    : (isGold ? '3-Candle CRT Daily Liquidation Model' : isSilver ? 'Silver Institutional FVG Expansion Model' : 'Bitcoin Order Flow Swing Model');
+  const modelName = isGold
+    ? '3-Candle CRT Daily Liquidation Model'
+    : isSilver
+      ? 'Silver Institutional FVG Expansion Model'
+      : 'Bitcoin Order Flow Swing Model';
 
   return {
-    id: `sig-${isScalp ? 'scalp' : 'daytrade'}-${normPair.toLowerCase()}-${Date.now()}`,
+    ok: true,
+    id: `sig-daytrade-${normPair.toLowerCase()}-${Date.now()}`,
     pair: normPair,
     symbol: normPair,
     direction: dirStr,
-    timeframe: isScalp ? '1m / 5m' : '15m / 1H',
-    style: isScalp ? 'scalping' : 'daytrade',
-    mode: isScalp ? '1M/5M QUICK SCALP' : '15M/1H DAY TRADE (CRT SWING)',
+    timeframe: '15m / 1H',
+    style: 'daytrade',
+    mode: '15M/1H DAY TRADE (CRT SWING)',
     model: modelName,
     entry: entryVal,
     sl: slVal,
     tp: tpVal,
     tp1: tpVal,
     tp2: tp2Val,
+    slDistance: slDist,
+    tpDistance: tp1Dist,
+    slDistanceFormatted: `-$${slDist.toFixed(decimals)}`,
+    tpDistanceFormatted: `+$${tp1Dist.toFixed(decimals)}`,
     breakEvenTrigger: beVal,
     rr: '1:2.0',
-    confidence: isScalp ? 94 : 96,
+    rrNumeric: 2.0,
+    netRr: '1:1.92',
+    netRrNumeric: 1.92,
+    levelExplanations: {
+      entry: `${dirStr} execution at live spot ($${entryVal.toFixed(decimals)}) aligned with 15M/1H multi-timeframe structure.`,
+      sl: `Placed $${slDist.toFixed(decimals)} ${isBuy ? 'below' : 'above'} 15M/1H invalidation swing ($${slVal.toFixed(decimals)}).`,
+      tp: `Targets next 1H institutional liquidity pool $${tp1Dist.toFixed(decimals)} away ($${tpVal.toFixed(decimals)}) for 1:2.0 R:R.`,
+    },
     pipsGain,
     session: 'Active Institutional Overlap',
     status: 'active',
     confluences: [
-      `${normPair} ${isBuy ? 'demand' : 'supply'} liquidity swept with instant confirmation`,
-      `Stop Loss strictly locked at $${slDist} distance beyond structural swing`,
-      `Take Profit secured at 1:2.0 Risk-to-Reward ratio ($${tp1Dist} target)`,
+      `${normPair} ${isBuy ? 'demand' : 'supply'} liquidity swept with 15M/1H confirmation`,
+      `Stop Loss strictly locked at $${slDist.toFixed(decimals)} distance beyond structural swing`,
+      `Take Profit secured at 1:2.0 Risk-to-Reward ratio ($${tp1Dist.toFixed(decimals)} target)`,
     ],
     time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Phnom_Penh' }),
   };
@@ -1182,7 +1231,7 @@ export default function MarketAnalysisPanel({
         ...prev,
         activeStep: 3,
         stepStatuses: { 1: 'done', 2: 'done', 3: 'active', 4: 'pending' },
-        telemetry: `Step 3/4 — AI Validation: Verifying entry tolerance (±0.35%), SL/TP geometry & R:R...`,
+        telemetry: `Step 3/4 — AI Validation: Computing structure SL/TP, checking ATR noise & transaction costs...`,
       }));
 
       // -------------------------------------------------------------
@@ -1191,7 +1240,30 @@ export default function MarketAnalysisPanel({
       await sleep(400);
       if (isCancelled()) return;
 
-      const candidate = buildDefaultSignal(targetPair, lockedScanPrice, normMode, step2.direction);
+      const candidate = buildDefaultSignal(targetPair, lockedScanPrice, normMode, step2.direction, marketAnalysis);
+      if (!candidate || candidate.ok === false) {
+        await sleep(300);
+        if (isCancelled()) return;
+
+        const rejectMsg = candidate?.error || 'Setup rejected by scalping risk/reward & structure filter (NO TRADE).';
+        setTargetScanState({
+          isScanning: false,
+          activeStep: 4,
+          stepStatuses: { 1: 'done', 2: 'done', 3: 'error', 4: 'no_signal' },
+          telemetry: `Step 4/4 — Final Decision: NO TRADE (${rejectMsg})`,
+          completionStatus: 'NO_SIGNAL',
+        });
+
+        if (isTargetScalp) {
+          setScalpSignal(null);
+          try { localStorage.removeItem(`genz_locked_scalp_${targetPair}`); } catch {}
+        } else {
+          setDayTradeSignal(null);
+          try { localStorage.removeItem(`genz_locked_daytrade_${targetPair}`); } catch {}
+        }
+        return;
+      }
+
       const step3 = executeScanStep3_AiValidation(candidate, lockedScanPrice, normMode, { activePair: targetPair });
 
       if (!step3.ok) {
@@ -1267,14 +1339,19 @@ export default function MarketAnalysisPanel({
 
   const handleCopySignal = (sig = activeSignal) => {
     if (!sig) return;
+    const slDistStr = sig.slDistanceFormatted || (sig.slDistance != null ? `-$${Number(sig.slDistance).toFixed(decimals)}` : '');
+    const tpDistStr = sig.tpDistanceFormatted || (sig.tpDistance != null ? `+$${Number(sig.tpDistance).toFixed(decimals)}` : '');
+    const explanationsText = sig.levelExplanations
+      ? `\nLevel Rationale:\n• Entry: ${sig.levelExplanations.entry}\n• SL: ${sig.levelExplanations.sl}\n• TP: ${sig.levelExplanations.tp}`
+      : '';
     const text = `[GenZTrader Pip Signal - ${sig.mode || sig.style}]
 Asset: ${sig.pair}
 Action: ${sig.direction}
-Entry: ${sig.entry}
-SL: ${sig.sl}
-TP1: ${sig.tp1 || sig.tp}
-${sig.tp2 ? `TP2: ${sig.tp2}\n` : ''}${sig.breakEvenTrigger ? `BE Trigger: ${sig.breakEvenTrigger}\n` : ''}R:R: ${sig.rr || '1:2.5'}
-Model: ${sig.model || 'ICT SMC Model'}`;
+Entry: $${formatCommaPrice(sig.entry, decimals)}
+SL: $${formatCommaPrice(sig.sl, decimals)}${slDistStr ? ` (${slDistStr})` : ''}
+TP: $${formatCommaPrice(sig.tp1 || sig.tp, decimals)}${tpDistStr ? ` (${tpDistStr})` : ''}
+${sig.tp2 ? `TP2 (Runner): $${formatCommaPrice(sig.tp2, decimals)}\n` : ''}${sig.breakEvenTrigger ? `BE Trigger: $${formatCommaPrice(sig.breakEvenTrigger, decimals)}\n` : ''}R:R: ${sig.rr || '1:2.0'}${sig.netRr ? ` (Net ${sig.netRr} after costs)` : ''}
+Model: ${sig.model || 'ICT SMC Model'}${explanationsText}`;
 
     if (navigator?.clipboard?.writeText) {
       navigator.clipboard.writeText(text).catch(() => {});
@@ -1854,9 +1931,9 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                 <span className="ait-pm-mode-icon"><IconZap width="17" height="17" /></span>
                 <div className="ait-pm-mode-meta">
                   <strong className="ait-pm-mode-title">Pip Scalp</strong>
-                  <span className="ait-pm-mode-sub">1m • 5m Fast Scalp (2–3 Pts Target &amp; SL)</span>
+                  <span className="ait-pm-mode-sub">1m • 5m Structure &amp; ATR Scalp (Min 1.5:1 R:R)</span>
                 </div>
-                <span className="ait-pm-pill-tag amber">Always Active</span>
+                <span className="ait-pm-pill-tag amber">Structure Validated</span>
               </button>
 
               <button
@@ -1867,7 +1944,7 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                 <span className="ait-pm-mode-icon"><IconTarget width="17" height="17" /></span>
                 <div className="ait-pm-mode-meta">
                   <strong className="ait-pm-mode-title">Pip Intra Trade</strong>
-                  <span className="ait-pm-mode-sub">15m • 1h • 4h CRT Swings ($10–$20)</span>
+                  <span className="ait-pm-mode-sub">15m • 1h • 4h CRT Swings (Min 2.0:1 R:R)</span>
                 </div>
                 <span className="ait-pm-pill-tag cyan">Autonomous Monitor</span>
               </button>
@@ -1965,95 +2042,136 @@ Model: ${sig.model || 'ICT SMC Model'}`;
             </div>
 
             {/* 4. SIGNAL OUTPUT AREA */}
-            {/* 4A. SCALP MODE: SIMPLE ROW DIRECTLY UNDER THE MACHINE (NUMBERS STRICTLY LOCKED) */}
-            {pipMode === 'scalp' && currentScalpSignal && (
-              <div className="ait-pm-scalp-simple-row">
-                <div className="ait-pm-sr-badge-col">
-                  <span className={`ait-pm-sr-dir ${(currentScalpSignal?.direction || 'BUY').toLowerCase() === 'sell' ? 'sell' : 'buy'}`}>
-                    {(currentScalpSignal?.direction || 'BUY').toLowerCase() === 'sell' ? (
-                      <>
-                        <IconArrowDown width="11" height="11" /> SELL
-                      </>
-                    ) : (
-                      <>
-                        <IconArrowUp width="11" height="11" /> BUY
-                      </>
-                    )}
-                  </span>
-                  <div className="ait-pm-sr-pair-wrap">
-                    <strong className="ait-pm-sr-pair">{pair}</strong>
-                    <span className="ait-pm-sr-tf-tag">1M / 5M</span>
-                  </div>
-                </div>
+            {/* 4A. SCALP MODE: SIGNAL CARD WITH ENTRY, TP, SL, DISTANCES, R:R & LEVEL EXPLANATIONS */}
+            {pipMode === 'scalp' && currentScalpSignal && (() => {
+              const sEntry = Number(currentScalpSignal.entry);
+              const sSl = Number(currentScalpSignal.sl);
+              const sTp = Number(currentScalpSignal.tp1 ?? currentScalpSignal.tp);
+              const sSlDist = currentScalpSignal.slDistance ?? Math.abs(sEntry - sSl);
+              const sTpDist = currentScalpSignal.tpDistance ?? Math.abs(sTp - sEntry);
+              const sSlDistFmt = currentScalpSignal.slDistanceFormatted || `-$${sSlDist.toFixed(decimals)}`;
+              const sTpDistFmt = currentScalpSignal.tpDistanceFormatted || `+$${sTpDist.toFixed(decimals)}`;
+              const sRr = currentScalpSignal.rr || (sSlDist > 0 ? `1:${(sTpDist / sSlDist).toFixed(1)}` : '1:2.0');
+              const sNetRr = currentScalpSignal.netRr || null;
+              const sExpl = currentScalpSignal.levelExplanations || {
+                entry: `${currentScalpSignal.direction} execution at live spot ($${formatCommaPrice(sEntry, decimals)}) after 1M/5M structure confirmation.`,
+                sl: `Placed ${sSlDistFmt} beyond nearest market-structure invalidation point + ATR noise buffer.`,
+                tp: `Targets nearest opposing liquidity pool (${sTpDistFmt}) for realistic scalp R:R (${sRr}).`,
+              };
 
-                <div className="ait-pm-sr-metrics">
-                  <div className="ait-pm-sr-item">
-                    <span className="ait-pm-sr-label">ENTRY</span>
-                    <strong className="ait-pm-sr-val text-cyan ait-mono">
-                      ${formatCommaPrice(currentScalpSignal?.entry, decimals)}
-                    </strong>
-                    <span className="ait-pm-sr-tag-badge text-cyan">Optimal</span>
-                  </div>
+              return (
+                <div className="ait-pm-signal-card-wrap">
+                  <div className="ait-pm-scalp-simple-row">
+                    <div className="ait-pm-sr-badge-col">
+                      <span className={`ait-pm-sr-dir ${(currentScalpSignal?.direction || 'BUY').toLowerCase() === 'sell' ? 'sell' : 'buy'}`}>
+                        {(currentScalpSignal?.direction || 'BUY').toLowerCase() === 'sell' ? (
+                          <>
+                            <IconArrowDown width="11" height="11" /> SELL
+                          </>
+                        ) : (
+                          <>
+                            <IconArrowUp width="11" height="11" /> BUY
+                          </>
+                        )}
+                      </span>
+                      <div className="ait-pm-sr-pair-wrap">
+                        <strong className="ait-pm-sr-pair">{pair}</strong>
+                        <span className="ait-pm-sr-tf-tag">1M / 5M SCALP</span>
+                      </div>
+                    </div>
 
-                  <div className="ait-pm-sr-divider" />
+                    <div className="ait-pm-sr-metrics">
+                      <div className="ait-pm-sr-item">
+                        <span className="ait-pm-sr-label">ENTRY PRICE</span>
+                        <strong className="ait-pm-sr-val text-cyan ait-mono">
+                          ${formatCommaPrice(sEntry, decimals)}
+                        </strong>
+                        <span className="ait-pm-sr-tag-badge text-cyan">Live Spot</span>
+                      </div>
 
-                  <div className="ait-pm-sr-item">
-                    <span className="ait-pm-sr-label">STOP LOSS</span>
-                    <strong className="ait-pm-sr-val text-red ait-mono">
-                      ${formatCommaPrice(currentScalpSignal?.sl, decimals)}
-                    </strong>
-                    <span className="ait-pm-sr-tag-badge text-red">2.5 Num</span>
-                  </div>
+                      <div className="ait-pm-sr-divider" />
 
-                  <div className="ait-pm-sr-divider" />
+                      <div className="ait-pm-sr-item">
+                        <span className="ait-pm-sr-label">STOP LOSS (SL)</span>
+                        <strong className="ait-pm-sr-val text-red ait-mono">
+                          ${formatCommaPrice(sSl, decimals)}
+                        </strong>
+                        <span className="ait-pm-sr-tag-badge text-red" title="SL Distance from Entry">
+                          {sSlDistFmt}
+                        </span>
+                      </div>
 
-                  <div className="ait-pm-sr-item">
-                    <span className="ait-pm-sr-label">TAKE PROFIT 1</span>
-                    <strong className="ait-pm-sr-val text-emerald ait-mono">
-                      ${formatCommaPrice(currentScalpSignal?.tp1, decimals)}
-                    </strong>
-                    <span className="ait-pm-sr-tag-badge text-emerald">3.0 Num</span>
-                  </div>
+                      <div className="ait-pm-sr-divider" />
 
-                  <div className="ait-pm-sr-divider" />
+                      <div className="ait-pm-sr-item">
+                        <span className="ait-pm-sr-label">TAKE PROFIT (TP)</span>
+                        <strong className="ait-pm-sr-val text-emerald ait-mono">
+                          ${formatCommaPrice(sTp, decimals)}
+                        </strong>
+                        <span className="ait-pm-sr-tag-badge text-emerald" title="TP Distance from Entry">
+                          {sTpDistFmt}
+                        </span>
+                      </div>
 
-                  <div className="ait-pm-sr-item">
-                    <span className="ait-pm-sr-label">RUNNER (TP2)</span>
-                    <strong className="ait-pm-sr-val text-emerald ait-mono">
-                      ${formatCommaPrice(currentScalpSignal?.tp2, decimals)}
-                    </strong>
-                    <span className="ait-pm-sr-tag-badge text-emerald">+5.0 Num</span>
-                  </div>
-                </div>
+                      <div className="ait-pm-sr-divider" />
 
-                <div className="ait-pm-sr-actions">
-                  {signalSavedNotice && (
-                    <span className="ait-pm-saved-badge">
-                      <IconCheck width="11" height="11" /> Stored in Firestore &amp; Alert Sent
-                    </span>
-                  )}
-                  <span className="ait-pm-sr-conf">95% AI</span>
-                  <button
-                    type="button"
-                    className="ait-pm-sr-copy-btn"
-                    onClick={() => handleCopySignal(currentScalpSignal)}
-                    title="Copy Scalp Signal"
-                  >
-                    <span>
-                      {signalCopiedNotice ? (
-                        <>
-                          <IconCheck width="12" height="12" /> Copied
-                        </>
-                      ) : (
-                        <>
-                          <IconCopy width="12" height="12" /> Copy
-                        </>
+                      <div className="ait-pm-sr-item">
+                        <span className="ait-pm-sr-label">REWARD : RISK</span>
+                        <strong className="ait-pm-sr-val text-cyan ait-mono">
+                          {sRr}
+                        </strong>
+                        <span className="ait-pm-sr-tag-badge text-emerald">
+                          {sNetRr ? `Net ${sNetRr}` : 'Cost Verified'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="ait-pm-sr-actions">
+                      {signalSavedNotice && (
+                        <span className="ait-pm-saved-badge">
+                          <IconCheck width="11" height="11" /> Stored in Firestore &amp; Alert Sent
+                        </span>
                       )}
-                    </span>
-                  </button>
+                      <span className="ait-pm-sr-conf">VALIDATED</span>
+                      <button
+                        type="button"
+                        className="ait-pm-sr-copy-btn"
+                        onClick={() => handleCopySignal(currentScalpSignal)}
+                        title="Copy Scalp Signal"
+                      >
+                        <span>
+                          {signalCopiedNotice ? (
+                            <>
+                              <IconCheck width="12" height="12" /> Copied
+                            </>
+                          ) : (
+                            <>
+                              <IconCopy width="12" height="12" /> Copy
+                            </>
+                          )}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Level Selection Explanations (Entry, SL, TP Rationale) */}
+                  <div className="ait-pm-level-explanations">
+                    <div className="ait-pm-le-item">
+                      <span className="ait-pm-le-badge cyan">ENTRY WHY</span>
+                      <p className="ait-pm-le-text">{sExpl.entry}</p>
+                    </div>
+                    <div className="ait-pm-le-item">
+                      <span className="ait-pm-le-badge red">SL WHY</span>
+                      <p className="ait-pm-le-text">{sExpl.sl}</p>
+                    </div>
+                    <div className="ait-pm-le-item">
+                      <span className="ait-pm-le-badge emerald">TP WHY</span>
+                      <p className="ait-pm-le-text">{sExpl.tp}</p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* 4B. INTRA TRADE MODE: MARKET CLOSED NOTICE ONLY WHEN MARKET IS CLOSED */}
             {pipMode === 'daytrade' && !marketStatus.isOpen && !dayTradeSignal && (
@@ -2098,104 +2216,130 @@ Model: ${sig.model || 'ICT SMC Model'}`;
             )}
 
             {/* 4C. INTRA TRADE MODE: IF CONDITION MET, SHOW HIGH-CONVICTION CRT SIGNAL ROW */}
-            {pipMode === 'daytrade' && dayTradeSignal && (
-              <div className="ait-pm-scalp-simple-row intra-theme">
-                <div className="ait-pm-sr-badge-col">
-                  <span className={`ait-pm-sr-dir ${(dayTradeSignal.direction || 'BUY').toLowerCase() === 'sell' ? 'sell' : 'buy'}`}>
-                    {(dayTradeSignal.direction || 'BUY').toLowerCase() === 'sell' ? (
-                      <>
-                        <IconArrowDown width="11" height="11" /> SELL
-                      </>
-                    ) : (
-                      <>
-                        <IconArrowUp width="11" height="11" /> BUY
-                      </>
-                    )}
-                  </span>
-                  <div className="ait-pm-sr-pair-wrap">
-                    <strong className="ait-pm-sr-pair">{pair}</strong>
-                    <span className="ait-pm-sr-tf-tag cyan">CRT 15M/1H</span>
-                  </div>
-                </div>
+            {pipMode === 'daytrade' && dayTradeSignal && (() => {
+              const dEntry = Number(dayTradeSignal.entry);
+              const dSl = Number(dayTradeSignal.sl);
+              const dTp = Number(dayTradeSignal.tp1 ?? dayTradeSignal.tp);
+              const dSlDist = dayTradeSignal.slDistance ?? Math.abs(dEntry - dSl);
+              const dTpDist = dayTradeSignal.tpDistance ?? Math.abs(dTp - dEntry);
+              const dSlDistFmt = dayTradeSignal.slDistanceFormatted || `-$${dSlDist.toFixed(decimals)}`;
+              const dTpDistFmt = dayTradeSignal.tpDistanceFormatted || `+$${dTpDist.toFixed(decimals)}`;
+              const dRr = dayTradeSignal.rr || (dSlDist > 0 ? `1:${(dTpDist / dSlDist).toFixed(1)}` : '1:2.0');
+              const dExpl = dayTradeSignal.levelExplanations || {
+                entry: `${dayTradeSignal.direction} execution at live spot ($${formatCommaPrice(dEntry, decimals)}) aligned with 15M/1H multi-timeframe structure.`,
+                sl: `Placed ${dSlDistFmt} beyond 15M/1H invalidation swing ($${formatCommaPrice(dSl, decimals)}).`,
+                tp: `Targets 1H opposing liquidity zone (${dTpDistFmt}) for ${dRr} R:R.`,
+              };
 
-                <div className="ait-pm-sr-metrics">
-                  <div className="ait-pm-sr-item">
-                    <span className="ait-pm-sr-label">ENTRY</span>
-                    <strong className="ait-pm-sr-val text-cyan ait-mono">
-                      ${formatCommaPrice(dayTradeSignal.entry, decimals)}
-                    </strong>
-                    <span className="ait-pm-sr-tag-badge text-cyan">Optimal</span>
-                  </div>
+              return (
+                <div className="ait-pm-signal-card-wrap">
+                  <div className="ait-pm-scalp-simple-row intra-theme">
+                    <div className="ait-pm-sr-badge-col">
+                      <span className={`ait-pm-sr-dir ${(dayTradeSignal.direction || 'BUY').toLowerCase() === 'sell' ? 'sell' : 'buy'}`}>
+                        {(dayTradeSignal.direction || 'BUY').toLowerCase() === 'sell' ? (
+                          <>
+                            <IconArrowDown width="11" height="11" /> SELL
+                          </>
+                        ) : (
+                          <>
+                            <IconArrowUp width="11" height="11" /> BUY
+                          </>
+                        )}
+                      </span>
+                      <div className="ait-pm-sr-pair-wrap">
+                        <strong className="ait-pm-sr-pair">{pair}</strong>
+                        <span className="ait-pm-sr-tf-tag cyan">CRT 15M/1H</span>
+                      </div>
+                    </div>
 
-                  <div className="ait-pm-sr-divider" />
+                    <div className="ait-pm-sr-metrics">
+                      <div className="ait-pm-sr-item">
+                        <span className="ait-pm-sr-label">ENTRY PRICE</span>
+                        <strong className="ait-pm-sr-val text-cyan ait-mono">
+                          ${formatCommaPrice(dEntry, decimals)}
+                        </strong>
+                        <span className="ait-pm-sr-tag-badge text-cyan">Live Spot</span>
+                      </div>
 
-                  <div className="ait-pm-sr-item">
-                    <span className="ait-pm-sr-label">STOP LOSS</span>
-                    <strong className="ait-pm-sr-val text-red ait-mono">
-                      ${formatCommaPrice(dayTradeSignal.sl, decimals)}
-                    </strong>
-                    <span className="ait-pm-sr-tag-badge text-red">-10 Pts</span>
-                  </div>
+                      <div className="ait-pm-sr-divider" />
 
-                  <div className="ait-pm-sr-divider" />
+                      <div className="ait-pm-sr-item">
+                        <span className="ait-pm-sr-label">STOP LOSS (SL)</span>
+                        <strong className="ait-pm-sr-val text-red ait-mono">
+                          ${formatCommaPrice(dSl, decimals)}
+                        </strong>
+                        <span className="ait-pm-sr-tag-badge text-red">{dSlDistFmt}</span>
+                      </div>
 
-                  <div className="ait-pm-sr-item">
-                    <span className="ait-pm-sr-label">TAKE PROFIT 1</span>
-                    <strong className="ait-pm-sr-val text-emerald ait-mono">
-                      ${formatCommaPrice(dayTradeSignal.tp1, decimals)}
-                    </strong>
-                    <span className="ait-pm-sr-tag-badge text-emerald">{isGold ? '+20 Pts (1:2)' : '+70 Pips'}</span>
-                  </div>
+                      <div className="ait-pm-sr-divider" />
 
-                  <div className="ait-pm-sr-divider" />
+                      <div className="ait-pm-sr-item">
+                        <span className="ait-pm-sr-label">TAKE PROFIT (TP)</span>
+                        <strong className="ait-pm-sr-val text-emerald ait-mono">
+                          ${formatCommaPrice(dTp, decimals)}
+                        </strong>
+                        <span className="ait-pm-sr-tag-badge text-emerald">{dTpDistFmt}</span>
+                      </div>
 
-                  <div className="ait-pm-sr-item">
-                    <span className="ait-pm-sr-label">FINAL TP2</span>
-                    <strong className="ait-pm-sr-val text-emerald ait-mono">
-                      ${formatCommaPrice(dayTradeSignal.tp2, decimals)}
-                    </strong>
-                    <span className="ait-pm-sr-tag-badge text-emerald">{isGold ? '+25 Pts (1:2.5)' : '+90 Pips'}</span>
-                  </div>
+                      <div className="ait-pm-sr-divider" />
 
-                  <div className="ait-pm-sr-divider" />
+                      <div className="ait-pm-sr-item">
+                        <span className="ait-pm-sr-label">REWARD : RISK</span>
+                        <strong className="ait-pm-sr-val text-cyan ait-mono">
+                          {dRr}
+                        </strong>
+                        <span className="ait-pm-sr-tag-badge text-cyan">
+                          {dayTradeSignal.breakEvenTrigger ? `BE $${formatCommaPrice(dayTradeSignal.breakEvenTrigger, decimals)}` : 'CRT Swing'}
+                        </span>
+                      </div>
+                    </div>
 
-                  <div className="ait-pm-sr-item">
-                    <span className="ait-pm-sr-label">BE TRIGGER</span>
-                    <strong className="ait-pm-sr-val text-cyan ait-mono">
-                      ${formatCommaPrice(dayTradeSignal.breakEvenTrigger, decimals)}
-                    </strong>
-                    <span className="ait-pm-sr-tag-badge text-cyan">Move SL</span>
-                  </div>
-                </div>
-
-                <div className="ait-pm-sr-actions">
-                  {signalSavedNotice && (
-                    <span className="ait-pm-saved-badge">
-                      <IconCheck width="11" height="11" /> Stored in Firestore &amp; Alert Sent
-                    </span>
-                  )}
-                  <span className="ait-pm-sr-conf cyan">96% AI</span>
-                  <button
-                    type="button"
-                    className="ait-pm-sr-copy-btn"
-                    onClick={() => handleCopySignal(dayTradeSignal)}
-                    title="Copy Intra Signal"
-                  >
-                    <span>
-                      {signalCopiedNotice ? (
-                        <>
-                          <IconCheck width="12" height="12" /> Copied
-                        </>
-                      ) : (
-                        <>
-                          <IconCopy width="12" height="12" /> Copy
-                        </>
+                    <div className="ait-pm-sr-actions">
+                      {signalSavedNotice && (
+                        <span className="ait-pm-saved-badge">
+                          <IconCheck width="11" height="11" /> Stored in Firestore &amp; Alert Sent
+                        </span>
                       )}
-                    </span>
-                  </button>
+                      <span className="ait-pm-sr-conf cyan">VALIDATED</span>
+                      <button
+                        type="button"
+                        className="ait-pm-sr-copy-btn"
+                        onClick={() => handleCopySignal(dayTradeSignal)}
+                        title="Copy Intra Signal"
+                      >
+                        <span>
+                          {signalCopiedNotice ? (
+                            <>
+                              <IconCheck width="12" height="12" /> Copied
+                            </>
+                          ) : (
+                            <>
+                              <IconCopy width="12" height="12" /> Copy
+                            </>
+                          )}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Level Selection Explanations (Entry, SL, TP Rationale) */}
+                  <div className="ait-pm-level-explanations">
+                    <div className="ait-pm-le-item">
+                      <span className="ait-pm-le-badge cyan">ENTRY WHY</span>
+                      <p className="ait-pm-le-text">{dExpl.entry}</p>
+                    </div>
+                    <div className="ait-pm-le-item">
+                      <span className="ait-pm-le-badge red">SL WHY</span>
+                      <p className="ait-pm-le-text">{dExpl.sl}</p>
+                    </div>
+                    <div className="ait-pm-le-item">
+                      <span className="ait-pm-le-badge emerald">TP WHY</span>
+                      <p className="ait-pm-le-text">{dExpl.tp}</p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
         )}
       </div>

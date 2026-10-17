@@ -4,6 +4,7 @@ import { fetchLivePrice, formatSpotPrice } from './marketPriceService.js';
 import { getPipApiKey } from './pipAiService.js';
 import { sendTelegramSignal } from './telegramService.js';
 import { run15mMarketReanalysis } from './marketAnalysisService.js';
+import { calculateStructureScalpTpSl } from './scalpTpSlEngine.js';
 
 const STORAGE_KEY = 'genz_real_pip_signals';
 const DAILY_STATS_KEY = 'genz_pip_daily_stats';
@@ -414,14 +415,15 @@ export function calculateRealIctSetup(pair, spotPrice, preferredDir = null, styl
   else if (normPair.includes('XAG') || normPair.includes('SILVER')) normPair = 'XAGUSD';
 
   const isGold = normPair === 'XAUUSD';
+  const isSilver = normPair === 'XAGUSD';
   const isCrypto = normPair === 'BTCUSD' || normPair.includes('ETH');
   const isIndex = normPair === 'US30' || normPair.includes('NAS');
-  const isForex = !isGold && !isCrypto && !isIndex && (normPair.includes('EUR') || normPair.includes('GBP') || normPair.includes('JPY') || normPair.includes('USD'));
+  const isForex = !isGold && !isSilver && !isCrypto && !isIndex && (normPair.includes('EUR') || normPair.includes('GBP') || normPair.includes('JPY') || normPair.includes('USD'));
 
-  const decimals = isForex ? (normPair.includes('JPY') ? 3 : 5) : isIndex ? 1 : isCrypto ? 1 : 2;
+  const decimals = isSilver ? 3 : isForex ? (normPair.includes('JPY') ? 3 : 5) : isIndex ? 1 : isCrypto ? 1 : 2;
   const current = Number(spotPrice);
 
-  const isScalp = style === 'scalping';
+  const isScalp = style === 'scalping' || style === 'scalp';
   const timeframe = isScalp ? '5m' : (isGold ? '5m' : '15m');
   const mode = isScalp
     ? '5M SCALP (ICT M1-M5)'
@@ -441,57 +443,91 @@ export function calculateRealIctSetup(pair, spotPrice, preferredDir = null, styl
 
   const isBuy = dir === 'BUY';
 
-  // Realistic ICT & CRT Pip Scale and Risk parameters (Scalp vs Day Trade)
-  let riskPips, rewardPips;
-  if (isScalp) {
-    if (isGold) {
-      riskPips = 2.5; // 2–3 numbers SL ($2.50 risk for scalping)
-      rewardPips = 3.0; // 2–3 numbers TP ($3.00 target = 1:1.2 R:R quick scalp)
-    } else if (isCrypto) {
-      riskPips = 380.0;
-      rewardPips = 1020.0; // 1:2.68 R:R
-    } else if (isIndex) {
-      riskPips = 65.0;
-      rewardPips = 175.0; // 1:2.69 R:R
-    } else if (isForex) {
-      riskPips = normPair.includes('JPY') ? 0.25 : 0.0010; // 10 pips risk
-      rewardPips = normPair.includes('JPY') ? 0.65 : 0.0026; // 26 pips target = 1:2.6 R:R
-    } else {
-      riskPips = 10.0;
-      rewardPips = 25.0;
-    }
-  } else {
-    // Day Trade: For Gold, apply strict 3-Candle CRT model rules
-    if (isGold) {
-      // 1000 points = $10.00 strictly locked SL
-      // 2000 points = $20.00 strictly locked TP (1:2.0 RR)
-      riskPips = 10.0;
-      rewardPips = 20.0;
-    } else if (isCrypto) {
-      riskPips = 850.0;
-      rewardPips = 1700.0; // 1:2.0 R:R
-    } else if (isIndex) {
-      riskPips = 180.0;
-      rewardPips = 360.0; // 1:2.0 R:R
-    } else if (isForex) {
-      riskPips = normPair.includes('JPY') ? 0.55 : 0.0022; // 22 pips risk
-      rewardPips = normPair.includes('JPY') ? 1.10 : 0.0044; // 44 pips reward = 1:2.0 R:R
-    } else {
-      riskPips = 25.0;
-      rewardPips = 50.0;
+  // For Scalping on supported assets (Gold, BTC, Silver), use structure & ATR engine
+  let entry = Number(current.toFixed(decimals));
+  let sl, tp, tp2 = null, rrRatio, scalpMeta = null;
+
+  if (isScalp && (isGold || isSilver || normPair === 'BTCUSD')) {
+    const scalpCalc = calculateStructureScalpTpSl({
+      pair: normPair,
+      direction: dir,
+      entryPrice: current,
+      marketAnalysis: overrides.marketAnalysis || null,
+      atr5m: overrides.atr5m || null,
+      swingLow: overrides.swingLow || null,
+      swingHigh: overrides.swingHigh || null,
+      opposingResistance: overrides.opposingResistance || null,
+      opposingSupport: overrides.opposingSupport || null,
+      allowOneToOne: Boolean(overrides.allowOneToOne),
+      backtestValidated: Boolean(overrides.backtestValidated),
+    });
+
+    if (scalpCalc.ok) {
+      entry = scalpCalc.entry;
+      sl = scalpCalc.sl;
+      tp = scalpCalc.tp;
+      tp2 = scalpCalc.tp2;
+      rrRatio = scalpCalc.rrNumeric.toFixed(1);
+      scalpMeta = scalpCalc;
     }
   }
 
-  const entry = Number(current.toFixed(decimals));
-  const sl = Number((isBuy ? entry - riskPips : entry + riskPips).toFixed(decimals));
-  const tp = Number((isBuy ? entry + rewardPips : entry - rewardPips).toFixed(decimals));
+  if (!scalpMeta) {
+    // Realistic ICT & CRT Pip Scale and Risk parameters (Fallback / Day Trade)
+    let riskPips, rewardPips;
+    if (isScalp) {
+      if (isGold) {
+        riskPips = 2.00;
+        rewardPips = 4.00; // 1:2.0 R:R
+      } else if (isSilver) {
+        riskPips = 0.125;
+        rewardPips = 0.250; // 1:2.0 R:R
+      } else if (isCrypto) {
+        riskPips = 165.0;
+        rewardPips = 330.0; // 1:2.0 R:R
+      } else if (isIndex) {
+        riskPips = 65.0;
+        rewardPips = 130.0;
+      } else if (isForex) {
+        riskPips = normPair.includes('JPY') ? 0.20 : 0.0010;
+        rewardPips = normPair.includes('JPY') ? 0.40 : 0.0020;
+      } else {
+        riskPips = 2.0;
+        rewardPips = 4.0;
+      }
+    } else {
+      // Day Trade: For Gold, apply strict 3-Candle CRT model rules
+      if (isGold) {
+        riskPips = 10.0;
+        rewardPips = 20.0;
+      } else if (isSilver) {
+        riskPips = 0.400;
+        rewardPips = 0.800; // 1:2.0 R:R
+      } else if (isCrypto) {
+        riskPips = 850.0;
+        rewardPips = 1700.0; // 1:2.0 R:R
+      } else if (isIndex) {
+        riskPips = 180.0;
+        rewardPips = 360.0; // 1:2.0 R:R
+      } else if (isForex) {
+        riskPips = normPair.includes('JPY') ? 0.55 : 0.0022;
+        rewardPips = normPair.includes('JPY') ? 1.10 : 0.0044;
+      } else {
+        riskPips = 10.0;
+        rewardPips = 20.0;
+      }
+    }
 
-  const rrRatio = (rewardPips / riskPips).toFixed(1);
+    sl = Number((isBuy ? entry - riskPips : entry + riskPips).toFixed(decimals));
+    tp = Number((isBuy ? entry + rewardPips : entry - rewardPips).toFixed(decimals));
+    tp2 = Number((isBuy ? entry + rewardPips * 1.35 : entry - rewardPips * 1.35).toFixed(decimals));
+    rrRatio = (rewardPips / riskPips).toFixed(1);
+  }
 
   // 3-Candle CRT Parameters for Gold Day Trade
   const beTrigger = isGold && !isScalp
     ? Number((isBuy ? entry + 10.0 : entry - 10.0).toFixed(decimals))
-    : null;
+    : scalpMeta?.breakEvenTrigger ?? null;
   const refLow = isGold && !isScalp
     ? Number((isBuy ? entry - 4.50 : entry - 16.50).toFixed(decimals))
     : null;
@@ -499,7 +535,7 @@ export function calculateRealIctSetup(pair, spotPrice, preferredDir = null, styl
     ? Number((isBuy ? entry + 16.50 : entry + 4.50).toFixed(decimals))
     : null;
 
-  const confluences = buildVerifiedTradeConfluences({
+  const confluences = scalpMeta?.confluences || buildVerifiedTradeConfluences({
     pair: normPair,
     direction: dir,
     entry,
@@ -513,26 +549,44 @@ export function calculateRealIctSetup(pair, spotPrice, preferredDir = null, styl
 
   const session = getActiveSessionName();
   const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Phnom_Penh' });
+  const finalEntry = overrides.entry ?? entry;
+  const finalSl = overrides.sl ?? sl;
+  const finalTp = overrides.tp ?? tp;
+  const slDistNum = Number(Math.abs(finalEntry - finalSl).toFixed(decimals));
+  const tpDistNum = Number(Math.abs(finalTp - finalEntry).toFixed(decimals));
 
   return {
-    id: overrides.id || `pip-real-${normPair.toLowerCase()}-${style}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    id: overrides.id || `pip-real-${normPair.toLowerCase()}-${style}-${Date.now()}`,
     pair: normPair,
     symbol: normPair,
-    name: overrides.name || (isGold ? 'Gold (XAU/USD)' : isForex ? (normPair === 'EURUSD' ? 'EUR/USD' : normPair === 'USDJPY' ? 'USD/JPY' : 'GBP/USD') : isCrypto ? 'Bitcoin (BTC/USD)' : normPair === 'US30' ? 'Dow Jones (US30)' : normPair),
+    name: overrides.name || (isGold ? 'Gold (XAU/USD)' : isSilver ? 'Silver (XAG/USD)' : isForex ? (normPair === 'EURUSD' ? 'EUR/USD' : normPair === 'USDJPY' ? 'USD/JPY' : 'GBP/USD') : isCrypto ? 'Bitcoin (BTC/USD)' : normPair === 'US30' ? 'Dow Jones (US30)' : normPair),
     direction: overrides.direction || dir,
     timeframe: overrides.timeframe || timeframe,
     mode: overrides.mode || mode,
     style: overrides.style || style,
-    model: overrides.model || (isGold && !isScalp ? '3-Candle CRT Liquidation Model' : isScalp ? 'ICT M1-M5 Scalp' : 'ICT SMC Intraday'),
-    entry: overrides.entry ?? entry,
-    sl: overrides.sl ?? sl,
-    tp: overrides.tp ?? tp,
+    model: overrides.model || (isGold && !isScalp ? '3-Candle CRT Liquidation Model' : isScalp ? 'ICT M1-M5 Structure Scalp' : 'ICT SMC Intraday'),
+    entry: finalEntry,
+    sl: finalSl,
+    tp: finalTp,
+    tp1: overrides.tp1 ?? finalTp,
+    tp2: overrides.tp2 ?? tp2,
+    slDistance: overrides.slDistance ?? slDistNum,
+    tpDistance: overrides.tpDistance ?? tpDistNum,
+    slDistanceFormatted: overrides.slDistanceFormatted || scalpMeta?.slDistanceFormatted || `-$${slDistNum.toFixed(decimals)}`,
+    tpDistanceFormatted: overrides.tpDistanceFormatted || scalpMeta?.tpDistanceFormatted || `+$${tpDistNum.toFixed(decimals)}`,
     beTrigger: overrides.beTrigger ?? beTrigger,
     breakEvenTrigger: overrides.breakEvenTrigger ?? beTrigger,
     refCandleHigh: overrides.refCandleHigh ?? refHigh,
     refCandleLow: overrides.refCandleLow ?? refLow,
     rr: overrides.rr || (isGold && !isScalp ? '1:2.0' : `1:${rrRatio}`),
-    confidence: overrides.confidence || Math.floor(88 + Math.random() * 6), // 88% - 94%
+    rrNumeric: overrides.rrNumeric ?? Number(rrRatio),
+    netRr: overrides.netRr || scalpMeta?.netRr || null,
+    netRrNumeric: overrides.netRrNumeric ?? scalpMeta?.netRrNumeric ?? null,
+    levelExplanations: overrides.levelExplanations || scalpMeta?.levelExplanations || {
+      entry: `${dir} execution at live spot ($${finalEntry.toFixed(decimals)}) following ${timeframe} structure shift.`,
+      sl: `Placed $${slDistNum.toFixed(decimals)} beyond nearest invalidation swing + volatility buffer ($${finalSl.toFixed(decimals)}).`,
+      tp: `Targets nearest opposing liquidity pool $${tpDistNum.toFixed(decimals)} away ($${finalTp.toFixed(decimals)}) for 1:${rrRatio} R:R.`,
+    },
     confluences: overrides.confluences || confluences,
     session: overrides.session || session,
     opened: overrides.opened || `Today, ${timeStr} GMT+7`,
@@ -540,7 +594,7 @@ export function calculateRealIctSetup(pair, spotPrice, preferredDir = null, styl
     source: overrides.source || (isScalp ? 'PIP AI SCALPER' : (isGold ? 'PIP AI CRT MODEL' : 'PIP AI ENGINE')),
     resultBadge: overrides.resultBadge || (overrides.status === 'tp' ? '✓ TP HIT' : overrides.status === 'sl' ? '✕ STOP LOSS' : 'ACTIVE SETUP'),
     badgeClass: overrides.badgeClass || (overrides.status === 'tp' ? 'win' : overrides.status === 'sl' ? 'loss' : 'active'),
-    icon: overrides.icon || (isGold ? '🥇' : normPair.includes('EUR') ? '💶' : normPair.includes('GBP') ? '💷' : normPair.includes('JPY') ? '💴' : isCrypto ? '₿' : normPair.includes('US30') ? '📈' : '📊'),
+    icon: overrides.icon || (isGold ? '🥇' : isSilver ? '🥈' : normPair.includes('EUR') ? '💶' : normPair.includes('GBP') ? '💷' : normPair.includes('JPY') ? '💴' : isCrypto ? '₿' : normPair.includes('US30') ? '📈' : '📊'),
     generatedAt: overrides.generatedAt || Date.now(),
     isRealAiGenerated: true,
   };

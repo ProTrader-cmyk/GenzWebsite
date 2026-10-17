@@ -32,6 +32,13 @@ import {
   executeScanStep4_FinalDecision,
 } from '../src/services/scanWorkflowService.js';
 
+import {
+  SCALP_ASSET_CONFIGS,
+  estimateAssetAtr5m,
+  calculateStructureScalpTpSl,
+  evaluateHistoricalScalpSetup,
+} from '../src/services/scalpTpSlEngine.js';
+
 describe('AI Trading Page & Signal Engine Test Suite', () => {
   // --------------------------------------------------------------------------
   // Requirement 1: Limit Trading Pairs to Three (Gold, Silver, Bitcoin)
@@ -658,6 +665,213 @@ describe('AI Trading Page & Signal Engine Test Suite', () => {
       assert.equal(normalizeMode('scalp'), 'scalp');
       assert.equal(normalizeMode('daytrade'), 'daytrade');
       assert.equal(normalizeMode('intra'), 'daytrade');
+    });
+  });
+
+  // ==========================================================================
+  // Section 14: Structure & ATR Scalping TP/SL Engine + Historical Backtesting
+  // ==========================================================================
+  describe('14. Structure & ATR Scalping TP/SL Engine (Gold, BTC, Silver)', () => {
+    it('1. Should define distinct asset-specific scalping configs for XAUUSD, BTCUSD, and XAGUSD', () => {
+      assert.ok(SCALP_ASSET_CONFIGS.XAUUSD);
+      assert.ok(SCALP_ASSET_CONFIGS.BTCUSD);
+      assert.ok(SCALP_ASSET_CONFIGS.XAGUSD);
+
+      // Verify distinct decimals, spreads, and SL/TP bounds
+      assert.equal(SCALP_ASSET_CONFIGS.XAUUSD.decimals, 2);
+      assert.equal(SCALP_ASSET_CONFIGS.BTCUSD.decimals, 1);
+      assert.equal(SCALP_ASSET_CONFIGS.XAGUSD.decimals, 3);
+
+      assert.notEqual(SCALP_ASSET_CONFIGS.XAUUSD.minSlDist, SCALP_ASSET_CONFIGS.BTCUSD.minSlDist);
+      assert.notEqual(SCALP_ASSET_CONFIGS.XAUUSD.minSlDist, SCALP_ASSET_CONFIGS.XAGUSD.minSlDist);
+    });
+
+    it('2. Gold (XAUUSD) Scalp: places SL beyond swing low + ATR noise buffer and targets nearby liquidity with >= 1.5:1 R:R', () => {
+      const setup = calculateStructureScalpTpSl({
+        pair: 'XAUUSD',
+        direction: 'BUY',
+        entryPrice: 4165.00,
+        atr5m: 1.80,
+        swingLow: 4163.40, // 1.60 below entry -> + ~0.63 buffer = ~2.23 SL distance
+        opposingResistance: 4169.80, // 4.80 above entry
+      });
+
+      assert.equal(setup.ok, true);
+      assert.equal(setup.direction, 'BUY');
+      assert.ok(setup.sl < setup.entry, 'BUY SL must be strictly below entry');
+      assert.ok(setup.sl < 4163.40, 'BUY SL must be placed beyond the swing low invalidation point');
+      assert.ok(setup.tp > setup.entry, 'BUY TP must be strictly above entry');
+      assert.ok(setup.tp < 4169.80, 'BUY TP must front-run opposing resistance');
+      assert.ok(setup.rrNumeric >= 1.5, `Expected R:R >= 1.5, got ${setup.rrNumeric}`);
+      assert.ok(setup.netRrNumeric >= 1.2, `Expected net R:R after costs >= 1.2, got ${setup.netRrNumeric}`);
+      assert.ok(setup.levelExplanations.entry.length > 10);
+      assert.ok(setup.levelExplanations.sl.length > 10);
+      assert.ok(setup.levelExplanations.tp.length > 10);
+    });
+
+    it('3. Bitcoin (BTCUSD) Scalp: uses realistic nearby scalp target ($140–$580) instead of wide $1,020 swing target', () => {
+      const setup = calculateStructureScalpTpSl({
+        pair: 'BTCUSD',
+        direction: 'SELL',
+        entryPrice: 81650.0,
+        atr5m: 150.0,
+        swingHigh: 81760.0, // $110 above entry -> + ~52.5 buffer = ~$162.5 SL distance
+        opposingSupport: 81280.0, // $370 below entry
+      });
+
+      assert.equal(setup.ok, true);
+      assert.equal(setup.direction, 'SELL');
+      assert.ok(setup.sl > setup.entry, 'SELL SL must be strictly above entry');
+      assert.ok(setup.sl > 81760.0, 'SELL SL must be placed beyond the swing high invalidation point');
+      assert.ok(setup.tp < setup.entry, 'SELL TP must be strictly below entry');
+      assert.ok(setup.slDistance >= 90 && setup.slDistance <= 320, `BTC SL distance ${setup.slDistance} should be within scalp bounds`);
+      assert.ok(setup.tpDistance >= 140 && setup.tpDistance <= 580, `BTC TP distance ${setup.tpDistance} should be realistic scalp range (not $1020)`);
+      assert.ok(setup.rrNumeric >= 1.5);
+    });
+
+    it('4. Silver (XAGUSD) Scalp: uses 3-decimal structure distances ($0.080–$0.280 SL) instead of broken $10/$25 fallback', () => {
+      const setup = calculateStructureScalpTpSl({
+        pair: 'XAGUSD',
+        direction: 'BUY',
+        entryPrice: 57.000,
+        atr5m: 0.110,
+        swingLow: 56.910, // $0.090 below entry -> + ~0.042 buffer = ~$0.132 SL distance
+        opposingResistance: 57.310,
+      });
+
+      assert.equal(setup.ok, true);
+      assert.equal(setup.entry, 57.000);
+      assert.ok(setup.sl < 56.910);
+      assert.ok(setup.slDistance >= 0.080 && setup.slDistance <= 0.280, `Silver SL distance ${setup.slDistance} must be realistic`);
+      assert.ok(setup.tpDistance >= 0.125 && setup.tpDistance <= 0.520, `Silver TP distance ${setup.tpDistance} must be realistic`);
+      assert.ok(setup.rrNumeric >= 1.5);
+    });
+
+    it('5. Rejects trade (NO_TRADE) when valid structural SL is too far away instead of forcing a tighter stop inside noise', () => {
+      // Gold swing low is $6.50 away (exceeds maxSlDist of $4.20)
+      const setup = calculateStructureScalpTpSl({
+        pair: 'XAUUSD',
+        direction: 'BUY',
+        entryPrice: 4165.00,
+        atr5m: 2.00,
+        swingLow: 4158.50,
+      });
+
+      assert.equal(setup.ok, false);
+      assert.equal(setup.code, 'NO_TRADE');
+      assert.equal(setup.reasonCode, 'SL_TOO_WIDE_FOR_SCALP');
+    });
+
+    it('6. Rejects trade (NO_TRADE) when opposing structure blocks TP before 1.5:1 R:R can be reached', () => {
+      // Gold BUY at 4165.00, SL distance ~$2.10, but major resistance R1 sits right at 4166.80 ($1.80 away -> < 1.5x of $2.10)
+      const setup = calculateStructureScalpTpSl({
+        pair: 'XAUUSD',
+        direction: 'BUY',
+        entryPrice: 4165.00,
+        atr5m: 1.80,
+        swingLow: 4163.50,
+        opposingResistance: 4166.80,
+      });
+
+      assert.equal(setup.ok, false);
+      assert.equal(setup.code, 'NO_TRADE');
+      assert.equal(setup.reasonCode, 'OPPOSING_STRUCTURE_BLOCKS_TP');
+    });
+
+    it('7. Allows 1:1 setup ONLY when explicitly enabled and backtestValidated = true', () => {
+      // Opposing resistance at 4167.40 allows ~1.1:1 R:R on a ~$2.05 SL
+      const blockedDefault = calculateStructureScalpTpSl({
+        pair: 'XAUUSD',
+        direction: 'BUY',
+        entryPrice: 4165.00,
+        atr5m: 1.60,
+        swingLow: 4163.50,
+        opposingResistance: 4167.40,
+        allowOneToOne: false,
+      });
+      assert.equal(blockedDefault.ok, false);
+
+      const allowedExplicit = calculateStructureScalpTpSl({
+        pair: 'XAUUSD',
+        direction: 'BUY',
+        entryPrice: 4165.00,
+        atr5m: 1.60,
+        swingLow: 4163.50,
+        opposingResistance: 4167.40,
+        allowOneToOne: true,
+        backtestValidated: true,
+      });
+      assert.equal(allowedExplicit.ok, true);
+      assert.ok(allowedExplicit.rrNumeric >= 1.0);
+    });
+
+    it('8. Rejects trade (NO_TRADE) when current spread exceeds maximum allowed scalp spread', () => {
+      const setup = calculateStructureScalpTpSl({
+        pair: 'XAUUSD',
+        direction: 'BUY',
+        entryPrice: 4165.00,
+        atr5m: 1.80,
+        currentSpread: 0.85, // Exceeds maxAllowedSpread of $0.45
+      });
+
+      assert.equal(setup.ok, false);
+      assert.equal(setup.code, 'NO_TRADE');
+      assert.equal(setup.reasonCode, 'EXCESSIVE_SPREAD');
+    });
+
+    it('9. Historical OHLC Backtest Verification across Gold, BTC, and Silver with realistic trading costs', () => {
+      // 9A. Gold (XAUUSD) Historical 5m Candle Sequence (Bullish Liquidity Sweep & Expansion)
+      const goldHistoricalSetup = {
+        pair: 'XAUUSD',
+        direction: 'BUY',
+        entryPrice: 4162.40,
+        atr5m: 1.75,
+        swingLow: 4160.90,
+        opposingResistance: 4167.20,
+      };
+      const goldFutureCandles = [
+        { open: 4162.40, high: 4163.50, low: 4161.55, close: 4163.20 }, // Dip stays above SL (4160.29)
+        { open: 4163.20, high: 4165.10, low: 4162.90, close: 4164.85 },
+        { open: 4164.85, high: 4166.90, low: 4164.40, close: 4166.60 }, // Reaches TP (4166.62)
+      ];
+      const goldBacktest = evaluateHistoricalScalpSetup(goldHistoricalSetup, goldFutureCandles);
+      assert.equal(goldBacktest.outcome, 'TP_HIT');
+      assert.ok(goldBacktest.netPnl > 0, `Expected positive net PnL after $0.37 costs, got ${goldBacktest.netPnl}`);
+      assert.equal(goldBacktest.candlesElapsed, 3);
+
+      // 9B. Bitcoin (BTCUSD) Historical 5m Candle Sequence (Bearish Order Block Rejection)
+      const btcHistoricalSetup = {
+        pair: 'BTCUSD',
+        direction: 'SELL',
+        entryPrice: 81720.0,
+        atr5m: 145.0,
+        swingHigh: 81830.0,
+        opposingSupport: 81340.0,
+      };
+      const btcFutureCandles = [
+        { open: 81720.0, high: 81795.0, low: 81580.0, close: 81610.0 }, // Pullback stays below SL (81880.8)
+        { open: 81610.0, high: 81640.0, low: 81385.0, close: 81400.0 }, // Hits TP (81398.4)
+      ];
+      const btcBacktest = evaluateHistoricalScalpSetup(btcHistoricalSetup, btcFutureCandles);
+      assert.equal(btcBacktest.outcome, 'TP_HIT');
+      assert.ok(btcBacktest.netPnl > 0, `Expected positive BTC net PnL after $30 costs, got ${btcBacktest.netPnl}`);
+
+      // 9C. Silver (XAGUSD) Historical 5m Candle Sequence (Bullish FVG Tap)
+      const silverHistoricalSetup = {
+        pair: 'XAGUSD',
+        direction: 'BUY',
+        entryPrice: 56.850,
+        atr5m: 0.105,
+        swingLow: 56.760,
+        opposingResistance: 57.150,
+      };
+      const silverFutureCandles = [
+        { open: 56.850, high: 56.940, low: 56.795, close: 56.925 }, // Holds above SL (56.720)
+        { open: 56.925, high: 57.125, low: 56.910, close: 57.115 }, // Hits TP (57.110)
+      ];
+      const silverBacktest = evaluateHistoricalScalpSetup(silverHistoricalSetup, silverFutureCandles);
+      assert.equal(silverBacktest.outcome, 'TP_HIT');
+      assert.ok(silverBacktest.netPnl > 0, `Expected positive Silver net PnL after $0.034 costs, got ${silverBacktest.netPnl}`);
     });
   });
 });
