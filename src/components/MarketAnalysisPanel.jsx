@@ -26,6 +26,251 @@ const NEWS_ITEMS = [
   { time: '2h ago', source: 'WSJ', title: 'Institutional order flow shows strong higher-timeframe demand supporting precious metals complex.' },
 ];
 
+// --- MODERN FINTECH VECTOR ICONS (REPLACING EMOJIS & GENERIC UNICODE) ---
+function IconTrendUp(props) {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+      <polyline points="17 6 23 6 23 12" />
+    </svg>
+  );
+}
+
+function IconCompass(props) {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="12" cy="12" r="10" />
+      <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill="currentColor" fillOpacity="0.3" />
+    </svg>
+  );
+}
+
+function IconLayers(props) {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <polygon points="12 2 2 7 12 12 22 7 12 2" />
+      <polyline points="2 17 12 22 22 17" />
+      <polyline points="2 12 12 17 22 12" />
+    </svg>
+  );
+}
+
+function IconActivityWave(props) {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+    </svg>
+  );
+}
+
+function IconZap(props) {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill="currentColor" fillOpacity="0.3" />
+    </svg>
+  );
+}
+
+function IconSupportLevel(props) {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <line x1="2" y1="20" x2="22" y2="20" strokeWidth="2.6" />
+      <path d="M12 16V4m0 0L7 9m5-5l5 9" />
+    </svg>
+  );
+}
+
+function IconResistanceLevel(props) {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <line x1="2" y1="4" x2="22" y2="4" strokeWidth="2.6" />
+      <path d="M12 8v12m0 0l-5-5m5 5l5-5" />
+    </svg>
+  );
+}
+
+function IconMarketStructure(props) {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M3 20h4v-5h6v-5h6V4h2" />
+      <circle cx="7" cy="15" r="1.5" fill="currentColor" />
+      <circle cx="13" cy="10" r="1.5" fill="currentColor" />
+      <circle cx="19" cy="4" r="1.5" fill="currentColor" />
+    </svg>
+  );
+}
+
+function IconShieldSlash(props) {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <line x1="12" y1="16" x2="12.01" y2="16" />
+    </svg>
+  );
+}
+
+function IconOutlookRadar(props) {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 3v18M3 12h18" strokeDasharray="2 2" />
+      <path d="m14 10 4-4" />
+      <circle cx="12" cy="12" r="3" fill="currentColor" fillOpacity="0.3" />
+    </svg>
+  );
+}
+
+function IconMarketState(props) {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <line x1="4" y1="21" x2="4" y2="14" />
+      <line x1="4" y1="10" x2="4" y2="3" />
+      <line x1="12" y1="21" x2="12" y2="12" />
+      <line x1="12" y1="8" x2="12" y2="3" />
+      <line x1="20" y1="21" x2="20" y2="16" />
+      <line x1="20" y1="12" x2="20" y2="3" />
+      <line x1="1" y1="14" x2="7" y2="14" />
+      <line x1="9" y1="8" x2="15" y2="8" />
+      <line x1="17" y1="16" x2="23" y2="16" />
+    </svg>
+  );
+}
+
+function IconBullScenario(props) {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M7 18V6M7 6l-3 3M7 6l3 3" />
+      <rect x="14" y="8" width="5" height="9" rx="1" fill="currentColor" fillOpacity="0.3" />
+      <line x1="16.5" y1="4" x2="16.5" y2="8" />
+      <line x1="16.5" y1="17" x2="16.5" y2="20" />
+    </svg>
+  );
+}
+
+function IconBearScenario(props) {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M7 6v12M7 18l-3-3M7 18l3-3" />
+      <rect x="14" y="7" width="5" height="9" rx="1" fill="currentColor" fillOpacity="0.3" />
+      <line x1="16.5" y1="4" x2="16.5" y2="7" />
+      <line x1="16.5" y1="16" x2="16.5" y2="20" />
+    </svg>
+  );
+}
+
+function IconConfirmation(props) {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
+  );
+}
+
+function IconInvalidation(props) {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="12" cy="12" r="10" />
+      <line x1="15" y1="9" x2="9" y2="15" />
+      <line x1="9" y1="9" x2="15" y2="15" />
+    </svg>
+  );
+}
+
+function IconCalendarEvent(props) {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+      <circle cx="12" cy="15" r="2.5" fill="currentColor" fillOpacity="0.3" />
+    </svg>
+  );
+}
+
+function IconAiChip(props) {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="4" y="4" width="16" height="16" rx="3" />
+      <rect x="9" y="9" width="6" height="6" rx="1" fill="currentColor" fillOpacity="0.25" />
+      <path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3" />
+    </svg>
+  );
+}
+
+function IconTarget(props) {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="12" cy="12" r="10" />
+      <circle cx="12" cy="12" r="6" />
+      <circle cx="12" cy="12" r="2" fill="currentColor" />
+    </svg>
+  );
+}
+
+function IconArrowUp(props) {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <line x1="12" y1="19" x2="12" y2="5" />
+      <polyline points="5 12 12 5 19 12" />
+    </svg>
+  );
+}
+
+function IconArrowDown(props) {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <polyline points="19 12 12 19 5 12" />
+    </svg>
+  );
+}
+
+function IconCopy(props) {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  );
+}
+
+function IconCheck(props) {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+function IconCross(props) {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
+
+function IconLightbulb(props) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M9 18h6M10 22h4" />
+      <path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5.76.76 1.23 1.52 1.41 2.5" />
+    </svg>
+  );
+}
+
+function IconRefresh(props) {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-1.19" />
+    </svg>
+  );
+}
+
 function formatCommaPrice(val, decimals = 2) {
   const num = Number(val);
   if (isNaN(num)) return '---';
@@ -546,7 +791,7 @@ export default function MarketAnalysisPanel({
               id: generatedSignal.id,
               type: 'signal',
               isPipScan: true,
-              title: `⚡ New Pip ${mode === 'scalp' ? 'Scalp' : 'Intraday'} Signal: ${generatedSignal.pair}`,
+              title: `New Pip ${mode === 'scalp' ? 'Scalp' : 'Intraday'} Signal: ${generatedSignal.pair}`,
               body: `${generatedSignal.direction} ${generatedSignal.pair} @ $${formatCommaPrice(generatedSignal.entry, decimals)} | SL: $${formatCommaPrice(generatedSignal.sl, decimals)} | TP: $${formatCommaPrice(generatedSignal.tp1 || generatedSignal.tp, decimals)}`,
               pair: generatedSignal.pair,
               direction: (generatedSignal.direction || 'BUY').toLowerCase(),
@@ -589,7 +834,7 @@ export default function MarketAnalysisPanel({
 
   const handleCopySignal = (sig = activeSignal) => {
     if (!sig) return;
-    const text = `🎯 [GenZTrader Pip Signal - ${sig.mode || sig.style}]
+    const text = `[GenZTrader Pip Signal - ${sig.mode || sig.style}]
 Asset: ${sig.pair}
 Action: ${sig.direction}
 Entry: ${sig.entry}
@@ -687,7 +932,9 @@ Model: ${sig.model || 'ICT SMC Model'}`;
       {(lastCandleCloseNotice || copiedNotice) && (
         <div className="ait-aii-notice-strip">
           {copiedNotice && (
-            <span className="text-emerald">✓ Trading Plan copied to clipboard!</span>
+            <span className="text-emerald" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+              <IconCheck width="13" height="13" /> Trading Plan copied to clipboard!
+            </span>
           )}
           {!copiedNotice && lastCandleCloseNotice && (
             <span className="text-emerald">● {lastCandleCloseNotice}</span>
@@ -783,7 +1030,10 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                 <div className="ait-aii-card ait-aii-intel-card">
                   <div className="ait-aii-card-header">
                     <div className="ait-aii-card-title-group">
-                      <span className="ait-aii-ai-pill-icon">AI</span>
+                      <span className="ait-aii-ai-chip-badge">
+                        <IconAiChip />
+                        <span>AI INTEL</span>
+                      </span>
                       <h3>AI Market Intelligence</h3>
                     </div>
                     <span className="ait-aii-source-pill">
@@ -800,7 +1050,7 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                     <div className="ait-aii-metrics-col">
                       <div className="ait-aii-metric-row">
                         <div className="ait-aii-metric-lbl">
-                          <span className="ait-aii-m-icon cyan">↗</span>
+                          <span className="ait-aii-m-icon cyan"><IconTrendUp /></span>
                           <span>Overall Trend</span>
                         </div>
                         <div className="ait-aii-metric-val">
@@ -813,7 +1063,7 @@ Model: ${sig.model || 'ICT SMC Model'}`;
 
                       <div className="ait-aii-metric-row">
                         <div className="ait-aii-metric-lbl">
-                          <span className="ait-aii-m-icon purple">◈</span>
+                          <span className="ait-aii-m-icon purple"><IconCompass /></span>
                           <span>Short-term Bias</span>
                         </div>
                         <div className="ait-aii-metric-val">
@@ -823,7 +1073,7 @@ Model: ${sig.model || 'ICT SMC Model'}`;
 
                       <div className="ait-aii-metric-row">
                         <div className="ait-aii-metric-lbl">
-                          <span className="ait-aii-m-icon amber">⊞</span>
+                          <span className="ait-aii-m-icon amber"><IconLayers /></span>
                           <span>Multi-Timeframe</span>
                         </div>
                         <div className="ait-aii-metric-val">{intel.mtfSummary}</div>
@@ -831,7 +1081,7 @@ Model: ${sig.model || 'ICT SMC Model'}`;
 
                       <div className="ait-aii-metric-row">
                         <div className="ait-aii-metric-lbl">
-                          <span className="ait-aii-m-icon blue">∿</span>
+                          <span className="ait-aii-m-icon blue"><IconActivityWave /></span>
                           <span>Momentum</span>
                         </div>
                         <div className="ait-aii-metric-val">{intel.momentumText}</div>
@@ -839,7 +1089,7 @@ Model: ${sig.model || 'ICT SMC Model'}`;
 
                       <div className="ait-aii-metric-row">
                         <div className="ait-aii-metric-lbl">
-                          <span className="ait-aii-m-icon cyan">⚡</span>
+                          <span className="ait-aii-m-icon cyan"><IconZap /></span>
                           <span>Volatility</span>
                         </div>
                         <div className="ait-aii-metric-val">{intel.volatilityText}</div>
@@ -850,7 +1100,7 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                     <div className="ait-aii-metrics-col">
                       <div className="ait-aii-metric-row">
                         <div className="ait-aii-metric-lbl">
-                          <span className="ait-aii-m-icon blue">⚓</span>
+                          <span className="ait-aii-m-icon blue"><IconSupportLevel /></span>
                           <span>Key Support</span>
                         </div>
                         <div className="ait-aii-metric-val ait-mono">
@@ -860,7 +1110,7 @@ Model: ${sig.model || 'ICT SMC Model'}`;
 
                       <div className="ait-aii-metric-row">
                         <div className="ait-aii-metric-lbl">
-                          <span className="ait-aii-m-icon red">⊤</span>
+                          <span className="ait-aii-m-icon red"><IconResistanceLevel /></span>
                           <span>Key Resistance</span>
                         </div>
                         <div className="ait-aii-metric-val ait-mono">
@@ -870,7 +1120,7 @@ Model: ${sig.model || 'ICT SMC Model'}`;
 
                       <div className="ait-aii-metric-row">
                         <div className="ait-aii-metric-lbl">
-                          <span className="ait-aii-m-icon cyan">📈</span>
+                          <span className="ait-aii-m-icon cyan"><IconMarketStructure /></span>
                           <span>Structure</span>
                         </div>
                         <div className="ait-aii-metric-val">{intel.structureText}</div>
@@ -878,7 +1128,7 @@ Model: ${sig.model || 'ICT SMC Model'}`;
 
                       <div className="ait-aii-metric-row">
                         <div className="ait-aii-metric-lbl">
-                          <span className="ait-aii-m-icon red">⊗</span>
+                          <span className="ait-aii-m-icon red"><IconShieldSlash /></span>
                           <span>Invalidation</span>
                         </div>
                         <div className="ait-aii-metric-val text-red ait-mono">
@@ -894,14 +1144,16 @@ Model: ${sig.model || 'ICT SMC Model'}`;
               <div className="ait-aii-card ait-aii-outlook-card">
                 <div className="ait-aii-card-header">
                   <div className="ait-aii-card-title-group">
-                    <span className="ait-aii-card-icon amber">💡</span>
+                    <span className="ait-aii-card-icon amber">
+                      <IconOutlookRadar />
+                    </span>
                     <h3>Market Outlook</h3>
                   </div>
                 </div>
 
                 <div className="ait-aii-outlook-list">
                   <div className="ait-aii-outlook-item">
-                    <span className="ait-aii-ol-icon teal">🌱</span>
+                    <span className="ait-aii-ol-icon teal"><IconMarketState /></span>
                     <div className="ait-aii-ol-body">
                       <div className="ait-aii-ol-title">Current conditions</div>
                       <p className="ait-aii-ol-desc">
@@ -911,7 +1163,7 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                   </div>
 
                   <div className="ait-aii-outlook-item">
-                    <span className="ait-aii-ol-icon green">▲</span>
+                    <span className="ait-aii-ol-icon green"><IconBullScenario /></span>
                     <div className="ait-aii-ol-body">
                       <div className="ait-aii-ol-title">Bullish scenario</div>
                       <p className="ait-aii-ol-desc">
@@ -921,7 +1173,7 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                   </div>
 
                   <div className="ait-aii-outlook-item">
-                    <span className="ait-aii-ol-icon red">▼</span>
+                    <span className="ait-aii-ol-icon red"><IconBearScenario /></span>
                     <div className="ait-aii-ol-body">
                       <div className="ait-aii-ol-title">Bearish scenario</div>
                       <p className="ait-aii-ol-desc">
@@ -931,7 +1183,7 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                   </div>
 
                   <div className="ait-aii-outlook-item">
-                    <span className="ait-aii-ol-icon cyan">📈</span>
+                    <span className="ait-aii-ol-icon cyan"><IconConfirmation /></span>
                     <div className="ait-aii-ol-body">
                       <div className="ait-aii-ol-title">Key confirmation</div>
                       <p className="ait-aii-ol-desc ait-mono">
@@ -941,7 +1193,7 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                   </div>
 
                   <div className="ait-aii-outlook-item">
-                    <span className="ait-aii-ol-icon red">✕</span>
+                    <span className="ait-aii-ol-icon red"><IconInvalidation /></span>
                     <div className="ait-aii-ol-body">
                       <div className="ait-aii-ol-title">Invalidation level</div>
                       <p className="ait-aii-ol-desc ait-mono">
@@ -951,7 +1203,7 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                   </div>
 
                   <div className="ait-aii-outlook-item">
-                    <span className="ait-aii-ol-icon purple">📅</span>
+                    <span className="ait-aii-ol-icon purple"><IconCalendarEvent /></span>
                     <div className="ait-aii-ol-body">
                       <div className="ait-aii-ol-title">Upcoming events</div>
                       <p className="ait-aii-ol-desc">
@@ -996,7 +1248,7 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                 className={`ait-pm-mode-tab ${pipMode === 'scalp' ? 'active scalp' : ''}`}
                 onClick={() => setPipMode('scalp')}
               >
-                <span className="ait-pm-mode-icon">⚡</span>
+                <span className="ait-pm-mode-icon"><IconZap width="17" height="17" /></span>
                 <div className="ait-pm-mode-meta">
                   <strong className="ait-pm-mode-title">Pip Scalp</strong>
                   <span className="ait-pm-mode-sub">1m • 5m Fast Execution (2–3 Numbers Target &amp; SL)</span>
@@ -1009,7 +1261,7 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                 className={`ait-pm-mode-tab ${pipMode === 'daytrade' ? 'active intra' : ''}`}
                 onClick={() => setPipMode('daytrade')}
               >
-                <span className="ait-pm-mode-icon">🎯</span>
+                <span className="ait-pm-mode-icon"><IconTarget width="17" height="17" /></span>
                 <div className="ait-pm-mode-meta">
                   <strong className="ait-pm-mode-title">Pip Intra Trade</strong>
                   <span className="ait-pm-mode-sub">15m • 1h • 4h CRT Swings ($10–$20)</span>
@@ -1028,7 +1280,7 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                   <div className="ait-pm-radar-ping ping-1" />
                   <div className="ait-pm-radar-ping ping-2" />
                   <div className="ait-pm-radar-center-core">
-                    <span className="ait-pm-core-icon">{pipMode === 'scalp' ? '⚡' : '🎯'}</span>
+                    <span className="ait-pm-core-icon">{pipMode === 'scalp' ? <IconZap width="18" height="18" /> : <IconTarget width="18" height="18" />}</span>
                   </div>
                 </div>
               </div>
@@ -1106,7 +1358,17 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                       title="Click to toggle condition check test"
                     >
                       <span>Condition Audit:</span>
-                      <strong>{intraConditionMet ? '✓ Confluence Met' : '❌ Choppy / Not Met'}</strong>
+                      <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        {intraConditionMet ? (
+                          <>
+                            <IconCheck width="12" height="12" /> Confluence Met
+                          </>
+                        ) : (
+                          <>
+                            <IconCross width="11" height="11" /> Choppy / Invalidation
+                          </>
+                        )}
+                      </strong>
                     </button>
                   )}
                 </div>
@@ -1119,7 +1381,15 @@ Model: ${sig.model || 'ICT SMC Model'}`;
               <div className="ait-pm-scalp-simple-row">
                 <div className="ait-pm-sr-badge-col">
                   <span className={`ait-pm-sr-dir ${(currentScalpSignal?.direction || 'BUY').toLowerCase() === 'sell' ? 'sell' : 'buy'}`}>
-                    {(currentScalpSignal?.direction || 'BUY').toLowerCase() === 'sell' ? '▼ SELL' : '▲ BUY'}
+                    {(currentScalpSignal?.direction || 'BUY').toLowerCase() === 'sell' ? (
+                      <>
+                        <IconArrowDown width="11" height="11" /> SELL
+                      </>
+                    ) : (
+                      <>
+                        <IconArrowUp width="11" height="11" /> BUY
+                      </>
+                    )}
                   </span>
                   <div className="ait-pm-sr-pair-wrap">
                     <strong className="ait-pm-sr-pair">{pair}</strong>
@@ -1174,7 +1444,9 @@ Model: ${sig.model || 'ICT SMC Model'}`;
 
                 <div className="ait-pm-sr-actions">
                   {signalSavedNotice && (
-                    <span className="ait-pm-saved-badge">✓ Stored in Firestore &amp; Alert Sent</span>
+                    <span className="ait-pm-saved-badge">
+                      <IconCheck width="11" height="11" /> Stored in Firestore &amp; Alert Sent
+                    </span>
                   )}
                   <span className="ait-pm-sr-conf">95% AI</span>
                   <button
@@ -1183,7 +1455,17 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                     onClick={() => handleCopySignal(currentScalpSignal)}
                     title="Copy Scalp Signal"
                   >
-                    <span>{signalCopiedNotice ? '✓ Copied' : '📋 Copy'}</span>
+                    <span>
+                      {signalCopiedNotice ? (
+                        <>
+                          <IconCheck width="12" height="12" /> Copied
+                        </>
+                      ) : (
+                        <>
+                          <IconCopy width="12" height="12" /> Copy
+                        </>
+                      )}
+                    </span>
                   </button>
                 </div>
               </div>
@@ -1211,7 +1493,9 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                 {/* Condition Checklist Table */}
                 <div className="ait-pm-condition-matrix">
                   <div className="ait-pm-cond-row fail">
-                    <span className="ait-pm-cond-status-icon fail">✕</span>
+                    <span className="ait-pm-cond-status-icon fail">
+                      <IconCross width="11" height="11" />
+                    </span>
                     <div className="ait-pm-cond-body">
                       <strong>Condition 1: Higher Timeframe (1H/4H) Liquidity Sweep</strong>
                       <p>FAILED — Price is trapped between Asian Range ($2,946.50 – $2,962.20). No sweep confirmed.</p>
@@ -1220,7 +1504,9 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                   </div>
 
                   <div className="ait-pm-cond-row fail">
-                    <span className="ait-pm-cond-status-icon fail">✕</span>
+                    <span className="ait-pm-cond-status-icon fail">
+                      <IconCross width="11" height="11" />
+                    </span>
                     <div className="ait-pm-cond-body">
                       <strong>Condition 2: 3-Candle CRT Manipulation &amp; FVG Expansion</strong>
                       <p>FAILED — Current candles show low volume compression. Invalidation risk exceeds 65%.</p>
@@ -1229,7 +1515,9 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                   </div>
 
                   <div className="ait-pm-cond-row pass">
-                    <span className="ait-pm-cond-status-icon pass">✓</span>
+                    <span className="ait-pm-cond-status-icon pass">
+                      <IconCheck width="12" height="12" />
+                    </span>
                     <div className="ait-pm-cond-body">
                       <strong>Condition 3: Institutional Spread &amp; Broker Liquidity</strong>
                       <p>PASSED — Spreads normal, no high-impact red folder news active within next 15 mins.</p>
@@ -1241,7 +1529,9 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                 {/* Pip Machine Advice Box */}
                 <div className="ait-pm-advice-box">
                   <div className="ait-pm-advice-title">
-                    <span className="ait-pm-bulb">💡</span>
+                    <span className="ait-pm-bulb">
+                      <IconLightbulb width="15" height="15" />
+                    </span>
                     <strong>Pip Machine Trading Discipline:</strong>
                   </div>
                   <p className="ait-pm-advice-text">
@@ -1256,7 +1546,9 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                         handleScanSignal('scalp');
                       }}
                     >
-                      <span>⚡ Switch to Pip Scalp (Always Active)</span>
+                      <span className="ait-pm-btn-content" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        <IconZap width="13" height="13" /> Switch to Pip Scalp (Always Active)
+                      </span>
                     </button>
 
                     <button
@@ -1264,7 +1556,9 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                       className="ait-pm-retry-scan-btn"
                       onClick={() => handleScanSignal('daytrade')}
                     >
-                      <span>🔄 Re-scan Intra Market</span>
+                      <span className="ait-pm-btn-content" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        <IconRefresh width="13" height="13" /> Re-scan Intra Market
+                      </span>
                     </button>
                   </div>
                 </div>
@@ -1276,7 +1570,15 @@ Model: ${sig.model || 'ICT SMC Model'}`;
               <div className="ait-pm-scalp-simple-row intra-theme">
                 <div className="ait-pm-sr-badge-col">
                   <span className={`ait-pm-sr-dir ${(dayTradeSignal.direction || 'BUY').toLowerCase() === 'sell' ? 'sell' : 'buy'}`}>
-                    {(dayTradeSignal.direction || 'BUY').toLowerCase() === 'sell' ? '▼ SELL' : '▲ BUY'}
+                    {(dayTradeSignal.direction || 'BUY').toLowerCase() === 'sell' ? (
+                      <>
+                        <IconArrowDown width="11" height="11" /> SELL
+                      </>
+                    ) : (
+                      <>
+                        <IconArrowUp width="11" height="11" /> BUY
+                      </>
+                    )}
                   </span>
                   <div className="ait-pm-sr-pair-wrap">
                     <strong className="ait-pm-sr-pair">{pair}</strong>
@@ -1343,7 +1645,9 @@ Model: ${sig.model || 'ICT SMC Model'}`;
 
                 <div className="ait-pm-sr-actions">
                   {signalSavedNotice && (
-                    <span className="ait-pm-saved-badge">✓ Stored in Firestore &amp; Alert Sent</span>
+                    <span className="ait-pm-saved-badge">
+                      <IconCheck width="11" height="11" /> Stored in Firestore &amp; Alert Sent
+                    </span>
                   )}
                   <span className="ait-pm-sr-conf cyan">96% AI</span>
                   <button
@@ -1352,7 +1656,17 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                     onClick={() => handleCopySignal(dayTradeSignal)}
                     title="Copy Intra Signal"
                   >
-                    <span>{signalCopiedNotice ? '✓ Copied' : '📋 Copy'}</span>
+                    <span>
+                      {signalCopiedNotice ? (
+                        <>
+                          <IconCheck width="12" height="12" /> Copied
+                        </>
+                      ) : (
+                        <>
+                          <IconCopy width="12" height="12" /> Copy
+                        </>
+                      )}
+                    </span>
                   </button>
                 </div>
               </div>
