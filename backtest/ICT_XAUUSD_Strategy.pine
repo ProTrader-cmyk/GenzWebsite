@@ -1,7 +1,7 @@
 //@version=5
 strategy(
-     title               = "GenZ Trader — ICT XAUUSD Killzone Sweep + MSS + FVG [v1.2]",
-     shorttitle          = "ICT XAUUSD v1.2",
+     title               = "GenZ Trader — ICT XAUUSD Killzone Sweep + MSS + FVG [v2.0]",
+     shorttitle          = "ICT XAUUSD v2.0",
      overlay             = true,
      initial_capital     = 10000,
      default_qty_type    = strategy.percent_of_equity,
@@ -16,31 +16,33 @@ strategy(
 )
 
 // ============================================================================
-// 1. STRATEGY CONFIGURATION (Matches Python Engine ICT-XAUUSD-FVG-MSS-v1.2)
+// 1. STRATEGY CONFIGURATION (Matches Python Engine ICT-XAUUSD-FVG-MSS-v2.0)
 // ============================================================================
-grp_ict   = "ICT Strategy Rules (v1.2)"
+grp_ict   = "ICT Strategy Rules (v2.0 Improved)"
 rrTarget          = input.float(2.0,   "Take-Profit R:R Multiple", minval=1.0, maxval=5.0, step=0.1, group=grp_ict)
 riskPct           = input.float(0.5,   "Risk Per Trade (% of Equity)", minval=0.1, maxval=1.0, step=0.1, group=grp_ict)
 fvgEntryMode      = input.string("CE_50", "FVG Limit Entry Mode", options=["CE_50", "PROXIMAL"], group=grp_ict)
 fractalBars       = input.int(3,       "Confirmed Swing Fractal Left/Right Bars", minval=2, maxval=6, group=grp_ict)
 sweepLookback     = input.int(20,      "Liquidity Sweep Lookback Bars", minval=6, maxval=40, group=grp_ict)
 dealingRangeBars  = input.int(32,      "Dealing Range Lookback Bars", minval=16, maxval=96, group=grp_ict)
-fvgMinAtrMult     = input.float(0.08,  "Minimum FVG Height (ATR Multiple)", minval=0.02, maxval=0.50, step=0.01, group=grp_ict)
+fvgMinDollars     = input.float(1.00,  "Minimum FVG Dollar Height ($)", minval=0.20, maxval=5.0, step=0.10, group=grp_ict)
 dispBodyRatio     = input.float(0.42,  "Displacement Body-to-Range Ratio", minval=0.25, maxval=0.80, step=0.02, group=grp_ict)
 slAtrBuffer       = input.float(0.25,  "Stop-Loss ATR(14) Buffer", minval=0.05, maxval=1.0, step=0.05, group=grp_ict)
-minSlDollars      = input.float(3.00,  "Minimum Stop-Loss Distance ($)", minval=1.0, maxval=10.0, step=0.5, group=grp_ict)
+minSlDollars      = input.float(6.00,  "Minimum Stop-Loss Floor ($)", minval=1.0, maxval=15.0, step=0.5, group=grp_ict)
 maxSlDollars      = input.float(24.00, "Maximum Stop-Loss Distance ($)", minval=5.0, maxval=50.0, step=1.0, group=grp_ict)
 limitExpiryBars   = input.int(6,       "Pending FVG Limit Order Expiry (Bars)", minval=2, maxval=20, group=grp_ict)
+beTriggerR        = input.float(0.90,  "Break-Even Protective Trigger (R)", minval=0.5, maxval=1.5, step=0.05, group=grp_ict)
+maxHoldMinutes    = input.int(180,     "Max Intraday Hold Duration (Minutes)", minval=30, maxval=720, step=15, group=grp_ict)
 requireDiscPrem   = input.bool(true,   "Require Discount (Long) / Premium (Short)", group=grp_ict)
 requireHtfAlign   = input.bool(true,   "Require HTF Directional Bias Alignment", group=grp_ict)
 
-STRATEGY_VERSION  = "ICT-XAUUSD-FVG-MSS-v1.2"
+STRATEGY_VERSION  = "ICT-XAUUSD-FVG-MSS-v2.0"
 
 // ============================================================================
-// 2. SESSION FILTER (LONDON 07:00-11:00 UTC & NEW YORK 12:30-16:30 UTC)
+// 2. CORE OPENING KILLZONES (LONDON OPEN 07:00-09:00 UTC & NY OPEN 12:30-15:00 UTC)
 // ============================================================================
-inLondonKillzone  = not na(time(timeframe.period, "0700-1100:23456", "UTC"))
-inNyKillzone      = not na(time(timeframe.period, "1230-1630:23456", "UTC"))
+inLondonKillzone  = not na(time(timeframe.period, "0700-0900:23456", "UTC"))
+inNyKillzone      = not na(time(timeframe.period, "1230-1500:23456", "UTC"))
 inKillzone        = inLondonKillzone or inNyKillzone
 sessionLabel      = inLondonKillzone ? "London Killzone" : inNyKillzone ? "New York Killzone" : "Out of Session"
 
@@ -64,19 +66,35 @@ equilibrium       = (rangeHigh + rangeLow) / 2.0
 // Previous Day High / Low (Causal completed daily bar via barmerge.lookahead_off)
 [pdh, pdl]        = request.security(syminfo.tickerid, "D", [high[1], low[1]], lookahead=barmerge.lookahead_off)
 
+// Asian Session (00:00 - 06:00 UTC) High / Low
+inAsianSession    = not na(time(timeframe.period, "0000-0600:23456", "UTC"))
+var float asianHigh = na
+var float asianLow  = na
+if inAsianSession
+    asianHigh := na(asianHigh) ? high : math.max(asianHigh, high)
+    asianLow  := na(asianLow) ? low : math.min(asianLow, low)
+if ta.change(time("D")) != 0
+    asianHigh := na
+    asianLow  := na
+
 // Confirmed Swing Highs & Lows (confirmed strictly after `fractalBars` right-side bars)
 pivHi             = ta.pivothigh(high, fractalBars, fractalBars)
 pivLo             = ta.pivotlow(low, fractalBars, fractalBars)
 
 var float lastSwingHigh = na
 var float lastSwingLow  = na
+var int   lastSwingHighBar = na
+var int   lastSwingLowBar  = na
+
 if not na(pivHi)
     lastSwingHigh := pivHi
+    lastSwingHighBar := bar_index - fractalBars
 if not na(pivLo)
     lastSwingLow  := pivLo
+    lastSwingLowBar  := bar_index - fractalBars
 
 // ============================================================================
-// 4. LIQUIDITY SWEEP + MARKET STRUCTURE SHIFT (MSS) + FAIR VALUE GAP (FVG)
+// 4. POST-SWING LIQUIDITY REJECTION + MSS + FAIR VALUE GAP (FVG)
 // ============================================================================
 recentMinLow      = ta.lowest(low, sweepLookback)
 recentMaxHigh     = ta.highest(high, sweepLookback)
@@ -95,8 +113,14 @@ bearFvgGap        = low[2] - high
 bullDisp          = (close[1] > open[1] and c1Body / c1Range >= dispBodyRatio) or (close > open and c0Body / c0Range >= dispBodyRatio)
 bearDisp          = (close[1] < open[1] and c1Body / c1Range >= dispBodyRatio) or (close < open and c0Body / c0Range >= dispBodyRatio)
 
-bullSweep         = (not na(pdl) and recentMinLow <= pdl and close > pdl) or (not na(lastSwingLow) and recentMinLow <= lastSwingLow and close > lastSwingLow)
-bearSweep         = (not na(pdh) and recentMaxHigh >= pdh and close < pdh) or (not na(lastSwingHigh) and recentMaxHigh >= lastSwingHigh and close < lastSwingHigh)
+// True post-swing liquidity sweep: pierces level, reclaims inside
+bullSweep         = (not na(pdl) and recentMinLow < pdl and close > pdl) or 
+                    (not na(asianLow) and recentMinLow < asianLow and close > asianLow) or 
+                    (not na(lastSwingLow) and (bar_index - lastSwingLowBar >= 4) and recentMinLow < lastSwingLow and close > lastSwingLow)
+
+bearSweep         = (not na(pdh) and recentMaxHigh > pdh and close < pdh) or 
+                    (not na(asianHigh) and recentMaxHigh > asianHigh and close < asianHigh) or 
+                    (not na(lastSwingHigh) and (bar_index - lastSwingHighBar >= 4) and recentMaxHigh > lastSwingHigh and close < lastSwingHigh)
 
 bullMss           = close >= minorHigh or (close > high[1] and close > high[2])
 bearMss           = close <= minorLow or (close < low[1] and close < low[2])
@@ -117,18 +141,54 @@ inPremium         = not requireDiscPrem or (bearEntryPrice >= equilibrium - 0.20
 bullHtfOk         = not requireHtfAlign or htfBullish
 bearHtfOk         = not requireHtfAlign or htfBearish
 
-validBullSetup    = barstate.isconfirmed and inKillzone and strategy.position_size == 0 and bullFvgGap >= fvgMinAtrMult * atr14 and bullDisp and bullSweep and bullMss and inDiscount and bullHtfOk
-validBearSetup    = barstate.isconfirmed and inKillzone and strategy.position_size == 0 and bearFvgGap >= fvgMinAtrMult * atr14 and bearDisp and bearSweep and bearMss and inPremium and bearHtfOk
+validBullSetup    = barstate.isconfirmed and inKillzone and strategy.position_size == 0 and bullFvgGap >= fvgMinDollars and bullDisp and bullSweep and bullMss and inDiscount and bullHtfOk
+validBearSetup    = barstate.isconfirmed and inKillzone and strategy.position_size == 0 and bearFvgGap >= fvgMinDollars and bearDisp and bearSweep and bearMss and inPremium and bearHtfOk
 
 // ============================================================================
-// 5. NON-OVERLAPPING ORDER MANAGEMENT & JSON WEBHOOK ALERTS
+// 5. ORDER MANAGEMENT, BREAK-EVEN STOP & TIME EXIT
 // ============================================================================
 var int pendingBarIndex = na
+var float activeEntryPrice = na
+var float activeInitialSl  = na
+var int   activeEntryTime  = na
+var bool  beMoved          = false
 
+// Cancel expired limit orders
 if strategy.position_size == 0 and not na(pendingBarIndex) and (bar_index - pendingBarIndex > limitExpiryBars)
     strategy.cancel_all()
     pendingBarIndex := na
 
+// Track filled position entry
+if strategy.position_size != 0 and strategy.position_size[1] == 0
+    activeEntryPrice := strategy.position_avg_price
+    activeEntryTime  := time
+    beMoved          := false
+
+// Reset when flat
+if strategy.position_size == 0 and strategy.position_size[1] != 0
+    activeEntryPrice := na
+    activeInitialSl  := na
+    activeEntryTime  := na
+    beMoved          := false
+
+// 180-minute (3-hour) Max Hold Session Time Exit
+if strategy.position_size != 0 and not na(activeEntryTime) and (time - activeEntryTime >= maxHoldMinutes * 60 * 1000)
+    strategy.close_all(comment="TIME_EXIT_180M")
+
+// Protective Break-Even Stop at +0.90R
+if strategy.position_size > 0 and not na(activeEntryPrice) and not na(activeInitialSl) and not beMoved
+    initRisk = activeEntryPrice - activeInitialSl
+    if high >= activeEntryPrice + beTriggerR * initRisk
+        strategy.exit("ICT_LONG_EXIT", from_entry="ICT_LONG", stop=activeEntryPrice + 0.32, limit=activeEntryPrice + initRisk * rrTarget)
+        beMoved := true
+
+if strategy.position_size < 0 and not na(activeEntryPrice) and not na(activeInitialSl) and not beMoved
+    initRisk = activeInitialSl - activeEntryPrice
+    if low <= activeEntryPrice - beTriggerR * initRisk
+        strategy.exit("ICT_SHORT_EXIT", from_entry="ICT_SHORT", stop=activeEntryPrice - 0.32, limit=activeEntryPrice - initRisk * rrTarget)
+        beMoved := true
+
+// Setup execution
 if validBullSetup
     rawSl  = math.min(low[2], math.min(low[1], recentMinLow)) - slAtrBuffer * atr14
     slDist = math.max(minSlDollars, bullEntryPrice - rawSl)
@@ -143,6 +203,7 @@ if validBullSetup
         strategy.entry("ICT_LONG", strategy.long, qty=qtyOz, limit=bullEntryPrice, comment=sigId)
         strategy.exit("ICT_LONG_EXIT", from_entry="ICT_LONG", stop=slPrice, limit=tpPrice)
         pendingBarIndex := bar_index
+        activeInitialSl := slPrice
 
         alertPayload = '{"signal_id":"' + sigId + '","symbol":"' + syminfo.ticker + '","timeframe":"' + timeframe.period + '","direction":"BUY","signal_time_utc":"' + str.format_time(time, "yyyy-MM-dd HH:mm:ss", "UTC") + '","entry_price":' + str.tostring(bullEntryPrice, "#.##") + ',"stop_loss":' + str.tostring(slPrice, "#.##") + ',"take_profit":' + str.tostring(tpPrice, "#.##") + ',"rr_target":' + str.tostring(rrTarget, "#.##") + ',"session":"' + sessionLabel + '","strategy_version":"' + STRATEGY_VERSION + '","execution_mode":"SIGNAL_ONLY_NON_REPAINTING"}'
         alert(alertPayload, alert.freq_once_per_bar_close)
@@ -161,6 +222,7 @@ else if validBearSetup
         strategy.entry("ICT_SHORT", strategy.short, qty=qtyOz, limit=bearEntryPrice, comment=sigId)
         strategy.exit("ICT_SHORT_EXIT", from_entry="ICT_SHORT", stop=slPrice, limit=tpPrice)
         pendingBarIndex := bar_index
+        activeInitialSl := slPrice
 
         alertPayload = '{"signal_id":"' + sigId + '","symbol":"' + syminfo.ticker + '","timeframe":"' + timeframe.period + '","direction":"SELL","signal_time_utc":"' + str.format_time(time, "yyyy-MM-dd HH:mm:ss", "UTC") + '","entry_price":' + str.tostring(bearEntryPrice, "#.##") + ',"stop_loss":' + str.tostring(slPrice, "#.##") + ',"take_profit":' + str.tostring(tpPrice, "#.##") + ',"rr_target":' + str.tostring(rrTarget, "#.##") + ',"session":"' + sessionLabel + '","strategy_version":"' + STRATEGY_VERSION + '","execution_mode":"SIGNAL_ONLY_NON_REPAINTING"}'
         alert(alertPayload, alert.freq_once_per_bar_close)
@@ -171,6 +233,5 @@ else if validBearSetup
 plot(emaFast, "HTF Fast EMA", color=color.new(#00F2FE, 35), linewidth=1)
 plot(emaSlow, "HTF Slow EMA", color=color.new(#F59E0B, 35), linewidth=2)
 plot(equilibrium, "Dealing Range Equilibrium (50%)", color=color.new(#94A3B8, 60), style=plot.style_linebr)
-plotshape(validBullSetup, title="Bullish ICT FVG Setup", style=shape.labelup, location=location.belowbar, color=color.new(#10B981, 0), text="ICT BUY", textcolor=color.white, size=size.tiny)
-plotshape(validBearSetup, title="Bearish ICT FVG Setup", style=shape.labeldown, location=location.abovebar, color=color.new(#EF4444, 0), text="ICT SELL", textcolor=color.white, size=size.tiny)
-
+plotshape(validBullSetup, title="Bullish ICT FVG Setup", style=shape.labelup, location=location.belowbar, color=color.new(#10B981, 0), text="ICT BUY v2.0", textcolor=color.white, size=size.tiny)
+plotshape(validBearSetup, title="Bearish ICT FVG Setup", style=shape.labeldown, location=location.abovebar, color=color.new(#EF4444, 0), text="ICT SELL v2.0", textcolor=color.white, size=size.tiny)

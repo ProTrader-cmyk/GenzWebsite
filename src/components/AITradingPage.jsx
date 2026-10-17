@@ -1569,7 +1569,7 @@ export default function AITradingPage({
                 <div className="ait-scanner-status-line">
                   <span className="ait-scanner-status-dot" />
                   <strong>PIP AI GOLD SCANNER: ONLINE</strong>
-                  <span className="ait-scanner-model-pill">XAU/USD · ICT SMC v1.2</span>
+                  <span className="ait-scanner-model-pill">XAU/USD · ICT SMC v2.0</span>
                 </div>
                 <p className="ait-scanner-desc-line">
                   {isKhmer
