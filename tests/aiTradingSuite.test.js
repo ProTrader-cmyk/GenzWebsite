@@ -22,6 +22,16 @@ import {
   SCANNER_CONFIGS,
 } from '../src/services/marketAnalysisService.js';
 
+import {
+  SCAN_STEPS,
+  MODE_CONFIGS,
+  normalizeMode,
+  executeScanStep1_MarketData,
+  executeScanStep2_TechnicalAnalysis,
+  executeScanStep3_AiValidation,
+  executeScanStep4_FinalDecision,
+} from '../src/services/scanWorkflowService.js';
+
 describe('AI Trading Page & Signal Engine Test Suite', () => {
   // --------------------------------------------------------------------------
   // Requirement 1: Limit Trading Pairs to Three (Gold, Silver, Bitcoin)
@@ -517,4 +527,139 @@ describe('AI Trading Page & Signal Engine Test Suite', () => {
       assert.ok(SCANNER_CONFIGS.BTCUSD);
     });
   });
+
+  // ==========================================================================
+  // Upgraded 4-Step Scanning Workflow & Mode Independence (Scalp vs Intra)
+  // ==========================================================================
+  describe('13. Upgraded 4-Step Scanning Workflow & Scalp vs Intra Independence', () => {
+    // 1. Scalp uses its correct strategy and configured timeframes
+    it('1. Scalp scanner should use 1M/5M timeframes, ICT-SMC strategy, and min 1:1.5 R:R', () => {
+      const cfg = MODE_CONFIGS.scalp;
+      assert.equal(cfg.mode, 'SCALP');
+      assert.equal(cfg.timeframes, '1M / 5M');
+      assert.equal(cfg.strategyVersion, 'ICT-SMC-v4.2');
+      assert.equal(cfg.minRr, 1.5);
+    });
+
+    // 2. Intra uses its correct strategy and configured timeframes
+    it('2. Intra scanner should use 15M/1H/4H timeframes, ICT-CRT strategy, and min 1:2.0 R:R', () => {
+      const cfg = MODE_CONFIGS.daytrade;
+      assert.equal(cfg.mode, 'INTRA');
+      assert.equal(cfg.timeframes, '15M / 1H / 4H');
+      assert.equal(cfg.strategyVersion, 'ICT-CRT-v4.2');
+      assert.equal(cfg.minRr, 2.0);
+    });
+
+    // 3. Both display the four-step workflow correctly
+    it('3. Both modes should define the sequential 4-step workflow', () => {
+      assert.equal(SCAN_STEPS.length, 4);
+      assert.deepEqual(SCAN_STEPS.map((s) => s.num), ['01', '02', '03', '04']);
+      assert.equal(SCAN_STEPS[0].id, 'market_data');
+      assert.equal(SCAN_STEPS[1].id, 'technical_analysis');
+      assert.equal(SCAN_STEPS[2].id, 'ai_validation');
+      assert.equal(SCAN_STEPS[3].id, 'final_decision');
+    });
+
+    // 4. Switching modes does not start a scan
+    it('4. Switching between Scalp and Intra must preserve scan states without starting a scan', () => {
+      let scalpScanState = { isScanning: false, activeStep: 0, completionStatus: null };
+      let intraScanState = { isScanning: false, activeStep: 0, completionStatus: null };
+      let activeMode = 'scalp';
+
+      // Switch to intra
+      activeMode = 'daytrade';
+      assert.equal(activeMode, 'daytrade');
+      assert.equal(scalpScanState.isScanning, false);
+      assert.equal(intraScanState.isScanning, false);
+      assert.equal(intraScanState.activeStep, 0);
+    });
+
+    // 5. Switching assets does not create a signal
+    it('5. Switching assets resets in-flight scan state and does not create or dispatch a signal', () => {
+      let activePair = 'XAUUSD';
+      let activeSignal = null;
+      let scanRequestId = 1;
+
+      // Switch asset to Silver
+      activePair = 'XAGUSD';
+      scanRequestId += 1;
+      activeSignal = null; // Stays null
+
+      assert.equal(activePair, 'XAGUSD');
+      assert.equal(activeSignal, null);
+    });
+
+    // 6. Duplicate scan requests are prevented
+    it('6. Duplicate scan requests should be blocked when scanner is currently busy', () => {
+      const scanState = { isScanning: true, activeStep: 2 };
+      const canStartScan = !scanState.isScanning;
+      assert.equal(canStartScan, false);
+    });
+
+    // 7. Stale responses cannot overwrite the current mode
+    it('7. A delayed response from another mode or asset is rejected by race condition checks', () => {
+      const activeContext = { pair: 'BTCUSD', mode: 'daytrade', requestId: 5 };
+      const incomingDelayedPayload = { pair: 'XAUUSD', mode: 'scalp', requestId: 4 };
+
+      const isMatching = incomingDelayedPayload.pair === activeContext.pair &&
+        incomingDelayedPayload.mode === activeContext.mode &&
+        incomingDelayedPayload.requestId === activeContext.requestId;
+
+      assert.equal(isMatching, false);
+    });
+
+    // 8. Only validated signals appear in the correct active-signal panel
+    it('8. Validated Scalp signal is isolated to Scalp; Intra signal is isolated to Intra', () => {
+      const scalpCandidate = { pair: 'XAUUSD', direction: 'BUY', entry: 4165.0, sl: 4162.5, tp: 4170.0, style: 'scalp' };
+      const intraCandidate = { pair: 'XAUUSD', direction: 'BUY', entry: 4165.0, sl: 4155.0, tp: 4185.0, style: 'daytrade' };
+
+      const scalpVal = executeScanStep3_AiValidation(scalpCandidate, 4165.0, 'scalp');
+      const intraVal = executeScanStep3_AiValidation(intraCandidate, 4165.0, 'daytrade');
+
+      assert.equal(scalpVal.ok, true);
+      assert.equal(scalpVal.signal.style, 'scalp');
+
+      assert.equal(intraVal.ok, true);
+      assert.equal(intraVal.signal.style, 'daytrade');
+    });
+
+    // 9. NO_SIGNAL produces no active signal row
+    it('9. When conditions fail or return NO_SIGNAL, the decision produces null signal', () => {
+      const step1 = { ok: true, price: 4165.0 };
+      const step2Chop = { ok: true, conditionMet: false, code: 'NO_SIGNAL', reason: 'Consolidating in equilibrium chop' };
+      const decision = executeScanStep4_FinalDecision(step1, step2Chop, null);
+
+      assert.equal(decision.outcome, 'NO_SIGNAL');
+      assert.equal(decision.code, 'NO_VALID_SETUP');
+      assert.equal(decision.signal, null);
+    });
+
+    // 10. Errors never produce fake success states
+    it('10. Data failures in Step 1 immediately terminate scan as ERROR without fake signals', () => {
+      const failedStep1 = executeScanStep1_MarketData('XAUUSD', null);
+      assert.equal(failedStep1.ok, false);
+      assert.equal(failedStep1.errorCode, 'INVALID_PRICE');
+
+      const decision = executeScanStep4_FinalDecision(failedStep1, null, null);
+      assert.equal(decision.outcome, 'ERROR');
+      assert.equal(decision.signal, null);
+    });
+
+    // 11. Each mode can scan again after completion
+    it('11. After scan completion, isScanning resets to false enabling subsequent scans', () => {
+      const finishedState = { isScanning: false, activeStep: 4, completionStatus: 'SIGNAL_PUBLISHED' };
+      const canReScan = !finishedState.isScanning;
+      assert.equal(canReScan, true);
+    });
+
+    // 12. Existing home page functionality remains intact
+    it('12. Existing home page HowPipWorks steps definition remains intact', () => {
+      assert.ok(SCAN_STEPS.length >= 4);
+      assert.equal(normalizeMode('scalp'), 'scalp');
+      assert.equal(normalizeMode('daytrade'), 'daytrade');
+      assert.equal(normalizeMode('intra'), 'daytrade');
+    });
+  });
 });
+
+

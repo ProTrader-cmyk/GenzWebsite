@@ -321,3 +321,4 @@ export function validateSignal(candidate, currentPrice, options = {}) {
     signal: sanitizedSignal,
   };
 }
+

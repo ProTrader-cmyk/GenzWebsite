@@ -5,6 +5,13 @@ import { generateRealPipSignal, saveSignalToFirestore } from '../services/pipLiv
 import { getMarketHoursStatus } from '../services/marketHoursService.js';
 import { evaluateMarketTradingConditions } from '../services/marketAnalysisService.js';
 import { validateSignal, isSupportedPair, normalizePair } from '../services/signalValidationService.js';
+import ScanWorkflowStepper from './ScanWorkflowStepper.jsx';
+import {
+  executeScanStep1_MarketData,
+  executeScanStep2_TechnicalAnalysis,
+  executeScanStep3_AiValidation,
+  executeScanStep4_FinalDecision,
+} from '../services/scanWorkflowService.js';
 import {
   showBrowserNotification,
   playNotificationSound,
@@ -569,9 +576,20 @@ export default function MarketAnalysisPanel({
     }, 1350);
   }, [pipMode, engineStartAnimation]);
 
-  const [isScanning, setIsScanning] = useState(false);
-  const [scanProgress, setScanProgress] = useState(0);
-  const [scanTelemetry, setScanTelemetry] = useState('');
+  const [scalpScanState, setScalpScanState] = useState({
+    isScanning: false,
+    activeStep: 0,
+    stepStatuses: { 1: 'pending', 2: 'pending', 3: 'pending', 4: 'pending' },
+    telemetry: '',
+    completionStatus: null,
+  });
+  const [intraScanState, setIntraScanState] = useState({
+    isScanning: false,
+    activeStep: 0,
+    stepStatuses: { 1: 'pending', 2: 'pending', 3: 'pending', 4: 'pending' },
+    telemetry: '',
+    completionStatus: null,
+  });
   const [intraConditionMet, setIntraConditionMet] = useState(false);
   const [scalpSignal, setScalpSignal] = useState(null);
   const [dayTradeSignal, setDayTradeSignal] = useState(null);
@@ -961,8 +979,20 @@ export default function MarketAnalysisPanel({
   useEffect(() => {
     activePairRef.current = pair;
     scanRequestIdRef.current += 1; // Invalidate any running scan immediately
-    setIsScanning(false);
-    setScanProgress(0);
+    setScalpScanState({
+      isScanning: false,
+      activeStep: 0,
+      stepStatuses: { 1: 'pending', 2: 'pending', 3: 'pending', 4: 'pending' },
+      telemetry: '',
+      completionStatus: null,
+    });
+    setIntraScanState({
+      isScanning: false,
+      activeStep: 0,
+      stepStatuses: { 1: 'pending', 2: 'pending', 3: 'pending', 4: 'pending' },
+      telemetry: '',
+      completionStatus: null,
+    });
 
     try {
       const isCorruptOrInvalid = (sig) => {
@@ -1031,104 +1061,208 @@ export default function MarketAnalysisPanel({
   const currentScalpSignal = scalpSignal;
   const currentDayTradeSignal = dayTradeSignal;
   const activeSignal = pipMode === 'scalp' ? currentScalpSignal : currentDayTradeSignal;
+  const currentScanState = pipMode === 'scalp' ? scalpScanState : intraScanState;
 
-  const handleScanSignal = (mode = pipMode) => {
-    if (isScanning) return;
+  const handleScanSignal = async (mode = pipMode) => {
+    const normMode = mode === 'daytrade' || mode === 'intra' ? 'daytrade' : 'scalp';
+    const isTargetScalp = normMode === 'scalp';
+    const currentScanState = isTargetScalp ? scalpScanState : intraScanState;
+    const setTargetScanState = isTargetScalp ? setScalpScanState : setIntraScanState;
+
+    if (currentScanState.isScanning) return; // Prevent duplicate scan clicks
+
     if (!marketStatus.isOpen) {
-      setScanTelemetry(`Scanner Paused: Market Closed (${marketStatus.sessionName}). Interbank markets do not trade 24/7.`);
+      setTargetScanState({
+        isScanning: false,
+        activeStep: 1,
+        stepStatuses: { 1: 'error', 2: 'pending', 3: 'pending', 4: 'pending' },
+        telemetry: `Scanner Paused: Market Closed (${marketStatus.sessionName}). Interbank markets do not trade 24/7.`,
+        completionStatus: 'ERROR',
+      });
       return;
     }
 
     scanRequestIdRef.current += 1;
     const currentRequestId = scanRequestIdRef.current;
     const targetPair = pair;
+    const lockedScanPrice = Number(livePrice) || p;
 
-    setIsScanning(true);
-    setScanProgress(15);
-    setScanTelemetry(mode === 'scalp' ? 'Scanning 1M/5M micro-liquidity wicks...' : 'Auditing 1H/4H Asian High/Low boundaries...');
+    // Initialize 4-step scan state
+    setTargetScanState({
+      isScanning: true,
+      activeStep: 1,
+      stepStatuses: { 1: 'active', 2: 'pending', 3: 'pending', 4: 'pending' },
+      telemetry: `Step 1/4 — Market Data: Verifying live ${targetPair} spot stream & data freshness...`,
+      completionStatus: null,
+    });
     playScanSound();
 
-    let step = 0;
-    const timer = setInterval(() => {
-      // Race condition check: user switched pairs or started another scan
-      if (activePairRef.current !== targetPair || scanRequestIdRef.current !== currentRequestId) {
-        clearInterval(timer);
+    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    const isCancelled = () => activePairRef.current !== targetPair || scanRequestIdRef.current !== currentRequestId;
+
+    try {
+      // -------------------------------------------------------------
+      // STAGE 1: Market Data
+      // -------------------------------------------------------------
+      await sleep(350);
+      if (isCancelled()) return;
+
+      const step1 = executeScanStep1_MarketData(targetPair, lockedScanPrice, { marketStatus });
+      if (!step1.ok) {
+        setTargetScanState({
+          isScanning: false,
+          activeStep: 1,
+          stepStatuses: { 1: 'error', 2: 'pending', 3: 'pending', 4: 'pending' },
+          telemetry: `Step 1/4 Error: ${step1.errorMessage}`,
+          completionStatus: 'ERROR',
+        });
+        if (isTargetScalp) {
+          setScalpSignal(null);
+          try { localStorage.removeItem(`genz_locked_scalp_${targetPair}`); } catch {}
+        } else {
+          setDayTradeSignal(null);
+          try { localStorage.removeItem(`genz_locked_daytrade_${targetPair}`); } catch {}
+        }
         return;
       }
 
-      step += 1;
-      if (step === 1) {
-        setScanProgress(45);
-        setScanTelemetry(mode === 'scalp' ? 'Detecting micro FVG imbalances & displacement...' : 'Validating 3-Candle CRT manipulation & FVG...');
-      } else if (step === 2) {
-        setScanProgress(80);
-        setScanTelemetry(mode === 'scalp' ? 'Evaluating algorithmic conditions & R:R geometry...' : 'Evaluating institutional liquidity displacement condition...');
-      } else if (step >= 3) {
-        clearInterval(timer);
-        if (activePairRef.current !== targetPair || scanRequestIdRef.current !== currentRequestId) return;
+      // Step 1 Success -> Advance to Step 2
+      setTargetScanState((prev) => ({
+        ...prev,
+        activeStep: 2,
+        stepStatuses: { 1: 'done', 2: 'active', 3: 'pending', 4: 'pending' },
+        telemetry: isTargetScalp
+          ? `Step 2/4 — Technical Analysis: Evaluating 1M/5M momentum expansion & micro-order blocks...`
+          : `Step 2/4 — Technical Analysis: Auditing 15M/1H/4H Asian High/Low boundaries & CRT structure...`,
+      }));
 
-        setScanProgress(100);
-        playSuccessChime();
+      // -------------------------------------------------------------
+      // STAGE 2: Technical Analysis
+      // -------------------------------------------------------------
+      await sleep(400);
+      if (isCancelled()) return;
 
-        const lockedScanPrice = Number(livePrice) || p;
-
-        // 1. Evaluate market trading conditions
-        const cond = evaluateMarketTradingConditions(targetPair, marketAnalysis, mode);
-
-        if (!cond.canTrade) {
-          // NO_SIGNAL: conditions not met! Active signal area stays empty!
-          console.log(`[Pip Scan] NO_SIGNAL for ${targetPair} (${mode}): ${cond.reason}`);
-          if (mode === 'scalp') {
-            setScalpSignal(null);
-            try { localStorage.removeItem(`genz_locked_scalp_${targetPair}`); } catch {}
-          } else {
-            setDayTradeSignal(null);
-            try { localStorage.removeItem(`genz_locked_daytrade_${targetPair}`); } catch {}
-          }
-          setScanTelemetry(`Scan Complete: NO_SIGNAL — ${cond.reason}`);
-          setIsScanning(false);
-          return;
-        }
-
-        // 2. Conditions met: Build candidate signal based on verified live price and market bias
-        const candidate = buildDefaultSignal(targetPair, lockedScanPrice, mode, cond.direction);
-
-        // 3. Strict deterministic signal validation
-        const validation = validateSignal(candidate, lockedScanPrice);
-
-        if (!validation.isValid) {
-          console.warn(`[Pip Scan] Signal rejected for ${targetPair}: ${validation.reasonCode} - ${validation.message}`);
-          if (mode === 'scalp') {
-            setScalpSignal(null);
-            try { localStorage.removeItem(`genz_locked_scalp_${targetPair}`); } catch {}
-          } else {
-            setDayTradeSignal(null);
-            try { localStorage.removeItem(`genz_locked_daytrade_${targetPair}`); } catch {}
-          }
-          setScanTelemetry(`Scan Complete: NO_SIGNAL — Validation: ${validation.message}`);
-          setIsScanning(false);
-          return;
-        }
-
-        // 4. Signal validated! Set active and publish
-        if (mode === 'scalp') {
-          setScalpSignal(candidate);
-          try { localStorage.setItem(`genz_locked_scalp_${targetPair}`, JSON.stringify(candidate)); } catch {}
-        } else {
-          setDayTradeSignal(candidate);
-          try { localStorage.setItem(`genz_locked_daytrade_${targetPair}`, JSON.stringify(candidate)); } catch {}
-        }
-
-        dispatchSignalToSystem(candidate, mode);
-        setScanTelemetry(`Valid Setup Found: ${candidate.direction} ${candidate.pair} @ $${formatSpotPrice(targetPair, candidate.entry)}`);
-
-        setTimeout(() => {
-          if (activePairRef.current === targetPair && scanRequestIdRef.current === currentRequestId) {
-            setIsScanning(false);
-          }
-        }, 380);
+      const step2 = executeScanStep2_TechnicalAnalysis(targetPair, normMode, marketAnalysis);
+      if (!step2.ok) {
+        setTargetScanState({
+          isScanning: false,
+          activeStep: 2,
+          stepStatuses: { 1: 'done', 2: 'error', 3: 'pending', 4: 'pending' },
+          telemetry: `Step 2/4 Error: ${step2.errorMessage}`,
+          completionStatus: 'ERROR',
+        });
+        return;
       }
-    }, 320);
+
+      if (!step2.conditionMet) {
+        // Strategy conditions not met (e.g. equilibrium chop / conflicting MTF) -> Advance to Step 4 with NO_VALID_SETUP
+        await sleep(300);
+        if (isCancelled()) return;
+
+        setTargetScanState({
+          isScanning: false,
+          activeStep: 4,
+          stepStatuses: { 1: 'done', 2: 'done', 3: 'pending', 4: 'no_signal' },
+          telemetry: `Step 4/4 — Final Decision: SCAN COMPLETE · NO VALID SETUP (${step2.reason})`,
+          completionStatus: 'NO_SIGNAL',
+        });
+
+        if (isTargetScalp) {
+          setScalpSignal(null);
+          try { localStorage.removeItem(`genz_locked_scalp_${targetPair}`); } catch {}
+        } else {
+          setDayTradeSignal(null);
+          try { localStorage.removeItem(`genz_locked_daytrade_${targetPair}`); } catch {}
+        }
+        return;
+      }
+
+      // Step 2 Success -> Advance to Step 3
+      setTargetScanState((prev) => ({
+        ...prev,
+        activeStep: 3,
+        stepStatuses: { 1: 'done', 2: 'done', 3: 'active', 4: 'pending' },
+        telemetry: `Step 3/4 — AI Validation: Verifying entry tolerance (±0.35%), SL/TP geometry & R:R...`,
+      }));
+
+      // -------------------------------------------------------------
+      // STAGE 3: AI Analysis & Validation
+      // -------------------------------------------------------------
+      await sleep(400);
+      if (isCancelled()) return;
+
+      const candidate = buildDefaultSignal(targetPair, lockedScanPrice, normMode, step2.direction);
+      const step3 = executeScanStep3_AiValidation(candidate, lockedScanPrice, normMode, { activePair: targetPair });
+
+      if (!step3.ok) {
+        // Validation failed
+        await sleep(300);
+        if (isCancelled()) return;
+
+        setTargetScanState({
+          isScanning: false,
+          activeStep: 4,
+          stepStatuses: { 1: 'done', 2: 'done', 3: 'error', 4: 'no_signal' },
+          telemetry: `Step 4/4 — Final Decision: Signal rejected during validation (${step3.error})`,
+          completionStatus: 'NO_SIGNAL',
+        });
+
+        if (isTargetScalp) {
+          setScalpSignal(null);
+          try { localStorage.removeItem(`genz_locked_scalp_${targetPair}`); } catch {}
+        } else {
+          setDayTradeSignal(null);
+          try { localStorage.removeItem(`genz_locked_daytrade_${targetPair}`); } catch {}
+        }
+        return;
+      }
+
+      // Step 3 Success -> Advance to Step 4
+      setTargetScanState((prev) => ({
+        ...prev,
+        activeStep: 4,
+        stepStatuses: { 1: 'done', 2: 'done', 3: 'done', 4: 'active' },
+        telemetry: `Step 4/4 — Final Decision: Committing validated setup to system...`,
+      }));
+
+      // -------------------------------------------------------------
+      // STAGE 4: Final Decision
+      // -------------------------------------------------------------
+      await sleep(300);
+      if (isCancelled()) return;
+
+      const decision = executeScanStep4_FinalDecision(step1, step2, step3);
+
+      playSuccessChime();
+
+      setTargetScanState({
+        isScanning: false,
+        activeStep: 4,
+        stepStatuses: { 1: 'done', 2: 'done', 3: 'done', 4: 'done' },
+        telemetry: `Step 4/4 — Valid Setup Confirmed: ${decision.signal.direction} ${decision.signal.pair} @ $${formatSpotPrice(targetPair, decision.signal.entry)} (R:R ${decision.signal.rr})`,
+        completionStatus: 'SIGNAL_PUBLISHED',
+      });
+
+      if (isTargetScalp) {
+        setScalpSignal(decision.signal);
+        try { localStorage.setItem(`genz_locked_scalp_${targetPair}`, JSON.stringify(decision.signal)); } catch {}
+      } else {
+        setDayTradeSignal(decision.signal);
+        try { localStorage.setItem(`genz_locked_daytrade_${targetPair}`, JSON.stringify(decision.signal)); } catch {}
+      }
+
+      dispatchSignalToSystem(decision.signal, normMode);
+    } catch (scanErr) {
+      console.warn('[handleScanSignal] Unexpected scan error:', scanErr);
+      if (isCancelled()) return;
+      setTargetScanState({
+        isScanning: false,
+        activeStep: 4,
+        stepStatuses: { 1: 'error', 2: 'pending', 3: 'pending', 4: 'pending' },
+        telemetry: `Scan Error: ${scanErr.message || 'Operation interrupted.'}`,
+        completionStatus: 'ERROR',
+      });
+    }
   };
 
   const handleCopySignal = (sig = activeSignal) => {
@@ -1740,7 +1874,7 @@ Model: ${sig.model || 'ICT SMC Model'}`;
             </div>
 
             {/* 3. CENTRAL PIP MACHINE RADAR & SCAN HUD */}
-            <div className={`ait-pm-radar-hud ${isScanning ? 'scanning' : ''} ${!marketStatus.isOpen ? 'closed' : ''}`}>
+            <div className={`ait-pm-radar-hud ${currentScanState.isScanning ? 'scanning' : ''} ${!marketStatus.isOpen ? 'closed' : ''}`}>
               <div className="ait-pm-radar-visual">
                 <div className="ait-pm-radar-circle">
                   <div className="ait-pm-radar-sweep" />
@@ -1772,55 +1906,16 @@ Model: ${sig.model || 'ICT SMC Model'}`;
               </div>
 
               <div className="ait-pm-radar-info">
-                <div className="ait-pm-status-line">
-                  <span className={`ait-pm-status-pill ${!marketStatus.isOpen ? 'closed' : isScanning ? 'scanning' : 'ready'}`}>
-                    {!marketStatus.isOpen
-                      ? 'MARKET CLOSED • SCANNER PAUSED'
-                      : isScanning
-                        ? 'SCANNING ORDER FLOW...'
-                        : pipMode === 'daytrade'
-                          ? 'AUTONOMOUS SCANNER • ACTIVE'
-                          : 'SCANNER STANDBY • READY'}
-                  </span>
-                  <span className="ait-pm-mode-flag">
-                    {!marketStatus.isOpen
-                      ? 'WEEKEND PAUSE (NO 24/7 TRADING)'
-                      : pipMode === 'scalp'
-                        ? '1M-5M ULTRA SCALPER'
-                        : 'AUTO-DISPATCH CRT ENGINE'}
-                  </span>
-                </div>
+                {/* 4-Step Scanning Stepper Component (Unified visual design, independent strategies) */}
+                <ScanWorkflowStepper
+                  mode={pipMode}
+                  pair={pair}
+                  symbolLabel={assetSubtitle}
+                  scanState={currentScanState}
+                  isMarketOpen={marketStatus.isOpen}
+                />
 
-                <div className="ait-pm-telemetry-text">
-                  {!marketStatus.isOpen ? (
-                    <p className="ait-pm-t-closed text-amber">
-                      <IconLock width="13" height="13" style={{ display: 'inline', verticalAlign: '-2px', marginRight: 5 }} />
-                      Interbank markets closed for the weekend. Pip Machine autonomous engine is paused until <strong>{marketStatus.reopensText}</strong>.
-                    </p>
-                  ) : isScanning ? (
-                    <p className="ait-pm-t-active text-cyan">
-                      <span className="ait-pm-spin-dot" /> {scanTelemetry || 'Analyzing market liquidity...'}
-                    </p>
-                  ) : pipMode === 'scalp' ? (
-                    <p className="ait-pm-t-idle">
-                      Ready to execute 1M/5M micro-sweep scan. Strictly enforces 2–3 numbers SL &amp; TP ($2.00–$3.00).
-                    </p>
-                  ) : (
-                    <p className="ait-pm-t-idle">
-                      <span className="text-cyan" style={{ fontWeight: 700 }}>Autonomous Pipeline Active:</span> Continuously auditing 15M/1H CRT structure. Signal automatically dispatches the instant confluence is verified (no manual scan required).
-                    </p>
-                  )}
-                </div>
-
-                {/* Progress bar during scan */}
-                {isScanning && (
-                  <div className="ait-pm-progress-track">
-                    <div className="ait-pm-progress-fill" style={{ width: `${scanProgress}%` }} />
-                    <span className="ait-pm-progress-pct">{scanProgress}%</span>
-                  </div>
-                )}
-
-                {/* Action Button to trigger scan */}
+                {/* Scan Action Controls */}
                 <div className="ait-pm-hud-actions">
                   {!marketStatus.isOpen ? (
                     <button
@@ -1834,26 +1929,26 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                   ) : (
                     <button
                       type="button"
-                      className={`ait-pm-scan-btn ${isScanning ? 'busy' : ''}`}
+                      className={`ait-pm-scan-btn ${currentScanState.isScanning ? 'busy' : ''}`}
                       onClick={() => handleScanSignal(pipMode)}
-                      disabled={isScanning}
+                      disabled={currentScanState.isScanning}
                     >
                       <span className="ait-pm-scan-glow" />
-                      <svg className={isScanning ? 'ait-spin' : ''} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+                      <svg className={currentScanState.isScanning ? 'ait-spin' : ''} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
                         <circle cx="12" cy="12" r="10" />
                         <path d="M12 2a10 10 0 0 1 10 10" />
                       </svg>
                       <span>
-                        {isScanning
-                          ? 'Scanning Liquidity Pools...'
+                        {currentScanState.isScanning
+                          ? 'Scanning 4-Step Pipeline...'
                           : pipMode === 'scalp'
-                            ? 'Scan Pip Scalp Signal'
-                            : 'Re-Scan / Force Sync Intra Signal'}
+                            ? 'Scan 1M/5M Pip Scalp'
+                            : 'Scan 15M/1H Pip Intra'}
                       </span>
                     </button>
                   )}
 
-                  {/* Autonomous Dispatch Monitor Badge (Replacing manual toggle) */}
+                  {/* Autonomous Dispatch Monitor Badge for Daytrade */}
                   {pipMode === 'daytrade' && marketStatus.isOpen && (
                     <div className={`ait-pm-auto-monitor-badge ${intraConditionMet ? 'active' : ''}`}>
                       <span className="ait-pm-auto-pulse-dot" />
