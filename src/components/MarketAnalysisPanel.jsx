@@ -1041,7 +1041,7 @@ export default function MarketAnalysisPanel({
   // Persistent locked Pip signals (strictly frozen after scan so numbers NEVER move with live market ticks)
   useEffect(() => {
     activePairRef.current = pair;
-    scanRequestIdRef.current += 1; // Invalidate any running scan immediately
+    scanRequestIdRef.current += 1; // Invalidate any running scan immediately on pair switch
     setScalpScanState({
       isScanning: false,
       activeStep: 0,
@@ -1068,7 +1068,7 @@ export default function MarketAnalysisPanel({
         const sPair = (sig.pair || sig.symbol || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
         const currentNorm = pair.toUpperCase().replace(/[^A-Z0-9]/g, '');
         if (sPair !== currentNorm) return true;
-        const validation = validateSignal(sig, Number(livePrice) || p);
+        const validation = validateSignal(sig, e);
         return !validation.isValid;
       };
 
@@ -1117,7 +1117,9 @@ export default function MarketAnalysisPanel({
       setScalpSignal(null);
       setDayTradeSignal(null);
     }
-  }, [pair, livePrice, p]);
+    // Only run when the selected pair changes so live price ticks never reset scan state
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pair]);
 
   // Keep intraConditionMet synchronized for UI display only (NEVER auto-dispatches on pair switch)
   useEffect(() => {
@@ -1261,6 +1263,22 @@ export default function MarketAnalysisPanel({
       await sleep(400);
       if (isCancelled()) return;
 
+      // Gather existing active Intra Trade signal for targetPair so re-scanning the same condition does not re-approve
+      const existingIntraSignals = [];
+      if (!isTargetScalp) {
+        if (dayTradeSignal) {
+          existingIntraSignals.push(dayTradeSignal);
+        } else {
+          try {
+            const savedIntraRaw = localStorage.getItem(`genz_locked_daytrade_${targetPair}`);
+            if (savedIntraRaw) {
+              const parsedIntra = JSON.parse(savedIntraRaw);
+              if (parsedIntra) existingIntraSignals.push(parsedIntra);
+            }
+          } catch {}
+        }
+      }
+
       const candidate = buildDefaultSignal(targetPair, lockedScanPrice, normMode, step2.direction, marketAnalysis);
       if (!candidate || candidate.ok === false) {
         await sleep(300);
@@ -1285,7 +1303,10 @@ export default function MarketAnalysisPanel({
         return;
       }
 
-      const step3 = executeScanStep3_AiValidation(candidate, lockedScanPrice, normMode, { activePair: targetPair });
+      const step3 = executeScanStep3_AiValidation(candidate, lockedScanPrice, normMode, {
+        activePair: targetPair,
+        existingSignals: existingIntraSignals,
+      });
 
       if (!step3.ok) {
         // Validation failed
@@ -1315,7 +1336,9 @@ export default function MarketAnalysisPanel({
         ...prev,
         activeStep: 4,
         stepStatuses: { 1: 'done', 2: 'done', 3: 'done', 4: 'active' },
-        telemetry: `Step 4/4 — Final Decision: Committing validated setup to system...`,
+        telemetry: step3.alreadyPublished
+          ? `Step 4/4 — Final Decision: Checking active published Intra Trade signal for this condition...`
+          : `Step 4/4 — Final Decision: Committing validated setup to system...`,
       }));
 
       // -------------------------------------------------------------
@@ -1325,6 +1348,21 @@ export default function MarketAnalysisPanel({
       if (isCancelled()) return;
 
       const decision = executeScanStep4_FinalDecision(step1, step2, step3);
+
+      // If Intra Trade signal for this same condition is ALREADY PUBLISHED, do NOT approve or dispatch a duplicate
+      if (decision.outcome === 'ALREADY_PUBLISHED') {
+        setTargetScanState({
+          isScanning: false,
+          activeStep: 4,
+          stepStatuses: { 1: 'done', 2: 'done', 3: 'done', 4: 'no_signal' },
+          telemetry: `Step 4/4 — Final Decision: SIGNAL ALREADY PUBLISHED — Active ${decision.signal.direction} ${targetPair} Intra signal (@ $${formatSpotPrice(targetPair, decision.signal.entry)}) already meets this condition.`,
+          completionStatus: 'ALREADY_PUBLISHED',
+        });
+        if (!isTargetScalp && decision.signal) {
+          setDayTradeSignal(decision.signal);
+        }
+        return;
+      }
 
       playSuccessChime();
 
@@ -2234,6 +2272,47 @@ Model: ${sig.model || 'ICT SMC Model'}${explanationsText}`;
 
               return (
                 <div className="ait-pm-signal-card-wrap">
+                  {intraScanState.completionStatus === 'ALREADY_PUBLISHED' && (
+                    <div
+                      className="ait-pm-already-published-banner"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '10px',
+                        padding: '10px 14px',
+                        marginBottom: '10px',
+                        borderRadius: '10px',
+                        background: 'rgba(245, 158, 11, 0.1)',
+                        border: '1px solid rgba(245, 158, 11, 0.35)',
+                        color: '#FBBF24',
+                        fontSize: '12px',
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            padding: '2px 8px',
+                            borderRadius: '999px',
+                            background: 'rgba(245, 158, 11, 0.2)',
+                            color: '#FDE68A',
+                            fontWeight: 800,
+                            fontSize: '10px',
+                            letterSpacing: '0.06em',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          ALREADY PUBLISHED
+                        </span>
+                        <span>
+                          This <strong>{dayTradeSignal.direction} {pair}</strong> Intra Trade condition is already active and published (@ <strong>${formatCommaPrice(dEntry, decimals)}</strong>). Duplicate approval was skipped.
+                        </span>
+                      </div>
+                    </div>
+                  )}
                   <div className="ait-pm-scalp-simple-row intra-theme">
                     <div className="ait-pm-sr-badge-col">
                       <span className={`ait-pm-sr-dir ${(dayTradeSignal.direction || 'BUY').toLowerCase() === 'sell' ? 'sell' : 'buy'}`}>
@@ -2301,7 +2380,9 @@ Model: ${sig.model || 'ICT SMC Model'}${explanationsText}`;
                           <IconCheck width="11" height="11" /> Stored in Firestore &amp; Alert Sent
                         </span>
                       )}
-                      <span className="ait-pm-sr-conf cyan">VALIDATED</span>
+                      <span className="ait-pm-sr-conf cyan">
+                        {intraScanState.completionStatus === 'ALREADY_PUBLISHED' ? 'ALREADY PUBLISHED' : 'VALIDATED'}
+                      </span>
                       <button
                         type="button"
                         className="ait-pm-sr-copy-btn"

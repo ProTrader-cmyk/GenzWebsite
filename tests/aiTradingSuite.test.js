@@ -666,6 +666,50 @@ describe('AI Trading Page & Signal Engine Test Suite', () => {
       assert.equal(normalizeMode('daytrade'), 'daytrade');
       assert.equal(normalizeMode('intra'), 'daytrade');
     });
+
+    // 13. Re-scanning Intra Trade with the same active condition returns ALREADY_PUBLISHED instead of approving a duplicate signal
+    it('13. Intra Trade re-scan meeting the same active condition must return ALREADY_PUBLISHED and not approve a duplicate signal', () => {
+      const step1 = { ok: true, price: 4168.5, pair: 'XAUUSD' };
+      const step2 = { ok: true, conditionMet: true, direction: 'BUY', code: 'SETUP_CONFIRMED' };
+
+      // First Intra scan published signal at 4165.0 (SL: 4155.0, TP: 4185.0)
+      const existingPublishedIntra = {
+        id: 'sig_XAUUSD_first',
+        pair: 'XAUUSD',
+        direction: 'BUY',
+        entry: 4165.0,
+        sl: 4155.0,
+        tp: 4185.0,
+        style: 'daytrade',
+        status: 'active',
+      };
+
+      // User scans Intra again while price is 4168.5 (still active between SL and TP, same BUY condition)
+      const secondScanCandidate = {
+        pair: 'XAUUSD',
+        direction: 'BUY',
+        entry: 4168.5,
+        sl: 4158.5,
+        tp: 4188.5,
+        style: 'daytrade',
+      };
+
+      const step3Repeat = executeScanStep3_AiValidation(secondScanCandidate, 4168.5, 'daytrade', {
+        activePair: 'XAUUSD',
+        existingSignals: [existingPublishedIntra],
+      });
+
+      assert.equal(step3Repeat.ok, true);
+      assert.equal(step3Repeat.alreadyPublished, true);
+      assert.equal(step3Repeat.reasonCode, 'SIGNAL_ALREADY_PUBLISHED');
+      assert.equal(step3Repeat.signal.id, 'sig_XAUUSD_first');
+
+      const decision = executeScanStep4_FinalDecision(step1, step2, step3Repeat);
+      assert.equal(decision.outcome, 'ALREADY_PUBLISHED');
+      assert.equal(decision.code, 'SIGNAL_ALREADY_PUBLISHED');
+      assert.equal(decision.signal.id, 'sig_XAUUSD_first');
+      assert.match(decision.message, /already published/i);
+    });
   });
 
   // ==========================================================================

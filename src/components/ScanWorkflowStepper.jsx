@@ -105,6 +105,10 @@ export function ScanWorkflowStepper({
             <span className="ait-sw-status-pill success">
               ✓ SETUP CONFIRMED
             </span>
+          ) : scanState.completionStatus === 'ALREADY_PUBLISHED' ? (
+            <span className="ait-sw-status-pill neutral">
+              ● SIGNAL ALREADY PUBLISHED
+            </span>
           ) : scanState.completionStatus === 'NO_SIGNAL' ? (
             <span className="ait-sw-status-pill neutral">
               SCAN COMPLETE · NO SETUP
@@ -188,7 +192,7 @@ export function ScanWorkflowStepper({
             <span className="ait-sw-spin-dot" />
           ) : scanState.completionStatus === 'SIGNAL_PUBLISHED' ? (
             <span className="ait-sw-dot green" />
-          ) : scanState.completionStatus === 'NO_SIGNAL' ? (
+          ) : scanState.completionStatus === 'ALREADY_PUBLISHED' || scanState.completionStatus === 'NO_SIGNAL' ? (
             <span className="ait-sw-dot amber" />
           ) : scanState.completionStatus === 'ERROR' ? (
             <span className="ait-sw-dot red" />

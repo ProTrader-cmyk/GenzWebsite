@@ -216,6 +216,53 @@ export function executeScanStep2_TechnicalAnalysis(pair, mode, marketAnalysis) {
 }
 
 /**
+ * Checks whether an active Intra Trade (daytrade) signal for the same pair and
+ * same condition/direction has already been published and has not yet hit TP or SL.
+ */
+export function findActivePublishedIntraSignal(pair, direction, livePrice, existingSignals = []) {
+  if (!Array.isArray(existingSignals) || existingSignals.length === 0) return null;
+  const normPair = normalizePair(pair);
+  const normDir = String(direction || '').toUpperCase();
+  if (!normPair || !normDir) return null;
+
+  const curP = Number(livePrice);
+
+  return (
+    existingSignals.find((s) => {
+      if (!s || typeof s !== 'object') return false;
+      const status = String(s.status || 'active').toLowerCase();
+      if (status === 'closed' || status === 'tp' || status === 'sl' || status === 'invalidated' || status === 'expired') {
+        return false;
+      }
+      const sPair = normalizePair(s.pair || s.symbol);
+      if (sPair !== normPair) return false;
+
+      const sStyle = normalizeMode(s.style || s.mode || 'daytrade');
+      if (sStyle !== 'daytrade') return false;
+
+      const sDir = String(s.direction || '').toUpperCase();
+      if (sDir !== normDir) return false;
+
+      const sEntry = Number(s.entry ?? s.entry_price);
+      const sSl = Number(s.sl ?? s.stop_loss);
+      const sTp = Number(s.tp1 ?? s.tp ?? s.take_profit);
+      if (!sEntry || isNaN(sEntry) || !sSl || isNaN(sSl) || !sTp || isNaN(sTp)) return false;
+
+      // If live price has already reached TP or SL, the previous setup is finished
+      if (curP > 0 && !isNaN(curP)) {
+        if (sDir === 'BUY') {
+          if (curP >= sTp || curP <= sSl) return false;
+        } else if (sDir === 'SELL') {
+          if (curP <= sTp || curP >= sSl) return false;
+        }
+      }
+
+      return true;
+    }) || null
+  );
+}
+
+/**
  * Step 3 — AI Analysis & Validation
  * Constructs candidate levels and validates direction, entry deviation, SL/TP geometry, and R:R.
  */
@@ -230,6 +277,30 @@ export function executeScanStep3_AiValidation(candidate, livePrice, mode, option
       reasonCode: 'EMPTY_CANDIDATE',
       error: 'Candidate signal payload is empty.',
     };
+  }
+
+  const targetPair = normalizePair(activePair || candidate.pair);
+
+  // For Intra Trade (daytrade): if a signal for this same pair & condition/direction is already published and active,
+  // do not approve a new duplicate signal — mark as ALREADY_PUBLISHED.
+  if (normMode === 'daytrade') {
+    const existingIntra = findActivePublishedIntraSignal(
+      targetPair,
+      candidate.direction,
+      livePrice,
+      existingSignals
+    );
+    if (existingIntra) {
+      return {
+        ok: true,
+        alreadyPublished: true,
+        step: 3,
+        reasonCode: 'SIGNAL_ALREADY_PUBLISHED',
+        message: `Signal already published: Active ${existingIntra.direction} ${targetPair} Intra signal (@ $${formatSpotPrice(targetPair, existingIntra.entry)}) already meets this condition.`,
+        signal: existingIntra,
+        mode: normMode,
+      };
+    }
   }
 
   const validation = validateSignal(candidate, livePrice, {
@@ -249,6 +320,7 @@ export function executeScanStep3_AiValidation(candidate, livePrice, mode, option
 
   return {
     ok: true,
+    alreadyPublished: false,
     step: 3,
     signal: validation.signal,
     mode: normMode,
@@ -300,6 +372,19 @@ export function executeScanStep4_FinalDecision(step1Result, step2Result, step3Re
       code: step3Result?.reasonCode || 'VALIDATION_REJECTED',
       message: step3Result?.error || 'Candidate signal rejected during validation.',
       signal: null,
+    };
+  }
+
+  // If Step 3 detected that a signal for this same Intra condition is already published
+  if (step3Result.alreadyPublished) {
+    return {
+      outcome: 'ALREADY_PUBLISHED',
+      step: 4,
+      code: 'SIGNAL_ALREADY_PUBLISHED',
+      message:
+        step3Result.message ||
+        `Signal already published: ${step3Result.signal.direction} ${step3Result.signal.pair} @ ${step3Result.signal.entry} is already active for this condition.`,
+      signal: step3Result.signal,
     };
   }
 
