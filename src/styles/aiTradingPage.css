@@ -8561,12 +8561,9 @@
 }
 
 .ait-pm-mode-sub {
-  font-size: 10.5px;
+  font-size: 11px;
   color: #94A3B8;
   line-height: 1.35;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .ait-pm-pill-tag {
@@ -9397,11 +9394,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 18px;
   background: linear-gradient(90deg, rgba(10, 18, 36, 0.95) 0%, rgba(6, 12, 24, 0.98) 100%);
   border: 1px solid rgba(245, 158, 11, 0.4);
   border-radius: 12px;
-  padding: 10px 18px;
+  padding: 12px 18px;
   box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.6), 0 0 16px -4px rgba(245, 158, 11, 0.15);
   position: relative;
   overflow: hidden;
@@ -9438,9 +9435,10 @@
 .ait-pm-sr-dir {
   display: inline-flex;
   align-items: center;
+  gap: 4px;
   font-size: 11px;
   font-weight: 900;
-  padding: 4px 10px;
+  padding: 5px 10px;
   border-radius: 6px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -9464,7 +9462,7 @@
 .ait-pm-sr-pair-wrap {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
 }
 
 .ait-pm-sr-pair {
@@ -9490,53 +9488,72 @@
 .ait-pm-sr-metrics {
   display: flex;
   align-items: center;
-  justify-content: space-around;
+  justify-content: space-evenly;
   gap: 14px;
   flex: 1;
   min-width: 0;
+  padding: 0 6px;
 }
 
 .ait-pm-sr-item {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  align-items: flex-start;
+  gap: 3.5px;
   min-width: 0;
+  flex-shrink: 0;
 }
 
 .ait-pm-sr-label {
-  font-size: 9px;
+  font-size: 9.5px;
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   color: #64748B;
   text-transform: uppercase;
-}
-
-.ait-pm-sr-val-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  white-space: nowrap;
 }
 
 .ait-pm-sr-val {
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 900;
   color: #FFFFFF;
   letter-spacing: -0.01em;
+  line-height: 1.15;
+  white-space: nowrap;
 }
 
 .ait-pm-sr-tag-badge {
   font-size: 9px;
   font-weight: 800;
-  padding: 1px 5px;
+  padding: 1.5px 6px;
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
   white-space: nowrap;
+  line-height: 1.25;
+}
+
+.ait-pm-sr-tag-badge.text-red {
+  color: #F87171;
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.28);
+}
+
+.ait-pm-sr-tag-badge.text-emerald {
+  color: #34D399;
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.28);
+}
+
+.ait-pm-sr-tag-badge.text-cyan {
+  color: #38BDF8;
+  background: rgba(0, 242, 254, 0.12);
+  border-color: rgba(0, 242, 254, 0.28);
 }
 
 .ait-pm-sr-divider {
   width: 1px;
-  height: 24px;
+  height: 38px;
   background: rgba(255, 255, 255, 0.08);
   flex-shrink: 0;
 }
@@ -9607,8 +9624,8 @@
    AI TRADING PAGE COMPREHENSIVE MOBILE RESPONSIVENESS
    ========================================================================== */
 
-/* 1. Tablet & Large Mobile (<= 992px) */
-@media (max-width: 992px) {
+/* 1. Tablet & Medium Desktop (<= 1160px) */
+@media (max-width: 1160px) {
   .ait-terminal-fullwidth-wrapper {
     padding: 0 12px;
     margin-bottom: 24px;
@@ -9618,14 +9635,22 @@
   }
   .ait-pm-scalp-simple-row {
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 14px;
+    padding: 14px 18px;
+  }
+  .ait-pm-sr-badge-col {
+    flex: 1;
+    min-width: 160px;
+  }
+  .ait-pm-sr-actions {
+    flex-shrink: 0;
   }
   .ait-pm-sr-metrics {
     width: 100%;
     order: 3;
     justify-content: space-between;
-    padding-top: 8px;
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
   }
 }
 

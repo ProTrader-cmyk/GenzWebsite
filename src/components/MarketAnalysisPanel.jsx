@@ -1224,7 +1224,7 @@ Model: ${sig.model || 'ICT SMC Model'}`;
             <div className="ait-pm-chassis-top">
               <div className="ait-pm-brand">
                 <div className="ait-pm-orb">
-                  <span className="ait-pm-orb-core" />
+                  <IconAiChip width="20" height="20" style={{ color: '#00F2FE' }} />
                 </div>
                 <div className="ait-pm-brand-info">
                   <div className="ait-pm-title-row">
@@ -1251,7 +1251,7 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                 <span className="ait-pm-mode-icon"><IconZap width="17" height="17" /></span>
                 <div className="ait-pm-mode-meta">
                   <strong className="ait-pm-mode-title">Pip Scalp</strong>
-                  <span className="ait-pm-mode-sub">1m • 5m Fast Execution (2–3 Numbers Target &amp; SL)</span>
+                  <span className="ait-pm-mode-sub">1m • 5m Fast Scalp (2–3 Pts Target &amp; SL)</span>
                 </div>
                 <span className="ait-pm-pill-tag amber">Always Active</span>
               </button>
@@ -1403,42 +1403,37 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                     <strong className="ait-pm-sr-val text-cyan ait-mono">
                       ${formatCommaPrice(currentScalpSignal?.entry, decimals)}
                     </strong>
+                    <span className="ait-pm-sr-tag-badge text-cyan">Optimal</span>
                   </div>
 
                   <div className="ait-pm-sr-divider" />
 
                   <div className="ait-pm-sr-item">
                     <span className="ait-pm-sr-label">STOP LOSS</span>
-                    <div className="ait-pm-sr-val-row">
-                      <strong className="ait-pm-sr-val text-red ait-mono">
-                        ${formatCommaPrice(currentScalpSignal?.sl, decimals)}
-                      </strong>
-                      <span className="ait-pm-sr-tag-badge text-red">2.5 Num</span>
-                    </div>
+                    <strong className="ait-pm-sr-val text-red ait-mono">
+                      ${formatCommaPrice(currentScalpSignal?.sl, decimals)}
+                    </strong>
+                    <span className="ait-pm-sr-tag-badge text-red">2.5 Num</span>
                   </div>
 
                   <div className="ait-pm-sr-divider" />
 
                   <div className="ait-pm-sr-item">
                     <span className="ait-pm-sr-label">TAKE PROFIT 1</span>
-                    <div className="ait-pm-sr-val-row">
-                      <strong className="ait-pm-sr-val text-emerald ait-mono">
-                        ${formatCommaPrice(currentScalpSignal?.tp1, decimals)}
-                      </strong>
-                      <span className="ait-pm-sr-tag-badge text-emerald">3.0 Num</span>
-                    </div>
+                    <strong className="ait-pm-sr-val text-emerald ait-mono">
+                      ${formatCommaPrice(currentScalpSignal?.tp1, decimals)}
+                    </strong>
+                    <span className="ait-pm-sr-tag-badge text-emerald">3.0 Num</span>
                   </div>
 
                   <div className="ait-pm-sr-divider" />
 
                   <div className="ait-pm-sr-item">
                     <span className="ait-pm-sr-label">RUNNER (TP2)</span>
-                    <div className="ait-pm-sr-val-row">
-                      <strong className="ait-pm-sr-val text-emerald ait-mono">
-                        ${formatCommaPrice(currentScalpSignal?.tp2, decimals)}
-                      </strong>
-                      <span className="ait-pm-sr-tag-badge text-emerald">+5.0 Num</span>
-                    </div>
+                    <strong className="ait-pm-sr-val text-emerald ait-mono">
+                      ${formatCommaPrice(currentScalpSignal?.tp2, decimals)}
+                    </strong>
+                    <span className="ait-pm-sr-tag-badge text-emerald">+5.0 Num</span>
                   </div>
                 </div>
 
@@ -1592,54 +1587,47 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                     <strong className="ait-pm-sr-val text-cyan ait-mono">
                       ${formatCommaPrice(dayTradeSignal.entry, decimals)}
                     </strong>
+                    <span className="ait-pm-sr-tag-badge text-cyan">Optimal</span>
                   </div>
 
                   <div className="ait-pm-sr-divider" />
 
                   <div className="ait-pm-sr-item">
                     <span className="ait-pm-sr-label">STOP LOSS</span>
-                    <div className="ait-pm-sr-val-row">
-                      <strong className="ait-pm-sr-val text-red ait-mono">
-                        ${formatCommaPrice(dayTradeSignal.sl, decimals)}
-                      </strong>
-                      <span className="ait-pm-sr-tag-badge text-red">-10 Pts</span>
-                    </div>
+                    <strong className="ait-pm-sr-val text-red ait-mono">
+                      ${formatCommaPrice(dayTradeSignal.sl, decimals)}
+                    </strong>
+                    <span className="ait-pm-sr-tag-badge text-red">-10 Pts</span>
                   </div>
 
                   <div className="ait-pm-sr-divider" />
 
                   <div className="ait-pm-sr-item">
                     <span className="ait-pm-sr-label">TAKE PROFIT 1</span>
-                    <div className="ait-pm-sr-val-row">
-                      <strong className="ait-pm-sr-val text-emerald ait-mono">
-                        ${formatCommaPrice(dayTradeSignal.tp1, decimals)}
-                      </strong>
-                      <span className="ait-pm-sr-tag-badge text-emerald">{isGold ? '+20 Pts (1:2 RR)' : '+70 Pips'}</span>
-                    </div>
+                    <strong className="ait-pm-sr-val text-emerald ait-mono">
+                      ${formatCommaPrice(dayTradeSignal.tp1, decimals)}
+                    </strong>
+                    <span className="ait-pm-sr-tag-badge text-emerald">{isGold ? '+20 Pts (1:2)' : '+70 Pips'}</span>
                   </div>
 
                   <div className="ait-pm-sr-divider" />
 
                   <div className="ait-pm-sr-item">
                     <span className="ait-pm-sr-label">FINAL TP2</span>
-                    <div className="ait-pm-sr-val-row">
-                      <strong className="ait-pm-sr-val text-emerald ait-mono">
-                        ${formatCommaPrice(dayTradeSignal.tp2, decimals)}
-                      </strong>
-                      <span className="ait-pm-sr-tag-badge text-emerald">{isGold ? '+25 Pts (1:2.5 RR)' : '+90 Pips'}</span>
-                    </div>
+                    <strong className="ait-pm-sr-val text-emerald ait-mono">
+                      ${formatCommaPrice(dayTradeSignal.tp2, decimals)}
+                    </strong>
+                    <span className="ait-pm-sr-tag-badge text-emerald">{isGold ? '+25 Pts (1:2.5)' : '+90 Pips'}</span>
                   </div>
 
                   <div className="ait-pm-sr-divider" />
 
                   <div className="ait-pm-sr-item">
                     <span className="ait-pm-sr-label">BE TRIGGER</span>
-                    <div className="ait-pm-sr-val-row">
-                      <strong className="ait-pm-sr-val text-cyan ait-mono">
-                        ${formatCommaPrice(dayTradeSignal.breakEvenTrigger, decimals)}
-                      </strong>
-                      <span className="ait-pm-sr-tag-badge text-cyan">Move SL</span>
-                    </div>
+                    <strong className="ait-pm-sr-val text-cyan ait-mono">
+                      ${formatCommaPrice(dayTradeSignal.breakEvenTrigger, decimals)}
+                    </strong>
+                    <span className="ait-pm-sr-tag-badge text-cyan">Move SL</span>
                   </div>
                 </div>
 
