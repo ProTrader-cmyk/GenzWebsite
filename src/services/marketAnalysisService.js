@@ -9,7 +9,7 @@
  * Automatically re-analyzes when a 15-minute candle closes (:00, :15, :30, :45).
  */
 
-import { formatSpotPrice, normalizePair, isSupportedPair, SUPPORTED_PAIRS } from './marketPriceService.js';
+import { formatSpotPrice, normalizePair, isSupportedPair, SUPPORTED_PAIRS, API_BASE_URL } from './marketPriceService.js';
 
 // Symbol mapping for TradingView scanners (Strictly 3 supported assets)
 export const SCANNER_CONFIGS = {
@@ -54,14 +54,74 @@ export function get15mCandleTimeRemaining() {
   };
 }
 
+function mapScannerRow(row, decimals) {
+  if (!Array.isArray(row) || row.length < 12 || typeof row[0] !== 'number') return null;
+  return {
+    raw: row,
+    close15: row[0],
+    open15: row[1],
+    high15: row[2],
+    low15: row[3],
+    change15: row[4],
+    changeAbs15: row[5],
+    rsi15: row[6],
+    macd15: row[7],
+    macdSignal15: row[8],
+    ema20_15: row[9],
+    ema50_15: row[10],
+    ema200_15: row[11],
+    close60: row[12],
+    ema20_60: row[13],
+    close240: row[14],
+    ema20_240: row[15],
+    closeD: row[16],
+    sessionHigh: typeof row[17] === 'number' ? row[17] : row[2],
+    sessionLow: typeof row[18] === 'number' ? row[18] : row[3],
+    ema20_D: row[19],
+    r1: row[20],
+    r2: row[21],
+    r3: row[22],
+    s1: row[23],
+    s2: row[24],
+    s3: row[25],
+    change24h: row[26],
+    changeAbs24h: row[27],
+    close5: row[28],
+    high5: row[29],
+    low5: row[30],
+    decimals,
+  };
+}
+
 /**
  * Queries TradingView scanner for 15-minute candle indicators, MTF data, and pivots.
+ * Primary: Server-side proxy (/api/market/scanner) to bypass browser CORS in production.
+ * Fallback: Direct TradingView scanner API.
  */
 async function queryTradingViewScanner(pair) {
   const norm = normalizePair(pair);
   if (!isSupportedPair(norm)) return null;
 
   const config = SCANNER_CONFIGS[norm] || SCANNER_CONFIGS.XAUUSD;
+
+  // 1. Primary: Backend proxy (avoids browser CORS issues in production)
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const proxyRes = await fetch(`${API_BASE_URL}/api/market/scanner?pair=${encodeURIComponent(norm)}`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (proxyRes.ok) {
+      const proxyJson = await proxyRes.json();
+      const mapped = mapScannerRow(proxyJson?.row, config.decimals);
+      if (mapped) return mapped;
+    }
+  } catch {
+    // Fall through to direct scanner call
+  }
+
+  // 2. Fallback: Direct browser call to TradingView scanner
   const url = `https://scanner.tradingview.com/${config.endpoint}/scan`;
 
   const columns = [
@@ -90,43 +150,8 @@ async function queryTradingViewScanner(pair) {
     if (!res.ok) throw new Error(`TradingView scanner returned ${res.status}`);
     const json = await res.json();
     const row = json?.data?.[0]?.d;
-    if (Array.isArray(row) && row.length >= 12 && typeof row[0] === 'number') {
-      return {
-        raw: row,
-        close15: row[0],
-        open15: row[1],
-        high15: row[2],
-        low15: row[3],
-        change15: row[4],
-        changeAbs15: row[5],
-        rsi15: row[6],
-        macd15: row[7],
-        macdSignal15: row[8],
-        ema20_15: row[9],
-        ema50_15: row[10],
-        ema200_15: row[11],
-        close60: row[12],
-        ema20_60: row[13],
-        close240: row[14],
-        ema20_240: row[15],
-        closeD: row[16],
-        sessionHigh: typeof row[17] === 'number' ? row[17] : row[2],
-        sessionLow: typeof row[18] === 'number' ? row[18] : row[3],
-        ema20_D: row[19],
-        r1: row[20],
-        r2: row[21],
-        r3: row[22],
-        s1: row[23],
-        s2: row[24],
-        s3: row[25],
-        change24h: row[26],
-        changeAbs24h: row[27],
-        close5: row[28],
-        high5: row[29],
-        low5: row[30],
-        decimals: config.decimals,
-      };
-    }
+    const mapped = mapScannerRow(row, config.decimals);
+    if (mapped) return mapped;
   } catch (err) {
     console.warn(`[marketAnalysisService] TV Scanner query for ${pair}:`, err);
   }

@@ -14,6 +14,11 @@
 
 export const SUPPORTED_PAIRS = ['XAUUSD', 'XAGUSD', 'BTCUSD'];
 
+export const API_BASE_URL = (
+  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_NEWS_API_URL) ||
+  'https://genzapi-production.up.railway.app'
+).replace(/\/$/, '');
+
 // Cache structure: { [pair]: { price: number, timestamp: number, source: string, isAvailable: boolean } }
 const cache = {};
 const CACHE_TTL_MS = 2000; // 2 seconds cache for streaming tick freshness
@@ -146,10 +151,12 @@ class TradingViewStreamer {
     }
 
     this.connect();
+    this.startBackendPolling();
 
     return () => {
       this.listeners.delete(sub);
       if (this.listeners.size === 0) {
+        this.stopBackendPolling();
         this.disconnectTimer = setTimeout(() => {
           this.disconnectTimer = null;
           if (this.listeners.size === 0 && this.ws) {
@@ -163,6 +170,22 @@ class TradingViewStreamer {
         }, 1500);
       }
     };
+  }
+
+  startBackendPolling() {
+    if (typeof window === 'undefined' || this.pollTimer) return;
+    const poll = () => {
+      fetchBackendMarketPricesSnapshot().catch(() => {});
+    };
+    poll();
+    this.pollTimer = setInterval(poll, 3500);
+  }
+
+  stopBackendPolling() {
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+      this.pollTimer = null;
+    }
   }
 
   connect() {
@@ -316,6 +339,45 @@ class TradingViewStreamer {
 export const tvStreamer = new TradingViewStreamer();
 
 /**
+ * Fetches all 3 pairs from the backend `/api/market/prices` proxy so production browsers
+ * never fail due to CORS or ISP blocks on TradingView/Binance.
+ */
+export async function fetchBackendMarketPricesSnapshot() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/market/prices`, { cache: 'no-cache' });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const prices = data?.prices;
+    if (!prices || typeof prices !== 'object') return null;
+
+    const now = Date.now();
+    for (const pair of SUPPORTED_PAIRS) {
+      const item = prices[pair];
+      if (item && typeof item.price === 'number' && item.price > 0) {
+        tvStreamer.prices[pair] = item.price;
+        tvStreamer.sources[pair] = item.source || 'GenZ Backend Live Feed';
+        if (typeof item.changePercent === 'number') {
+          tvStreamer.quoteMetrics[pair] = {
+            change: typeof item.changeAbs === 'number' ? item.changeAbs : null,
+            changePercent: item.changePercent,
+          };
+        }
+        cache[pair] = {
+          price: item.price,
+          timestamp: now,
+          source: item.source || 'GenZ Backend Live Feed',
+          isAvailable: true,
+        };
+        tvStreamer.notify(pair, item.price);
+      }
+    }
+    return prices;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Subscribes to live WebSocket ticks for the supported pairs.
  */
 export function subscribeLiveTicks(pairs, callback) {
@@ -337,9 +399,24 @@ export function subscribeGoldMarketSnapshot(callback) {
 }
 
 /**
- * Fetches current Gold spot price and 24h change percent via TradingView CFD scanner.
+ * Fetches current Gold spot price and 24h change percent via Backend Proxy -> TradingView -> Gold-API.
  */
 export async function fetchGoldQuoteMetrics() {
+  // 1. Try Backend Proxy first (works 100% in production without CORS)
+  try {
+    const backendPrices = await fetchBackendMarketPricesSnapshot();
+    const xau = backendPrices?.XAUUSD;
+    if (xau && typeof xau.price === 'number' && xau.price > 1000) {
+      const changePercent = typeof xau.changePercent === 'number' ? xau.changePercent : 0;
+      return {
+        price: xau.price,
+        changePercent,
+        pct: `${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%`,
+        isUp: changePercent >= 0,
+      };
+    }
+  } catch {}
+
   try {
     const res = await fetch('https://scanner.tradingview.com/cfd/scan', {
       method: 'POST',
@@ -401,11 +478,40 @@ export async function fetchGoldQuoteMetrics() {
 }
 
 /**
- * Fetches real-time price extremes (candle wicks, session high/low) from TradingView scanner.
+ * Fetches real-time price extremes (candle wicks, session high/low) from Backend Proxy or TradingView scanner.
  */
 export async function fetchLiveExtremePrices(pair = 'XAUUSD') {
   const norm = normalizePair(pair);
   if (!isSupportedPair(norm)) return null;
+
+  // 1. Try Backend Scanner Proxy first (CORS-safe in production)
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/market/scanner?pair=${norm}`, { cache: 'no-cache' });
+    if (res.ok) {
+      const json = await res.json();
+      const row = json?.row;
+      if (Array.isArray(row) && typeof row[0] === 'number') {
+        const close = typeof row[16] === 'number' ? row[16] : row[0];
+        const sessionHigh = typeof row[17] === 'number' ? row[17] : close;
+        const sessionLow = typeof row[18] === 'number' ? row[18] : close;
+        const high15 = typeof row[2] === 'number' ? row[2] : sessionHigh;
+        const low15 = typeof row[3] === 'number' ? row[3] : sessionLow;
+        const high60 = Math.max(close, high15, sessionHigh);
+        const low60 = Math.min(close, low15, sessionLow);
+        return {
+          price: close,
+          sessionHigh,
+          sessionLow,
+          high15,
+          low15,
+          high60,
+          low60,
+          peakHigh: high60,
+          troughLow: low60,
+        };
+      }
+    }
+  } catch {}
 
   const isCfd = norm === 'XAUUSD' || norm === 'XAGUSD';
   const endpoint = isCfd ? 'cfd' : 'crypto';
@@ -489,6 +595,14 @@ export async function fetchLivePrice(pair = 'XAUUSD') {
     return cache[norm].price;
   }
 
+  // 1. Try Backend Proxy (/api/market/prices) which updates all 3 pairs without browser CORS
+  try {
+    const backendPrices = await fetchBackendMarketPricesSnapshot();
+    if (backendPrices?.[norm]?.price) {
+      return backendPrices[norm].price;
+    }
+  } catch {}
+
   try {
     if (norm === 'XAUUSD') {
       const price = await fetchGoldPrice();
@@ -513,7 +627,7 @@ export async function fetchLivePrice(pair = 'XAUUSD') {
 export async function fetchGoldPrice() {
   const now = Date.now();
 
-  // Primary: TradingView OANDA CFD Scanner
+  // Primary: Backend Proxy -> TradingView OANDA CFD Scanner
   try {
     const res = await fetch('https://scanner.tradingview.com/cfd/scan', {
       method: 'POST',
@@ -600,21 +714,35 @@ export async function fetchSilverPrice() {
 export async function fetchBtcPrice() {
   const now = Date.now();
 
-  // Primary: Binance Official Public Ticker API (Reliable, fast, zero auth required)
+  // Primary: Coinbase Public Spot API (CORS-friendly globally)
+  try {
+    const res = await fetch('https://api.coinbase.com/v2/prices/BTC-USD/spot');
+    if (res.ok) {
+      const data = await res.json();
+      const num = parseFloat(data?.data?.amount);
+      if (!isNaN(num) && num > 10000) {
+        const price = Math.round(num * 100) / 100;
+        cache.BTCUSD = { price, timestamp: now, source: 'Coinbase Live Spot', isAvailable: true };
+        return price;
+      }
+    }
+  } catch {}
+
+  // Secondary: Binance Official Public Ticker API
   try {
     const res = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
     if (res.ok) {
       const data = await res.json();
       const num = parseFloat(data.price);
       if (!isNaN(num) && num > 10000) {
-        const price = Math.round(num * 10) / 10;
+        const price = Math.round(num * 100) / 100;
         cache.BTCUSD = { price, timestamp: now, source: 'Binance Live Spot', isAvailable: true };
         return price;
       }
     }
   } catch {}
 
-  // Secondary: TradingView Crypto Scanner
+  // Tertiary: TradingView Crypto Scanner
   try {
     const res = await fetch('https://scanner.tradingview.com/crypto/scan', {
       method: 'POST',
@@ -628,20 +756,20 @@ export async function fetchBtcPrice() {
       const data = await res.json();
       const p = data.data?.[0]?.d?.[0];
       if (typeof p === 'number' && p > 10000) {
-        const price = Math.round(p * 10) / 10;
+        const price = Math.round(p * 100) / 100;
         cache.BTCUSD = { price, timestamp: now, source: 'Binance / TradingView', isAvailable: true };
         return price;
       }
     }
   } catch {}
 
-  // Tertiary: Gold-API BTC
+  // Quaternary: Gold-API BTC
   try {
     const res = await fetch('https://api.gold-api.com/price/BTC', { cache: 'no-cache' });
     if (res.ok) {
       const data = await res.json();
       if (data && typeof data.price === 'number' && data.price > 10000) {
-        const price = Math.round(data.price * 10) / 10;
+        const price = Math.round(data.price * 100) / 100;
         cache.BTCUSD = { price, timestamp: now, source: 'Gold-API Bitcoin', isAvailable: true };
         return price;
       }
