@@ -1,24 +1,22 @@
 /**
  * Market Analysis Service
  * Fetches real-time institutional indicators and Smart Money Concepts (SMC) structure
- * from TradingView OANDA data feeds for 15-minute timeframe candles.
+ * for the 3 authorized pairs:
+ * - Gold (XAU/USD)
+ * - Silver (XAG/USD)
+ * - Bitcoin (BTC/USD)
  * 
  * Automatically re-analyzes when a 15-minute candle closes (:00, :15, :30, :45).
  */
 
-import { formatSpotPrice, normalizePair } from './marketPriceService.js';
+import { formatSpotPrice, normalizePair, isSupportedPair, SUPPORTED_PAIRS } from './marketPriceService.js';
 
-// Symbol mapping for TradingView scanners
-const SCANNER_CONFIGS = {
+// Symbol mapping for TradingView scanners (Strictly 3 supported assets)
+export const SCANNER_CONFIGS = {
   XAUUSD: { endpoint: 'cfd', ticker: 'OANDA:XAUUSD', decimals: 2 },
   GOLD: { endpoint: 'cfd', ticker: 'OANDA:XAUUSD', decimals: 2 },
-  XAGUSD: { endpoint: 'cfd', ticker: 'OANDA:XAGUSD', decimals: 2 },
-  SILVER: { endpoint: 'cfd', ticker: 'OANDA:XAGUSD', decimals: 2 },
-  US30: { endpoint: 'cfd', ticker: 'OANDA:US30USD', decimals: 1 },
-  EURUSD: { endpoint: 'forex', ticker: 'OANDA:EURUSD', decimals: 5 },
-  GBPUSD: { endpoint: 'forex', ticker: 'OANDA:GBPUSD', decimals: 5 },
-  USDJPY: { endpoint: 'forex', ticker: 'OANDA:USDJPY', decimals: 3 },
-  AUDUSD: { endpoint: 'forex', ticker: 'OANDA:AUDUSD', decimals: 5 },
+  XAGUSD: { endpoint: 'cfd', ticker: 'TVC:SILVER', decimals: 3 },
+  SILVER: { endpoint: 'cfd', ticker: 'TVC:SILVER', decimals: 3 },
   BTCUSD: { endpoint: 'crypto', ticker: 'BINANCE:BTCUSDT', decimals: 1 },
   BTC: { endpoint: 'crypto', ticker: 'BINANCE:BTCUSDT', decimals: 1 },
 };
@@ -42,7 +40,6 @@ export function get15mCandleTimeRemaining() {
   const timeStr = `${String(minsLeft).padStart(2, '0')}:${String(secsLeft).padStart(2, '0')}`;
   const progressPct = Math.min(100, Math.max(0, (((15 * 60) - secondsRemaining) / (15 * 60)) * 100));
 
-  // Determine the exact open and close timestamp of the active 15m candle
   const currentCandleOpenMs = now.getTime() - ((minutesIntoCandle * 60 + seconds) * 1000 + ms);
   const currentCandleCloseMs = currentCandleOpenMs + (15 * 60 * 1000);
 
@@ -60,9 +57,11 @@ export function get15mCandleTimeRemaining() {
 /**
  * Queries TradingView scanner for 15-minute candle indicators, MTF data, and pivots.
  */
-async function queryTradingViewScanner(pair, fallbackPrice) {
+async function queryTradingViewScanner(pair) {
   const norm = normalizePair(pair);
-  const config = SCANNER_CONFIGS[norm] || { endpoint: 'cfd', ticker: `OANDA:${norm}`, decimals: 2 };
+  if (!isSupportedPair(norm)) return null;
+
+  const config = SCANNER_CONFIGS[norm] || SCANNER_CONFIGS.XAUUSD;
   const url = `https://scanner.tradingview.com/${config.endpoint}/scan`;
 
   const columns = [
@@ -125,7 +124,7 @@ async function queryTradingViewScanner(pair, fallbackPrice) {
       };
     }
   } catch (err) {
-    console.warn(`[marketAnalysisService] TV Scanner fallback for ${pair}:`, err);
+    console.warn(`[marketAnalysisService] TV Scanner query for ${pair}:`, err);
   }
   return null;
 }
@@ -136,27 +135,38 @@ async function queryTradingViewScanner(pair, fallbackPrice) {
  */
 export async function run15mMarketReanalysis(pair = 'XAUUSD', liveSpotPrice = null) {
   const norm = normalizePair(pair);
-  const isGold = norm.includes('XAU') || norm.includes('GOLD');
-  const isCrypto = norm.includes('BTC') || norm.includes('ETH');
-  const isForex = !isGold && !isCrypto && !norm.includes('US30');
-  const isJpy = norm.includes('JPY');
+  if (!isSupportedPair(norm)) {
+    console.warn(`[marketAnalysisService] Pair ${pair} is not in the supported 3-asset list.`);
+    return null;
+  }
 
-  const decimals = isForex ? 5 : isJpy ? 3 : isCrypto ? 1 : 2;
-  const rawData = await queryTradingViewScanner(norm, liveSpotPrice);
+  const isGold = norm === 'XAUUSD';
+  const isSilver = norm === 'XAGUSD';
+  const isCrypto = norm === 'BTCUSD';
 
-  const price = Number(liveSpotPrice) || rawData?.close15 || (isGold ? 4138.72 : 1.0854);
-  const pStr = price.toFixed(decimals);
+  const decimals = isSilver ? 3 : isCrypto ? 1 : 2;
+  const rawData = await queryTradingViewScanner(norm);
+
+  const price = Number(liveSpotPrice) || rawData?.close15 || null;
+  if (!price || isNaN(price) || price <= 0) {
+    return {
+      pair: norm,
+      isAvailable: false,
+      error: 'Live market data currently unavailable for this asset.',
+      analyzedAt: Date.now(),
+    };
+  }
 
   // Indicators
-  const rsiVal = rawData?.rsi15 != null ? Math.round(rawData.rsi15 * 100) / 100 : 54.80;
-  const macdVal = rawData?.macd15 != null ? Number(rawData.macd15.toFixed(2)) : 3.05;
-  const macdSig = rawData?.macdSignal15 != null ? Number(rawData.macdSignal15.toFixed(2)) : 5.74;
+  const rsiVal = rawData?.rsi15 != null ? Math.round(rawData.rsi15 * 100) / 100 : 52.50;
+  const macdVal = rawData?.macd15 != null ? Number(rawData.macd15.toFixed(2)) : 0.05;
+  const macdSig = rawData?.macdSignal15 != null ? Number(rawData.macdSignal15.toFixed(2)) : 0.02;
   const macdHist = Number((macdVal - macdSig).toFixed(2));
 
   // EMAs
-  const ema20 = rawData?.ema20_15 != null ? rawData.ema20_15 : price - (isGold ? 2.5 : isForex ? 0.0012 : 120);
-  const ema50 = rawData?.ema50_15 != null ? rawData.ema50_15 : price - (isGold ? 7.8 : isForex ? 0.0025 : 340);
-  const ema200 = rawData?.ema200_15 != null ? rawData.ema200_15 : price + (isGold ? 3.2 : isForex ? 0.0040 : 800);
+  const ema20 = rawData?.ema20_15 != null ? rawData.ema20_15 : price;
+  const ema50 = rawData?.ema50_15 != null ? rawData.ema50_15 : price;
+  const ema200 = rawData?.ema200_15 != null ? rawData.ema200_15 : price;
 
   // Bias Determination
   const isAbove20 = price >= ema20;
@@ -216,60 +226,58 @@ export async function run15mMarketReanalysis(pair = 'XAUUSD', liveSpotPrice = nu
     s1Num = price - 38.6;
     s2Num = price - 74.2;
     s3Num = price - 145.0;
-  } else if (isCrypto) {
+  } else if (isSilver) {
+    r1Num = price + 0.45;
+    r2Num = price + 1.20;
+    r3Num = price + 2.50;
+    s1Num = price - 0.40;
+    s2Num = price - 0.95;
+    s3Num = price - 2.10;
+  } else {
+    // Bitcoin
     r1Num = price + 850;
     r2Num = price + 2400;
     r3Num = price + 5200;
     s1Num = price - 1200;
     s2Num = price - 2800;
     s3Num = price - 5000;
-  } else {
-    r1Num = price + 0.0025;
-    r2Num = price + 0.0055;
-    r3Num = price + 0.0120;
-    s1Num = price - 0.0030;
-    s2Num = price - 0.0065;
-    s3Num = price - 0.0115;
   }
 
-  const r1Range = `${(r1Num - (isGold ? 4.0 : isForex ? 0.0008 : 300)).toFixed(decimals)} – ${r1Num.toFixed(decimals)}`;
-  const r2Range = `${r2Num.toFixed(decimals)} – ${(r2Num + (isGold ? 8.0 : isForex ? 0.0015 : 600)).toFixed(decimals)}`;
-  const r3Range = `${r3Num.toFixed(decimals)} – ${(r3Num + (isGold ? 15.0 : isForex ? 0.0030 : 1200)).toFixed(decimals)}`;
+  const r1Range = `${(r1Num - (isGold ? 4.0 : isSilver ? 0.15 : 300)).toFixed(decimals)} – ${r1Num.toFixed(decimals)}`;
+  const r2Range = `${r2Num.toFixed(decimals)} – ${(r2Num + (isGold ? 8.0 : isSilver ? 0.35 : 600)).toFixed(decimals)}`;
+  const r3Range = `${r3Num.toFixed(decimals)} – ${(r3Num + (isGold ? 15.0 : isSilver ? 0.75 : 1200)).toFixed(decimals)}`;
 
-  const s1Range = `${(s1Num - (isGold ? 10.0 : isForex ? 0.0015 : 400)).toFixed(decimals)} – ${s1Num.toFixed(decimals)}`;
+  const s1Range = `${(s1Num - (isGold ? 10.0 : isSilver ? 0.25 : 400)).toFixed(decimals)} – ${s1Num.toFixed(decimals)}`;
   const s2Range = `${s2Num.toFixed(decimals)}`;
   const s3Range = `${s3Num.toFixed(decimals)}`;
 
   // Trading Plan Scenario Calculations
-  const longEntry = `${(price + (isGold ? 2.5 : isForex ? 0.0008 : 150)).toFixed(decimals)} – ${(price + (isGold ? 8.0 : isForex ? 0.0020 : 350)).toFixed(decimals)}`;
+  const longEntry = `${(price + (isGold ? 2.5 : isSilver ? 0.10 : 150)).toFixed(decimals)} – ${(price + (isGold ? 8.0 : isSilver ? 0.30 : 350)).toFixed(decimals)}`;
   const longTp1 = r1Num.toFixed(decimals);
   const longTp2 = r2Num.toFixed(decimals);
-  const longSl = (price - (isGold ? 12.0 : isForex ? 0.0022 : 800)).toFixed(decimals);
+  const longSl = (price - (isGold ? 12.0 : isSilver ? 0.45 : 800)).toFixed(decimals);
 
-  const shortEntry = `${(price + (isGold ? 1.5 : isForex ? 0.0006 : 100)).toFixed(decimals)} – ${(r1Num).toFixed(decimals)}`;
+  const shortEntry = `${(price + (isGold ? 1.5 : isSilver ? 0.08 : 100)).toFixed(decimals)} – ${(r1Num).toFixed(decimals)}`;
   const shortTp1 = s1Num.toFixed(decimals);
   const shortTp2 = s2Num.toFixed(decimals);
-  const shortSl = (r1Num + (isGold ? 8.0 : isForex ? 0.0018 : 600)).toFixed(decimals);
+  const shortSl = (r1Num + (isGold ? 8.0 : isSilver ? 0.40 : 600)).toFixed(decimals);
 
-  // 24h & 15m Changes
+  // 24h Changes
   const chg24Pct = rawData?.change24h != null
     ? `${rawData.change24h >= 0 ? '+' : ''}${rawData.change24h.toFixed(2)}%`
-    : '+0.83%';
+    : '+0.00%';
   const chg24Abs = rawData?.changeAbs24h != null
     ? `${rawData.changeAbs24h >= 0 ? '+' : ''}${rawData.changeAbs24h.toFixed(decimals)}`
-    : `+${(isGold ? 33.925 : isForex ? 0.0045 : 650.0).toFixed(decimals)}`;
+    : '+0.00';
   const isUp24 = (rawData?.change24h || 0) >= 0;
 
-  // Signal & Order Blocks
   const signalText = bias.includes('BULL')
     ? `ChoCH ▲ $${formatSpotPrice(norm, price)}`
     : `ChoCH ▼ $${formatSpotPrice(norm, price)}`;
 
-  // FVG Counts based on momentum
   const bullFvg = isAbove20 ? (isMacdPositive ? 5 : 4) : 2;
   const bearFvg = !isAbove20 ? (isMacdPositive ? 2 : 4) : 2;
 
-  // Market Sentiment
   const sentiment = bias.includes('BULL') ? 'Bullish' : bias.includes('BEAR') ? 'Bearish' : 'Neutral';
   const sentimentGaugePct = bias.includes('BULL') ? 78 : bias.includes('BEAR') ? 22 : 50;
 
@@ -344,7 +352,7 @@ export async function run15mMarketReanalysis(pair = 'XAUUSD', liveSpotPrice = nu
       abs: chg24Abs,
       isUp: isUp24,
       pct15: rawData?.change15 != null ? `${rawData.change15 >= 0 ? '+' : ''}${rawData.change15.toFixed(2)}%` : chg24Pct,
-      abs15: rawData?.changeAbs15 != null ? `${rawData.changeAbs15 >= 0 ? '+' : ''}${rawData.changeAbs15.toFixed(isGold ? 3 : decimals)}` : chg24Abs,
+      abs15: rawData?.changeAbs15 != null ? `${rawData.changeAbs15 >= 0 ? '+' : ''}${rawData.changeAbs15.toFixed(decimals)}` : chg24Abs,
       isUp15: (rawData?.change15 ?? rawData?.change24h ?? 0) >= 0,
     },
     sentiment,
@@ -359,12 +367,111 @@ export async function run15mMarketReanalysis(pair = 'XAUUSD', liveSpotPrice = nu
     },
     candleInfo,
     analyzedAt: Date.now(),
-    analyzedTimeStr: new Date().toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
-    }),
+    isAvailable: true,
   };
 }
 
+/**
+ * Evaluates whether live technical market indicators satisfy high-probability trading conditions.
+ * If conditions are not met, returns { met: false, code: 'NO_SIGNAL', reason: '...' }.
+ * Scanning does not guarantee a signal — a signal is generated only if conditions are met.
+ */
+export function evaluateMarketTradingConditions(pair, marketAnalysis, style = 'scalp') {
+  const norm = normalizePair(pair);
+  if (!isSupportedPair(norm)) {
+    return {
+      met: false,
+      code: 'NO_SIGNAL',
+      reason: `Unsupported asset: ${pair}. Only Gold, Silver, and Bitcoin are supported.`,
+    };
+  }
+
+  if (!marketAnalysis || !marketAnalysis.isAvailable || !marketAnalysis.price) {
+    return {
+      met: false,
+      code: 'NO_SIGNAL',
+      reason: 'Live market analysis is currently unavailable or disconnected.',
+    };
+  }
+
+  const rsi = parseFloat(marketAnalysis.rsi?.val) || 50;
+  const bias = marketAnalysis.bias || 'NEUTRAL';
+  const mtf = marketAnalysis.mtf || {};
+  const isScalp = style === 'scalp';
+
+  // Chop / Equilibrium Zone: RSI between 47 and 53 with neutral bias
+  const inEquilibriumChop = rsi >= 48 && rsi <= 52 && bias.includes('NEUTRAL');
+  if (inEquilibriumChop) {
+    return {
+      met: false,
+      code: 'NO_SIGNAL',
+      reason: 'Price is consolidating in tight equilibrium range. No directional edge.',
+    };
+  }
+
+  // Bullish Condition Evaluation
+  const isBullishSetup = (bias.includes('BULL') || rsi > 54) && rsi < 70;
+  // Bearish Condition Evaluation
+  const isBearishSetup = (bias.includes('BEAR') || rsi < 46) && rsi > 30;
+
+  if (isScalp) {
+    if (isBullishSetup) {
+      return {
+        met: true,
+        direction: 'BUY',
+        reason: 'Bullish order flow + 5M momentum expansion confirmed.',
+        code: 'SETUP_CONFIRMED',
+      };
+    }
+    if (isBearishSetup) {
+      return {
+        met: true,
+        direction: 'SELL',
+        reason: 'Bearish liquidity displacement + order block rejection confirmed.',
+        code: 'SETUP_CONFIRMED',
+      };
+    }
+    return {
+      met: false,
+      code: 'NO_SIGNAL',
+      reason: '1M/5M momentum within neutral noise threshold. Waiting for liquidity sweep.',
+    };
+  }
+
+  // Daytrade (Intra) Condition Evaluation: requires MTF alignment
+  const m15 = mtf.m15;
+  const h1 = mtf.h1;
+  const mtfAligned = m15 && h1 && m15 === h1;
+
+  if (!mtfAligned) {
+    return {
+      met: false,
+      code: 'NO_SIGNAL',
+      reason: `Conflicting multi-timeframe structure (15M: ${m15 || 'N/A'}, 1H: ${h1 || 'N/A'}). Daytrade requires confluence.`,
+    };
+  }
+
+  if (m15 === 'BULL' && isBullishSetup) {
+    return {
+      met: true,
+      direction: 'BUY',
+      reason: 'Higher-timeframe 1H/4H Bullish CRT Expansion + 15M FVG Discount entry.',
+      code: 'SETUP_CONFIRMED',
+    };
+  }
+
+  if (m15 === 'BEAR' && isBearishSetup) {
+    return {
+      met: true,
+      direction: 'SELL',
+      reason: 'Higher-timeframe 1H/4H Bearish CRT Liquidity Sweep + 15M FVG Premium entry.',
+      code: 'SETUP_CONFIRMED',
+    };
+  }
+
+  return {
+    met: false,
+    code: 'NO_SIGNAL',
+    reason: 'Multi-timeframe structure is mixed. Scanner waiting for higher-timeframe sweep.',
+  };
+}

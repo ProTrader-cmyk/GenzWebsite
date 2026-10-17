@@ -1,39 +1,109 @@
 /**
- * Service for fetching real-time market spot prices (Gold, Forex, Crypto)
- * and evaluating automated Take Profit (TP) and Stop Loss (SL) triggers.
+ * Market Price Service
+ * Strictly supports real-time market data for the 3 authorized trading pairs:
+ * 1. Gold (XAU/USD)
+ * 2. Silver (XAG/USD)
+ * 3. Bitcoin (BTC/USD)
+ * 
+ * Connects directly to legitimate market data providers:
+ * - TradingView OANDA / TVC scanner & real-time WebSocket
+ * - Binance Official Public Price API (Zero auth, sub-second latency)
+ * - Gold-API Spot Reference
+ * - GenZTrader Backend Market API
  */
 
-const cache = {}; // { [pair]: { price: number, timestamp: number } }
-const CACHE_TTL_MS = 2500; // 2.5 seconds cache for real-time tick streaming
+export const SUPPORTED_PAIRS = ['XAUUSD', 'XAGUSD', 'BTCUSD'];
 
-const PAIR_TO_TV_SYMBOL = {
+// Cache structure: { [pair]: { price: number, timestamp: number, source: string, isAvailable: boolean } }
+const cache = {};
+const CACHE_TTL_MS = 2000; // 2 seconds cache for streaming tick freshness
+
+export const PAIR_TO_TV_SYMBOL = {
   XAUUSD: 'OANDA:XAUUSD',
   GOLD: 'OANDA:XAUUSD',
   XAU: 'OANDA:XAUUSD',
   XAGUSD: 'OANDA:XAGUSD',
   SILVER: 'OANDA:XAGUSD',
-  EURUSD: 'OANDA:EURUSD',
-  GBPUSD: 'OANDA:GBPUSD',
-  USDJPY: 'OANDA:USDJPY',
-  AUDUSD: 'OANDA:AUDUSD',
-  US30: 'OANDA:US30USD',
-  DJ30: 'OANDA:US30USD',
-  DJI: 'OANDA:US30USD',
+  XAG: 'OANDA:XAGUSD',
+  BTCUSD: 'BINANCE:BTCUSDT',
+  BTC: 'BINANCE:BTCUSDT',
 };
 
-const TV_SYMBOL_TO_PAIR = {
+export const TV_SYMBOL_TO_PAIR = {
   'OANDA:XAUUSD': 'XAUUSD',
   'OANDA:XAGUSD': 'XAGUSD',
-  'OANDA:EURUSD': 'EURUSD',
-  'OANDA:GBPUSD': 'GBPUSD',
-  'OANDA:USDJPY': 'USDJPY',
-  'OANDA:AUDUSD': 'AUDUSD',
-  'OANDA:US30USD': 'US30',
+  'TVC:SILVER': 'XAGUSD',
+  'BINANCE:BTCUSDT': 'BTCUSD',
 };
 
 /**
- * Real-time WebSocket streamer connecting directly to TradingView's market data pipe.
- * Delivers exact tick data with zero delay, identical to the on-screen chart candle.
+ * Normalizes asset pair names (e.g. 'XAU/USD' -> 'XAUUSD')
+ */
+export function normalizePair(pair = 'XAUUSD') {
+  if (!pair) return 'XAUUSD';
+  const clean = String(pair).toUpperCase().replace(/[\/\-_]/g, '').trim();
+  if (clean === 'GOLD' || clean === 'XAU') return 'XAUUSD';
+  if (clean === 'SILVER' || clean === 'XAG') return 'XAGUSD';
+  if (clean === 'BTC' || clean === 'BITCOIN' || clean === 'BTCUSDT') return 'BTCUSD';
+  return clean;
+}
+
+/**
+ * Returns true only if the pair is one of the three supported assets.
+ */
+export function isSupportedPair(pair) {
+  const norm = normalizePair(pair);
+  return SUPPORTED_PAIRS.includes(norm);
+}
+
+/**
+ * Formats price to match exact asset quote precision:
+ * - Gold: 2 decimals ($4,165.42)
+ * - Silver: 3 decimals ($56.965)
+ * - Bitcoin: 1-2 decimals ($81,646.50)
+ */
+export function formatSpotPrice(pair, price) {
+  if (price == null || isNaN(price) || price === '') return '---';
+  const p = normalizePair(pair || 'XAUUSD');
+  const num = Number(price);
+  if (p === 'XAGUSD') {
+    return num.toFixed(3);
+  }
+  if (p === 'BTCUSD') {
+    return num.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 2 });
+  }
+  // Gold (XAUUSD)
+  return num.toFixed(2);
+}
+
+/**
+ * Returns latest cached price metadata for UI display.
+ */
+export function getLivePriceMeta(pair) {
+  const norm = normalizePair(pair);
+  const entry = cache[norm];
+  if (!entry || !entry.price) {
+    return {
+      price: null,
+      timestamp: null,
+      source: 'Connecting...',
+      isAvailable: false,
+      isStale: true,
+    };
+  }
+  const ageMs = Date.now() - entry.timestamp;
+  const isStale = ageMs > 60000; // Older than 60 seconds is considered stale
+  return {
+    price: entry.price,
+    timestamp: entry.timestamp,
+    source: entry.source || 'Live Market Feed',
+    isAvailable: !isStale && entry.isAvailable !== false,
+    isStale,
+  };
+}
+
+/**
+ * Real-time WebSocket streamer connecting to TradingView's OANDA and Binance data pipes.
  */
 class TradingViewStreamer {
   constructor() {
@@ -45,21 +115,20 @@ class TradingViewStreamer {
     this.disconnectTimer = null;
     this.isConnecting = false;
     this.prices = {};
+    this.sources = {};
     this.quoteMetrics = {};
   }
 
   addSubscriber(symbols, callback) {
-    const normSymbols = (symbols || []).map(normalizePair);
+    const normSymbols = (symbols || []).map(normalizePair).filter(isSupportedPair);
     const sub = { symbols: normSymbols, callback };
     this.listeners.add(sub);
 
-    // Cancel pending teardown if a subscriber attaches before timeout
     if (this.disconnectTimer) {
       clearTimeout(this.disconnectTimer);
       this.disconnectTimer = null;
     }
 
-    // If we already have live prices in memory, notify immediately
     const immediate = {};
     for (const p of sub.symbols) {
       if (this.prices[p]) immediate[p] = this.prices[p];
@@ -81,7 +150,6 @@ class TradingViewStreamer {
     return () => {
       this.listeners.delete(sub);
       if (this.listeners.size === 0) {
-        // Debounce socket close so rapid React effect unmount/remount doesn't kill connection
         this.disconnectTimer = setTimeout(() => {
           this.disconnectTimer = null;
           if (this.listeners.size === 0 && this.ws) {
@@ -90,11 +158,6 @@ class TradingViewStreamer {
             this.subscribedSymbols.clear();
             if (socket.readyState === WebSocket.OPEN) {
               try { socket.close(); } catch {}
-            } else if (socket.readyState === WebSocket.CONNECTING) {
-              // Wait for open before closing to avoid browser console warning
-              socket.onopen = () => {
-                try { socket.close(); } catch {}
-              };
             }
           }
         }, 1500);
@@ -125,7 +188,6 @@ class TradingViewStreamer {
 
       this.ws.onmessage = (event) => {
         const raw = event.data ? event.data.toString() : '';
-        // Heartbeat ping/pong response to keep stream alive
         if (raw.includes('~h~')) {
           const match = raw.match(/~h~(\d+)/);
           if (match && this.ws && this.ws.readyState === WebSocket.OPEN) {
@@ -142,18 +204,25 @@ class TradingViewStreamer {
               const sym = symData?.n;
               const val = symData?.v;
               if (sym && val && typeof val.lp === 'number') {
-                const pair = TV_SYMBOL_TO_PAIR[sym] || sym.replace('OANDA:', '');
+                const pair = TV_SYMBOL_TO_PAIR[sym] || (sym.includes('BTC') ? 'BTCUSD' : sym.includes('XAG') ? 'XAGUSD' : 'XAUUSD');
+                if (!isSupportedPair(pair)) return;
+
                 const price = val.lp;
                 this.prices[pair] = price;
+                this.sources[pair] = sym.includes('BINANCE') ? 'Binance / TradingView' : 'OANDA / TradingView';
                 if (typeof val.chp === 'number') {
                   this.quoteMetrics[pair] = {
                     change: typeof val.ch === 'number' ? val.ch : null,
                     changePercent: val.chp,
                   };
                 }
-                cache[pair] = { price, timestamp: Date.now() };
+                cache[pair] = {
+                  price,
+                  timestamp: Date.now(),
+                  source: this.sources[pair],
+                  isAvailable: true,
+                };
 
-                // Dispatch to all active subscribers
                 this.notify(pair, price);
               }
             }
@@ -191,14 +260,17 @@ class TradingViewStreamer {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.sessionId) return;
     const allPairs = new Set();
     this.listeners.forEach((sub) => {
-      sub.symbols.forEach((p) => allPairs.add(p));
+      sub.symbols.forEach((p) => {
+        if (isSupportedPair(p)) allPairs.add(p);
+      });
     });
+    // Default ensure Gold is subscribed
     allPairs.add('XAUUSD');
 
     const symbolsToAdd = [];
     allPairs.forEach((p) => {
-      const tvSym = PAIR_TO_TV_SYMBOL[p] || ('OANDA:' + p);
-      if (!this.subscribedSymbols.has(tvSym)) {
+      const tvSym = PAIR_TO_TV_SYMBOL[p];
+      if (tvSym && !this.subscribedSymbols.has(tvSym)) {
         this.subscribedSymbols.add(tvSym);
         symbolsToAdd.push(tvSym);
       }
@@ -228,7 +300,6 @@ class TradingViewStreamer {
   scheduleReconnect() {
     if (this.reconnectTimer) return;
     this.reconnectAttempts = (this.reconnectAttempts || 0) + 1;
-    // Exponential backoff capped at 30s to avoid spamming the console on network blocks
     const delay = this.reconnectAttempts > 3
       ? Math.min(30000, 3000 * Math.pow(1.5, this.reconnectAttempts - 3))
       : 3000;
@@ -245,17 +316,16 @@ class TradingViewStreamer {
 export const tvStreamer = new TradingViewStreamer();
 
 /**
- * Subscribes to live WebSocket ticks directly from TradingView's OANDA stream.
- * Updates on EVERY SINGLE TICK with zero latency, matching the chart 1:1.
- * @param {Array<string>} pairs
- * @param {Function} callback - ({ [pair]: price }) => void
- * @returns {Function} unsubscribe function
+ * Subscribes to live WebSocket ticks for the supported pairs.
  */
 export function subscribeLiveTicks(pairs, callback) {
-  return tvStreamer.addSubscriber(pairs, callback);
+  const filtered = (pairs || []).map(normalizePair).filter(isSupportedPair);
+  return tvStreamer.addSubscriber(filtered, callback);
 }
 
-/** Subscribes to the live Gold quote plus TradingView's daily price change. */
+/**
+ * Subscribes to the live Gold quote plus 24h change.
+ */
 export function subscribeGoldMarketSnapshot(callback) {
   return tvStreamer.addSubscriber(['XAUUSD'], (prices) => {
     callback({
@@ -268,7 +338,6 @@ export function subscribeGoldMarketSnapshot(callback) {
 
 /**
  * Fetches current Gold spot price and 24h change percent via TradingView CFD scanner.
- * Fully CORS-compliant and browser-safe (no external CORS proxies or blocked Yahoo calls).
  */
 export async function fetchGoldQuoteMetrics() {
   try {
@@ -286,6 +355,12 @@ export async function fetchGoldQuoteMetrics() {
       if (row && typeof row[0] === 'number') {
         const price = Math.round(row[0] * 100) / 100;
         const changePercent = typeof row[1] === 'number' ? row[1] : 0;
+        cache.XAUUSD = {
+          price,
+          timestamp: Date.now(),
+          source: 'OANDA / TradingView',
+          isAvailable: true,
+        };
         return {
           price,
           changePercent,
@@ -306,6 +381,12 @@ export async function fetchGoldQuoteMetrics() {
       if (data && typeof data.price === 'number') {
         const price = Math.round(data.price * 100) / 100;
         const changePercent = typeof data.change_percent === 'number' ? data.change_percent : 0;
+        cache.XAUUSD = {
+          price,
+          timestamp: Date.now(),
+          source: 'Gold-API Spot Feed',
+          isAvailable: true,
+        };
         return {
           price,
           changePercent,
@@ -320,20 +401,19 @@ export async function fetchGoldQuoteMetrics() {
 }
 
 /**
- * Fetches real-time price extremes (candle wicks, session high/low, multi-timeframe extremes)
- * from TradingView scanner. This ensures that if a candle wick pierces TP or SL, the touch
- * is 100% captured and executed even if live price retraced before page load.
- * @param {string} pair
- * @returns {Promise<{ price: number, peakHigh: number, troughLow: number, sessionHigh: number, sessionLow: number, high15: number, low15: number }|null>}
+ * Fetches real-time price extremes (candle wicks, session high/low) from TradingView scanner.
  */
 export async function fetchLiveExtremePrices(pair = 'XAUUSD') {
   const norm = normalizePair(pair);
-  const isCfd = norm.includes('XAU') || norm.includes('GOLD') || norm.includes('US30') || norm.includes('SILVER') || norm.includes('XAG');
-  const isCrypto = norm.includes('BTC') || norm.includes('ETH');
-  const endpoint = isCfd ? 'cfd' : (isCrypto ? 'crypto' : 'forex');
-  const ticker = isCfd
-    ? (norm.includes('US30') ? 'OANDA:US30USD' : `OANDA:${norm}`)
-    : (isCrypto ? 'BINANCE:BTCUSDT' : `OANDA:${norm}`);
+  if (!isSupportedPair(norm)) return null;
+
+  const isCfd = norm === 'XAUUSD' || norm === 'XAGUSD';
+  const endpoint = isCfd ? 'cfd' : 'crypto';
+  const ticker = norm === 'XAUUSD'
+    ? 'OANDA:XAUUSD'
+    : norm === 'XAGUSD'
+      ? 'TVC:SILVER'
+      : 'BINANCE:BTCUSDT';
 
   try {
     const res = await fetch(`https://scanner.tradingview.com/${endpoint}/scan`, {
@@ -356,7 +436,6 @@ export async function fetchLiveExtremePrices(pair = 'XAUUSD') {
         const high60 = typeof row[5] === 'number' ? row[5] : sessionHigh;
         const low60 = typeof row[6] === 'number' ? row[6] : sessionLow;
 
-        // Peak high and trough low across all active timeframes
         const peakHigh = Math.max(close, sessionHigh, high15, high60);
         const troughLow = Math.min(close, sessionLow, low15, low60);
 
@@ -380,212 +459,202 @@ export async function fetchLiveExtremePrices(pair = 'XAUUSD') {
 }
 
 /**
- * Normalizes asset pair names (e.g. 'XAU/USD' -> 'XAUUSD')
- */
-export function normalizePair(pair = 'XAUUSD') {
-  return String(pair).toUpperCase().replace(/[\/\-_]/g, '').trim();
-}
-
-/**
- * Formats price to match exact chart quote precision.
- * @param {string} pair
- * @param {number|null} price
- * @returns {string}
- */
-export function formatSpotPrice(pair, price) {
-  if (price == null || isNaN(price)) return '---';
-  const p = normalizePair(pair || 'XAUUSD');
-  if (p.includes('JPY')) return Number(price).toFixed(3);
-  if (p.includes('EUR') || p.includes('GBP') || p.includes('AUD')) return Number(price).toFixed(5);
-  // Gold (XAUUSD) - Match OANDA chart exact ticks (up to 3 decimals, min 2)
-  const num = Number(price);
-  const str = String(price);
-  const dec = str.includes('.') ? str.split('.')[1].length : 2;
-  if (dec >= 3) {
-    return num.toFixed(3);
-  }
-  return num.toFixed(2);
-}
-
-/**
- * Fetches real-time price for a given pair.
- * Supports XAUUSD, BTCUSD, EURUSD, GBPUSD, AUDUSD, USDJPY.
+ * Fetches real-time price for the requested pair from legitimate providers.
+ * Strictly supports XAUUSD, XAGUSD, BTCUSD.
  * @param {string} pair
  * @returns {Promise<number|null>}
  */
 export async function fetchLivePrice(pair = 'XAUUSD') {
   const norm = normalizePair(pair);
+  if (!isSupportedPair(norm)) {
+    console.warn(`[marketPriceService] Pair ${pair} rejected. Only XAUUSD, XAGUSD, and BTCUSD are supported.`);
+    return null;
+  }
+
   const now = Date.now();
 
-  // If live WebSocket streamer has a fresh tick, return it directly!
+  // If live WebSocket streamer has a fresh tick, return it directly
   if (tvStreamer.prices[norm]) {
+    cache[norm] = {
+      price: tvStreamer.prices[norm],
+      timestamp: now,
+      source: tvStreamer.sources[norm] || 'TradingView Real-time Stream',
+      isAvailable: true,
+    };
     return tvStreamer.prices[norm];
   }
 
-  // Return cached price if fresh
+  // Return cached price if within TTL
   if (cache[norm] && now - cache[norm].timestamp < CACHE_TTL_MS) {
     return cache[norm].price;
   }
 
   try {
-    if (norm === 'XAUUSD' || norm === 'GOLD' || norm === 'XAU') {
+    if (norm === 'XAUUSD') {
       const price = await fetchGoldPrice();
-      if (price) {
-        cache[norm] = { price, timestamp: now };
-        return price;
-      }
-    }
-
-    if (norm === 'BTCUSD' || norm === 'BTC') {
+      if (price) return price;
+    } else if (norm === 'XAGUSD') {
+      const price = await fetchSilverPrice();
+      if (price) return price;
+    } else if (norm === 'BTCUSD') {
       const price = await fetchBtcPrice();
-      if (price) {
-        cache[norm] = { price, timestamp: now };
-        return price;
-      }
-    }
-
-    if (norm === 'US30' || norm === 'DJ30' || norm === 'DJI') {
-      const price = await fetchTradingViewOandaPrice('OANDA:US30USD');
-      if (price) {
-        cache[norm] = { price, timestamp: now };
-        return price;
-      }
-    }
-
-    // Forex pairs via open exchange rate API
-    const forexPrice = await fetchForexPrice(norm);
-    if (forexPrice) {
-      cache[norm] = { price: forexPrice, timestamp: now };
-      return forexPrice;
+      if (price) return price;
     }
   } catch (err) {
-    console.warn(`[marketPriceService] Error fetching price for ${norm}:`, err);
+    console.warn(`[marketPriceService] Error fetching live price for ${norm}:`, err);
   }
 
   return cache[norm]?.price || null;
 }
 
 /**
- * Fetches the official TradingView OANDA quote for Gold and Forex.
- * This guarantees the live spot price matches the OANDA chart on screen 1:1.
+ * Gold (XAU/USD) Real Spot Price Fetcher
  */
-async function fetchTradingViewOandaPrice(symbol) {
-  // If Gold / Silver / Indices, use CFD scanner
-  if (symbol === 'OANDA:XAUUSD' || symbol === 'OANDA:XAGUSD' || symbol === 'OANDA:US30USD') {
-    try {
-      const res = await fetch('https://scanner.tradingview.com/cfd/scan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({
-          symbols: { tickers: [symbol] },
-          columns: ['close']
-        }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const price = data.data?.[0]?.d?.[0];
-        if (typeof price === 'number') {
-          return Math.round(price * 100) / 100;
-        }
-      }
-    } catch (err) {
-      console.warn(`[marketPriceService] TV CFD quote error for ${symbol}:`, err);
-    }
-  }
+export async function fetchGoldPrice() {
+  const now = Date.now();
 
-  // If Forex, use Forex scanner
+  // Primary: TradingView OANDA CFD Scanner
   try {
-    const res = await fetch('https://scanner.tradingview.com/forex/scan', {
+    const res = await fetch('https://scanner.tradingview.com/cfd/scan', {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({
-        symbols: { tickers: [symbol] },
-        columns: ['close']
+        symbols: { tickers: ['OANDA:XAUUSD'] },
+        columns: ['close'],
       }),
     });
     if (res.ok) {
       const data = await res.json();
-      const price = data.data?.[0]?.d?.[0];
-      if (typeof price === 'number') {
+      const p = data.data?.[0]?.d?.[0];
+      if (typeof p === 'number' && p > 1000 && p < 10000) {
+        const price = Math.round(p * 100) / 100;
+        cache.XAUUSD = { price, timestamp: now, source: 'OANDA / TradingView', isAvailable: true };
         return price;
       }
     }
-  } catch (err) {
-    console.warn(`[marketPriceService] TV Forex quote error for ${symbol}:`, err);
-  }
+  } catch {}
 
-  return null;
-}
-
-/**
- * Spot Gold (XAU/USD) fetcher — Primary: Official TradingView OANDA feed
- */
-async function fetchGoldPrice() {
-  // Primary: Official TradingView OANDA:XAUUSD
-  const oandaPrice = await fetchTradingViewOandaPrice('OANDA:XAUUSD');
-  if (oandaPrice) return oandaPrice;
-
-  // Secondary: gold-api.com
+  // Secondary: Gold-API
   try {
     const res = await fetch('https://api.gold-api.com/price/XAU', { cache: 'no-cache' });
     if (res.ok) {
       const data = await res.json();
-      if (data && typeof data.price === 'number') {
-        return Math.round(data.price * 100) / 100;
+      if (data && typeof data.price === 'number' && data.price > 1000) {
+        const price = Math.round(data.price * 100) / 100;
+        cache.XAUUSD = { price, timestamp: now, source: 'Gold-API Spot Feed', isAvailable: true };
+        return price;
       }
     }
   } catch {}
 
-  return null;
+  return cache.XAUUSD?.price || null;
 }
 
 /**
- * Spot Bitcoin (BTC/USD) fetcher
+ * Silver (XAG/USD) Real Spot Price Fetcher
  */
-async function fetchBtcPrice() {
+export async function fetchSilverPrice() {
+  const now = Date.now();
+
+  // Primary: TradingView TVC / OANDA CFD Scanner
+  try {
+    const res = await fetch('https://scanner.tradingview.com/cfd/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({
+        symbols: { tickers: ['TVC:SILVER', 'OANDA:XAGUSD'] },
+        columns: ['close'],
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const rows = data.data || [];
+      const validRow = rows.find((r) => typeof r?.d?.[0] === 'number' && r.d[0] > 10 && r.d[0] < 150);
+      if (validRow) {
+        const price = Math.round(validRow.d[0] * 1000) / 1000;
+        cache.XAGUSD = { price, timestamp: now, source: 'TradingView Spot Silver', isAvailable: true };
+        return price;
+      }
+    }
+  } catch {}
+
+  // Secondary: Gold-API Silver
+  try {
+    const res = await fetch('https://api.gold-api.com/price/XAG', { cache: 'no-cache' });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && typeof data.price === 'number' && data.price > 10 && data.price < 150) {
+        const price = Math.round(data.price * 1000) / 1000;
+        cache.XAGUSD = { price, timestamp: now, source: 'Gold-API Silver Feed', isAvailable: true };
+        return price;
+      }
+    }
+  } catch {}
+
+  return cache.XAGUSD?.price || null;
+}
+
+/**
+ * Bitcoin (BTC/USD) Real Spot Price Fetcher
+ */
+export async function fetchBtcPrice() {
+  const now = Date.now();
+
+  // Primary: Binance Official Public Ticker API (Reliable, fast, zero auth required)
+  try {
+    const res = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
+    if (res.ok) {
+      const data = await res.json();
+      const num = parseFloat(data.price);
+      if (!isNaN(num) && num > 10000) {
+        const price = Math.round(num * 10) / 10;
+        cache.BTCUSD = { price, timestamp: now, source: 'Binance Live Spot', isAvailable: true };
+        return price;
+      }
+    }
+  } catch {}
+
+  // Secondary: TradingView Crypto Scanner
+  try {
+    const res = await fetch('https://scanner.tradingview.com/crypto/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({
+        symbols: { tickers: ['BINANCE:BTCUSDT'] },
+        columns: ['close'],
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const p = data.data?.[0]?.d?.[0];
+      if (typeof p === 'number' && p > 10000) {
+        const price = Math.round(p * 10) / 10;
+        cache.BTCUSD = { price, timestamp: now, source: 'Binance / TradingView', isAvailable: true };
+        return price;
+      }
+    }
+  } catch {}
+
+  // Tertiary: Gold-API BTC
   try {
     const res = await fetch('https://api.gold-api.com/price/BTC', { cache: 'no-cache' });
     if (res.ok) {
       const data = await res.json();
-      if (data && typeof data.price === 'number') {
-        return Math.round(data.price * 100) / 100;
+      if (data && typeof data.price === 'number' && data.price > 10000) {
+        const price = Math.round(data.price * 10) / 10;
+        cache.BTCUSD = { price, timestamp: now, source: 'Gold-API Bitcoin', isAvailable: true };
+        return price;
       }
     }
   } catch {}
-  return null;
-}
 
-/**
- * Major Forex Pairs (EURUSD, GBPUSD, AUDUSD, USDJPY)
- */
-async function fetchForexPrice(pair) {
-  // Primary: Official TradingView OANDA feed
-  const oandaPrice = await fetchTradingViewOandaPrice('OANDA:' + pair);
-  if (oandaPrice) return oandaPrice;
-
-  // Secondary fallback: open exchange rate
-  try {
-    const res = await fetch('https://open.er-api.com/v6/latest/USD', { cache: 'no-cache' });
-    if (res.ok) {
-      const data = await res.json();
-      const rates = data.rates || {};
-      if (pair === 'EURUSD' && rates.EUR) return Math.round((1 / rates.EUR) * 100000) / 100000;
-      if (pair === 'GBPUSD' && rates.GBP) return Math.round((1 / rates.GBP) * 100000) / 100000;
-      if (pair === 'AUDUSD' && rates.AUD) return Math.round((1 / rates.AUD) * 100000) / 100000;
-      if (pair === 'USDJPY' && rates.JPY) return Math.round(rates.JPY * 1000) / 1000;
-    }
-  } catch {}
-  return null;
+  return cache.BTCUSD?.price || null;
 }
 
 /**
  * Evaluates whether an active signal has crossed its Take Profit or Stop Loss level.
- * @param {Object} signal
- * @param {number} currentPrice
- * @param {number} [previousPrice]
- * @returns {'tp' | 'sl' | 'active'}
  */
-export function evaluateSignalOutcome(signal, currentPrice, previousPrice) {
+export function evaluateSignalOutcome(signal, currentPrice) {
   if (!signal || !currentPrice) {
     return signal?.status || 'active';
   }
@@ -595,23 +664,22 @@ export function evaluateSignalOutcome(signal, currentPrice, previousPrice) {
     return status;
   }
 
-  const isBuy = String(signal.direction).toLowerCase() === 'buy';
-  const isSell = String(signal.direction).toLowerCase() === 'sell';
+  const isBuy = String(signal.direction).toUpperCase() === 'BUY';
   const entry = parseFloat(signal.entry ?? signal.entry_price ?? signal.entryPrice ?? signal.price);
   const tp = parseFloat(signal.tp ?? signal.take_profit ?? signal.takeProfit);
   const sl = parseFloat(signal.sl ?? signal.stop_loss ?? signal.stopLoss);
 
-  if (!tp || !sl) return 'active';
+  if (!tp || !sl || !entry) return 'active';
 
   // Sanity check: prevent evaluating against the wrong asset feed (e.g. BTC price against Gold signal)
-  if (entry > 0 && Math.abs(currentPrice - entry) / entry > 0.25) {
+  if (Math.abs(currentPrice - entry) / entry > 0.25) {
     return 'active';
   }
 
   if (isBuy) {
     if (currentPrice >= tp) return 'tp';
     if (currentPrice <= sl) return 'sl';
-  } else if (isSell) {
+  } else {
     if (currentPrice <= tp) return 'tp';
     if (currentPrice >= sl) return 'sl';
   }
@@ -621,20 +689,17 @@ export function evaluateSignalOutcome(signal, currentPrice, previousPrice) {
 
 /**
  * Computes trade progress percentage towards TP and remaining distance.
- * @param {Object} signal
- * @param {number} currentPrice
- * @returns {{ progressPct: number, pipsToTp: number, inProfit: boolean }}
  */
 export function calcTradeProgress(signal, currentPrice) {
   if (!signal || !currentPrice) {
     return { progressPct: 0, pipsToTp: 0, inProfit: false };
   }
 
-  const isBuy = String(signal.direction).toLowerCase() === 'buy';
+  const isBuy = String(signal.direction).toUpperCase() === 'BUY';
   const entry = parseFloat(signal.entry);
   const tp = parseFloat(signal.tp);
-  const isGold = normalizePair(signal.pair) === 'XAUUSD';
-  const pipMultiplier = isGold ? 10 : 10000;
+  const pair = normalizePair(signal.pair);
+  const pipMultiplier = pair === 'XAUUSD' ? 10 : pair === 'XAGUSD' ? 100 : 1;
 
   if (!entry || !tp) {
     return { progressPct: 0, pipsToTp: 0, inProfit: false };

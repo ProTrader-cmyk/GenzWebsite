@@ -11,14 +11,12 @@ import MarketAnalysisPanel from './MarketAnalysisPanel.jsx';
 
 const TV_LOCALE = 'en';
 
+export const SUPPORTED_PAIRS = ['XAUUSD', 'XAGUSD', 'BTCUSD'];
+
 const SYMBOLS = [
   { id: 'gold', symbol: 'OANDA:XAUUSD', label: 'XAU/USD', name: 'Gold', pair: 'XAUUSD', pipScale: 0.1, defaultPrice: 4171.25 },
-  { id: 'eurusd', symbol: 'OANDA:EURUSD', label: 'EUR/USD', name: 'EUR/USD', pair: 'EURUSD', pipScale: 0.0001, defaultPrice: 1.12250 },
-  { id: 'gbpusd', symbol: 'OANDA:GBPUSD', label: 'GBP/USD', name: 'GBP/USD', pair: 'GBPUSD', pipScale: 0.0001, defaultPrice: 1.32700 },
-  { id: 'usdjpy', symbol: 'OANDA:USDJPY', label: 'USD/JPY', name: 'USD/JPY', pair: 'USDJPY', pipScale: 0.01, defaultPrice: 149.20 },
-  { id: 'btc', symbol: 'BINANCE:BTCUSDT', label: 'BTC/USD', name: 'Bitcoin', pair: 'BTCUSD', pipScale: 1.0, defaultPrice: 81200.00 },
-  { id: 'us30', symbol: 'CAPITALCOM:US30', label: 'US30', name: 'Dow Jones', pair: 'US30', pipScale: 1.0, defaultPrice: 51830.00 },
-  { id: 'silver', symbol: 'OANDA:XAGUSD', label: 'XAG/USD', name: 'Silver', pair: 'XAGUSD', pipScale: 0.01, defaultPrice: 34.20 },
+  { id: 'silver', symbol: 'OANDA:XAGUSD', label: 'XAG/USD', name: 'Silver', pair: 'XAGUSD', pipScale: 0.01, defaultPrice: 57.00 },
+  { id: 'btc', symbol: 'BINANCE:BTCUSDT', label: 'BTC/USD', name: 'Bitcoin', pair: 'BTCUSD', pipScale: 1.0, defaultPrice: 81600.00 },
 ];
 
 const TIMEFRAMES = [
@@ -145,6 +143,8 @@ export default function AILiveChartTerminal({
   const isKhmer = lang === 'km' || lang === 'kh';
 
   const [symbolId, setSymbolId] = useState('gold');
+  const activeSymbolIdRef = useRef(symbolId);
+  activeSymbolIdRef.current = symbolId;
   const [timeframe, setTimeframe] = useState('15');
   const [selectedModel, setSelectedModel] = useState('smc');
   const [isMuted, setIsMuted] = useState(false);
@@ -390,13 +390,11 @@ export default function AILiveChartTerminal({
   }, [activeSignals, liveSignals, currentPairNorm, currentAsset.pair, closedSignalIds, marketExtremes, marketAnalysis, livePrice, hasVerifiedLivePrice]);
 
   // Precision decimals for current asset
-  const decimals = currentPairNorm.includes('EUR') || currentPairNorm.includes('GBP')
-    ? 5
-    : currentPairNorm.includes('JPY')
-      ? 3
-      : currentPairNorm.includes('US30')
-        ? 1
-        : 2;
+  const decimals = currentPairNorm.includes('XAG')
+    ? 3
+    : currentPairNorm.includes('BTC')
+      ? 1
+      : 2;
 
   // Real-time live P&L and target distance meter for the active position (Locked strictly to 0.03 lot size)
   const POSITION_LOT_SIZE = 0.03;
@@ -409,10 +407,10 @@ export default function AILiveChartTerminal({
     const sl = Number(currentActiveSetup.sl);
     const curr = Number(livePrice);
     const isGold = currentPairNorm.includes('XAU');
-    const isForex = currentPairNorm.includes('EUR') || currentPairNorm.includes('GBP') || currentPairNorm.includes('AUD');
-    const isJpy = currentPairNorm.includes('JPY');
+    const isSilver = currentPairNorm.includes('XAG');
+    const isBtc = currentPairNorm.includes('BTC');
 
-    const mult = isGold ? 10 : isForex ? 10000 : isJpy ? 100 : 1;
+    const mult = isGold ? 10 : isSilver ? 100 : 1;
 
     const diff = isBuy ? curr - entry : entry - curr;
     const pips = diff * mult;
@@ -422,7 +420,8 @@ export default function AILiveChartTerminal({
 
     // Real Dollar P&L calculation strictly for 0.03 LOT SIZE
     // For Gold (XAUUSD): 1 standard lot = 100 oz ($100/pt). 0.03 lot = 3 oz ($3.00/pt)
-    // For Forex: 1 standard lot = 100,000 units ($10/pip). 0.03 lot = $0.30/pip
+    // For Silver (XAGUSD): 1 standard lot = 5000 oz ($5000/pt). 0.03 lot = 150 oz ($150/pt)
+    // For Bitcoin (BTCUSD): 1 standard lot = 1 BTC. 0.03 lot = 0.03 BTC ($0.03/pt)
     let dollarPnl = 0;
     let tpProfitUsd = 0;
     let slLossUsd = 0;
@@ -431,10 +430,14 @@ export default function AILiveChartTerminal({
       dollarPnl = diff * 100 * POSITION_LOT_SIZE; // $3.00 per point
       tpProfitUsd = targetDiff * 100 * POSITION_LOT_SIZE;
       slLossUsd = riskDiff * 100 * POSITION_LOT_SIZE;
-    } else if (isForex || isJpy) {
-      dollarPnl = pips * 0.30;
-      tpProfitUsd = (targetDiff * mult) * 0.30;
-      slLossUsd = (riskDiff * mult) * 0.30;
+    } else if (isSilver) {
+      dollarPnl = diff * 5000 * POSITION_LOT_SIZE; // $150.00 per point
+      tpProfitUsd = targetDiff * 5000 * POSITION_LOT_SIZE;
+      slLossUsd = riskDiff * 5000 * POSITION_LOT_SIZE;
+    } else if (isBtc) {
+      dollarPnl = diff * POSITION_LOT_SIZE; // $0.03 per point
+      tpProfitUsd = targetDiff * POSITION_LOT_SIZE;
+      slLossUsd = riskDiff * POSITION_LOT_SIZE;
     } else {
       dollarPnl = diff * POSITION_LOT_SIZE;
       tpProfitUsd = targetDiff * POSITION_LOT_SIZE;
@@ -445,13 +448,13 @@ export default function AILiveChartTerminal({
       pips: pips >= 0 ? `+${pips.toFixed(1)}` : pips.toFixed(1),
       isProfit: dollarPnl >= 0,
       progressPct,
-      pts: diff >= 0 ? `+${diff.toFixed(2)} pts` : `-${Math.abs(diff).toFixed(2)} pts`,
+      pts: diff >= 0 ? `+${diff.toFixed(decimals)} pts` : `-${Math.abs(diff).toFixed(decimals)} pts`,
       dollarPnl: dollarPnl >= 0 ? `+$${dollarPnl.toFixed(2)}` : `-$${Math.abs(dollarPnl).toFixed(2)}`,
       tpProfitUsd: tpProfitUsd > 0 ? `+$${tpProfitUsd.toFixed(2)}` : '',
       slLossUsd: slLossUsd > 0 ? `-$${slLossUsd.toFixed(2)}` : '',
       lotSize: POSITION_LOT_SIZE,
     };
-  }, [currentActiveSetup, livePrice, currentPairNorm]);
+  }, [currentActiveSetup, livePrice, currentPairNorm, decimals]);
 
   // Live TP / SL touch detection for the active position (strictly requires verified live price)
   useEffect(() => {
@@ -553,8 +556,11 @@ export default function AILiveChartTerminal({
 
   // Silent background market re-analysis triggered on initial mount, asset change, manual click, and every 15m candle close
   const triggerReanalysis = useCallback(async (isCandleCloseTrigger = false) => {
+    const requestedSymbolId = symbolId;
+    const requestedPair = currentAsset.pair;
     try {
-      const result = await run15mMarketReanalysis(currentAsset.pair, livePriceRef.current);
+      const result = await run15mMarketReanalysis(requestedPair, livePriceRef.current);
+      if (activeSymbolIdRef.current !== requestedSymbolId) return;
       if (result) {
         setMarketAnalysis(result);
         if (isCandleCloseTrigger) {
@@ -570,7 +576,7 @@ export default function AILiveChartTerminal({
     } catch (err) {
       console.warn('[AILiveChartTerminal] Reanalysis failed:', err);
     }
-  }, [currentAsset.pair, isMuted, isKhmer]);
+  }, [currentAsset.pair, symbolId, isMuted, isKhmer]);
 
   // Synchronized 15m candle close scheduler + background refresh every 60s
   useEffect(() => {
@@ -657,34 +663,40 @@ export default function AILiveChartTerminal({
   // 2. Real-time Live Price Streaming & Candle Wick / Extreme Tracking for the selected asset
   useEffect(() => {
     let isSubscribed = true;
+    const requestedSymbolId = symbolId;
+    const requestedPair = currentAsset.pair;
     setHasVerifiedLivePrice(false);
     // Instantly set livePrice to currentAsset.defaultPrice so no stale price from previous asset leaks
     setLivePrice(currentAsset.defaultPrice);
 
-    fetchLivePrice(currentAsset.pair).then((price) => {
-      if (isSubscribed && price) {
+    fetchLivePrice(requestedPair).then((price) => {
+      if (!isSubscribed || activeSymbolIdRef.current !== requestedSymbolId) return;
+      if (price) {
         setLivePrice(price);
         setHasVerifiedLivePrice(true);
-        addLog('TICK', `Live Spot synced: $${formatSpotPrice(currentAsset.pair, price)}`);
+        addLog('TICK', `Live Spot synced: $${formatSpotPrice(requestedPair, price)}`);
       }
     });
 
-    fetchLiveExtremePrices(currentAsset.pair).then((ext) => {
-      if (isSubscribed && ext) {
+    fetchLiveExtremePrices(requestedPair).then((ext) => {
+      if (!isSubscribed || activeSymbolIdRef.current !== requestedSymbolId) return;
+      if (ext) {
         setMarketExtremes(ext);
       }
     });
 
     const extremesPollTimer = setInterval(() => {
-      fetchLiveExtremePrices(currentAsset.pair).then((ext) => {
-        if (isSubscribed && ext) {
+      fetchLiveExtremePrices(requestedPair).then((ext) => {
+        if (!isSubscribed || activeSymbolIdRef.current !== requestedSymbolId) return;
+        if (ext) {
           setMarketExtremes(ext);
         }
       });
     }, 4000);
 
-    const unsubTicks = subscribeLiveTicks([currentAsset.pair], (pair, newPrice) => {
-      if (!isSubscribed || !newPrice) return;
+    const unsubTicks = subscribeLiveTicks([requestedPair], (tPair, newPrice) => {
+      if (!isSubscribed || activeSymbolIdRef.current !== requestedSymbolId) return;
+      if (!newPrice) return;
       setHasVerifiedLivePrice(true);
       setLivePrice((prev) => {
         if (newPrice > prev) setPriceChangeDirection('up');
@@ -698,7 +710,7 @@ export default function AILiveChartTerminal({
       clearInterval(extremesPollTimer);
       unsubTicks();
     };
-  }, [currentAsset.pair, currentAsset.pipScale]);
+  }, [currentAsset.pair, currentAsset.pipScale, symbolId, currentAsset.defaultPrice]);
 
   // Helper to safely instantiate TradingView widget without duplication
   const initTradingViewWidget = useCallback(() => {

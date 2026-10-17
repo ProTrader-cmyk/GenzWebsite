@@ -110,32 +110,20 @@ const SCANNER_PAIRS = [
   {
     symbol: 'XAUUSD',
     name: 'Gold (XAU/USD)',
-    category: 'Commodity',
+    category: 'Precious Metals',
     icon: <GoldIngotLogo size={22} />,
   },
   {
-    symbol: 'EURUSD',
-    name: 'EUR/USD',
-    category: 'Major Forex',
-    icon: <FlagEU size={22} />,
-  },
-  {
-    symbol: 'GBPUSD',
-    name: 'GBP/USD',
-    category: 'Major Forex',
-    icon: <FlagUK size={22} />,
+    symbol: 'XAGUSD',
+    name: 'Silver (XAG/USD)',
+    category: 'Precious Metals',
+    icon: <SilverIngotLogo size={22} />,
   },
   {
     symbol: 'BTCUSD',
     name: 'Bitcoin (BTC/USD)',
     category: 'Crypto',
     icon: <BitcoinLogo size={22} />,
-  },
-  {
-    symbol: 'US30',
-    name: 'US30 (Dow Jones)',
-    category: 'US Index',
-    icon: <US30Logo size={22} />,
   },
 ];
 
@@ -378,10 +366,8 @@ export default function AITradingPage({
   const [liveGoldPrice, setLiveGoldPrice] = useState(null);
   const [liveForexPrices, setLiveForexPrices] = useState({
     XAUUSD: null,
-    EURUSD: null,
-    GBPUSD: null,
-    USDJPY: null,
     XAGUSD: null,
+    BTCUSD: null,
   });
 
   // Real signals directly from Firestore (Strictly zero mock data)
@@ -451,7 +437,7 @@ export default function AITradingPage({
     } catch {}
 
     // 1. Fetch real spot prices
-    const pairs = ['XAUUSD', 'EURUSD', 'GBPUSD', 'USDJPY', 'XAGUSD'];
+    const pairs = ['XAUUSD', 'XAGUSD', 'BTCUSD'];
     pairs.forEach(async (pair) => {
       const price = await fetchLivePrice(pair);
       if (price) {
@@ -461,7 +447,7 @@ export default function AITradingPage({
     });
 
     // 2. Subscribe to real WebSocket ticks
-    const unsubTicks = subscribeLiveTicks(['XAUUSD', 'EURUSD', 'GBPUSD'], (pair, price) => {
+    const unsubTicks = subscribeLiveTicks(['XAUUSD', 'XAGUSD', 'BTCUSD'], (pair, price) => {
       if (price) {
         setLiveForexPrices((prev) => ({ ...prev, [pair]: price }));
         if (pair === 'XAUUSD') setLiveGoldPrice(price);
@@ -863,19 +849,25 @@ export default function AITradingPage({
 
   // Filter signals by both Asset Category and Strategy Style (Scalping vs Day Trade)
   const filteredSignals = useMemo(() => {
-    return deduplicatedSignals.filter((sig) => {
+    const res = deduplicatedSignals.filter((sig) => {
+      // 0. Supported Pairs allowlist check
+      const asset = (sig.pair || sig.symbol || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      const isGold = asset.includes('XAU') || asset.includes('GOLD');
+      const isSilver = asset.includes('XAG') || asset.includes('SILVER');
+      const isBtc = asset.includes('BTC');
+
+      if (!isGold && !isSilver && !isBtc) return false;
+
       // 1. Trading Style Filter
       const isScalp = isSignalScalp(sig);
-
       if (tradeStyleFilter === 'scalping' && !isScalp) return false;
       if (tradeStyleFilter === 'daytrade' && isScalp) return false;
 
       // 2. Asset Category Filter
       if (signalFilter === 'all') return true;
-      const asset = (sig.pair || sig.symbol || '').toUpperCase();
-      if (signalFilter === 'gold') return asset.includes('XAU') || asset.includes('GOLD') || asset.includes('XAG');
-      if (signalFilter === 'forex') return (asset.includes('EUR') || asset.includes('GBP') || asset.includes('JPY') || asset.includes('USD')) && !asset.includes('BTC') && !asset.includes('XAU') && !asset.includes('XAG') && !asset.includes('US30');
-      if (signalFilter === 'crypto') return asset.includes('BTC') || asset.includes('ETH') || asset.includes('US30') || asset.includes('CRYPTO');
+      if (signalFilter === 'gold') return isGold;
+      if (signalFilter === 'silver') return isSilver;
+      if (signalFilter === 'btc') return isBtc;
       return true;
     });
 
@@ -1699,10 +1691,8 @@ export default function AITradingPage({
                 onSelectPair={(sym) => setScanTargetPair(sym)}
                 livePrices={{
                   XAUUSD: liveGoldPrice || liveForexPrices.XAUUSD,
-                  EURUSD: liveForexPrices.EURUSD,
-                  GBPUSD: liveForexPrices.GBPUSD,
-                  BTCUSD: 65420,
-                  US30: 38940,
+                  XAGUSD: liveForexPrices.XAGUSD,
+                  BTCUSD: liveForexPrices.BTCUSD,
                 }}
               />
 
@@ -1806,29 +1796,29 @@ export default function AITradingPage({
                 }}
               >
                 <span className="ait-sig-filter-icon"><IconBullion size={15} color="#F59E0B" /></span>
-                <span>Gold & Silver (XAU/XAG)</span>
+                <span>Gold (XAU/USD)</span>
               </button>
               <button
                 type="button"
-                className={`ait-sig-filter-btn ${signalFilter === 'forex' ? 'active' : ''}`}
+                className={`ait-sig-filter-btn ${signalFilter === 'silver' ? 'active' : ''}`}
                 onClick={() => {
-                  setSignalFilter('forex');
+                  setSignalFilter('silver');
                   setCurrentPage(1);
                 }}
               >
-                <span className="ait-sig-filter-icon"><IconForexArrows size={15} color="#34D399" /></span>
-                <span>Major Forex (EUR, GBP)</span>
+                <span className="ait-sig-filter-icon"><IconBullion size={15} color="#94A3B8" /></span>
+                <span>Silver (XAG/USD)</span>
               </button>
               <button
                 type="button"
-                className={`ait-sig-filter-btn ${signalFilter === 'crypto' ? 'active' : ''}`}
+                className={`ait-sig-filter-btn ${signalFilter === 'btc' ? 'active' : ''}`}
                 onClick={() => {
-                  setSignalFilter('crypto');
+                  setSignalFilter('btc');
                   setCurrentPage(1);
                 }}
               >
-                <span className="ait-sig-filter-icon"><IconCryptoToken size={15} color="#A78BFA" /></span>
-                <span>Crypto & Indices (BTC, US30)</span>
+                <span className="ait-sig-filter-icon"><IconCryptoToken size={15} color="#F59E0B" /></span>
+                <span>Bitcoin (BTC/USD)</span>
               </button>
             </div>
           </div>
