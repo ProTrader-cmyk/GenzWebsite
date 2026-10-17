@@ -67,17 +67,12 @@ function BootScreen() {
   );
 }
 
-// Where the user was (category picker / lesson list / a specific lesson) —
-// restored on mount so an F5 refresh doesn't dump them back on the category
-// picker mid-lesson.
+// Always start on the Homepage ('home') when the user clicks or opens the website link
 function loadNav() {
   try {
-    const saved = JSON.parse(localStorage.getItem(NAV_KEY));
-    if (saved && typeof saved.section === 'string' && typeof saved.view === 'string') {
-      return saved;
-    }
+    localStorage.removeItem(NAV_KEY);
   } catch {
-    // ignore malformed value
+    // ignore storage errors
   }
   return { section: 'home', view: 'home' };
 }
@@ -124,10 +119,9 @@ export default function App() {
   // whole app sat behind a blank screen for no real reason, since the
   // cached `user` above was sitting right there the whole time.
   const [checkingSession, setCheckingSession] = useState(() => !loadSession());
-  // 'categories' (top-level track picker), 'technical' (lesson list + lesson
-  // pages), 'news', or 'contact'.
-  const [section, setSection] = useState(() => loadNav().section);
-  const [view, setView] = useState(() => loadNav().view);
+  // Always show Homepage ('home') first when user clicks the website link
+  const [section, setSection] = useState('home');
+  const [view, setView] = useState('home');
   const [doneMap, setDoneMap] = useState({});
   // { lessonId, lessonTitle } while the post-lesson feedback prompt is open, else null.
   const [feedbackPrompt, setFeedbackPrompt] = useState(null);
@@ -229,9 +223,9 @@ export default function App() {
   // an admin grants access while this tab is open (or on next visit if it
   // wasn't); AccessGrantedModal renders it.
   const [accessAlert, setAccessAlert] = useState(null);
-  // An admin account defaults to the dashboard; this flips to true when they
-  // click "Go back to website" so they can browse the site like any user.
-  const [adminViewingSite, setAdminViewingSite] = useState(false);
+  // Default to viewing the Homepage first when clicking the website link;
+  // admins can open the Admin Dashboard at any time via the Navbar "Admin" button.
+  const [adminViewingSite, setAdminViewingSite] = useState(true);
   // While a Login/VerifyOtp page owns its own zoom-then-handoff transition
   // (see handleAuthSuccess), this stops the listener below from swapping
   // `user` out from under it the instant Firebase's sign-in resolves —
@@ -316,8 +310,12 @@ export default function App() {
   }, [section, view, user]);
 
   useEffect(() => {
-    localStorage.setItem(NAV_KEY, JSON.stringify({ section, view }));
-  }, [section, view]);
+    try {
+      localStorage.removeItem(NAV_KEY);
+    } catch {
+      // ignore storage errors
+    }
+  }, []);
 
   // 'home' or a lesson id — every nav action (lesson card, back link,
   // prev-lesson link) goes through this one function.
@@ -398,7 +396,8 @@ export default function App() {
     setUser(loggedInUser);
     setDoneMap(loggedInUser.progress || {});
     setPendingVerification(null);
-    setSection('categories');
+    setAdminViewingSite(true);
+    setSection('home');
     setView('home');
   }
 
@@ -427,7 +426,7 @@ export default function App() {
     setAuthView(null);
     setSection('home');
     setView('home');
-    setAdminViewingSite(false);
+    setAdminViewingSite(true);
     setAccessAlert(null);
     localStorage.removeItem(NAV_KEY);
   }
