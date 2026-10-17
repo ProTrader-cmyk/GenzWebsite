@@ -48,7 +48,7 @@ const STEP_ICONS = {
   4: IconFinalDecision,
 };
 
-export default function ScanWorkflowStepper({
+export function ScanWorkflowStepper({
   mode = 'scalp',
   pair = 'XAUUSD',
   symbolLabel = 'XAU/USD',
@@ -210,3 +210,4 @@ export default function ScanWorkflowStepper({
   );
 }
 
+export default ScanWorkflowStepper;
