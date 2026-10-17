@@ -935,6 +935,55 @@ describe('AI Trading Page & Signal Engine Test Suite', () => {
       assert.ok(silverBacktest.netPnl > 0, `Expected positive Silver net PnL after $0.034 costs, got ${silverBacktest.netPnl}`);
     });
   });
+
+  // --------------------------------------------------------------------------
+  // Requirement 10: Audited ICT XAUUSD Strategy Backtest Verification
+  // --------------------------------------------------------------------------
+  describe('10. Audited ICT XAUUSD Strategy Backtest Verification', async () => {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const btPath = path.resolve('src/data/xauusdIctBacktest.json');
+    const bt = JSON.parse(fs.readFileSync(btPath, 'utf-8'));
+
+    it('should contain valid metadata, data validation report, and chronological splits', () => {
+      assert.equal(bt.symbol, 'XAUUSD');
+      assert.equal(bt.status, 'COMPLETED');
+      assert.equal(bt.data_category, 'HISTORICAL_BACKTEST');
+      assert.ok(bt.strategy_version.includes('ICT-XAUUSD'));
+      assert.ok(bt.data_validation.m15.validation_passed);
+      assert.ok(bt.data_validation.m5_intrabar.validation_passed);
+      assert.ok(Array.isArray(bt.timeframe_comparison_train_val));
+      assert.ok(bt.timeframe_comparison_train_val.length >= 2);
+    });
+
+    it('should enforce non-overlapping trades, 0.5% risk sizing, and exact cost math on every trade', () => {
+      assert.ok(Array.isArray(bt.trades) && bt.trades.length > 0);
+      for (let i = 0; i < bt.trades.length; i++) {
+        const t = bt.trades[i];
+        assert.equal(t.symbol, 'XAUUSD');
+        assert.ok(t.risk_pct <= 1.0, `Expected risk_pct <= 1.0%, got ${t.risk_pct}`);
+        assert.ok(t.total_costs > 0, 'Expected positive transaction costs');
+        const expectedNet = Number((t.gross_pnl - t.total_costs).toFixed(2));
+        assert.ok(Math.abs(t.net_pnl - expectedNet) <= 0.02, `Trade ${t.trade_id} net_pnl mismatch`);
+        if (i > 0) {
+          assert.ok(t.entry_ts >= bt.trades[i - 1].exit_ts, `Overlapping trade detected at ${t.trade_id}`);
+        }
+      }
+    });
+
+    it('should match overall performance metrics to the underlying closed trade records', () => {
+      const m = bt.metrics.overall;
+      assert.equal(m.total_closed_trades, bt.trades.length);
+      const wins = bt.trades.filter((t) => t.net_pnl > 0).length;
+      const losses = bt.trades.filter((t) => t.net_pnl < 0).length;
+      assert.equal(m.winning_trades, wins);
+      assert.equal(m.losing_trades, losses);
+      const sumNet = Number(bt.trades.reduce((acc, t) => acc + t.net_pnl, 0).toFixed(2));
+      assert.ok(Math.abs(m.net_profit - sumNet) <= 0.05);
+      assert.ok(Array.isArray(m.equity_curve) && m.equity_curve.length === bt.trades.length + 1);
+    });
+  });
 });
+
 
 

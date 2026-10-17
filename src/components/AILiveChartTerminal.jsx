@@ -14,9 +14,7 @@ const TV_LOCALE = 'en';
 export const SUPPORTED_PAIRS = ['XAUUSD', 'XAGUSD', 'BTCUSD'];
 
 const SYMBOLS = [
-  { id: 'gold', symbol: 'OANDA:XAUUSD', label: 'XAU/USD', name: 'Gold', pair: 'XAUUSD', pipScale: 0.1, defaultPrice: 4171.25 },
-  { id: 'silver', symbol: 'OANDA:XAGUSD', label: 'XAG/USD', name: 'Silver', pair: 'XAGUSD', pipScale: 0.01, defaultPrice: 57.00 },
-  { id: 'btc', symbol: 'BINANCE:BTCUSDT', label: 'BTC/USD', name: 'Bitcoin', pair: 'BTCUSD', pipScale: 1.0, defaultPrice: 81600.00 },
+  { id: 'gold', symbol: 'OANDA:XAUUSD', label: 'XAU/USD (Gold)', name: 'Gold', pair: 'XAUUSD', pipScale: 0.1, defaultPrice: 4171.25 },
 ];
 
 const TIMEFRAMES = [

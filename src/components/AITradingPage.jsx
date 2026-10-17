@@ -18,11 +18,10 @@ import { getUserPlan } from '../data/auth.js';
 import { clearStoredPipSignals, generateRealPipSignal, buildVerifiedTradeConfluences } from '../services/pipLiveSignalService.js';
 import { getMarketHoursStatus } from '../services/marketHoursService.js';
 import AILiveChartTerminal from './AILiveChartTerminal.jsx';
+import IctXauusdBacktestDashboard from './IctXauusdBacktestDashboard.jsx';
 import ReferralAccessModal from './ReferralAccessModal.jsx';
 import PairLogo, {
   GoldIngotLogo,
-  BitcoinLogo,
-  SilverIngotLogo,
 } from './ui/PairLogo.jsx';
 import { GoldAssetEmblem, SignalStrengthBars, formatSignalDate, formatLevelPrice, parseDateInput } from './ui/SignalEmblems.jsx';
 import '../styles/aiTradingPage.css';
@@ -57,20 +56,6 @@ const IconBullion = ({ size = 15, color = '#F59E0B' }) => (
     <path d="M6 10l2-5h8l2 5" />
     <line x1="9" y1="17" x2="10.5" y2="10" />
     <line x1="15" y1="17" x2="13.5" y2="10" />
-  </svg>
-);
-
-const IconForexArrows = ({ size = 15, color = '#34D399' }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M7 17V5m0 0L3 9m4-4l4 4" />
-    <path d="M17 7v12m0 0l4-4m-4 4l-4-4" />
-  </svg>
-);
-
-const IconCryptoToken = ({ size = 15, color = '#A78BFA' }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="9.5" />
-    <path d="M9.5 8.5h4a2 2 0 0 1 0 4H9.5m0 0h4.5a2 2 0 0 1 0 4H9.5m0-8v8m2-9.5v1.5m2-1.5v1.5m-2 14.5v1.5m2-1.5v1.5" />
   </svg>
 );
 
@@ -109,18 +94,6 @@ const SCANNER_PAIRS = [
     name: 'Gold (XAU/USD)',
     category: 'Precious Metals',
     icon: <GoldIngotLogo size={22} />,
-  },
-  {
-    symbol: 'XAGUSD',
-    name: 'Silver (XAG/USD)',
-    category: 'Precious Metals',
-    icon: <SilverIngotLogo size={22} />,
-  },
-  {
-    symbol: 'BTCUSD',
-    name: 'Bitcoin (BTC/USD)',
-    category: 'Crypto',
-    icon: <BitcoinLogo size={22} />,
   },
 ];
 
@@ -628,9 +601,13 @@ export default function AITradingPage({
 
   const activeSession = getActiveTradingSession();
 
-  // 100% Real Signals directly from Firestore (Strictly zero mock data)
+  // 100% Real Gold (XAUUSD) Signals directly from Firestore (Focused on Gold only)
   const deduplicatedSignals = useMemo(() => {
-    const pool = [...firestoreSignals, ...serverSignals];
+    const pool = [...firestoreSignals, ...serverSignals].filter((s) => {
+      if (!s) return false;
+      const p = String(s.pair || s.symbol || 'XAUUSD').toUpperCase();
+      return p.includes('XAU') || p.includes('GOLD');
+    });
     return deduplicateActiveSignals(pool);
   }, [firestoreSignals, serverSignals]);
 
@@ -1536,17 +1513,17 @@ export default function AITradingPage({
             <div>
               <div className="ait-sig-hero-badge">
                 <span>⚡</span>
-                <span>{isKhmer ? 'ផ្សាយ SIGNAL ស្ថាប័នផ្ទាល់' : 'PIP AI REAL-TIME SIGNAL STREAM'}</span>
+                <span>{isKhmer ? 'ផ្សាយ SIGNAL ស្ថាប័នផ្ទាល់ (GOLD XAU/USD)' : 'PIP AI GOLD (XAU/USD) INSTITUTIONAL STREAM'}</span>
               </div>
               <h2 className="ait-sig-main-title">
                 {isKhmer
-                  ? 'Gold (XAUUSD) & Forex Institutional Signals'
-                  : 'Gold (XAUUSD) & Major Forex Signals'}
+                  ? 'Gold (XAUUSD) ICT Strategy & Institutional Signals'
+                  : 'Gold (XAUUSD) ICT Strategy & Live Signals'}
               </h2>
               <p className="ait-sig-main-desc">
                 {isKhmer
-                  ? 'Pip AI ស្កេនរចនាសម្ព័ន្ធទីផ្សារ 24/7 រួមបញ្ចូល Liquidity Sweeps, Fair Value Gaps និង Smart Money Concepts ដើម្បីផ្តល់ Signal ជាក់លាក់ជាមួយ Entry, Stop Loss, និង Take Profit 1:2.5+ R:R។'
-                  : 'Gold (XAUUSD) and major currencies scanned 24/7 by Pip AI. Blending multi-timeframe ICT market structure, liquidity sweeps, and order flow context to produce high-conviction trade setups with exact entry, stop-loss, and multi-tier take-profits.'}
+                  ? 'Pip AI ផ្តោតលើការវិភាគ Gold (XAUUSD) 24/7 រួមបញ្ចូល Liquidity Sweeps, Market Structure Shift (MSS), និង Fair Value Gaps (FVG) ក្នុងតំបន់ Discount/Premium ជាមួយលទ្ធផល Backtest ពិតប្រាកដ។'
+                  : 'Exclusively focused on Gold (XAUUSD). Blending multi-timeframe ICT market structure, London/NY Killzone liquidity sweeps, and Fair Value Gap (FVG) displacements with audited historical backtest verification and live signal streaming.'}
               </p>
               <div className="ait-sig-hero-btns">
                 <button
@@ -1580,12 +1557,12 @@ export default function AITradingPage({
                 <span>✓</span>
                 <span>
                   {isKhmer
-                    ? 'លទ្ធផលបានផ្ទៀងផ្ទាត់ (VERIFIED REAL TRACK RECORD)'
-                    : 'PIP AI — VERIFIED RESULTS'}
+                    ? 'លទ្ធផល LIVE SIGNALS (VERIFIED LIVE TRACK RECORD)'
+                    : 'PIP AI — LIVE GOLD SIGNALS SCORECARD'}
                 </span>
                 <span className="ait-live-real-badge">
                   <span className="ait-scanner-status-dot" style={{ width: 6, height: 6 }} />
-                  {isKhmer ? 'ទិន្នន័យជាក់ស្តែង' : 'REAL FIRESTORE DATA'}
+                  {isKhmer ? 'ទិន្នន័យជាក់ស្តែង' : 'LIVE FIRESTORE STREAM'}
                 </span>
               </div>
               <div className="ait-scorecard-grid">
@@ -1638,8 +1615,8 @@ export default function AITradingPage({
               </div>
               <div className="ait-scorecard-fineprint">
                 {isKhmer
-                  ? 'លទ្ធផលគណនាផ្ទាល់ពីទិន្នន័យ Signal ជាក់ស្តែងក្នុង Firestore & Live Market Ticks។ គ្រប់ Setup អនុវត្តតាមក្បួនគ្រប់គ្រងហានិភ័យ 1%។'
-                  : 'Results tracked against real market ticks and live Firestore signals. All setups adhere strictly to 1.0% maximum risk.'}
+                  ? 'លទ្ធផលគណនាផ្ទាល់ពីទិន្នន័យ Signal ជាក់ស្តែងក្នុង Firestore & Live Market Ticks (ដាច់ដោយឡែកពីទិន្នន័យ Historical Backtest ខាងក្រោម)។'
+                  : 'Live Gold signals tracked against real market ticks in Firestore (strictly separated from the Historical Backtest audit below).'}
               </div>
             </div>
           </div>
@@ -1649,10 +1626,13 @@ export default function AITradingPage({
             <span style={{ fontSize: 16 }}>ⓘ</span>
             <span>
               {isKhmer
-                ? 'Signal និងការវិភាគត្រូវបានផ្តល់ជូនសម្រាប់គោលបំណងសិក្សា និងតាមដានទីផ្សារប៉ុណ្ណោះ។ មិនមែនជាការណែនាំហិរញ្ញវត្ថុទេ។ ការជួញដូរមានហានិភ័យ សូមគ្រប់គ្រងដើមទុនត្រឹម 1% ជានិច្ច។'
-                : 'Signals are for educational and analysis purposes only. This is not financial advice. Trading involves risk and you can lose capital. Always adhere to strict 1% account risk.'}
+                ? 'Signal និងការវិភាគត្រូវបានផ្តល់ជូនសម្រាប់គោលបំណងសិក្សា និងតាមដានទីផ្សារប៉ុណ្ណោះ។ មិនមែនជាការណែនាំហិរញ្ញវត្ថុទេ។ ការជួញដូរមានហានិភ័យ សូមគ្រប់គ្រងដើមទុនត្រឹម 0.5%–1% ជានិច្ច។'
+                : 'Signals and backtest research are for educational and analytical purposes only. This is not financial advice. Trading involves risk of loss. Always adhere to 0.5%–1.0% account risk.'}
             </span>
           </div>
+
+          {/* Audited ICT XAUUSD Historical Backtest Performance Dashboard */}
+          <IctXauusdBacktestDashboard isKhmer={isKhmer} />
 
           {/* Live Pip AI Scanner Action Bar */}
           <div className="ait-pip-scanner-trigger-bar">
@@ -1661,25 +1641,23 @@ export default function AITradingPage({
               <div className="ait-scanner-text-group">
                 <div className="ait-scanner-status-line">
                   <span className="ait-scanner-status-dot" />
-                  <strong>PIP AI SCANNER: ONLINE</strong>
-                  <span className="ait-scanner-model-pill">Gemini 3.8 Flash + Live ICT SMC</span>
+                  <strong>PIP AI GOLD SCANNER: ONLINE</strong>
+                  <span className="ait-scanner-model-pill">XAU/USD · ICT SMC v1.2</span>
                 </div>
                 <p className="ait-scanner-desc-line">
                   {isKhmer
-                    ? 'ស្កេនតម្លៃទីផ្សារ Live ជាក់ស្តែងជាមួយ Pip AI ដើម្បីបង្កើត Signal ស្ថាប័នពិតប្រាកដ'
-                    : 'Scan live market quotes directly with Pip AI to generate real institutional trade setups in real time.'}
+                    ? 'ស្កេនតម្លៃទីផ្សារមាស (XAU/USD) Live ជាក់ស្តែងជាមួយ Pip AI ដើម្បីបង្កើត Signal ស្ថាប័នពិតប្រាកដ'
+                    : 'Scan live Gold (XAU/USD) market quotes directly with Pip AI to generate real institutional trade setups in real time.'}
                 </p>
               </div>
             </div>
 
             <div className="ait-scanner-actions">
               <ScannerPairDropdown
-                selectedPair={scanTargetPair}
-                onSelectPair={(sym) => setScanTargetPair(sym)}
+                selectedPair="XAUUSD"
+                onSelectPair={() => setScanTargetPair('XAUUSD')}
                 livePrices={{
                   XAUUSD: liveGoldPrice || liveForexPrices.XAUUSD,
-                  XAGUSD: liveForexPrices.XAGUSD,
-                  BTCUSD: liveForexPrices.BTCUSD,
                 }}
               />
 
@@ -1690,7 +1668,7 @@ export default function AITradingPage({
                     {isKhmer ? 'ស្កេនស្វ័យប្រវត្តិ (AUTO-SCAN)' : 'AUTO-SCAN STREAM'}
                   </span>
                   <span className="ait-auto-badge-sub">
-                    {isKhmer ? '~7–10 Signal ក្នុងមួយថ្ងៃ · ទៀន M15' : '~7–10 Signals / Day · M15 Close'}
+                    {isKhmer ? 'XAU/USD · ទៀន M5 / M15' : 'XAU/USD Only · M5 / M15 Close'}
                   </span>
                 </div>
               </div>
@@ -1723,7 +1701,7 @@ export default function AITradingPage({
                   }}
                 >
                   <span className="ait-style-icon"><IconGlobe size={15} /></span>
-                  <span>{isKhmer ? 'គ្រប់បែប' : 'All Trades'}</span>
+                  <span>{isKhmer ? 'គ្រប់បែប' : 'All Gold Trades'}</span>
                   <span className="ait-style-count">{styleCounts.all}</span>
                 </button>
 
@@ -1761,51 +1739,18 @@ export default function AITradingPage({
               </div>
             </div>
 
-            {/* 2. Asset Category Tabs */}
+            {/* 2. Asset Category Tabs (Gold Only Focus) */}
             <div className="ait-signals-filter-bar">
               <button
                 type="button"
-                className={`ait-sig-filter-btn ${signalFilter === 'all' ? 'active' : ''}`}
-                onClick={() => {
-                  setSignalFilter('all');
-                  setCurrentPage(1);
-                }}
-              >
-                <span className="ait-sig-filter-icon"><IconGlobe size={15} /></span>
-                <span>{isKhmer ? 'គ្រប់ទ្រព្យ' : 'All Assets'}</span>
-              </button>
-              <button
-                type="button"
-                className={`ait-sig-filter-btn ${signalFilter === 'gold' ? 'active' : ''}`}
+                className="ait-sig-filter-btn active"
                 onClick={() => {
                   setSignalFilter('gold');
                   setCurrentPage(1);
                 }}
               >
                 <span className="ait-sig-filter-icon"><IconBullion size={15} color="#F59E0B" /></span>
-                <span>Gold (XAU/USD)</span>
-              </button>
-              <button
-                type="button"
-                className={`ait-sig-filter-btn ${signalFilter === 'silver' ? 'active' : ''}`}
-                onClick={() => {
-                  setSignalFilter('silver');
-                  setCurrentPage(1);
-                }}
-              >
-                <span className="ait-sig-filter-icon"><IconBullion size={15} color="#94A3B8" /></span>
-                <span>Silver (XAG/USD)</span>
-              </button>
-              <button
-                type="button"
-                className={`ait-sig-filter-btn ${signalFilter === 'btc' ? 'active' : ''}`}
-                onClick={() => {
-                  setSignalFilter('btc');
-                  setCurrentPage(1);
-                }}
-              >
-                <span className="ait-sig-filter-icon"><IconCryptoToken size={15} color="#F59E0B" /></span>
-                <span>Bitcoin (BTC/USD)</span>
+                <span>Gold (XAU/USD) — Exclusive Focus</span>
               </button>
             </div>
           </div>
