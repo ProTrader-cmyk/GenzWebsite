@@ -6,6 +6,7 @@ import { useTheme } from '../theme/ThemeContext.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { fetchLivePrice, formatSpotPrice, subscribeLiveTicks, fetchLiveExtremePrices } from '../services/marketPriceService.js';
 import { run15mMarketReanalysis, get15mCandleTimeRemaining } from '../services/marketAnalysisService.js';
+import { getMarketHoursStatus } from '../services/marketHoursService.js';
 import MarketAnalysisPanel from './MarketAnalysisPanel.jsx';
 
 const TV_LOCALE = 'en';
@@ -318,6 +319,7 @@ export default function AILiveChartTerminal({
   // Active Symbol Object
   const currentAsset = SYMBOLS.find((s) => s.id === symbolId) || SYMBOLS[0];
   const currentPairNorm = (currentAsset.pair || 'XAUUSD').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const pairMarketStatus = useMemo(() => getMarketHoursStatus(currentAsset.pair), [currentAsset.pair]);
 
   // Live Spot Prices & Extreme Peak/Trough Prices (Wicks & High/Low)
   const [livePrice, setLivePrice] = useState(currentAsset.defaultPrice);
@@ -951,7 +953,9 @@ export default function AILiveChartTerminal({
           </span>
           <span className="ait-tele-sep">|</span>
           <span className="ait-tele-session">
-            {activeSession.name} ({activeSession.status})
+            {pairMarketStatus.isOpen
+              ? `${pairMarketStatus.sessionName} (${pairMarketStatus.sessionStatus})`
+              : `Market Closed (${pairMarketStatus.sessionName})`}
           </span>
           <span className="ait-tele-sep">|</span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#10B981', fontWeight: 800 }}>
@@ -1046,8 +1050,8 @@ export default function AILiveChartTerminal({
                 {/* Row 5: Active Trading Session Killzone */}
                 <div className="pip-msob-row session-row">
                   <span className="pip-msob-lbl">SESSION</span>
-                  <span className="pip-msob-val session-name">
-                    {(activeSession?.name || 'LONDON (KZ)').toUpperCase()}
+                  <span className={`pip-msob-val session-name ${!pairMarketStatus.isOpen ? 'text-red' : ''}`}>
+                    {(pairMarketStatus.isOpen ? pairMarketStatus.sessionName : `CLOSED (${pairMarketStatus.sessionName})`).toUpperCase()}
                   </span>
                 </div>
 
@@ -1288,7 +1292,7 @@ export default function AILiveChartTerminal({
               currentAsset={currentAsset}
               livePrice={livePrice}
               timeframe={TIMEFRAMES.find((tf) => tf.id === timeframe)?.label || '15m'}
-              activeSession={activeSession}
+              activeSession={pairMarketStatus.isOpen ? activeSession : { name: pairMarketStatus.sessionName, status: pairMarketStatus.label, color: pairMarketStatus.color }}
               isKhmer={isKhmer}
               marketAnalysis={marketAnalysis}
               isReanalyzing={isReanalyzing}

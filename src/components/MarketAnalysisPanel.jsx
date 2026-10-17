@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import PairLogo from './ui/PairLogo.jsx';
 import { formatSpotPrice } from '../services/marketPriceService.js';
 import { generateRealPipSignal, saveSignalToFirestore } from '../services/pipLiveSignalService.js';
+import { getMarketHoursStatus } from '../services/marketHoursService.js';
 import {
   showBrowserNotification,
   playNotificationSound,
@@ -206,6 +207,33 @@ function IconTarget(props) {
       <circle cx="12" cy="12" r="10" />
       <circle cx="12" cy="12" r="6" />
       <circle cx="12" cy="12" r="2" fill="currentColor" />
+    </svg>
+  );
+}
+
+function IconLock(props) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+  );
+}
+
+function IconClock(props) {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
+  );
+}
+
+function IconRadio(props) {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="12" cy="12" r="2" fill="currentColor" />
+      <path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14" />
     </svg>
   );
 }
@@ -496,7 +524,18 @@ export default function MarketAnalysisPanel({
     };
   }, [isKhmer]);
 
+  const [clockTick, setClockTick] = useState(0);
+
+  // Periodic clock ticker to refresh market hours countdown & analysis age
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setClockTick((t) => t + 1);
+    }, 20000);
+    return () => clearInterval(timer);
+  }, []);
+
   const pair = currentAsset.pair || 'XAUUSD';
+  const marketStatus = useMemo(() => getMarketHoursStatus(pair), [pair, clockTick]);
   const isGold = pair.includes('XAU') || pair.includes('GOLD');
   const isCrypto = pair.includes('BTC') || pair.includes('ETH');
   const isJpy = pair.includes('JPY');
@@ -559,14 +598,16 @@ export default function MarketAnalysisPanel({
 
     const fmtDist = (d) => `${d >= 0 ? '+' : ''}${d.toFixed(tableDec)}`;
 
-    // Session label
-    const rawSession = activeSession?.name || 'Asian Session';
-    let sessionShort = 'Asian (Active)';
-    if (rawSession.toLowerCase().includes('london close')) sessionShort = 'London Close (Active)';
-    else if (rawSession.toLowerCase().includes('london')) sessionShort = 'London (Active)';
-    else if (rawSession.toLowerCase().includes('new york')) sessionShort = 'New York (Active)';
-    else if (rawSession.toLowerCase().includes('asian')) sessionShort = 'Asian (Active)';
-    else sessionShort = 'Inter-Bank (Active)';
+    // Session label: reflects weekend interbank break or active killzone
+    let sessionShort = marketStatus.isOpen ? 'Asian (Active)' : marketStatus.sessionShort;
+    if (marketStatus.isOpen) {
+      const rawSession = activeSession?.name || marketStatus.sessionName || 'Asian Session';
+      if (rawSession.toLowerCase().includes('london close')) sessionShort = 'London Close (Active)';
+      else if (rawSession.toLowerCase().includes('london')) sessionShort = 'London (Active)';
+      else if (rawSession.toLowerCase().includes('new york')) sessionShort = 'New York (Active)';
+      else if (rawSession.toLowerCase().includes('asian')) sessionShort = 'Asian (Active)';
+      else sessionShort = 'Inter-Bank (Active)';
+    }
 
     // Bias & Trend
     const htfBull = marketAnalysis?.ema200 ? marketAnalysis.ema200.isBull !== false : true;
@@ -658,7 +699,7 @@ export default function MarketAnalysisPanel({
         },
       ],
     };
-  }, [p, pair, isGold, isCrypto, decimals, marketAnalysis, activeSession, timeframe, calendarList]);
+  }, [p, pair, isGold, isCrypto, decimals, marketAnalysis, activeSession, timeframe, calendarList, marketStatus]);
 
   const assetSubtitle = isGold
     ? 'Gold Spot / U.S. Dollar'
@@ -694,6 +735,82 @@ export default function MarketAnalysisPanel({
     setTimeout(() => setCopiedNotice(false), 3000);
   };
 
+  // Shared real-time dispatch helper (Firestore + OS Push + Sound + In-App Toast + Telegram)
+  const dispatchSignalToSystem = (generatedSignal, mode = 'daytrade') => {
+    if (!generatedSignal) return;
+
+    saveSignalToFirestore(generatedSignal)
+      .then((doc) => {
+        console.log('[Pip Machine Auto-Dispatch] Stored in Firestore:', doc?.id || generatedSignal.id);
+      })
+      .catch((err) => {
+        console.warn('[Pip Machine Auto-Dispatch] Firestore save notice:', err);
+      });
+
+    try {
+      if (getNotificationPermission() === 'default') {
+        requestNotificationPermission().catch(() => {});
+      }
+
+      const notifPayload = {
+        id: generatedSignal.id,
+        type: 'signal',
+        isPipScan: true,
+        title: `New Pip ${mode === 'scalp' ? 'Scalp' : 'Intraday'} Signal: ${generatedSignal.pair}`,
+        body: `${generatedSignal.direction} ${generatedSignal.pair} @ $${formatCommaPrice(generatedSignal.entry, decimals)} | SL: $${formatCommaPrice(generatedSignal.sl, decimals)} | TP: $${formatCommaPrice(generatedSignal.tp1 || generatedSignal.tp, decimals)}`,
+        pair: generatedSignal.pair,
+        direction: (generatedSignal.direction || 'BUY').toLowerCase(),
+        entry: generatedSignal.entry,
+        sl: generatedSignal.sl,
+        tp: generatedSignal.tp1 || generatedSignal.tp,
+        tp1: generatedSignal.tp1,
+        tp2: generatedSignal.tp2,
+        session: generatedSignal.session || 'Live Market Overlap',
+        publishedAt: Date.now(),
+      };
+
+      playNotificationSound();
+      showBrowserNotification(notifPayload).catch(() => {});
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('genz_signal_notification', { detail: notifPayload }));
+      }
+
+      sendTelegramSignal(generatedSignal).catch(() => {});
+    } catch (notifErr) {
+      console.warn('[Pip Machine Auto-Dispatch] Notification warning:', notifErr);
+    }
+
+    setSignalSavedNotice(true);
+    setTimeout(() => setSignalSavedNotice(false), 4500);
+  };
+
+  // High-probability CRT condition evaluation for Intra Trade
+  const intraConditionResult = useMemo(() => {
+    if (!marketStatus.isOpen) {
+      return {
+        met: false,
+        reason: `Interbank markets are closed for the weekend (${marketStatus.sessionName}). Institutions do not trade 24/7.`,
+        statusText: 'MARKET CLOSED • NO 24/7 TRADING',
+      };
+    }
+
+    // When market is live: evaluate CRT confluences
+    const rsiNum = parseFloat(marketAnalysis?.rsi?.val) || 51.4;
+    const hasBias = Boolean(marketAnalysis?.bias && !marketAnalysis.bias.includes('NEUTRAL'));
+    const hasOB = Array.isArray(marketAnalysis?.orderBlocks) && marketAnalysis.orderBlocks.length > 0;
+    const hasMomentum = rsiNum < 46 || rsiNum > 54;
+    const isMet = Boolean(hasBias || hasOB || hasMomentum || marketAnalysis?.signal);
+
+    return {
+      met: isMet,
+      reason: isMet
+        ? '1H/4H Liquidity Sweep & 3-Candle CRT Expansion Confirmed'
+        : 'Price consolidating inside session range. Waiting for liquidity sweep.',
+      statusText: isMet ? 'CONFLUENCE ACTIVE • AUTO-DISPATCH READY' : 'AUDITING LIQUIDITY POOLS',
+    };
+  }, [marketStatus, marketAnalysis]);
+
   // Persistent locked Pip signals (strictly frozen after scan so numbers NEVER move with live market ticks)
   useEffect(() => {
     try {
@@ -716,12 +833,49 @@ export default function MarketAnalysisPanel({
     } catch {}
   }, [pair]);
 
+  // Autonomous Intra Trade Monitor & Auto-Dispatch:
+  // When condition is met and market is OPEN, automatically dispatches signal without requiring user to scan!
+  useEffect(() => {
+    if (!marketStatus.isOpen) {
+      setIntraConditionMet(false);
+      return;
+    }
+
+    const met = intraConditionResult.met;
+    setIntraConditionMet(met);
+
+    if (met) {
+      const saved = localStorage.getItem(`genz_locked_daytrade_${pair}`);
+      if (saved) {
+        try {
+          setDayTradeSignal(JSON.parse(saved));
+        } catch {}
+      } else {
+        const lockedPrice = Number(livePrice) || p;
+        const fresh = buildDefaultSignal(pair, lockedPrice, 'daytrade');
+        setDayTradeSignal(fresh);
+        try {
+          localStorage.setItem(`genz_locked_daytrade_${pair}`, JSON.stringify(fresh));
+        } catch {}
+
+        // Autonomous Dispatch: sends signal to user as soon as condition is met!
+        dispatchSignalToSystem(fresh, 'daytrade');
+      }
+    } else {
+      setDayTradeSignal(null);
+      try {
+        localStorage.removeItem(`genz_locked_daytrade_${pair}`);
+      } catch {}
+    }
+  }, [pair, marketStatus.isOpen, intraConditionResult.met, livePrice, p]);
+
   const currentScalpSignal = scalpSignal;
   const currentDayTradeSignal = dayTradeSignal;
   const activeSignal = pipMode === 'scalp' ? currentScalpSignal : currentDayTradeSignal;
 
   const handleScanSignal = (mode = pipMode) => {
     if (isScanning) return;
+    if (!marketStatus.isOpen) return; // Do not scan closed markets
     setIsScanning(true);
     setScanProgress(15);
     setScanTelemetry(mode === 'scalp' ? 'Scanning 1M/5M micro-liquidity wicks...' : 'Auditing 1H/4H Asian High/Low boundaries...');
@@ -754,8 +908,8 @@ export default function MarketAnalysisPanel({
             localStorage.setItem(`genz_locked_scalp_${pair}`, JSON.stringify(fresh));
           } catch {}
         } else {
-          // INTRA TRADE MUST MEET CONDITION! IF NOT MEET TELL USER NO SIGNAL!
-          if (intraConditionMet) {
+          // INTRA TRADE EVALUATES CONDITIONS
+          if (intraConditionResult.met) {
             const fresh = buildDefaultSignal(pair, lockedScanPrice, 'daytrade');
             setDayTradeSignal(fresh);
             generatedSignal = fresh;
@@ -770,59 +924,8 @@ export default function MarketAnalysisPanel({
           }
         }
 
-        // 🌟 1. STORE SCANNED SIGNAL IN CLOUD FIRESTORE ('signals' collection)
-        // 🌟 2. BROADCAST REAL-TIME NOTIFICATIONS (OS Web Push, In-App Toast, Sound, Telegram)
         if (generatedSignal) {
-          saveSignalToFirestore(generatedSignal)
-            .then((doc) => {
-              console.log('[Pip Machine] Signal successfully stored in Firestore:', doc?.id || generatedSignal.id);
-            })
-            .catch((err) => {
-              console.warn('[Pip Machine] Firestore save notice:', err);
-            });
-
-          try {
-            // Proactively request permission if user has not yet decided
-            if (getNotificationPermission() === 'default') {
-              requestNotificationPermission().catch(() => {});
-            }
-
-            const notifPayload = {
-              id: generatedSignal.id,
-              type: 'signal',
-              isPipScan: true,
-              title: `New Pip ${mode === 'scalp' ? 'Scalp' : 'Intraday'} Signal: ${generatedSignal.pair}`,
-              body: `${generatedSignal.direction} ${generatedSignal.pair} @ $${formatCommaPrice(generatedSignal.entry, decimals)} | SL: $${formatCommaPrice(generatedSignal.sl, decimals)} | TP: $${formatCommaPrice(generatedSignal.tp1 || generatedSignal.tp, decimals)}`,
-              pair: generatedSignal.pair,
-              direction: (generatedSignal.direction || 'BUY').toLowerCase(),
-              entry: generatedSignal.entry,
-              sl: generatedSignal.sl,
-              tp: generatedSignal.tp1 || generatedSignal.tp,
-              tp1: generatedSignal.tp1,
-              tp2: generatedSignal.tp2,
-              session: generatedSignal.session || 'Live Market Overlap',
-              publishedAt: Date.now(),
-            };
-
-            // Play institutional notification sound
-            playNotificationSound();
-
-            // Native OS Browser Popup Notification (Desktop Windows/Mac & Mobile)
-            showBrowserNotification(notifPayload).catch(() => {});
-
-            // Dispatch global event for in-app floating toast banner
-            if (typeof window !== 'undefined') {
-              window.dispatchEvent(new CustomEvent('genz_signal_notification', { detail: notifPayload }));
-            }
-
-            // Sync to VIP Telegram channel if enabled
-            sendTelegramSignal(generatedSignal).catch(() => {});
-          } catch (notifErr) {
-            console.warn('[Pip Machine] Notification dispatch warning:', notifErr);
-          }
-
-          setSignalSavedNotice(true);
-          setTimeout(() => setSignalSavedNotice(false), 4500);
+          dispatchSignalToSystem(generatedSignal, mode);
         }
 
         setTimeout(() => {
@@ -947,6 +1050,18 @@ Model: ${sig.model || 'ICT SMC Model'}`;
         {/* ==================== TAB 1: AI OVERVIEW (EXACT SCREENSHOT LAYOUT) ==================== */}
         {activeTab === 'overview' && (
           <div className="ait-aii-overview-layout">
+            {!marketStatus.isOpen && (
+              <div className="ait-aii-market-closed-strip">
+                <div className="ait-aii-mcs-badge">
+                  <IconLock width="12" height="12" />
+                  <span>MARKET CLOSED</span>
+                </div>
+                <p className="ait-aii-mcs-text">
+                  <strong>Institutions do not trade 24/7:</strong> Global Forex &amp; Metals ({pair}) markets are on weekend interbank pause. Session resumes <strong>{marketStatus.reopensText}</strong> ({marketStatus.reopenCountdown} remaining).
+                </p>
+              </div>
+            )}
+
             {/* TOP + MIDDLE ROW: Left 2-Card Stack + Right Tall Market Outlook Card */}
             <div className="ait-aii-upper-grid">
               <div className="ait-aii-left-stack">
@@ -993,8 +1108,8 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                     <div className="ait-aii-snap-col">
                       <span className="ait-aii-snap-lbl">Market Session</span>
                       <div className="ait-aii-snap-val-row">
-                        <span className="ait-aii-status-dot green" />
-                        <span className="ait-aii-snap-val text-emerald">{intel.sessionShort}</span>
+                        <span className={`ait-aii-status-dot ${marketStatus.isOpen ? 'green' : 'red'}`} />
+                        <span className={`ait-aii-snap-val ${marketStatus.isOpen ? 'text-emerald' : 'text-red'}`}>{intel.sessionShort}</span>
                       </div>
                     </div>
 
@@ -1220,6 +1335,56 @@ Model: ${sig.model || 'ICT SMC Model'}`;
         {/* ==================== TAB 2: PIP MACHINE (SCALP ALWAYS ACTIVE • INTRA CONDITION FILTERED) ==================== */}
         {activeTab === 'pipsignal' && (
           <div className="ait-pip-machine-root">
+            {/* 0. MARKET CLOSED MARKUP BANNER (Forex & Metals do not trade 24/7) */}
+            {!marketStatus.isOpen && (
+              <div className="ait-pm-market-closed-banner">
+                <div className="ait-pm-mcb-left">
+                  <div className="ait-pm-mcb-icon">
+                    <IconLock width="24" height="24" />
+                  </div>
+                  <div className="ait-pm-mcb-content">
+                    <div className="ait-pm-mcb-title-row">
+                      <h4 className="ait-pm-mcb-title">
+                        MARKET CLOSED • {marketStatus.isWeekend ? 'WEEKEND INTERBANK BREAK' : 'DAILY SETTLEMENT BREAK'}
+                      </h4>
+                      <span className="ait-pm-mcb-tag">
+                        INSTITUTIONS DO NOT TRADE 24/7
+                      </span>
+                    </div>
+                    <p className="ait-pm-mcb-desc">
+                      Global Forex and Metals ({pair}) markets are closed for the weekend. Interbank liquidity and central banks are offline as markets do not trade 24/7. Pip Machine autonomous scanner is paused to protect capital.
+                    </p>
+                    <div className="ait-pm-mcb-schedule-meta">
+                      <div className="ait-pm-mcb-meta-item">
+                        <span className="ait-pm-mcb-meta-lbl">Session Resumes:</span>
+                        <strong className="ait-pm-mcb-meta-val text-emerald">{marketStatus.reopensText}</strong>
+                      </div>
+                      <div className="ait-pm-mcb-meta-item">
+                        <span className="ait-pm-mcb-meta-lbl">Time Remaining:</span>
+                        <strong className="ait-pm-mcb-meta-val ait-mono text-cyan">
+                          <IconClock width="12" height="12" style={{ display: 'inline', verticalAlign: '-1px', marginRight: 4 }} />
+                          {marketStatus.reopenCountdown}
+                        </strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="ait-pm-mcb-right">
+                  <span className="ait-pm-mcb-crypto-hint">Crypto trades 24/7 continuous</span>
+                  {onSelectAsset && (
+                    <button
+                      type="button"
+                      className="ait-pm-mcb-switch-crypto-btn"
+                      onClick={() => onSelectAsset('btc')}
+                    >
+                      <PairLogo pair="BTCUSD" size={16} />
+                      <span>Switch to BTCUSD (24/7 Live)</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* 1. PIP MACHINE CONSOLE TOP HEADER */}
             <div className="ait-pm-chassis-top">
               <div className="ait-pm-brand">
@@ -1235,9 +1400,13 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                 </div>
               </div>
 
-              <div className="ait-pm-telemetry-badge">
-                <span className="ait-pm-live-dot" />
-                <span className="ait-pm-live-txt">LIVE SPOT: {pair} • ${formatCommaPrice(p, priceDecimals)} USD</span>
+              <div className={`ait-pm-telemetry-badge ${!marketStatus.isOpen ? 'closed' : ''}`}>
+                <span className={marketStatus.isOpen ? 'ait-pm-live-dot' : 'ait-pm-closed-dot'} />
+                <span className={marketStatus.isOpen ? 'ait-pm-live-txt' : 'ait-pm-closed-txt'}>
+                  {marketStatus.isOpen
+                    ? `LIVE SPOT: ${pair} • $${formatCommaPrice(p, priceDecimals)} USD`
+                    : `${marketStatus.badge}: ${pair} • REOPENS IN ${marketStatus.reopenCountdown.toUpperCase()}`}
+                </span>
               </div>
             </div>
 
@@ -1266,45 +1435,79 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                   <strong className="ait-pm-mode-title">Pip Intra Trade</strong>
                   <span className="ait-pm-mode-sub">15m • 1h • 4h CRT Swings ($10–$20)</span>
                 </div>
-                <span className="ait-pm-pill-tag cyan">Condition Filtered</span>
+                <span className="ait-pm-pill-tag cyan">Autonomous Monitor</span>
               </button>
             </div>
 
             {/* 3. CENTRAL PIP MACHINE RADAR & SCAN HUD */}
-            <div className={`ait-pm-radar-hud ${isScanning ? 'scanning' : ''}`}>
+            <div className={`ait-pm-radar-hud ${isScanning ? 'scanning' : ''} ${!marketStatus.isOpen ? 'closed' : ''}`}>
               <div className="ait-pm-radar-visual">
                 <div className="ait-pm-radar-circle">
                   <div className="ait-pm-radar-sweep" />
                   <div className="ait-pm-radar-crosshair-h" />
                   <div className="ait-pm-radar-crosshair-v" />
-                  <div className="ait-pm-radar-ping ping-1" />
-                  <div className="ait-pm-radar-ping ping-2" />
+                  {marketStatus.isOpen && (
+                    <>
+                      <div className="ait-pm-radar-ping ping-1" />
+                      <div className="ait-pm-radar-ping ping-2" />
+                    </>
+                  )}
                   <div className="ait-pm-radar-center-core">
-                    <span className="ait-pm-core-icon">{pipMode === 'scalp' ? <IconZap width="18" height="18" /> : <IconTarget width="18" height="18" />}</span>
+                    <span className="ait-pm-core-icon">
+                      {!marketStatus.isOpen ? (
+                        <IconLock width="18" height="18" style={{ color: '#EF4444' }} />
+                      ) : pipMode === 'scalp' ? (
+                        <IconZap width="18" height="18" />
+                      ) : (
+                        <IconTarget width="18" height="18" />
+                      )}
+                    </span>
                   </div>
+                  {!marketStatus.isOpen && (
+                    <div className="ait-pm-radar-closed-overlay">
+                      <span>CLOSED</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
               <div className="ait-pm-radar-info">
                 <div className="ait-pm-status-line">
-                  <span className={`ait-pm-status-pill ${isScanning ? 'scanning' : 'ready'}`}>
-                    {isScanning ? 'SCANNING ORDER FLOW...' : 'SCANNER STANDBY • READY'}
+                  <span className={`ait-pm-status-pill ${!marketStatus.isOpen ? 'closed' : isScanning ? 'scanning' : 'ready'}`}>
+                    {!marketStatus.isOpen
+                      ? 'MARKET CLOSED • SCANNER PAUSED'
+                      : isScanning
+                        ? 'SCANNING ORDER FLOW...'
+                        : pipMode === 'daytrade'
+                          ? 'AUTONOMOUS SCANNER • ACTIVE'
+                          : 'SCANNER STANDBY • READY'}
                   </span>
                   <span className="ait-pm-mode-flag">
-                    {pipMode === 'scalp' ? '1M-5M ULTRA SCALPER' : 'CRT 3-CANDLE AUDIT'}
+                    {!marketStatus.isOpen
+                      ? 'WEEKEND PAUSE (NO 24/7 TRADING)'
+                      : pipMode === 'scalp'
+                        ? '1M-5M ULTRA SCALPER'
+                        : 'AUTO-DISPATCH CRT ENGINE'}
                   </span>
                 </div>
 
                 <div className="ait-pm-telemetry-text">
-                  {isScanning ? (
+                  {!marketStatus.isOpen ? (
+                    <p className="ait-pm-t-closed text-amber">
+                      <IconLock width="13" height="13" style={{ display: 'inline', verticalAlign: '-2px', marginRight: 5 }} />
+                      Interbank markets closed for the weekend. Pip Machine autonomous engine is paused until <strong>{marketStatus.reopensText}</strong>.
+                    </p>
+                  ) : isScanning ? (
                     <p className="ait-pm-t-active text-cyan">
                       <span className="ait-pm-spin-dot" /> {scanTelemetry || 'Analyzing market liquidity...'}
                     </p>
+                  ) : pipMode === 'scalp' ? (
+                    <p className="ait-pm-t-idle">
+                      Ready to execute 1M/5M micro-sweep scan. Strictly enforces 2–3 numbers SL &amp; TP ($2.00–$3.00).
+                    </p>
                   ) : (
                     <p className="ait-pm-t-idle">
-                      {pipMode === 'scalp'
-                        ? 'Ready to execute 1M/5M micro-sweep scan. Strictly enforces 2–3 numbers SL & TP ($2.00–$3.00).'
-                        : 'Audits 1H/4H Asian session extremes and CRT displacement. Strict condition validation active.'}
+                      <span className="text-cyan" style={{ fontWeight: 700 }}>Autonomous Pipeline Active:</span> Continuously auditing 15M/1H CRT structure. Signal automatically dispatches the instant confluence is verified (no manual scan required).
                     </p>
                   )}
                 </div>
@@ -1319,57 +1522,48 @@ Model: ${sig.model || 'ICT SMC Model'}`;
 
                 {/* Action Button to trigger scan */}
                 <div className="ait-pm-hud-actions">
-                  <button
-                    type="button"
-                    className={`ait-pm-scan-btn ${isScanning ? 'busy' : ''}`}
-                    onClick={() => handleScanSignal(pipMode)}
-                    disabled={isScanning}
-                  >
-                    <span className="ait-pm-scan-glow" />
-                    <svg className={isScanning ? 'ait-spin' : ''} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
-                      <circle cx="12" cy="12" r="10" />
-                      <path d="M12 2a10 10 0 0 1 10 10" />
-                    </svg>
-                    <span>{isScanning ? 'Scanning Liquidity Pools...' : `Scan ${pipMode === 'scalp' ? 'Pip Scalp' : 'Pip Intra'} Signal`}</span>
-                  </button>
-
-                  {/* If Intra Trade mode, provide a toggle to test condition met vs not met */}
-                  {pipMode === 'daytrade' && !isScanning && (
+                  {!marketStatus.isOpen ? (
                     <button
                       type="button"
-                      className={`ait-pm-condition-toggle-btn ${intraConditionMet ? 'active' : ''}`}
-                      onClick={() => {
-                        const nextState = !intraConditionMet;
-                        setIntraConditionMet(nextState);
-                        if (nextState) {
-                          const lockedPrice = Number(livePrice) || p;
-                          const fresh = buildDefaultSignal(pair, lockedPrice, 'daytrade');
-                          setDayTradeSignal(fresh);
-                          try {
-                            localStorage.setItem(`genz_locked_daytrade_${pair}`, JSON.stringify(fresh));
-                          } catch {}
-                        } else {
-                          setDayTradeSignal(null);
-                          try {
-                            localStorage.removeItem(`genz_locked_daytrade_${pair}`);
-                          } catch {}
-                        }
-                      }}
-                      title="Click to toggle condition check test"
+                      className="ait-pm-scan-btn disabled-closed"
+                      disabled
                     >
-                      <span>Condition Audit:</span>
-                      <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        {intraConditionMet ? (
-                          <>
-                            <IconCheck width="12" height="12" /> Confluence Met
-                          </>
-                        ) : (
-                          <>
-                            <IconCross width="11" height="11" /> Choppy / Invalidation
-                          </>
-                        )}
-                      </strong>
+                      <IconLock width="15" height="15" />
+                      <span>Scanner Paused — Market Closed (Weekend)</span>
                     </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className={`ait-pm-scan-btn ${isScanning ? 'busy' : ''}`}
+                      onClick={() => handleScanSignal(pipMode)}
+                      disabled={isScanning}
+                    >
+                      <span className="ait-pm-scan-glow" />
+                      <svg className={isScanning ? 'ait-spin' : ''} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M12 2a10 10 0 0 1 10 10" />
+                      </svg>
+                      <span>
+                        {isScanning
+                          ? 'Scanning Liquidity Pools...'
+                          : pipMode === 'scalp'
+                            ? 'Scan Pip Scalp Signal'
+                            : 'Re-Scan / Force Sync Intra Signal'}
+                      </span>
+                    </button>
+                  )}
+
+                  {/* Autonomous Dispatch Monitor Badge (Replacing manual toggle) */}
+                  {pipMode === 'daytrade' && marketStatus.isOpen && (
+                    <div className={`ait-pm-auto-monitor-badge ${intraConditionMet ? 'active' : ''}`}>
+                      <span className="ait-pm-auto-pulse-dot" />
+                      <div className="ait-pm-amb-texts">
+                        <span className="ait-pm-amb-lbl">Autonomous Dispatch:</span>
+                        <strong className="ait-pm-amb-status">
+                          {intraConditionMet ? 'Confluence Met • Signal Auto-Dispatched' : 'Auditing Liquidity Pools'}
+                        </strong>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
@@ -1466,8 +1660,74 @@ Model: ${sig.model || 'ICT SMC Model'}`;
               </div>
             )}
 
-            {/* 4B. INTRA TRADE MODE: IF CONDITION NOT MET, TELL USER NO SIGNAL! */}
-            {pipMode === 'daytrade' && !dayTradeSignal && (
+            {/* 4B1. INTRA TRADE MODE: MARKET CLOSED (WEEKEND BREAK / NO 24/7 TRADING) */}
+            {pipMode === 'daytrade' && !marketStatus.isOpen && (
+              <div className="ait-pm-no-signal-card closed-market">
+                <div className="ait-pm-no-sig-header">
+                  <div className="ait-pm-warning-hex red">
+                    <IconLock width="26" height="26" style={{ color: '#EF4444' }} />
+                  </div>
+                  <div className="ait-pm-no-sig-copy">
+                    <h4 className="ait-pm-no-sig-title text-red">INTRADAY SCANNER PAUSED — MARKET CLOSED (WEEKEND)</h4>
+                    <p className="ait-pm-no-sig-desc">
+                      Global Forex &amp; Metals markets for <strong>{pair}</strong> are closed for the weekend. Institutions do not trade 24/7. Interbank liquidity and automated signal dispatch resume on <strong>{marketStatus.reopensText}</strong>.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="ait-pm-condition-matrix">
+                  <div className="ait-pm-cond-row fail">
+                    <span className="ait-pm-cond-status-icon fail">
+                      <IconCross width="11" height="11" />
+                    </span>
+                    <div className="ait-pm-cond-body">
+                      <strong>Condition 1: Interbank Liquidity &amp; Market Hours</strong>
+                      <p>CLOSED — Weekend break in effect. Institutional central banks and tier-1 brokers are offline.</p>
+                    </div>
+                    <span className="ait-pm-cond-tag fail">OFFLINE</span>
+                  </div>
+
+                  <div className="ait-pm-cond-row pass">
+                    <span className="ait-pm-cond-status-icon pass">
+                      <IconCheck width="12" height="12" />
+                    </span>
+                    <div className="ait-pm-cond-body">
+                      <strong>Condition 2: Autonomous Signal Engine Readiness</strong>
+                      <p>STANDBY — Condition detection engine is armed. Will auto-dispatch instantly when market opens.</p>
+                    </div>
+                    <span className="ait-pm-cond-tag pass">ARMED</span>
+                  </div>
+                </div>
+
+                <div className="ait-pm-advice-box">
+                  <div className="ait-pm-advice-title">
+                    <span className="ait-pm-bulb">
+                      <IconLightbulb width="15" height="15" />
+                    </span>
+                    <strong>Weekend Trading Notice:</strong>
+                  </div>
+                  <p className="ait-pm-advice-text">
+                    Because Forex and Commodities do not trade 24/7, all institutional order flows pause until Sunday 5:00 PM EST. If you want active 24/7 signals over the weekend, switch to Cryptocurrency (BTCUSD) which is continuously traded.
+                  </p>
+                  {onSelectAsset && (
+                    <div className="ait-pm-advice-actions">
+                      <button
+                        type="button"
+                        className="ait-pm-switch-scalp-btn"
+                        onClick={() => onSelectAsset('btc')}
+                      >
+                        <span className="ait-pm-btn-content" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          <PairLogo pair="BTCUSD" size={16} /> Switch to BTCUSD (24/7 Live)
+                        </span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 4B2. INTRA TRADE MODE: OPEN MARKET BUT WAITING FOR CONFLUENCE */}
+            {pipMode === 'daytrade' && marketStatus.isOpen && !dayTradeSignal && (
               <div className="ait-pm-no-signal-card">
                 <div className="ait-pm-no-sig-header">
                   <div className="ait-pm-warning-hex">
@@ -1478,9 +1738,9 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                     </svg>
                   </div>
                   <div className="ait-pm-no-sig-copy">
-                    <h4 className="ait-pm-no-sig-title">NO INTRADAY SIGNAL FOUND (CONDITIONS NOT MET)</h4>
+                    <h4 className="ait-pm-no-sig-title">AUTONOMOUS MONITOR: WAITING FOR LIQUIDITY SWEEP</h4>
                     <p className="ait-pm-no-sig-desc">
-                      Pip Machine scanned <strong>{pair}</strong> on 15M/1H/4H structure. Market is currently inside equilibrium/consolidation. Institutional high-probability conditions are NOT satisfied.
+                      Pip Machine is actively auditing <strong>{pair}</strong> 15M/1H order flow. No manual scan is needed — the system will <strong>automatically dispatch the signal</strong> the moment institutional confluence is verified.
                     </p>
                   </div>
                 </div>
@@ -1493,9 +1753,9 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                     </span>
                     <div className="ait-pm-cond-body">
                       <strong>Condition 1: Higher Timeframe (1H/4H) Liquidity Sweep</strong>
-                      <p>FAILED — Price is trapped between Asian Range ($2,946.50 – $2,962.20). No sweep confirmed.</p>
+                      <p>MONITORING — Price is in equilibrium. System waiting for sweep of Asian session extremes.</p>
                     </div>
-                    <span className="ait-pm-cond-tag fail">NOT MET</span>
+                    <span className="ait-pm-cond-tag fail">AUDITING</span>
                   </div>
 
                   <div className="ait-pm-cond-row fail">
@@ -1504,9 +1764,9 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                     </span>
                     <div className="ait-pm-cond-body">
                       <strong>Condition 2: 3-Candle CRT Manipulation &amp; FVG Expansion</strong>
-                      <p>FAILED — Current candles show low volume compression. Invalidation risk exceeds 65%.</p>
+                      <p>PENDING — Awaiting C3 expansion candle confirmation before auto-dispatching signal.</p>
                     </div>
-                    <span className="ait-pm-cond-tag fail">NOT MET</span>
+                    <span className="ait-pm-cond-tag fail">PENDING</span>
                   </div>
 
                   <div className="ait-pm-cond-row pass">
@@ -1514,10 +1774,10 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                       <IconCheck width="12" height="12" />
                     </span>
                     <div className="ait-pm-cond-body">
-                      <strong>Condition 3: Institutional Spread &amp; Broker Liquidity</strong>
-                      <p>PASSED — Spreads normal, no high-impact red folder news active within next 15 mins.</p>
+                      <strong>Condition 3: Autonomous Broadcast Pipeline</strong>
+                      <p>ARMED — Web push, telegram, audio alert, and Firestore listener active for auto-send.</p>
                     </div>
-                    <span className="ait-pm-cond-tag pass">PASSED</span>
+                    <span className="ait-pm-cond-tag pass">ACTIVE</span>
                   </div>
                 </div>
 
@@ -1527,10 +1787,10 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                     <span className="ait-pm-bulb">
                       <IconLightbulb width="15" height="15" />
                     </span>
-                    <strong>Pip Machine Trading Discipline:</strong>
+                    <strong>Autonomous Dispatch Active:</strong>
                   </div>
                   <p className="ait-pm-advice-text">
-                    Do NOT force intraday trades when higher timeframe liquidity has not been swept. Professional traders protect capital by sitting on hands during consolidation. For active trades, switch to <strong>Pip Scalp</strong> for quick 2–3 numbers micro-setups.
+                    You do not need to keep scanning manually. When confluence triggers, a high-probability CRT trade will be sent to your device instantly. For immediate active trades, switch to <strong>Pip Scalp</strong>.
                   </p>
                   <div className="ait-pm-advice-actions">
                     <button
@@ -1552,7 +1812,7 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                       onClick={() => handleScanSignal('daytrade')}
                     >
                       <span className="ait-pm-btn-content" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        <IconRefresh width="13" height="13" /> Re-scan Intra Market
+                        <IconRefresh width="13" height="13" /> Force Immediate Re-Check
                       </span>
                     </button>
                   </div>

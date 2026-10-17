@@ -16,6 +16,7 @@ import { fetchLivePrice, formatSpotPrice, subscribeLiveTicks, evaluateSignalOutc
 import { subscribeSignals, updateSignalStatus } from '../data/signals.js';
 import { getUserPlan } from '../data/auth.js';
 import { clearStoredPipSignals, generateRealPipSignal, buildVerifiedTradeConfluences } from '../services/pipLiveSignalService.js';
+import { getMarketHoursStatus } from '../services/marketHoursService.js';
 import AILiveChartTerminal from './AILiveChartTerminal.jsx';
 import ReferralAccessModal from './ReferralAccessModal.jsx';
 import PairLogo, {
@@ -219,27 +220,24 @@ function ScannerPairDropdown({ selectedPair, onSelectPair, livePrices }) {
   );
 }
 
-function getActiveTradingSession() {
-  const now = new Date();
-  const utcHour = now.getUTCHours();
-  const utcMin = now.getUTCMinutes();
-  const totalUtcMinutes = utcHour * 60 + utcMin;
-
-  // Asian Range: 00:00 - 06:00 GMT (07:00 - 13:00 GMT+7)
-  // London Open Killzone: 07:00 - 10:00 GMT (14:00 - 17:00 GMT+7)
-  // New York AM Killzone: 12:30 - 15:00 GMT (19:30 - 22:00 GMT+7)
-  // London Close: 15:00 - 17:00 GMT (22:00 - 00:00 GMT+7)
-  if (totalUtcMinutes >= 750 && totalUtcMinutes < 900) {
-    return { name: 'New York AM Killzone', status: 'Active (Peak High Volatility)', color: '#10B981' };
-  } else if (totalUtcMinutes >= 420 && totalUtcMinutes < 600) {
-    return { name: 'London Open Killzone', status: 'Active (High Institutional Volume)', color: '#10B981' };
-  } else if (totalUtcMinutes >= 0 && totalUtcMinutes < 360) {
-    return { name: 'Asian Session', status: 'Active (Initial Balance / Accumulation)', color: '#00F2FE' };
-  } else if (totalUtcMinutes >= 900 && totalUtcMinutes < 1020) {
-    return { name: 'London Close Session', status: 'Active (Daily Retracement Phase)', color: '#F59E0B' };
-  } else {
-    return { name: 'Off-Killzone Inter-Bank', status: 'Low Volatility Consolidation', color: 'var(--mute)' };
+function getActiveTradingSession(pair = 'XAUUSD') {
+  const m = getMarketHoursStatus(pair);
+  if (!m.isOpen) {
+    return {
+      name: m.sessionName,
+      status: m.label,
+      color: m.color,
+      isOpen: false,
+      reason: m.reason,
+      reopensText: m.reopensText,
+    };
   }
+  return {
+    name: m.sessionName,
+    status: m.sessionStatus,
+    color: m.color,
+    isOpen: true,
+  };
 }
 
 // Data Binding Helper: extracts & formats price values dynamically from active signal payload
@@ -977,8 +975,8 @@ export default function AITradingPage({
               0.03 LOT • 1:2.0 R:R
             </span>
             <span className="ait-neural-chip">
-              <span className="ait-neural-chip-dot purple" />
-              {activeSession.name}
+              <span className={`ait-neural-chip-dot ${activeSession.isOpen ? 'purple' : 'red'}`} />
+              {activeSession.isOpen ? activeSession.name : `Market Closed (${activeSession.name})`}
             </span>
           </div>
 
@@ -1786,6 +1784,19 @@ export default function AITradingPage({
                   <IconSendPlane size={15} />
                   <span>{isKhmer ? 'ផ្ញើសារទៅ Admin ដោះសោ Signal (@Vengsopheagenz)' : 'DM Admin on Telegram to Unlock (@Vengsopheagenz)'}</span>
                 </a>
+              </div>
+            </div>
+          )}
+
+          {/* Market Closed Banner above Signal Grid (Institutions do not trade 24/7) */}
+          {!activeSession.isOpen && signalFilter !== 'crypto' && (
+            <div className="ait-signals-market-closed-bar">
+              <div className="ait-smcb-icon">
+                <LockIcon style={{ width: 15, height: 15 }} />
+              </div>
+              <div className="ait-smcb-content">
+                <strong>MARKET CLOSED • WEEKEND BREAK:</strong>
+                <span>Forex and Metals markets do not trade 24/7. Interbank trading re-opens Sunday 5:00 PM EST ({activeSession.reopensText || 'Monday 05:00 AM UTC+7'}). Select Crypto (BTCUSD) for continuous 24/7 weekend markets.</span>
               </div>
             </div>
           )}
