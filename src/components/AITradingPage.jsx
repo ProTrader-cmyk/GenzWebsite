@@ -18,7 +18,6 @@ import { getUserPlan } from '../data/auth.js';
 import { clearStoredPipSignals, generateRealPipSignal, buildVerifiedTradeConfluences } from '../services/pipLiveSignalService.js';
 import { getMarketHoursStatus } from '../services/marketHoursService.js';
 import AILiveChartTerminal from './AILiveChartTerminal.jsx';
-import IctXauusdBacktestDashboard from './IctXauusdBacktestDashboard.jsx';
 import backtestArtifact from '../data/xauusdIctBacktest.json';
 import { BACKTEST_SIGNALS } from '../data/backtestSignals.js';
 import ReferralAccessModal from './ReferralAccessModal.jsx';
@@ -1518,9 +1517,6 @@ export default function AITradingPage({
                 : 'Signals and backtest research are for educational and analytical purposes only. This is not financial advice. Trading involves risk of loss. Always adhere to 0.5%–1.0% account risk.'}
             </span>
           </div>
-
-          {/* Audited ICT XAUUSD Historical Backtest Performance Dashboard */}
-          <IctXauusdBacktestDashboard isKhmer={isKhmer} />
 
           {/* Live Pip AI Scanner Action Bar */}
           <div className="ait-pip-scanner-trigger-bar">

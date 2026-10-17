@@ -115,3 +115,4 @@ export const BACKTEST_SIGNALS = buildSignalsFromBacktest(backtestArtifact.trades
 );
 
 export default BACKTEST_SIGNALS;
+
