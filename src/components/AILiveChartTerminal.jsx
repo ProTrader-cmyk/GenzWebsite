@@ -8,6 +8,7 @@ import { fetchLivePrice, formatSpotPrice, subscribeLiveTicks, fetchLiveExtremePr
 import { run15mMarketReanalysis, get15mCandleTimeRemaining } from '../services/marketAnalysisService.js';
 import { getMarketHoursStatus } from '../services/marketHoursService.js';
 import MarketAnalysisPanel from './MarketAnalysisPanel.jsx';
+import { BACKTEST_SIGNALS } from '../data/backtestSignals.js';
 
 const TV_LOCALE = 'en';
 
@@ -158,7 +159,7 @@ export default function AILiveChartTerminal({
   const hudCardRef = useRef(null);
 
   // In-Chart Auto Trade Setup State & Drag
-  const [liveSignals, setLiveSignals] = useState([]);
+  const [liveSignals, setLiveSignals] = useState(BACKTEST_SIGNALS);
   const [closedSignalIds, setClosedSignalIds] = useState(() => new Set());
   const [recentOutcomeNotice, setRecentOutcomeNotice] = useState(null);
   const [autoSetupActive, setAutoSetupActive] = useState(true);
@@ -302,15 +303,23 @@ export default function AILiveChartTerminal({
       const unsub = onSnapshot(q, (snapshot) => {
         const list = [];
         snapshot.forEach((d) => {
-          list.push({ id: d.id, ...d.data() });
+          const data = d.data();
+          if (d.id.startsWith('ICT-XAU-') || Boolean(data.isBacktest)) {
+            list.push({ id: d.id, ...data });
+          }
         });
-        setLiveSignals(list);
+        const mergedMap = new Map();
+        BACKTEST_SIGNALS.forEach((s) => mergedMap.set(s.id, s));
+        list.forEach((s) => mergedMap.set(s.id, { ...mergedMap.get(s.id), ...s }));
+        setLiveSignals(Array.from(mergedMap.values()));
       }, (err) => {
         console.warn('[AILiveChartTerminal] Signals subscription notice:', err);
+        setLiveSignals(BACKTEST_SIGNALS);
       });
       return () => unsub();
     } catch (err) {
       console.warn('[AILiveChartTerminal] Signals query error:', err);
+      setLiveSignals(BACKTEST_SIGNALS);
     }
   }, [activeSignals]);
 
@@ -434,7 +443,7 @@ export default function AILiveChartTerminal({
     // Find active intra trade setup candidate from list, even if currentActiveSetup already suppressed it
     const list = activeSignals && activeSignals.length > 0 ? activeSignals : liveSignals;
     const targetSetup = currentActiveSetup || list.find((s) => {
-      if (!s || closedSignalIds.has(s.id)) return false;
+      if (!s || closedSignalIds.has(s.id) || s.isBacktest) return false;
       if (!isIntraTradeSignal(s)) return false;
       const sPair = (s.pair || s.symbol || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
       const isMatch = sPair === currentPairNorm || 

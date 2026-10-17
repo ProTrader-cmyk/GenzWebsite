@@ -2093,6 +2093,10 @@
   background: rgba(239, 68, 68, 0.15);
   color: #EF4444;
 }
+.ait-footer-res-badge.be {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38BDF8;
+}
 .ait-footer-res-badge.active {
   background: rgba(0, 242, 254, 0.15);
   color: #00F2FE;
@@ -7488,6 +7492,12 @@
   background: rgba(239, 68, 68, 0.12);
   border: 1px solid rgba(239, 68, 68, 0.35);
   color: #EF4444;
+}
+
+.ait-outcome-pill.be {
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #38BDF8;
 }
 
 /* Price Levels (Vertical Clean List) */

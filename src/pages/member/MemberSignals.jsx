@@ -10,12 +10,14 @@ import {
 } from '../../services/marketPriceService.js';
 import { GoldAssetEmblem, SignalStrengthBars, formatSignalDate, formatLevelPrice, parseDateInput } from '../../components/ui/SignalEmblems.jsx';
 import PairLogo from '../../components/ui/PairLogo.jsx';
+import { BACKTEST_SIGNALS } from '../../data/backtestSignals.js';
 import '../../styles/aiTradingPage.css';
 
 const STATUS_FILTERS = [
   { key: 'all', label: 'All Signals' },
   { key: 'active', label: '⚡ Active Setups' },
   { key: 'tp', label: '✓ Hit Take Profit' },
+  { key: 'be', label: '✓ Break-Even' },
   { key: 'sl', label: '✕ Hit Stop Loss' },
 ];
 
@@ -80,7 +82,9 @@ function SignalCard({ signal, livePrice }) {
   const tf = (signal.timeframe || signal.mode || '15m').toUpperCase();
   const cleanTf = (tf.match(/\b(1M|5M|15M|30M|1H|4H|D1)\b/i)?.[0] || '15M').toUpperCase();
   const timeframeTag = `INTRADAY (${cleanTf})`;
-  const assetSubtitle = isGold ? `Gold · ${cleanTf.toLowerCase()}` : `${asset.replace('USD', '')} · ${cleanTf.toLowerCase()}`;
+  const assetSubtitle = signal.trade_id
+    ? `${signal.trade_id} · Gold · ${cleanTf.toLowerCase()}`
+    : isGold ? `Gold · ${cleanTf.toLowerCase()}` : `${asset.replace('USD', '')} · ${cleanTf.toLowerCase()}`;
 
   const entryNum = parseFloat(signal.entry) || 0;
   const slNum = parseFloat(signal.sl) || 0;
@@ -88,6 +92,7 @@ function SignalCard({ signal, livePrice }) {
 
   const isWin = signal.status === 'tp';
   const isLoss = signal.status === 'sl';
+  const isBe = signal.status === 'be' || signal.status === 'breakeven';
   const isActive = signal.status === 'active';
   const conf = signal.confidence || (isBuy ? 88 : 84);
 
@@ -107,12 +112,14 @@ function SignalCard({ signal, livePrice }) {
                 <span>{dir}</span>
               </span>
               <span className={`ait-desk-pill ${isBuy ? 'buy' : 'sell'}`}>DESK</span>
-              {(!isWin && !isLoss && signal.status === 'active') ? (
+              {(!isWin && !isLoss && !isBe && signal.status === 'active') ? (
                 <span className="ait-active-setup-pill">
                   <span className="ait-pulse-dot" /> ACTIVE SETUP
                 </span>
               ) : isWin ? (
                 <span className="ait-outcome-pill tp">✓ TP HIT</span>
+              ) : isBe ? (
+                <span className="ait-outcome-pill be">✓ BREAK-EVEN</span>
               ) : isLoss ? (
                 <span className="ait-outcome-pill sl">✕ STOPPED OUT</span>
               ) : null}
@@ -243,15 +250,20 @@ function SignalCard({ signal, livePrice }) {
 }
 
 export default function MemberSignals({ plan = 'elite' }) {
-  const [signals, setSignals] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [signals, setSignals] = useState(BACKTEST_SIGNALS);
+  const [loading, setLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
   const [toast, setToast] = useState(null);
   const [livePrices, setLivePrices] = useState({});
 
   useEffect(() => {
     const unsub = subscribeSignals((list) => {
-      setSignals(list);
+      if (Array.isArray(list) && list.length > 0) {
+        const filtered = list.filter((s) => s.id?.startsWith('ICT-XAU-') || s.isBacktest);
+        setSignals(filtered.length > 0 ? filtered : BACKTEST_SIGNALS);
+      } else {
+        setSignals(BACKTEST_SIGNALS);
+      }
       setLoading(false);
     });
     return () => unsub();
@@ -278,8 +290,8 @@ export default function MemberSignals({ plan = 'elite' }) {
       if (cancelled) return;
       setLivePrices((prev) => ({ ...prev, ...incoming }));
 
-      // Instant TP / SL outcome evaluation on every single live tick
-      const activeList = signals.filter((s) => s.status === 'active');
+      // Instant TP / SL outcome evaluation on every single live tick (strictly non-backtest active setups)
+      const activeList = signals.filter((s) => s.status === 'active' && !s.isBacktest);
       for (const s of activeList) {
         const pair = s.pair || 'XAUUSD';
         const currentPrice = incoming[pair];

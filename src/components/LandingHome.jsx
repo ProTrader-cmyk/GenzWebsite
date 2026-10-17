@@ -20,6 +20,7 @@ import {
   UserIcon,
 } from './ui/CategoryIcons.jsx';
 import HowPipWorks from './HowPipWorks.jsx';
+import { BACKTEST_SIGNALS } from '../data/backtestSignals.js';
 import '../styles/landing.css';
 
 function getActiveTradingSession() {
@@ -55,7 +56,7 @@ export default function LandingHome({
   // Real-time Live Gold Price state
   const [liveGoldPrice, setLiveGoldPrice] = useState(null);
   const [goldChange, setGoldChange] = useState({ pct: '+1.26%', isUp: true });
-  const [firestoreSignals, setFirestoreSignals] = useState([]);
+  const [firestoreSignals, setFirestoreSignals] = useState(BACKTEST_SIGNALS);
 
   // Ultra-smooth GPU-composited lerp scroll animation (zero DOM style cascade or repaint)
   useEffect(() => {
@@ -176,7 +177,7 @@ export default function LandingHome({
       });
     }, 4000);
 
-    // 4. Real-time Firestore signals subscription
+    // 4. Real-time Firestore signals subscription (strictly audited backtest signals)
     let unsubSignals = () => {};
     try {
       unsubSignals = onSnapshot(
@@ -184,9 +185,18 @@ export default function LandingHome({
         (snapshot) => {
           const list = [];
           snapshot.forEach((docSnap) => {
-            list.push({ id: docSnap.id, ...docSnap.data() });
+            const data = docSnap.data();
+            const docId = docSnap.id;
+            const isBacktest = docId.startsWith('ICT-XAU-') || Boolean(data.isBacktest);
+            if (!isBacktest) return;
+            list.push({ id: docId, ...data });
           });
-          setFirestoreSignals(list);
+          const mergedMap = new Map();
+          BACKTEST_SIGNALS.forEach((s) => mergedMap.set(s.id, s));
+          list.forEach((s) => mergedMap.set(s.id, { ...mergedMap.get(s.id), ...s }));
+          const combined = Array.from(mergedMap.values());
+          combined.sort((a, b) => (b._timeMs || b.publishedAt || 0) - (a._timeMs || a.publishedAt || 0));
+          setFirestoreSignals(combined);
         },
         (err) => console.warn('[LandingHome] Firestore signals error:', err)
       );
@@ -201,8 +211,8 @@ export default function LandingHome({
     };
   }, []);
 
-  // Starting balance is $1,000 and all position sizes are 0.03 lot
-  const STARTING_BALANCE = 1000.00;
+  // Starting capital is $10,000.00 and all position sizes are 0.03 lot
+  const STARTING_BALANCE = 10000.00;
   const POSITION_LOT_SIZE = 0.03;
 
   const portfolio = useMemo(() => {
@@ -211,62 +221,30 @@ export default function LandingHome({
     let closedCount = 0;
     let winsCount = 0;
     let lossesCount = 0;
+    let breakevenCount = 0;
 
     firestoreSignals.forEach((sig) => {
-      const pair = (sig.pair || sig.symbol || 'XAUUSD').toUpperCase();
-      const isGold = pair.includes('XAU') || pair.includes('GOLD');
-      const isJpy = pair.includes('JPY');
-      const isCrypto = pair.includes('BTC') || pair.includes('ETH') || pair.includes('US30');
-      const direction = (sig.direction || 'BUY').toUpperCase();
-      const isBuy = direction === 'BUY';
-
-      const entry = parseFloat(sig.entry ?? sig.entry_price ?? sig.entryPrice) || 0;
-      const sl = parseFloat(sig.sl ?? sig.stop_loss ?? sig.stopLoss) || 0;
-      const tp = parseFloat(sig.tp ?? sig.take_profit ?? sig.takeProfit) || 0;
-
-      const rawStatus = (sig.status || 'active').toLowerCase();
-      const isTp = rawStatus === 'tp' || rawStatus === 'win';
-      const isSl = rawStatus === 'sl' || rawStatus === 'loss';
+      const rawStatus = (sig.status || '').toLowerCase();
+      const outcome = String(sig.outcome || '').toUpperCase();
+      const isTp = rawStatus === 'tp' || rawStatus === 'win' || outcome === 'WIN';
+      const isSl = rawStatus === 'sl' || rawStatus === 'loss' || outcome === 'LOSS';
+      const isBe = rawStatus === 'be' || rawStatus === 'breakeven' || outcome === 'BREAKEVEN';
 
       if (isTp) {
         closedCount++;
         winsCount++;
-        let tradeProfit = 0;
-        if (isGold) {
-          const points = (entry > 0 && tp > 0) ? Math.abs(tp - entry) : 30.0;
-          tradeProfit = points * 100 * POSITION_LOT_SIZE; // $3.00 per point
-        } else if (isJpy) {
-          const pips = (entry > 0 && tp > 0) ? Math.abs(tp - entry) * 100 : 70;
-          tradeProfit = pips * 0.30;
-        } else if (isCrypto) {
-          const points = (entry > 0 && tp > 0) ? Math.abs(tp - entry) : 800;
-          tradeProfit = points * POSITION_LOT_SIZE;
-        } else {
-          const pips = (entry > 0 && tp > 0) ? Math.abs(tp - entry) * 10000 : 60;
-          tradeProfit = pips * 0.30;
-        }
-        realizedPnL += tradeProfit;
+        const pnl = typeof sig.net_pnl === 'number' ? sig.net_pnl : 84.93;
+        realizedPnL += pnl;
       } else if (isSl) {
         closedCount++;
         lossesCount++;
-        let tradeLoss = 0;
-        if (isGold) {
-          const points = (entry > 0 && sl > 0) ? Math.abs(entry - sl) : 12.0;
-          tradeLoss = points * 100 * POSITION_LOT_SIZE;
-        } else if (isJpy) {
-          const pips = (entry > 0 && sl > 0) ? Math.abs(entry - sl) * 100 : 25;
-          tradeLoss = pips * 0.30;
-        } else if (isCrypto) {
-          const points = (entry > 0 && sl > 0) ? Math.abs(entry - sl) : 350;
-          tradeLoss = points * POSITION_LOT_SIZE;
-        } else {
-          const pips = (entry > 0 && sl > 0) ? Math.abs(entry - sl) * 10000 : 25;
-          tradeLoss = pips * 0.30;
-        }
-        realizedPnL -= tradeLoss;
-      } else if (liveGoldPrice && isGold && entry > 0) {
-        const diff = isBuy ? (liveGoldPrice - entry) : (entry - liveGoldPrice);
-        floatingPnL += diff * 100 * POSITION_LOT_SIZE;
+        const pnl = typeof sig.net_pnl === 'number' ? Math.abs(sig.net_pnl) : 52.59;
+        realizedPnL -= pnl;
+      } else if (isBe) {
+        closedCount++;
+        breakevenCount++;
+        const pnl = typeof sig.net_pnl === 'number' ? sig.net_pnl : 0;
+        realizedPnL += pnl;
       }
     });
 
@@ -274,15 +252,16 @@ export default function LandingHome({
     const netProfit = currentBalance - STARTING_BALANCE;
     const roiPercent = ((currentBalance - STARTING_BALANCE) / STARTING_BALANCE) * 100;
 
-    // Generate real trade-by-trade progression bars matching real signals
+    // Generate real trade-by-trade progression matching backtest signals
     const closedSignals = firestoreSignals.filter((s) => {
       const st = (s.status || '').toLowerCase();
-      return st === 'tp' || st === 'win' || st === 'sl' || st === 'loss';
+      const out = String(s.outcome || '').toUpperCase();
+      return st === 'tp' || st === 'win' || st === 'sl' || st === 'loss' || st === 'be' || out === 'WIN' || out === 'LOSS' || out === 'BREAKEVEN';
     });
 
     closedSignals.sort((a, b) => {
-      const tA = Number(a.publishedAt || a.createdAt?.toMillis?.() || 0);
-      const tB = Number(b.publishedAt || b.createdAt?.toMillis?.() || 0);
+      const tA = Number(a._timeMs || a.publishedAt || a.createdAt?.toMillis?.() || 0);
+      const tB = Number(b._timeMs || b.publishedAt || b.createdAt?.toMillis?.() || 0);
       return tA - tB;
     });
 
@@ -296,46 +275,14 @@ export default function LandingHome({
     ];
 
     closedSignals.forEach((sig, idx) => {
-      const pair = (sig.pair || sig.symbol || 'XAUUSD').toUpperCase();
-      const isGold = pair.includes('XAU') || pair.includes('GOLD');
-      const isJpy = pair.includes('JPY');
-      const isCrypto = pair.includes('BTC') || pair.includes('ETH') || pair.includes('US30');
-      const entry = parseFloat(sig.entry ?? sig.entry_price ?? sig.entryPrice) || 0;
-      const sl = parseFloat(sig.sl ?? sig.stop_loss ?? sig.stopLoss) || 0;
-      const tp = parseFloat(sig.tp ?? sig.take_profit ?? sig.takeProfit) || 0;
-
-      const rawStatus = (sig.status || 'active').toLowerCase();
-      const isTp = rawStatus === 'tp' || rawStatus === 'win';
-
       let diff = 0;
-      if (isTp) {
-        if (isGold) {
-          const pts = (entry > 0 && tp > 0) ? Math.abs(tp - entry) : 30.0;
-          diff = pts * 100 * POSITION_LOT_SIZE; // $3.00 per point on 0.03 lot
-        } else if (isJpy) {
-          const pips = (entry > 0 && tp > 0) ? Math.abs(tp - entry) * 100 : 70;
-          diff = pips * 0.30;
-        } else if (isCrypto) {
-          const pts = (entry > 0 && tp > 0) ? Math.abs(tp - entry) : 800;
-          diff = pts * POSITION_LOT_SIZE;
-        } else {
-          const pips = (entry > 0 && tp > 0) ? Math.abs(tp - entry) * 10000 : 60;
-          diff = pips * 0.30;
-        }
+      if (typeof sig.net_pnl === 'number') {
+        diff = sig.net_pnl;
       } else {
-        if (isGold) {
-          const pts = (entry > 0 && sl > 0) ? Math.abs(entry - sl) : 12.0;
-          diff = -pts * 100 * POSITION_LOT_SIZE;
-        } else if (isJpy) {
-          const pips = (entry > 0 && sl > 0) ? Math.abs(entry - sl) * 100 : 25;
-          diff = -pips * 0.30;
-        } else if (isCrypto) {
-          const pts = (entry > 0 && sl > 0) ? Math.abs(entry - sl) : 350;
-          diff = -pts * POSITION_LOT_SIZE;
-        } else {
-          const pips = (entry > 0 && sl > 0) ? Math.abs(entry - sl) * 10000 : 25;
-          diff = -pips * 0.30;
-        }
+        const rawStatus = (sig.status || '').toLowerCase();
+        if (rawStatus === 'tp' || rawStatus === 'win') diff = 84.93;
+        else if (rawStatus === 'sl' || rawStatus === 'loss') diff = -52.59;
+        else diff = 0;
       }
 
       runningBal += diff;
@@ -359,7 +306,6 @@ export default function LandingHome({
 
     const barData = displayBars.map((b, idx) => {
       const isLatest = idx === displayBars.length - 1;
-      // Ascends progressively up to 100% on the active current bar
       const heightPercent = Math.min(
         100,
         Math.max(38, Math.round(((b.val - minVal) / valRange) * 58) + 42)
@@ -380,9 +326,10 @@ export default function LandingHome({
       closedCount,
       winsCount,
       lossesCount,
+      breakevenCount,
       barData,
     };
-  }, [firestoreSignals, liveGoldPrice, isKhmer]);
+  }, [firestoreSignals, isKhmer]);
 
   const activeSession = getActiveTradingSession();
   const winRate = portfolio.closedCount > 0
@@ -565,7 +512,7 @@ export default function LandingHome({
                 ))}
               </div>
               <div className="lnd-card-footer">
-                <span className="lnd-asset-tag">● Starting $1,000 (0.03 Lot)</span>
+                <span className="lnd-asset-tag">● Starting $10,000 (0.03 Lot)</span>
                 <span className="lnd-asset-tag">
                   ● {portfolio.closedCount} {isKhmer ? 'Signal បានបញ្ចប់' : 'Signals Realized'} ({portfolio.netProfit >= 0 ? `+$${portfolio.netProfit.toFixed(2)}` : `-$${Math.abs(portfolio.netProfit).toFixed(2)}`})
                 </span>
@@ -955,11 +902,11 @@ export default function LandingHome({
                     <SparkleIcon style={{ width: 16, height: 16, color: 'var(--brand2)' }} />
                   </div>
                   <div className="lnd-alert-content">
-                    <strong>{isKhmer ? 'សញ្ញាជួញដូរចុងក្រោយ' : 'Latest Verified Signal'}: {latestSig ? `${latestSig.pair || 'XAU/USD'} ${(latestSig.direction || 'SELL').toUpperCase()}` : 'Gold XAU/USD SELL'}</strong>
+                    <strong>{isKhmer ? 'សញ្ញាជួញដូរចុងក្រោយ' : 'Latest Verified Signal'}: {latestSig ? `${latestSig.trade_id ? `${latestSig.trade_id} · ` : ''}${latestSig.pair || 'XAU/USD'} ${(latestSig.direction || 'BUY').toUpperCase()}` : 'ICT-XAU-5M-0020 · Gold BUY'}</strong>
                     <span>
                       {latestSig
-                        ? `Entry: $${latestSig.entry ?? latestSig.entry_price ?? '4,151.50'} · TP: $${latestSig.tp ?? latestSig.take_profit ?? '4,121.50'} (${(latestSig.status || 'tp').toUpperCase()})`
-                        : 'Entry: $4,151.50 · TP: $4,121.50 (Take Profit Hit)'}
+                        ? `Entry: $${Number(latestSig.entry ?? latestSig.entry_price ?? 4161.25).toFixed(2)} · TP: $${Number(latestSig.tp ?? latestSig.take_profit ?? 4180.13).toFixed(2)} · SL: $${Number(latestSig.sl ?? latestSig.stop_loss ?? 4151.81).toFixed(2)} (${latestSig.resultBadge || '✓ TP HIT'})`
+                        : 'Entry: $4,161.25 · TP: $4,180.13 (✓ TP HIT)'}
                     </span>
                   </div>
                 </div>
