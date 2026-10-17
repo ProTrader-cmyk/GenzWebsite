@@ -2507,7 +2507,9 @@
 }
 
 .ait-chart-terminal-card:fullscreen .ait-workstation-grid,
-.ait-chart-terminal-card.is-fullscreen .ait-workstation-grid {
+.ait-chart-terminal-card.is-fullscreen .ait-workstation-grid,
+.ait-chart-terminal-card:fullscreen .ait-workstation-split-container,
+.ait-chart-terminal-card.is-fullscreen .ait-workstation-split-container {
   height: calc(100vh - 86px) !important;
   min-height: calc(100vh - 86px) !important;
   max-height: calc(100vh - 86px) !important;
@@ -4709,7 +4711,7 @@
    ========================================================================== */
 .ait-workstation-split-container {
   display: grid;
-  grid-template-columns: 50% 50%;
+  grid-template-columns: 1fr 1fr;
   min-height: 720px;
   height: 740px;
   background: #080D1A;
@@ -4718,12 +4720,51 @@
   position: relative;
 }
 
+/* 1. Full Chart View: Chart takes full 100% width, Analysis panel is hidden */
 .ait-workstation-split-container.view-chart {
-  grid-template-columns: 100% 0%;
+  grid-template-columns: 1fr !important;
+}
+.ait-workstation-split-container.view-chart .ait-chart-col {
+  display: flex !important;
+  width: 100% !important;
+  border-right: none !important;
+  grid-column: 1 / -1 !important;
+}
+.ait-workstation-split-container.view-chart .ait-analysis-col {
+  display: none !important;
 }
 
+/* 2. Full Analysis View: Analysis panel takes full 100% width, Chart is hidden */
 .ait-workstation-split-container.view-analysis {
-  grid-template-columns: 0% 100%;
+  grid-template-columns: 1fr !important;
+}
+.ait-workstation-split-container.view-analysis .ait-chart-col {
+  display: none !important;
+}
+.ait-workstation-split-container.view-analysis .ait-analysis-col {
+  display: flex !important;
+  width: 100% !important;
+  grid-column: 1 / -1 !important;
+}
+
+/* 3. Split View (Default): Both columns side-by-side */
+.ait-workstation-split-container.view-split {
+  grid-template-columns: 1fr 1fr !important;
+}
+.ait-workstation-split-container.view-split .ait-chart-col {
+  display: flex !important;
+  width: 100% !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+.ait-workstation-split-container.view-split .ait-analysis-col {
+  display: flex !important;
+  width: 100% !important;
+}
+
+/* Helper hidden class */
+.ait-chart-col.is-hidden,
+.ait-analysis-col.is-hidden {
+  display: none !important;
 }
 
 @media (max-width: 1200px) {
@@ -9764,8 +9805,8 @@
 
   /* Workstation Split & Chart Canvas */
   .ait-workstation-split-container {
-    display: flex;
-    flex-direction: column;
+    display: flex !important;
+    flex-direction: column !important;
     height: auto !important;
   }
   .ait-chart-col {
@@ -9775,8 +9816,27 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
   .ait-workstation-split-container.view-chart .ait-chart-col {
-    min-height: 70vh;
-    height: 70vh;
+    min-height: 70vh !important;
+    height: 70vh !important;
+    border-bottom: none !important;
+    display: flex !important;
+  }
+  .ait-workstation-split-container.view-chart .ait-analysis-col {
+    display: none !important;
+  }
+  .ait-workstation-split-container.view-analysis .ait-chart-col {
+    display: none !important;
+  }
+  .ait-workstation-split-container.view-analysis .ait-analysis-col {
+    display: flex !important;
+    min-height: auto !important;
+    width: 100% !important;
+  }
+  .ait-workstation-split-container.view-split .ait-chart-col {
+    display: flex !important;
+  }
+  .ait-workstation-split-container.view-split .ait-analysis-col {
+    display: flex !important;
   }
   .ait-analysis-col {
     width: 100%;

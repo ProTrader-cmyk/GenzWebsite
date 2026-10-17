@@ -151,3 +151,4 @@ export function getMarketHoursStatus(pair = 'XAUUSD') {
     reopenCountdown: 'Active',
   };
 }
+

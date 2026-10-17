@@ -698,6 +698,84 @@ export default function AILiveChartTerminal({
     };
   }, [currentAsset.pair, currentAsset.pipScale]);
 
+  // Helper to safely instantiate TradingView widget without duplication
+  const initTradingViewWidget = useCallback(() => {
+    const el = document.getElementById(tvContainerId);
+    if (!el) return;
+    try {
+      el.innerHTML = '';
+      if (window.TradingView && window.TradingView.widget) {
+        const isLight = theme === 'light';
+        tvWidgetRef.current = new window.TradingView.widget({
+          autosize: true,
+          symbol: currentAsset.symbol,
+          interval: timeframe,
+          timezone: 'Asia/Bangkok', // GMT+7 Cambodia Time
+          theme: isLight ? 'light' : 'dark',
+          style: '1',
+          locale: TV_LOCALE,
+          toolbar_bg: isLight ? '#FFFFFF' : '#000000',
+          enable_publishing: false,
+          allow_symbol_change: true,
+          hide_side_toolbar: false,
+          withdateranges: true,
+          details: true,
+          hotlist: true,
+          calendar: true,
+          container_id: tvContainerId,
+          overrides: isLight ? {
+            'paneProperties.background': '#FFFFFF',
+            'paneProperties.backgroundType': 'solid',
+            'paneProperties.vertGridProperties.color': 'rgba(0, 0, 0, 0.05)',
+            'paneProperties.horzGridProperties.color': 'rgba(0, 0, 0, 0.05)',
+            'mainSeriesProperties.style': 1,
+            'mainSeriesProperties.candleStyle.upColor': '#16A34A',
+            'mainSeriesProperties.candleStyle.downColor': '#DC2626',
+            'mainSeriesProperties.candleStyle.drawWick': true,
+            'mainSeriesProperties.candleStyle.drawBorder': true,
+            'mainSeriesProperties.candleStyle.borderColor': '#16A34A',
+            'mainSeriesProperties.candleStyle.borderUpColor': '#16A34A',
+            'mainSeriesProperties.candleStyle.borderDownColor': '#DC2626',
+            'mainSeriesProperties.candleStyle.wickColor': '#64748B',
+            'mainSeriesProperties.candleStyle.wickUpColor': '#16A34A',
+            'mainSeriesProperties.candleStyle.wickDownColor': '#DC2626',
+            'mainSeriesProperties.showCountdown': true,
+            'paneProperties.legendProperties.showSeriesTitle': true,
+            'scalesProperties.showSeriesLastValue': true,
+            'scalesProperties.backgroundColor': '#FFFFFF',
+            'scalesProperties.textColor': '#334155',
+            'scalesProperties.lineColor': 'rgba(0, 0, 0, 0.1)',
+          } : {
+            'paneProperties.background': '#000000',
+            'paneProperties.backgroundType': 'solid',
+            'paneProperties.vertGridProperties.color': 'rgba(255, 255, 255, 0.04)',
+            'paneProperties.horzGridProperties.color': 'rgba(255, 255, 255, 0.04)',
+            'mainSeriesProperties.style': 1,
+            'mainSeriesProperties.candleStyle.upColor': '#FFFFFF',
+            'mainSeriesProperties.candleStyle.downColor': '#000000',
+            'mainSeriesProperties.candleStyle.drawWick': true,
+            'mainSeriesProperties.candleStyle.drawBorder': true,
+            'mainSeriesProperties.candleStyle.borderColor': '#FFFFFF',
+            'mainSeriesProperties.candleStyle.borderUpColor': '#FFFFFF',
+            'mainSeriesProperties.candleStyle.borderDownColor': '#FFFFFF',
+            'mainSeriesProperties.candleStyle.wickColor': '#FFFFFF',
+            'mainSeriesProperties.candleStyle.wickUpColor': '#FFFFFF',
+            'mainSeriesProperties.candleStyle.wickDownColor': '#FFFFFF',
+            'mainSeriesProperties.showCountdown': true,
+            'paneProperties.legendProperties.showSeriesTitle': true,
+            'scalesProperties.showSeriesLastValue': true,
+            'scalesProperties.backgroundColor': '#000000',
+            'scalesProperties.textColor': '#94A3B8',
+            'scalesProperties.lineColor': 'rgba(255, 255, 255, 0.1)',
+          },
+        });
+        addLog('WIDGET', `TradingView terminal initialized for ${currentAsset.symbol} [${timeframe}m].`);
+      }
+    } catch (err) {
+      console.warn('TradingView initialization error:', err);
+    }
+  }, [theme, currentAsset.symbol, timeframe, tvContainerId]);
+
   // 3. Initialize TradingView Advanced Chart Widget
   useEffect(() => {
     if (!tvContainerRef.current) return undefined;
@@ -705,80 +783,7 @@ export default function AILiveChartTerminal({
 
     loadTradingViewScript().then(() => {
       if (cancelled || !tvContainerRef.current) return;
-      try {
-        if (tvContainerRef.current) {
-          tvContainerRef.current.innerHTML = '';
-        }
-        if (window.TradingView && window.TradingView.widget) {
-          const isLight = theme === 'light';
-          tvWidgetRef.current = new window.TradingView.widget({
-            autosize: true,
-            symbol: currentAsset.symbol,
-            interval: timeframe,
-            timezone: 'Asia/Bangkok', // GMT+7 Cambodia Time
-            theme: isLight ? 'light' : 'dark',
-            style: '1',
-            locale: TV_LOCALE,
-            toolbar_bg: isLight ? '#FFFFFF' : '#000000',
-            enable_publishing: false,
-            allow_symbol_change: true,
-            hide_side_toolbar: false,
-            withdateranges: true,
-            details: true,
-            hotlist: true,
-            calendar: true,
-            container_id: tvContainerId,
-            overrides: isLight ? {
-              'paneProperties.background': '#FFFFFF',
-              'paneProperties.backgroundType': 'solid',
-              'paneProperties.vertGridProperties.color': 'rgba(0, 0, 0, 0.05)',
-              'paneProperties.horzGridProperties.color': 'rgba(0, 0, 0, 0.05)',
-              'mainSeriesProperties.style': 1,
-              'mainSeriesProperties.candleStyle.upColor': '#16A34A',
-              'mainSeriesProperties.candleStyle.downColor': '#DC2626',
-              'mainSeriesProperties.candleStyle.drawWick': true,
-              'mainSeriesProperties.candleStyle.drawBorder': true,
-              'mainSeriesProperties.candleStyle.borderColor': '#16A34A',
-              'mainSeriesProperties.candleStyle.borderUpColor': '#16A34A',
-              'mainSeriesProperties.candleStyle.borderDownColor': '#DC2626',
-              'mainSeriesProperties.candleStyle.wickColor': '#64748B',
-              'mainSeriesProperties.candleStyle.wickUpColor': '#16A34A',
-              'mainSeriesProperties.candleStyle.wickDownColor': '#DC2626',
-              'mainSeriesProperties.showCountdown': true,
-              'paneProperties.legendProperties.showSeriesTitle': true,
-              'scalesProperties.showSeriesLastValue': true,
-              'scalesProperties.backgroundColor': '#FFFFFF',
-              'scalesProperties.textColor': '#334155',
-              'scalesProperties.lineColor': 'rgba(0, 0, 0, 0.1)',
-            } : {
-              'paneProperties.background': '#000000',
-              'paneProperties.backgroundType': 'solid',
-              'paneProperties.vertGridProperties.color': 'rgba(255, 255, 255, 0.04)',
-              'paneProperties.horzGridProperties.color': 'rgba(255, 255, 255, 0.04)',
-              'mainSeriesProperties.style': 1,
-              'mainSeriesProperties.candleStyle.upColor': '#FFFFFF',
-              'mainSeriesProperties.candleStyle.downColor': '#000000',
-              'mainSeriesProperties.candleStyle.drawWick': true,
-              'mainSeriesProperties.candleStyle.drawBorder': true,
-              'mainSeriesProperties.candleStyle.borderColor': '#FFFFFF',
-              'mainSeriesProperties.candleStyle.borderUpColor': '#FFFFFF',
-              'mainSeriesProperties.candleStyle.borderDownColor': '#FFFFFF',
-              'mainSeriesProperties.candleStyle.wickColor': '#FFFFFF',
-              'mainSeriesProperties.candleStyle.wickUpColor': '#FFFFFF',
-              'mainSeriesProperties.candleStyle.wickDownColor': '#FFFFFF',
-              'mainSeriesProperties.showCountdown': true,
-              'paneProperties.legendProperties.showSeriesTitle': true,
-              'scalesProperties.showSeriesLastValue': true,
-              'scalesProperties.backgroundColor': '#000000',
-              'scalesProperties.textColor': '#94A3B8',
-              'scalesProperties.lineColor': 'rgba(255, 255, 255, 0.1)',
-            },
-          });
-          addLog('WIDGET', `TradingView terminal initialized for ${currentAsset.symbol} [${timeframe}m].`);
-        }
-      } catch (err) {
-        console.warn('TradingView initialization error:', err);
-      }
+      initTradingViewWidget();
     }).catch((err) => {
       console.warn('TradingView script load error:', err);
     });
@@ -797,7 +802,53 @@ export default function AILiveChartTerminal({
       }
       tvWidgetRef.current = null;
     };
-  }, [theme, currentAsset.symbol, timeframe, tvContainerId]);
+  }, [initTradingViewWidget]);
+
+  // View switcher that triggers resize recalibration and ensures chart iframe stays valid
+  const handleSwitchWorkstationView = (nextView) => {
+    setWorkstationView(nextView);
+    const fireResize = () => {
+      try {
+        window.dispatchEvent(new Event('resize'));
+      } catch {
+        // Suppress window event errors
+      }
+    };
+    requestAnimationFrame(fireResize);
+    setTimeout(fireResize, 60);
+    setTimeout(fireResize, 180);
+    setTimeout(fireResize, 380);
+
+    // Watchdog check: If switching back to chart/split and widget is unexpectedly missing, restore it
+    if (nextView === 'split' || nextView === 'chart') {
+      setTimeout(() => {
+        const el = document.getElementById(tvContainerId);
+        if (el && (!el.hasChildNodes() || !el.querySelector('iframe'))) {
+          initTradingViewWidget();
+        }
+      }, 80);
+    }
+  };
+
+  // Watchdog resize listener on workstationView change
+  useEffect(() => {
+    const fireResize = () => {
+      try {
+        window.dispatchEvent(new Event('resize'));
+      } catch {
+        // Safe fallback
+      }
+    };
+    fireResize();
+    const t1 = setTimeout(fireResize, 60);
+    const t2 = setTimeout(fireResize, 180);
+    const t3 = setTimeout(fireResize, 400);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, [workstationView]);
 
 
 
@@ -876,10 +927,7 @@ export default function AILiveChartTerminal({
             <button
               type="button"
               className={`ait-view-pill ${workstationView === 'split' ? 'active' : ''}`}
-              onClick={() => {
-                setWorkstationView('split');
-                setTimeout(() => window.dispatchEvent(new Event('resize')), 150);
-              }}
+              onClick={() => handleSwitchWorkstationView('split')}
               title="Split View: Chart + Market Analysis"
             >
               <span>◫</span>
@@ -888,10 +936,7 @@ export default function AILiveChartTerminal({
             <button
               type="button"
               className={`ait-view-pill ${workstationView === 'chart' ? 'active' : ''}`}
-              onClick={() => {
-                setWorkstationView('chart');
-                setTimeout(() => window.dispatchEvent(new Event('resize')), 150);
-              }}
+              onClick={() => handleSwitchWorkstationView('chart')}
               title="Chart Full View"
             >
               <span>📈</span>
@@ -900,10 +945,7 @@ export default function AILiveChartTerminal({
             <button
               type="button"
               className={`ait-view-pill ${workstationView === 'analysis' ? 'active' : ''}`}
-              onClick={() => {
-                setWorkstationView('analysis');
-                setTimeout(() => window.dispatchEvent(new Event('resize')), 150);
-              }}
+              onClick={() => handleSwitchWorkstationView('analysis')}
               title="Analysis Full View"
             >
               <span>📊</span>
@@ -982,9 +1024,8 @@ export default function AILiveChartTerminal({
           </div>
         )}
 
-        {/* Left Column: Real Live Interactive TradingView Candlestick Canvas */}
-        {(workstationView === 'split' || workstationView === 'chart') && (
-          <div className="ait-chart-col">
+        {/* Left Column: Real Live Interactive TradingView Candlestick Canvas (Permanently mounted to preserve TV iframe) */}
+        <div className={`ait-chart-col ${workstationView === 'analysis' ? 'is-hidden' : ''}`}>
             {/* Floating Institutional MSOB DASHBOARD HUD on Real Live Chart */}
             {msobActive && (
               <div
@@ -1283,30 +1324,27 @@ export default function AILiveChartTerminal({
               style={{ width: '100%', height: '100%' }}
             />
           </div>
-        )}
 
-        {/* Right Column: Institutional Market Analysis & Intelligence Terminal (Exact Match to User Screenshot) */}
-        {(workstationView === 'split' || workstationView === 'analysis') && (
-          <div className="ait-analysis-col">
-            <MarketAnalysisPanel
-              currentAsset={currentAsset}
-              livePrice={livePrice}
-              timeframe={TIMEFRAMES.find((tf) => tf.id === timeframe)?.label || '15m'}
-              activeSession={pairMarketStatus.isOpen ? activeSession : { name: pairMarketStatus.sessionName, status: pairMarketStatus.label, color: pairMarketStatus.color }}
-              isKhmer={isKhmer}
-              marketAnalysis={marketAnalysis}
-              isReanalyzing={isReanalyzing}
-              candleCountdown={candleCountdown}
-              lastCandleCloseNotice={lastCandleCloseNotice}
-              onReanalyze={() => triggerReanalysis(false)}
-              onSelectAsset={(id) => {
-                setSymbolId(id);
-                addLog('MARKET', `Switched active feed to ${id}`);
-                playAiBeep('scan', isMuted);
-              }}
-            />
-          </div>
-        )}
+        {/* Right Column: Institutional Market Analysis & Intelligence Terminal (Permanently mounted to preserve state) */}
+        <div className={`ait-analysis-col ${workstationView === 'chart' ? 'is-hidden' : ''}`}>
+          <MarketAnalysisPanel
+            currentAsset={currentAsset}
+            livePrice={livePrice}
+            timeframe={TIMEFRAMES.find((tf) => tf.id === timeframe)?.label || '15m'}
+            activeSession={pairMarketStatus.isOpen ? activeSession : { name: pairMarketStatus.sessionName, status: pairMarketStatus.label, color: pairMarketStatus.color }}
+            isKhmer={isKhmer}
+            marketAnalysis={marketAnalysis}
+            isReanalyzing={isReanalyzing}
+            candleCountdown={candleCountdown}
+            lastCandleCloseNotice={lastCandleCloseNotice}
+            onReanalyze={() => triggerReanalysis(false)}
+            onSelectAsset={(id) => {
+              setSymbolId(id);
+              addLog('MARKET', `Switched active feed to ${id}`);
+              playAiBeep('scan', isMuted);
+            }}
+          />
+        </div>
       </div>
     </div>
   );
