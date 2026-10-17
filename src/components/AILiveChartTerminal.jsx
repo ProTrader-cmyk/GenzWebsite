@@ -658,6 +658,8 @@ export default function AILiveChartTerminal({
   useEffect(() => {
     let isSubscribed = true;
     setHasVerifiedLivePrice(false);
+    // Instantly set livePrice to currentAsset.defaultPrice so no stale price from previous asset leaks
+    setLivePrice(currentAsset.defaultPrice);
 
     fetchLivePrice(currentAsset.pair).then((price) => {
       if (isSubscribed && price) {
@@ -871,6 +873,7 @@ export default function AILiveChartTerminal({
                   className={`ait-chart-symbol-pill ${s.id === symbolId ? 'active' : ''}`}
                   onClick={() => {
                     setSymbolId(s.id);
+                    setLivePrice(s.defaultPrice);
                     addLog('MARKET', `Switched active feed to ${s.label}`);
                     playAiBeep('scan', isMuted);
                   }}
@@ -1339,7 +1342,9 @@ export default function AILiveChartTerminal({
             lastCandleCloseNotice={lastCandleCloseNotice}
             onReanalyze={() => triggerReanalysis(false)}
             onSelectAsset={(id) => {
+              const target = SYMBOLS.find((s) => s.id === id);
               setSymbolId(id);
+              if (target) setLivePrice(target.defaultPrice);
               addLog('MARKET', `Switched active feed to ${id}`);
               playAiBeep('scan', isMuted);
             }}

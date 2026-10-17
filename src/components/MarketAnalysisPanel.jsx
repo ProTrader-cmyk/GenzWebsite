@@ -348,71 +348,167 @@ function playSuccessChime() {
 }
 
 function buildDefaultSignal(pair, price, style = 'scalp') {
-  const isGold = (pair || '').includes('XAU') || (pair || '').includes('GOLD');
-  const decimals = (pair || '').includes('EUR') || (pair || '').includes('GBP') ? 5 : (pair || '').includes('BTC') ? 1 : 2;
-  const p = Number(price) || (isGold ? 2954.20 : 1.0850);
+  const normPair = (pair || 'XAUUSD').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const isGold = normPair.includes('XAU') || normPair.includes('GOLD');
+  const isCrypto = normPair.includes('BTC') || normPair.includes('ETH');
+  const isIndex = normPair.includes('US30') || normPair.includes('DOW');
+  const isSilver = normPair.includes('XAG') || normPair.includes('SILVER');
+  const isJpy = normPair.includes('JPY');
+  const isForex = !isGold && !isCrypto && !isIndex && !isSilver;
+
+  const decimals = isForex ? 5 : isJpy ? 3 : (isCrypto || isIndex) ? 1 : 2;
+
+  // Strict price sanity checking to prevent cross-asset leakage (e.g. Gold $4,165 applied to BTC)
+  let p = Number(price);
+  if (!p || isNaN(p) || p <= 0) {
+    p = isCrypto ? 81632.50 : isIndex ? 51830.0 : isGold ? 4171.25 : isSilver ? 34.20 : isJpy ? 149.20 : 1.1225;
+  } else if (isCrypto && p < 10000) {
+    p = 81632.50;
+  } else if (isIndex && p < 10000) {
+    p = 51830.0;
+  } else if (isGold && (p < 1000 || p > 10000)) {
+    p = 4171.25;
+  } else if (isSilver && (p < 10 || p > 100)) {
+    p = 34.20;
+  } else if (isJpy && (p < 50 || p > 300)) {
+    p = 149.20;
+  } else if (isForex && p > 10) {
+    p = 1.1225;
+  }
+
   const isScalp = style === 'scalp';
 
+  // Realistic asset-specific SL and TP parameters strictly separated from entry
+  let slDist, tp1Dist, tp2Dist, beDist, pipsGain;
   if (isScalp) {
-    const slDist = isGold ? 2.5 : 0.0008; // 2–3 numbers SL ($2.50 on Gold / 25 pips)
-    const tp1Dist = isGold ? 3.0 : 0.0012; // 2–3 numbers TP1 ($3.00 on Gold / 30 pips)
-    const tp2Dist = isGold ? 5.0 : 0.0022; // 5 numbers TP2 ($5.00 on Gold / 50 pips)
-    const tpVal = Number((p + tp1Dist).toFixed(decimals));
+    if (isGold) {
+      slDist = 2.5; // $2.50 (25 pips)
+      tp1Dist = 3.5; // $3.50 (35 pips)
+      tp2Dist = 5.0; // $5.00 (50 pips)
+      pipsGain = '+35 Pips ($3.50)';
+    } else if (isCrypto) {
+      slDist = 350.0; // $350 SL
+      tp1Dist = 700.0; // $700 TP (1:2.0 RR)
+      tp2Dist = 1050.0;
+      pipsGain = '+700 Pts ($700.00)';
+    } else if (isIndex) {
+      slDist = 65.0;
+      tp1Dist = 130.0; // 1:2.0 RR
+      tp2Dist = 180.0;
+      pipsGain = '+130 Pts';
+    } else if (isSilver) {
+      slDist = 0.15;
+      tp1Dist = 0.30;
+      tp2Dist = 0.45;
+      pipsGain = '+30 Pts ($0.30)';
+    } else if (isJpy) {
+      slDist = 0.25;
+      tp1Dist = 0.50;
+      tp2Dist = 0.75;
+      pipsGain = '+50 Pips';
+    } else {
+      slDist = 0.0010; // 10 pips
+      tp1Dist = 0.0020; // 20 pips (1:2.0 RR)
+      tp2Dist = 0.0030;
+      pipsGain = '+20 Pips';
+    }
+  } else {
+    // Day trade (Intraday)
+    if (isGold) {
+      slDist = 10.0; // $10.00 (1000 pts)
+      tp1Dist = 20.0; // $20.00 (2000 pts / 1:2.0 RR)
+      tp2Dist = 25.0;
+      beDist = 10.0;
+      pipsGain = '+200 Pips ($20.00)';
+    } else if (isCrypto) {
+      slDist = 850.0; // $850 SL
+      tp1Dist = 1700.0; // $1,700 TP (1:2.0 RR)
+      tp2Dist = 2200.0;
+      beDist = 850.0;
+      pipsGain = '+1,700 Pts ($1,700.00)';
+    } else if (isIndex) {
+      slDist = 180.0;
+      tp1Dist = 360.0; // 1:2.0 RR
+      tp2Dist = 450.0;
+      beDist = 180.0;
+      pipsGain = '+360 Pts';
+    } else if (isSilver) {
+      slDist = 0.40;
+      tp1Dist = 0.80;
+      tp2Dist = 1.20;
+      beDist = 0.40;
+      pipsGain = '+80 Pts ($0.80)';
+    } else if (isJpy) {
+      slDist = 0.60;
+      tp1Dist = 1.20;
+      tp2Dist = 1.60;
+      beDist = 0.60;
+      pipsGain = '+120 Pips';
+    } else {
+      slDist = 0.0025; // 25 pips
+      tp1Dist = 0.0050; // 50 pips (1:2.0 RR)
+      tp2Dist = 0.0075;
+      beDist = 0.0025;
+      pipsGain = '+50 Pips';
+    }
+  }
+
+  const entryVal = Number(p.toFixed(decimals));
+  const slVal = Number((entryVal - slDist).toFixed(decimals));
+  const tpVal = Number((entryVal + tp1Dist).toFixed(decimals));
+  const tp2Val = Number((entryVal + tp2Dist).toFixed(decimals));
+  const beVal = beDist ? Number((entryVal + beDist).toFixed(decimals)) : null;
+
+  if (isScalp) {
     return {
-      id: `sig-scalp-${Date.now()}`,
-      pair,
+      id: `sig-scalp-${normPair.toLowerCase()}-${Date.now()}`,
+      pair: normPair,
       direction: 'BUY',
       timeframe: '1m / 5m',
       style: 'scalping',
-      mode: '1M/5M QUICK SCALP (2–3 NUMBERS)',
+      mode: '1M/5M QUICK SCALP',
       model: '1M-5M Liquidity Sweep + Fast FVG Tap',
-      entry: Number(p.toFixed(decimals)),
-      sl: Number((p - slDist).toFixed(decimals)),
+      entry: entryVal,
+      sl: slVal,
       tp: tpVal,
       tp1: tpVal,
-      tp2: Number((p + tp2Dist).toFixed(decimals)),
-      rr: '1 : 1.2',
+      tp2: tp2Val,
+      rr: '1 : 2.0',
       confidence: 94,
-      pipsGain: isGold ? '+30 Pips ($3.00)' : '+12 Pips',
+      pipsGain,
       session: 'Active Institutional Overlap',
       status: 'active',
       confluences: [
-        'Asian/Session micro liquidity swept with instant 1M/5M rejection wick',
-        'Strict 2–3 numbers Stop Loss ($2.50) beyond immediate micro swing',
-        'Quick 2–3 numbers Take Profit ($3.00) secured inside opposing micro-imbalance',
+        'Session micro liquidity swept with instant 1M/5M rejection wick',
+        `Stop Loss strictly locked at $${slDist} distance beyond micro swing`,
+        `Take Profit secured at 1:2.0 Risk-to-Reward ratio ($${tp1Dist} target)`,
       ],
       time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Phnom_Penh' }),
     };
   } else {
-    // Day trade CRT standard: 1000 pts SL ($10.00), strictly 1:2+ R:R (2000–2500 pts TP = $20.00–$25.00)
-    const slDist = isGold ? 10.0 : 0.0035;
-    const tp1Dist = isGold ? 20.0 : 0.0070; // 20.0 / 10.0 = 1:2.0 RR (strictly 1:2+)
-    const tp2Dist = isGold ? 25.0 : 0.0090; // 25.0 / 10.0 = 1:2.5 RR
-    const beDist = isGold ? 10.0 : 0.0035;
-    const tpVal = Number((p + tp1Dist).toFixed(decimals));
     return {
-      id: `sig-daytrade-${Date.now()}`,
-      pair,
+      id: `sig-daytrade-${normPair.toLowerCase()}-${Date.now()}`,
+      pair: normPair,
       direction: 'BUY',
       timeframe: '15m / 1H',
       style: 'daytrade',
       mode: '15M/1H DAY TRADE (CRT SWING)',
-      model: '3-Candle CRT Daily Liquidation Model',
-      entry: Number(p.toFixed(decimals)),
-      sl: Number((p - slDist).toFixed(decimals)),
+      model: isGold ? '3-Candle CRT Daily Liquidation Model' : 'Institutional Order Flow Swing Model',
+      entry: entryVal,
+      sl: slVal,
       tp: tpVal,
       tp1: tpVal,
-      tp2: Number((p + tp2Dist).toFixed(decimals)),
-      breakEvenTrigger: Number((p + beDist).toFixed(decimals)),
+      tp2: tp2Val,
+      breakEvenTrigger: beVal,
       rr: '1 : 2.0',
       confidence: 96,
-      pipsGain: isGold ? '+200 Pips' : '+80 Pips',
+      pipsGain,
       session: 'Intraday Session Trend',
       status: 'active',
       confluences: [
-        'Previous Day Low swept during C2 manipulation phase',
-        'C3 expansion candle confirmed with 1H Order Block mitigation',
-        'Strict CRT risk parameters: 1000 pts SL, move to BE at +1000 pts, TP at +2000 pts',
+        'Previous Session Low swept during manipulation phase',
+        'Expansion candle confirmed with Order Block mitigation',
+        `Strict risk parameters: 1:2.0 Risk-to-Reward ratio with Break-Even protection at +${slDist} distance`,
       ],
       time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Phnom_Penh' }),
     };
@@ -543,7 +639,15 @@ export default function MarketAnalysisPanel({
   const decimals = isForex ? 5 : isJpy ? 3 : isCrypto ? 1 : 2;
   const priceDecimals = isGold ? 3 : decimals;
 
-  const p = Number(livePrice) || Number(marketAnalysis?.price) || currentAsset.defaultPrice || 4169.735;
+  const rawPrice = Number(livePrice) || Number(marketAnalysis?.price) || currentAsset.defaultPrice || 4169.735;
+  const p = useMemo(() => {
+    if (isCrypto && rawPrice < 10000) return currentAsset.defaultPrice || 81632.50;
+    if (pair.includes('US30') && rawPrice < 10000) return currentAsset.defaultPrice || 51830.0;
+    if (isGold && (rawPrice < 1000 || rawPrice > 10000)) return currentAsset.defaultPrice || 4171.25;
+    if (isForex && rawPrice > 10) return currentAsset.defaultPrice || 1.1225;
+    if (isJpy && (rawPrice < 50 || rawPrice > 300)) return currentAsset.defaultPrice || 149.20;
+    return rawPrice;
+  }, [rawPrice, isCrypto, pair, isGold, isForex, isJpy, currentAsset.defaultPrice]);
   const calendarList = liveCalendarEvents || CALENDAR_EVENTS;
   const newsList = liveNewsItems || NEWS_ITEMS;
 
@@ -814,9 +918,28 @@ export default function MarketAnalysisPanel({
   // Persistent locked Pip signals (strictly frozen after scan so numbers NEVER move with live market ticks)
   useEffect(() => {
     try {
+      const isCorrupt = (sig) => {
+        if (!sig) return true;
+        const e = Number(sig.entry);
+        const s = Number(sig.sl);
+        const t = Number(sig.tp);
+        if (isNaN(e) || isNaN(s) || isNaN(t)) return true;
+        if (Math.abs(e - s) < 0.001 || Math.abs(e - t) < 0.001) return true;
+        if (pair.includes('BTC') && e < 10000) return true;
+        if (pair.includes('US30') && e < 10000) return true;
+        return false;
+      };
+
       const savedScalp = localStorage.getItem(`genz_locked_scalp_${pair}`);
       if (savedScalp) {
-        setScalpSignal(JSON.parse(savedScalp));
+        const parsed = JSON.parse(savedScalp);
+        if (isCorrupt(parsed)) {
+          const fresh = buildDefaultSignal(pair, p, 'scalp');
+          setScalpSignal(fresh);
+          localStorage.setItem(`genz_locked_scalp_${pair}`, JSON.stringify(fresh));
+        } else {
+          setScalpSignal(parsed);
+        }
       } else {
         // First time initialization for this pair: lock at initial snapshot so it never moves
         const initScalp = buildDefaultSignal(pair, p, 'scalp');
@@ -826,12 +949,19 @@ export default function MarketAnalysisPanel({
 
       const savedDay = localStorage.getItem(`genz_locked_daytrade_${pair}`);
       if (savedDay) {
-        setDayTradeSignal(JSON.parse(savedDay));
+        const parsed = JSON.parse(savedDay);
+        if (isCorrupt(parsed)) {
+          const fresh = buildDefaultSignal(pair, p, 'daytrade');
+          setDayTradeSignal(fresh);
+          localStorage.setItem(`genz_locked_daytrade_${pair}`, JSON.stringify(fresh));
+        } else {
+          setDayTradeSignal(parsed);
+        }
       } else {
         setDayTradeSignal(null);
       }
     } catch {}
-  }, [pair]);
+  }, [pair, p]);
 
   // Autonomous Intra Trade Monitor & Auto-Dispatch:
   // When condition is met and market is OPEN, automatically dispatches signal without requiring user to scan!
@@ -846,12 +976,22 @@ export default function MarketAnalysisPanel({
 
     if (met) {
       const saved = localStorage.getItem(`genz_locked_daytrade_${pair}`);
+      let hasValid = false;
       if (saved) {
         try {
-          setDayTradeSignal(JSON.parse(saved));
+          const parsed = JSON.parse(saved);
+          const e = Number(parsed.entry);
+          const s = Number(parsed.sl);
+          const isBad = Math.abs(e - s) < 0.001 || (pair.includes('BTC') && e < 10000) || (pair.includes('US30') && e < 10000);
+          if (!isBad) {
+            setDayTradeSignal(parsed);
+            hasValid = true;
+          }
         } catch {}
-      } else {
-        const lockedPrice = Number(livePrice) || p;
+      }
+
+      if (!hasValid) {
+        const lockedPrice = p;
         const fresh = buildDefaultSignal(pair, lockedPrice, 'daytrade');
         setDayTradeSignal(fresh);
         try {
@@ -867,7 +1007,7 @@ export default function MarketAnalysisPanel({
         localStorage.removeItem(`genz_locked_daytrade_${pair}`);
       } catch {}
     }
-  }, [pair, marketStatus.isOpen, intraConditionResult.met, livePrice, p]);
+  }, [pair, marketStatus.isOpen, intraConditionResult.met, p]);
 
   const currentScalpSignal = scalpSignal;
   const currentDayTradeSignal = dayTradeSignal;

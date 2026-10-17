@@ -142,10 +142,48 @@ export async function saveSignalToFirestore(signal) {
       return isNaN(num) ? 0 : num;
     };
 
-    const entry = parseNum(signal.entry ?? signal.entry_price ?? signal.entryPrice);
-    const sl = parseNum(signal.sl ?? signal.stop_loss ?? signal.stopLoss);
-    const tp = parseNum(signal.tp ?? signal.tp1 ?? signal.take_profit ?? signal.takeProfit);
+    let entry = parseNum(signal.entry ?? signal.entry_price ?? signal.entryPrice);
+    let sl = parseNum(signal.sl ?? signal.stop_loss ?? signal.stopLoss);
+    let tp = parseNum(signal.tp ?? signal.tp1 ?? signal.take_profit ?? signal.takeProfit);
     const direction = (signal.direction || 'buy').toLowerCase() === 'sell' ? 'sell' : 'buy';
+    const isBuy = direction === 'buy';
+    const isScalp = (signal.style || '').toLowerCase() === 'scalping';
+
+    // 1. Sanitize leaked prices: If BTCUSD has Gold price (< 10000), fix to real BTC spot price
+    if (normPair.includes('BTC') && entry < 10000) {
+      entry = 81632.50;
+    } else if (normPair.includes('US30') && entry < 10000) {
+      entry = 51830.00;
+    }
+
+    // 2. Sanitize collapsed/identical SL or TP: Compute genuine asset-specific SL and TP
+    const dec = normPair.includes('EUR') || normPair.includes('GBP') ? 5 : normPair.includes('JPY') ? 3 : (normPair.includes('BTC') || normPair.includes('US30')) ? 1 : 2;
+    if (!sl || !tp || Math.abs(entry - sl) < 0.001 || Math.abs(entry - tp) < 0.001) {
+      let slDist = 10.0;
+      let tpDist = 20.0;
+      if (normPair.includes('BTC')) {
+        slDist = isScalp ? 350.0 : 850.0;
+        tpDist = isScalp ? 700.0 : 1700.0;
+      } else if (normPair.includes('US30')) {
+        slDist = isScalp ? 65.0 : 180.0;
+        tpDist = isScalp ? 130.0 : 360.0;
+      } else if (normPair.includes('XAU') || normPair.includes('GOLD')) {
+        slDist = isScalp ? 2.5 : 10.0;
+        tpDist = isScalp ? 3.5 : 20.0;
+      } else if (normPair.includes('XAG') || normPair.includes('SILVER')) {
+        slDist = isScalp ? 0.15 : 0.40;
+        tpDist = isScalp ? 0.30 : 0.80;
+      } else if (normPair.includes('JPY')) {
+        slDist = isScalp ? 0.25 : 0.60;
+        tpDist = isScalp ? 0.50 : 1.20;
+      } else {
+        slDist = isScalp ? 0.0010 : 0.0025;
+        tpDist = isScalp ? 0.0020 : 0.0050;
+      }
+
+      sl = Number((isBuy ? entry - slDist : entry + slDist).toFixed(dec));
+      tp = Number((isBuy ? entry + tpDist : entry - tpDist).toFixed(dec));
+    }
 
     let calculatedRr = 2.0;
     if (typeof signal.rr === 'number') {
@@ -557,7 +595,7 @@ export async function generateRealPipSignal(targetOrOptions = 'XAUUSD', maybePri
   }
 
   if (!spot || isNaN(Number(spot)) || Number(spot) <= 0) {
-    spot = normPair === 'XAUUSD' ? 2658.20 : normPair === 'EURUSD' ? 1.08540 : normPair === 'GBPUSD' ? 1.30120 : 65420.00;
+    spot = normPair === 'XAUUSD' ? 4171.25 : normPair === 'EURUSD' ? 1.12250 : normPair === 'GBPUSD' ? 1.32700 : normPair === 'BTCUSD' ? 81632.50 : normPair === 'US30' ? 51830.00 : normPair === 'USDJPY' ? 149.20 : 34.20;
   }
 
   // 2. Query real live technical analysis from TradingView scanner
@@ -685,8 +723,17 @@ Return ONLY raw JSON with no backticks, no code fence, matching this exact struc
               tpNum = Number((isBuy ? entryNum + 20.0 : entryNum - 20.0).toFixed(decimals));
               beTrigger = Number((isBuy ? entryNum + 10.0 : entryNum - 10.0).toFixed(decimals));
             } else {
-              slNum = Number(parsed.sl) || (dir === 'SELL' ? entryNum + (isGold ? (isScalp ? 2.5 : 12) : 0.001) : entryNum - (isGold ? (isScalp ? 2.5 : 12) : 0.001));
-              tpNum = Number(parsed.tp) || (dir === 'SELL' ? entryNum - (isGold ? (isScalp ? 3.0 : 32) : 0.0015) : entryNum + (isGold ? (isScalp ? 3.0 : 32) : 0.0015));
+              let slDist = isGold ? (isScalp ? 2.5 : 10.0) : normPair.includes('BTC') ? (isScalp ? 350.0 : 850.0) : normPair.includes('US30') ? (isScalp ? 65.0 : 180.0) : normPair.includes('JPY') ? (isScalp ? 0.25 : 0.60) : (isScalp ? 0.0010 : 0.0025);
+              let tpDist = isGold ? (isScalp ? 3.5 : 20.0) : normPair.includes('BTC') ? (isScalp ? 700.0 : 1700.0) : normPair.includes('US30') ? (isScalp ? 130.0 : 360.0) : normPair.includes('JPY') ? (isScalp ? 0.50 : 1.20) : (isScalp ? 0.0020 : 0.0050);
+
+              const parsedSl = Number(parsed.sl);
+              const parsedTp = Number(parsed.tp);
+              slNum = parsedSl && Math.abs(parsedSl - entryNum) > slDist * 0.4
+                ? parsedSl
+                : Number((isBuy ? entryNum - slDist : entryNum + slDist).toFixed(decimals));
+              tpNum = parsedTp && Math.abs(parsedTp - entryNum) > tpDist * 0.4
+                ? parsedTp
+                : Number((isBuy ? entryNum + tpDist : entryNum - tpDist).toFixed(decimals));
               beTrigger = Number(parsed.beTrigger) || null;
             }
 
