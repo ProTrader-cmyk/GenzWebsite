@@ -75,7 +75,7 @@ export function formatSpotPrice(pair, price) {
     return num.toFixed(3);
   }
   if (p === 'BTCUSD') {
-    return num.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 2 });
+    return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
   // Gold (XAUUSD)
   return num.toFixed(2);
@@ -122,6 +122,7 @@ class TradingViewStreamer {
     this.prices = {};
     this.sources = {};
     this.quoteMetrics = {};
+    this.lastWsTickAt = {};
   }
 
   addSubscriber(symbols, callback) {
@@ -231,7 +232,9 @@ class TradingViewStreamer {
                 if (!isSupportedPair(pair)) return;
 
                 const price = val.lp;
+                const nowMs = Date.now();
                 this.prices[pair] = price;
+                this.lastWsTickAt[pair] = nowMs;
                 this.sources[pair] = sym.includes('BINANCE') ? 'Binance / TradingView' : 'OANDA / TradingView';
                 if (typeof val.chp === 'number') {
                   this.quoteMetrics[pair] = {
@@ -241,7 +244,7 @@ class TradingViewStreamer {
                 }
                 cache[pair] = {
                   price,
-                  timestamp: Date.now(),
+                  timestamp: nowMs,
                   source: this.sources[pair],
                   isAvailable: true,
                 };
@@ -354,21 +357,25 @@ export async function fetchBackendMarketPricesSnapshot() {
     for (const pair of SUPPORTED_PAIRS) {
       const item = prices[pair];
       if (item && typeof item.price === 'number' && item.price > 0) {
-        tvStreamer.prices[pair] = item.price;
-        tvStreamer.sources[pair] = item.source || 'GenZ Backend Live Feed';
-        if (typeof item.changePercent === 'number') {
-          tvStreamer.quoteMetrics[pair] = {
-            change: typeof item.changeAbs === 'number' ? item.changeAbs : null,
-            changePercent: item.changePercent,
+        const hasFreshWsTick =
+          tvStreamer.lastWsTickAt[pair] && now - tvStreamer.lastWsTickAt[pair] < 8000;
+        if (!hasFreshWsTick) {
+          tvStreamer.prices[pair] = item.price;
+          tvStreamer.sources[pair] = item.source || 'GenZ Backend Live Feed';
+          if (typeof item.changePercent === 'number') {
+            tvStreamer.quoteMetrics[pair] = {
+              change: typeof item.changeAbs === 'number' ? item.changeAbs : null,
+              changePercent: item.changePercent,
+            };
+          }
+          cache[pair] = {
+            price: item.price,
+            timestamp: now,
+            source: item.source || 'GenZ Backend Live Feed',
+            isAvailable: true,
           };
+          tvStreamer.notify(pair, item.price);
         }
-        cache[pair] = {
-          price: item.price,
-          timestamp: now,
-          source: item.source || 'GenZ Backend Live Feed',
-          isAvailable: true,
-        };
-        tvStreamer.notify(pair, item.price);
       }
     }
     return prices;
@@ -714,35 +721,7 @@ export async function fetchSilverPrice() {
 export async function fetchBtcPrice() {
   const now = Date.now();
 
-  // Primary: Coinbase Public Spot API (CORS-friendly globally)
-  try {
-    const res = await fetch('https://api.coinbase.com/v2/prices/BTC-USD/spot');
-    if (res.ok) {
-      const data = await res.json();
-      const num = parseFloat(data?.data?.amount);
-      if (!isNaN(num) && num > 10000) {
-        const price = Math.round(num * 100) / 100;
-        cache.BTCUSD = { price, timestamp: now, source: 'Coinbase Live Spot', isAvailable: true };
-        return price;
-      }
-    }
-  } catch {}
-
-  // Secondary: Binance Official Public Ticker API
-  try {
-    const res = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
-    if (res.ok) {
-      const data = await res.json();
-      const num = parseFloat(data.price);
-      if (!isNaN(num) && num > 10000) {
-        const price = Math.round(num * 100) / 100;
-        cache.BTCUSD = { price, timestamp: now, source: 'Binance Live Spot', isAvailable: true };
-        return price;
-      }
-    }
-  } catch {}
-
-  // Tertiary: TradingView Crypto Scanner
+  // Primary: TradingView Crypto Scanner (BINANCE:BTCUSDT - matches live TradingView chart 1:1)
   try {
     const res = await fetch('https://scanner.tradingview.com/crypto/scan', {
       method: 'POST',
@@ -758,6 +737,34 @@ export async function fetchBtcPrice() {
       if (typeof p === 'number' && p > 10000) {
         const price = Math.round(p * 100) / 100;
         cache.BTCUSD = { price, timestamp: now, source: 'Binance / TradingView', isAvailable: true };
+        return price;
+      }
+    }
+  } catch {}
+
+  // Secondary: Binance Official Public Ticker API (BTCUSDT)
+  try {
+    const res = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
+    if (res.ok) {
+      const data = await res.json();
+      const num = parseFloat(data.price);
+      if (!isNaN(num) && num > 10000) {
+        const price = Math.round(num * 100) / 100;
+        cache.BTCUSD = { price, timestamp: now, source: 'Binance Live Spot', isAvailable: true };
+        return price;
+      }
+    }
+  } catch {}
+
+  // Tertiary: Coinbase Public Spot API (CORS-friendly fallback)
+  try {
+    const res = await fetch('https://api.coinbase.com/v2/prices/BTC-USD/spot');
+    if (res.ok) {
+      const data = await res.json();
+      const num = parseFloat(data?.data?.amount);
+      if (!isNaN(num) && num > 10000) {
+        const price = Math.round(num * 100) / 100;
+        cache.BTCUSD = { price, timestamp: now, source: 'Coinbase Live Spot', isAvailable: true };
         return price;
       }
     }

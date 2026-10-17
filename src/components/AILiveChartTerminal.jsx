@@ -393,19 +393,19 @@ export default function AILiveChartTerminal({
   const decimals = currentPairNorm.includes('XAG')
     ? 3
     : currentPairNorm.includes('BTC')
-      ? 1
+      ? 2
       : 2;
 
   // Real-time live P&L and target distance meter for the active position (Locked strictly to 0.03 lot size)
   const POSITION_LOT_SIZE = 0.03;
 
   const setupPnl = useMemo(() => {
-    if (!currentActiveSetup || !livePrice) return null;
+    if (!currentActiveSetup) return null;
     const isBuy = (currentActiveSetup.direction || 'BUY').toUpperCase() === 'BUY';
     const entry = Number(currentActiveSetup.entry);
     const tp = Number(currentActiveSetup.tp);
     const sl = Number(currentActiveSetup.sl);
-    const curr = Number(livePrice);
+    const curr = hasVerifiedLivePrice && livePrice ? Number(livePrice) : entry;
     const isGold = currentPairNorm.includes('XAU');
     const isSilver = currentPairNorm.includes('XAG');
     const isBtc = currentPairNorm.includes('BTC');
@@ -454,7 +454,7 @@ export default function AILiveChartTerminal({
       slLossUsd: slLossUsd > 0 ? `-$${slLossUsd.toFixed(2)}` : '',
       lotSize: POSITION_LOT_SIZE,
     };
-  }, [currentActiveSetup, livePrice, currentPairNorm, decimals]);
+  }, [currentActiveSetup, livePrice, hasVerifiedLivePrice, currentPairNorm, decimals]);
 
   // Live TP / SL touch detection for the active position (strictly requires verified live price)
   useEffect(() => {
