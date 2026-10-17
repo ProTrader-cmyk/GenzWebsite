@@ -8661,10 +8661,10 @@
   color: #00F2FE;
 }
 
-/* 3. Central Radar HUD & Scan Console */
+/* 3. Central Scan Console */
 .ait-pm-radar-hud {
   display: grid;
-  grid-template-columns: 130px 1fr;
+  grid-template-columns: 1fr;
   gap: 20px;
   align-items: center;
   background: rgba(6, 11, 22, 0.85);

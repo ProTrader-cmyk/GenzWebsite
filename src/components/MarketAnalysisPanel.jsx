@@ -1971,38 +1971,8 @@ Model: ${sig.model || 'ICT SMC Model'}${explanationsText}`;
               </button>
             </div>
 
-            {/* 3. CENTRAL PIP MACHINE RADAR & SCAN HUD */}
+            {/* 3. CENTRAL PIP MACHINE SCAN HUD */}
             <div className={`ait-pm-radar-hud ${currentScanState.isScanning ? 'scanning' : ''} ${!marketStatus.isOpen ? 'closed' : ''}`}>
-              <div className="ait-pm-radar-visual">
-                <div className="ait-pm-radar-circle">
-                  <div className="ait-pm-radar-sweep" />
-                  <div className="ait-pm-radar-crosshair-h" />
-                  <div className="ait-pm-radar-crosshair-v" />
-                  {marketStatus.isOpen && (
-                    <>
-                      <div className="ait-pm-radar-ping ping-1" />
-                      <div className="ait-pm-radar-ping ping-2" />
-                    </>
-                  )}
-                  <div className="ait-pm-radar-center-core">
-                    <span className="ait-pm-core-icon">
-                      {!marketStatus.isOpen ? (
-                        <IconLock width="18" height="18" style={{ color: '#EF4444' }} />
-                      ) : pipMode === 'scalp' ? (
-                        <IconZap width="18" height="18" />
-                      ) : (
-                        <IconTarget width="18" height="18" />
-                      )}
-                    </span>
-                  </div>
-                  {!marketStatus.isOpen && (
-                    <div className="ait-pm-radar-closed-overlay">
-                      <span>CLOSED</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
               <div className="ait-pm-radar-info">
                 {/* 4-Step Scanning Stepper Component (Unified visual design, independent strategies) */}
                 <ScanWorkflowStepper
