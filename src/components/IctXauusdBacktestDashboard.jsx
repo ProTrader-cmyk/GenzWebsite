@@ -1050,3 +1050,4 @@ export default function IctXauusdBacktestDashboard({ isKhmer = false }) {
     </div>
   );
 }
+

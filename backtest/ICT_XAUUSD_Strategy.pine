@@ -173,3 +173,4 @@ plot(emaSlow, "HTF Slow EMA", color=color.new(#F59E0B, 35), linewidth=2)
 plot(equilibrium, "Dealing Range Equilibrium (50%)", color=color.new(#94A3B8, 60), style=plot.style_linebr)
 plotshape(validBullSetup, title="Bullish ICT FVG Setup", style=shape.labelup, location=location.belowbar, color=color.new(#10B981, 0), text="ICT BUY", textcolor=color.white, size=size.tiny)
 plotshape(validBearSetup, title="Bearish ICT FVG Setup", style=shape.labeldown, location=location.abovebar, color=color.new(#EF4444, 0), text="ICT SELL", textcolor=color.white, size=size.tiny)
+

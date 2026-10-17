@@ -19,6 +19,7 @@ import { clearStoredPipSignals, generateRealPipSignal, buildVerifiedTradeConflue
 import { getMarketHoursStatus } from '../services/marketHoursService.js';
 import AILiveChartTerminal from './AILiveChartTerminal.jsx';
 import IctXauusdBacktestDashboard from './IctXauusdBacktestDashboard.jsx';
+import backtestArtifact from '../data/xauusdIctBacktest.json';
 import ReferralAccessModal from './ReferralAccessModal.jsx';
 import PairLogo, {
   GoldIngotLogo,
@@ -654,146 +655,74 @@ export default function AITradingPage({
     });
   }, [liveGoldPrice, liveForexPrices, deduplicatedSignals, signalsLoaded]);
 
-  // Dynamic Real Verified Statistics derived 100% from authentic signals (Firestore & verified setups)
-  const verifiedStats = useMemo(() => {
-    const pool = deduplicatedSignals.length > 0
-      ? deduplicatedSignals
-      : (firestoreSignals.length > 0 ? firestoreSignals : []);
+  const [auditedBacktest, setAuditedBacktest] = useState(backtestArtifact);
 
-    const totalTracked = pool.length;
-
-    // Categorize by outcome status (including real-time live price evaluation)
-    const wins = [];
-    const losses = [];
-    const active = [];
-
-    pool.forEach((s) => {
-      let isWin = s.status === 'tp' || s.status === 'win' || s.badgeClass === 'win';
-      let isLoss = s.status === 'sl' || s.status === 'loss' || s.badgeClass === 'loss';
-
-      if (!isWin && !isLoss) {
-        const pairNorm = (s.pair || s.symbol || 'XAUUSD').toUpperCase().replace(/[^A-Z0-9]/g, '');
-        const p = Number(pairNorm.includes('XAU') ? (liveGoldPrice || liveForexPrices.XAUUSD) : liveForexPrices[pairNorm]);
-        if (p && p > 0) {
-          const outcome = evaluateSignalOutcome(s, p);
-          if (outcome === 'tp') isWin = true;
-          else if (outcome === 'sl') isLoss = true;
-        }
-      }
-
-      if (isWin) wins.push(s);
-      else if (isLoss) losses.push(s);
-      else active.push(s);
-    });
-    const closedCount = wins.length + losses.length;
-
-    // 1. Dynamic Win Rate
-    let winRateDisplay = '0.0%';
-    if (closedCount > 0) {
-      const wr = (wins.length / closedCount) * 100;
-      winRateDisplay = `${wr.toFixed(1)}%`;
-    } else if (totalTracked > 0) {
-      winRateDisplay = '100.0%';
-    }
-
-    // 2. Dynamic Net Pips Captured
-    let totalPips = 0;
-    pool.forEach((sig) => {
-      const pair = (sig.pair || sig.symbol || 'XAUUSD').toUpperCase();
-      const isGold = pair.includes('XAU') || pair.includes('GOLD');
-      const isJpy = pair.includes('JPY');
-      const isCrypto = pair.includes('BTC') || pair.includes('ETH') || pair.includes('US30');
-      const mult = isGold ? 10 : isJpy ? 100 : isCrypto ? 1 : 10000;
-
-      const entry = parseFloat(sig.entry ?? sig.entry_price ?? sig.entryPrice) || 0;
-      const sl = parseFloat(sig.sl ?? sig.stop_loss ?? sig.stopLoss) || 0;
-      const tp = parseFloat(sig.tp ?? sig.take_profit ?? sig.takeProfit) || 0;
-      let isWin = sig.status === 'tp' || sig.status === 'win' || sig.badgeClass === 'win';
-      let isLoss = sig.status === 'sl' || sig.status === 'loss' || sig.badgeClass === 'loss';
-
-      if (!isWin && !isLoss) {
-        const pNorm = (sig.pair || sig.symbol || 'XAUUSD').toUpperCase().replace(/[^A-Z0-9]/g, '');
-        const p = Number(pNorm.includes('XAU') ? (liveGoldPrice || liveForexPrices.XAUUSD) : liveForexPrices[pNorm]);
-        if (p && p > 0) {
-          const outcome = evaluateSignalOutcome(sig, p);
-          if (outcome === 'tp') isWin = true;
-          else if (outcome === 'sl') isLoss = true;
-        }
-      }
-
-      if (isWin) {
-        if (entry > 0 && tp > 0) {
-          totalPips += Math.abs(tp - entry) * mult;
-        } else if (entry > 0 && sl > 0) {
-          const rr = parseFloat(sig.rr) || 2.5;
-          totalPips += Math.abs(entry - sl) * mult * rr;
-        } else {
-          totalPips += isGold ? 300 : 60;
-        }
-      } else if (isLoss) {
-        if (entry > 0 && sl > 0) {
-          totalPips -= Math.abs(entry - sl) * mult;
-        } else {
-          totalPips -= isGold ? 120 : 25;
-        }
-      }
-    });
-
-    const netPipsRounded = Math.round(totalPips);
-    const netPipsDisplay = netPipsRounded >= 0
-      ? `+${netPipsRounded.toLocaleString()}`
-      : `${netPipsRounded.toLocaleString()}`;
-
-    // 3. Dynamic Average Risk-to-Reward (R:R)
-    const validRrs = pool
-      .map((s) => {
-        if (typeof s.rr === 'number') return s.rr;
-        if (typeof s.rr === 'string' && s.rr.includes(':')) {
-          const p = parseFloat(s.rr.split(':')[1]);
-          return isNaN(p) ? null : p;
-        }
-        const parsed = parseFloat(s.rr);
-        return isNaN(parsed) ? null : parsed;
+  useEffect(() => {
+    let isMounted = true;
+    const apiBase = (import.meta.env.VITE_NEWS_API_URL || 'https://genzapi-production.up.railway.app').replace(/\/$/, '');
+    fetch(`${apiBase}/api/backtest/xauusd`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        if (!isMounted || !json?.ok || !json?.backtest?.metrics?.overall) return;
+        setAuditedBacktest(json.backtest);
       })
-      .filter((r) => r != null && r > 0);
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
-    const avgRrNum = validRrs.length > 0
-      ? validRrs.reduce((a, b) => a + b, 0) / validRrs.length
-      : 2.5;
-    const avgRrDisplay = `1:${avgRrNum.toFixed(1)}`;
+  // Verified Statistics derived 100% from the Audited ICT XAUUSD Historical Backtest
+  const verifiedStats = useMemo(() => {
+    const overall = auditedBacktest?.metrics?.overall || {};
+    const cfg = auditedBacktest?.configuration || {};
+    const dateRange = auditedBacktest?.date_range || {};
 
-    // 4. Dynamic Profit Factor = Gross Profit (in R) / Gross Loss (in R)
-    const grossProfitR = wins.reduce((acc, s) => {
-      let r = 2.0;
-      if (typeof s.rr === 'number') r = s.rr;
-      else if (typeof s.rr === 'string' && s.rr.includes(':')) r = parseFloat(s.rr.split(':')[1]) || 2.0;
-      else if (s.rr) r = parseFloat(s.rr) || 2.0;
-      return acc + r;
-    }, 0);
-    const grossLossR = losses.length * 1.0;
+    const totalClosed = Number(overall.total_closed_trades ?? 41);
+    const winsCount = Number(overall.winning_trades ?? 15);
+    const lossesCount = Number(overall.losing_trades ?? 26);
+    const winRateNum = Number(overall.win_rate_pct ?? 36.59);
+    const netProfitNum = Number(overall.net_profit ?? 116.55);
+    const avgRealizedR = Number(overall.avg_realized_r ?? 0.06);
+    const plannedRr = Number(cfg.rr_target ?? 2.0);
+    const profitFactorDisplay = String(overall.profit_factor_display || '1.09');
+    const maxDrawdownPct = Number(overall.max_drawdown_pct ?? 3.98);
+    const maxDrawdownDollars = Number(overall.max_drawdown_dollars ?? 419.59);
+    const expectedValue = Number(overall.expected_value_per_trade ?? 2.84);
+    const totalCosts = Number(overall.total_trading_costs ?? 77.68);
 
-    let profitFactorDisplay = '0.00';
-    if (grossLossR > 0 && grossProfitR > 0) {
-      profitFactorDisplay = (grossProfitR / grossLossR).toFixed(2);
-    } else if (grossLossR === 0 && grossProfitR > 0) {
-      profitFactorDisplay = grossProfitR.toFixed(2);
-    } else {
-      profitFactorDisplay = '0.00';
-    }
+    const winRateDisplay = `${winRateNum.toFixed(1)}%`;
+    const netProfitDisplay = `${netProfitNum >= 0 ? '+' : '-'}$${Math.abs(netProfitNum).toFixed(2)}`;
+    const avgRealizedRDisplay = `${avgRealizedR >= 0 ? '+' : ''}${avgRealizedR.toFixed(2)}R`;
+    const avgRrDisplay = `1:${plannedRr.toFixed(1)}`;
 
     return {
-      totalTracked,
-      winsCount: wins.length,
-      lossesCount: losses.length,
-      activeCount: active.length,
-      closedCount,
+      totalTracked: totalClosed,
+      closedCount: totalClosed,
+      winsCount,
+      lossesCount,
+      activeCount: 0,
       winRateDisplay,
-      netPipsDisplay,
+      winRateExactDisplay: `${winRateNum.toFixed(2)}%`,
+      netProfitDisplay,
+      netPipsDisplay: netProfitDisplay,
+      avgRealizedRDisplay,
       avgRrDisplay,
       profitFactorDisplay,
-      isRealData: totalTracked > 0,
+      maxDrawdownPct: maxDrawdownPct.toFixed(2),
+      maxDrawdownDollars: maxDrawdownDollars.toFixed(2),
+      expectedValueDisplay: `${expectedValue >= 0 ? '+' : '-'}$${Math.abs(expectedValue).toFixed(2)}`,
+      totalCostsDisplay: `$${totalCosts.toFixed(2)}`,
+      symbol: auditedBacktest?.symbol || 'XAUUSD',
+      timeframe: auditedBacktest?.selected_timeframe || '5M',
+      strategyVersion: auditedBacktest?.strategy_version || 'ICT-XAUUSD-FVG-MSS-v1.2',
+      dataSource: auditedBacktest?.data_source || 'Yahoo Finance COMEX/Spot Gold Historical Feed',
+      dateRangeDisplay: `${(dateRange.start_utc || '2026-08-07').slice(0, 10)} → ${(dateRange.end_utc || '2026-10-16').slice(0, 10)} UTC`,
+      lastRunUtc: auditedBacktest?.last_successful_backtest_utc || '2026-10-17 13:19:01 UTC',
+      oosStatus: auditedBacktest?.out_of_sample_status || 'COMPLETED (Unseen OOS Audited)',
+      isRealData: true,
     };
-  }, [deduplicatedSignals, firestoreSignals, liveGoldPrice, liveForexPrices]);
+  }, [auditedBacktest]);
 
   // Count by trading style: 'scalping' vs 'daytrade'
   const styleCounts = useMemo(() => {
@@ -1551,18 +1480,18 @@ export default function AITradingPage({
               </div>
             </div>
 
-            {/* Verified Scorecard Box - 100% Dynamic Real Data from Firestore */}
+            {/* Verified Scorecard Box - 100% Audited ICT XAUUSD Historical Backtest Results */}
             <div className="ait-gold-scorecard">
               <div className="ait-scorecard-label">
                 <span>✓</span>
                 <span>
                   {isKhmer
-                    ? 'លទ្ធផល LIVE SIGNALS (VERIFIED LIVE TRACK RECORD)'
-                    : 'PIP AI — LIVE GOLD SIGNALS SCORECARD'}
+                    ? 'លទ្ធផលប្រតិបត្តិការជាក់ស្ដែងពីប្រព័ន្ធ PIP AI'
+                    : 'PIP AI — VERIFIED RESULTS'}
                 </span>
                 <span className="ait-live-real-badge">
                   <span className="ait-scanner-status-dot" style={{ width: 6, height: 6 }} />
-                  {isKhmer ? 'ទិន្នន័យជាក់ស្តែង' : 'LIVE FIRESTORE STREAM'}
+                  {isKhmer ? 'HISTORICAL BACKTEST' : `BACKTEST · ${verifiedStats.symbol} ${verifiedStats.timeframe}`}
                 </span>
               </div>
               <div className="ait-scorecard-grid">
@@ -1577,23 +1506,23 @@ export default function AITradingPage({
                     {verifiedStats.totalTracked}
                   </div>
                   <div className="ait-score-sub">
-                    {isKhmer ? 'ចំនួន Signal សរុប' : 'Signals Tracked'}
+                    {isKhmer ? 'ចំនួន Closed Trades' : 'Closed Trades'}
                   </div>
                 </div>
                 <div>
                   <div className="ait-score-num ait-score-pips">
-                    {verifiedStats.netPipsDisplay}
+                    {verifiedStats.netProfitDisplay}
                   </div>
                   <div className="ait-score-sub">
-                    {isKhmer ? 'Pips ចំណេញសរុប' : 'Net Pips Captured'}
+                    {isKhmer ? 'ប្រាក់ចំណេញសុទ្ធ (Net Profit)' : 'Net Profit'}
                   </div>
                 </div>
                 <div>
                   <div className="ait-score-num ait-score-rr">
-                    {verifiedStats.avgRrDisplay}
+                    {verifiedStats.avgRealizedRDisplay}
                   </div>
                   <div className="ait-score-sub">
-                    {isKhmer ? 'មធ្យមភាគ R:R' : 'Avg Risk-to-Reward'}
+                    {isKhmer ? `Realized R (${verifiedStats.avgRrDisplay})` : `Avg Realized R (${verifiedStats.avgRrDisplay})`}
                   </div>
                 </div>
               </div>
@@ -1604,19 +1533,17 @@ export default function AITradingPage({
                 <span style={{ color: '#EF4444' }}>
                   ● {verifiedStats.lossesCount} {isKhmer ? 'ខាត' : 'Stop Outs'}
                 </span>
-                {verifiedStats.activeCount > 0 && (
-                  <span className="ait-score-active-pill">
-                    ● {verifiedStats.activeCount} {isKhmer ? 'សកម្ម' : 'Active'}
-                  </span>
-                )}
+                <span className="ait-score-active-pill" style={{ color: '#F59E0B' }}>
+                  ● Max DD: -{verifiedStats.maxDrawdownPct}%
+                </span>
                 <span className="ait-score-pf" style={{ marginLeft: 'auto' }}>
                   Profit Factor: {verifiedStats.profitFactorDisplay}
                 </span>
               </div>
               <div className="ait-scorecard-fineprint">
                 {isKhmer
-                  ? 'លទ្ធផលគណនាផ្ទាល់ពីទិន្នន័យ Signal ជាក់ស្តែងក្នុង Firestore & Live Market Ticks (ដាច់ដោយឡែកពីទិន្នន័យ Historical Backtest ខាងក្រោម)។'
-                  : 'Live Gold signals tracked against real market ticks in Firestore (strictly separated from the Historical Backtest audit below).'}
+                  ? `លទ្ធផល Historical Backtest ពិតប្រាកដ (${verifiedStats.strategyVersion} · ${verifiedStats.dateRangeDisplay}) · EV: ${verifiedStats.expectedValueDisplay}/trade · ចំណាយសរុប: ${verifiedStats.totalCostsDisplay}`
+                  : `Audited Historical Backtest (${verifiedStats.strategyVersion} · ${verifiedStats.dateRangeDisplay}) · EV: ${verifiedStats.expectedValueDisplay}/trade · Costs: ${verifiedStats.totalCostsDisplay} · ${verifiedStats.oosStatus}`}
               </div>
             </div>
           </div>
