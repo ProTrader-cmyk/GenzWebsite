@@ -1940,17 +1940,7 @@ Model: ${sig.model || 'ICT SMC Model'}${explanationsText}`;
                   </div>
                 </div>
                 <div className="ait-pm-mcb-right">
-                  <span className="ait-pm-mcb-crypto-hint">Crypto trades 24/7 continuous</span>
-                  {onSelectAsset && (
-                    <button
-                      type="button"
-                      className="ait-pm-mcb-switch-crypto-btn"
-                      onClick={() => onSelectAsset('btc')}
-                    >
-                      <PairLogo pair="BTCUSD" size={16} />
-                      <span>Switch to BTCUSD (24/7 Live)</span>
-                    </button>
-                  )}
+                  <span className="ait-pm-mcb-crypto-hint">Interbank Gold Liquidity Paused</span>
                 </div>
               </div>
             )}
@@ -2230,21 +2220,8 @@ Model: ${sig.model || 'ICT SMC Model'}${explanationsText}`;
                     <strong>Weekend Trading Notice:</strong>
                   </div>
                   <p className="ait-pm-advice-text">
-                    Because Forex and Commodities do not trade 24/7, all institutional order flows pause until Sunday 5:00 PM EST. If you want active 24/7 signals over the weekend, switch to Cryptocurrency (BTCUSD) which is continuously traded.
+                    Spot Gold (XAU/USD) markets do not trade 24/7. All interbank order flows pause over the weekend until Sunday 5:00 PM EST (Monday 05:00 AM UTC+7), when institutional liquidity resumes for the weekly open.
                   </p>
-                  {onSelectAsset && (
-                    <div className="ait-pm-advice-actions">
-                      <button
-                        type="button"
-                        className="ait-pm-switch-scalp-btn"
-                        onClick={() => onSelectAsset('btc')}
-                      >
-                        <span className="ait-pm-btn-content" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                          <PairLogo pair="BTCUSD" size={16} /> Switch to BTCUSD (24/7 Live)
-                        </span>
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
             )}

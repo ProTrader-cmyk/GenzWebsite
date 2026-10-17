@@ -12,3 +12,5 @@ dist
 *.mp4
 *.log
 firebase-debug.log*
+__pycache__/
+*.pyc

@@ -323,8 +323,6 @@ export default function AITradingPage({
   const [liveGoldPrice, setLiveGoldPrice] = useState(null);
   const [liveForexPrices, setLiveForexPrices] = useState({
     XAUUSD: null,
-    XAGUSD: null,
-    BTCUSD: null,
   });
 
   // Real signals directly from Firestore (Strictly zero mock data)
@@ -393,36 +391,34 @@ export default function AITradingPage({
       localStorage.removeItem('genz_pip_daily_stats');
     } catch {}
 
-    // 1. Fetch real spot prices
-    const pairs = ['XAUUSD', 'XAGUSD', 'BTCUSD'];
-    pairs.forEach(async (pair) => {
-      const price = await fetchLivePrice(pair);
+    // 1. Fetch real spot prices strictly for Gold (XAUUSD)
+    fetchLivePrice('XAUUSD').then((price) => {
       if (price) {
-        setLiveForexPrices((prev) => ({ ...prev, [pair]: price }));
-        if (pair === 'XAUUSD') setLiveGoldPrice(price);
+        setLiveForexPrices({ XAUUSD: price });
+        setLiveGoldPrice(price);
       }
     });
 
-    // 2. Subscribe to real WebSocket ticks
-    const unsubTicks = subscribeLiveTicks(['XAUUSD', 'XAGUSD', 'BTCUSD'], (pair, price) => {
-      if (price) {
-        setLiveForexPrices((prev) => ({ ...prev, [pair]: price }));
-        if (pair === 'XAUUSD') setLiveGoldPrice(price);
+    // 2. Subscribe to real WebSocket ticks strictly for Gold (XAUUSD)
+    const unsubTicks = subscribeLiveTicks(['XAUUSD'], (pair, price) => {
+      if (price && (pair === 'XAUUSD' || pair.includes('XAU') || pair.includes('GOLD'))) {
+        setLiveForexPrices({ XAUUSD: price });
+        setLiveGoldPrice(price);
       }
     });
 
-    // 3. Query real signals from backend stream & Firestore database
+    // 3. Query real signals from backend stream & Firestore database (Strictly Gold XAU/USD)
     const unsubSubscribedSignals = subscribeSignals((sigs) => {
       if (Array.isArray(sigs) && sigs.length > 0) {
         const cleanSigs = sigs.filter((s) => {
           if (!s) return false;
           const p = (s.pair || s.symbol || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+          const isGold = p.includes('XAU') || p.includes('GOLD');
+          if (!isGold) return false;
           const e = Number(s.entry ?? s.entry_price ?? s.entryPrice ?? s.price);
           const sl = Number(s.sl ?? s.stop_loss ?? s.stopLoss);
           const tp = Number(s.tp ?? s.take_profit ?? s.takeProfit);
-          if (p.includes('BTC') && (e < 10000 || Math.abs(e - sl) < 0.001)) return false;
-          if (p.includes('US30') && (e < 10000 || Math.abs(e - sl) < 0.001)) return false;
-          if (p.includes('XAU') && (e < 1000 || e > 10000)) return false;
+          if (e < 1000 || e > 10000) return false;
           if (e > 0 && sl > 0 && Math.abs(e - sl) < 0.001 && Math.abs(e - tp) < 0.001) return false;
           return true;
         });
@@ -471,21 +467,18 @@ export default function AITradingPage({
             });
 
             const pairRaw = (data.pair || 'XAUUSD').toUpperCase().replace('/', '').trim();
+            const isGold = pairRaw.includes('XAU') || pairRaw.includes('GOLD');
+            if (!isGold) {
+              // Exclusively Gold in AI Trading: skip all other assets
+              return;
+            }
+
             let entry = Number(data.entry ?? data.entry_price ?? data.entryPrice);
             let sl = Number(data.sl ?? data.stop_loss ?? data.stopLoss);
             let tp = Number(data.tp ?? data.take_profit ?? data.takeProfit);
 
-            // Filter out corrupted signals from previous accidental dispatches (e.g. BTCUSD with Gold's $4,165.40 price or identical TP/SL/Entry)
-            if (pairRaw.includes('BTC') && (entry < 10000 || Math.abs(entry - sl) < 0.001)) {
-              try {
-                deleteDoc(doc(db, 'signals', docSnap.id)).catch(() => {});
-              } catch {}
-              return;
-            }
-            if (pairRaw.includes('US30') && (entry < 10000 || Math.abs(entry - sl) < 0.001)) {
-              try {
-                deleteDoc(doc(db, 'signals', docSnap.id)).catch(() => {});
-              } catch {}
+            // Filter out corrupted signals
+            if (entry < 1000 || entry > 10000) {
               return;
             }
             if (entry > 0 && Math.abs(entry - sl) < 0.001 && Math.abs(entry - tp) < 0.001) {
@@ -495,35 +488,14 @@ export default function AITradingPage({
               return;
             }
 
-            // Sanitize collapsed/identical SL or TP: Compute genuine asset-specific SL and TP
+            // Sanitize collapsed/identical SL or TP: Compute genuine Gold SL and TP
             const isBuy = (data.direction || 'BUY').toUpperCase() === 'BUY';
             const isScalp = (data.style || '').toLowerCase() === 'scalping' || (data.mode || '').toLowerCase().includes('scalp');
-            const decimals = pairRaw.includes('EUR') || pairRaw.includes('GBP') ? 5 : (pairRaw.includes('JPY') || pairRaw.includes('XAG') || pairRaw.includes('SILVER')) ? 3 : pairRaw.includes('US30') ? 1 : 2;
+            const decimals = 2;
 
-            const isOldWideBtcScalp = pairRaw.includes('BTC') && isScalp && sl > 0 && Math.abs(entry - sl) > 250;
-            if (!sl || !tp || isNaN(sl) || isNaN(tp) || Math.abs(entry - sl) < 0.001 || Math.abs(entry - tp) < 0.001 || isOldWideBtcScalp) {
-              let slDist = 10.0;
-              let tpDist = 20.0;
-              if (pairRaw.includes('BTC')) {
-                slDist = isScalp ? 120.0 : 850.0;
-                tpDist = isScalp ? 180.0 : 1700.0;
-              } else if (pairRaw.includes('US30')) {
-                slDist = isScalp ? 65.0 : 180.0;
-                tpDist = isScalp ? 130.0 : 360.0;
-              } else if (pairRaw.includes('XAU') || pairRaw.includes('GOLD')) {
-                slDist = isScalp ? 2.5 : 10.0;
-                tpDist = isScalp ? 3.5 : 20.0;
-              } else if (pairRaw.includes('XAG') || pairRaw.includes('SILVER')) {
-                slDist = isScalp ? 0.15 : 0.40;
-                tpDist = isScalp ? 0.30 : 0.80;
-              } else if (pairRaw.includes('JPY')) {
-                slDist = isScalp ? 0.25 : 0.60;
-                tpDist = isScalp ? 0.50 : 1.20;
-              } else {
-                slDist = isScalp ? 0.0010 : 0.0025;
-                tpDist = isScalp ? 0.0020 : 0.0050;
-              }
-
+            if (!sl || !tp || isNaN(sl) || isNaN(tp) || Math.abs(entry - sl) < 0.001 || Math.abs(entry - tp) < 0.001) {
+              const slDist = isScalp ? 2.5 : 10.0;
+              const tpDist = isScalp ? 3.5 : 20.0;
               sl = Number((isBuy ? entry - slDist : entry + slDist).toFixed(decimals));
               tp = Number((isBuy ? entry + tpDist : entry - tpDist).toFixed(decimals));
             }
@@ -531,9 +503,9 @@ export default function AITradingPage({
             list.push({
               id: docSnap.id,
               ...data,
-              pair: pairRaw,
-              symbol: pairRaw,
-              name: pairRaw === 'XAUUSD' ? 'Gold (XAU/USD)' : pairRaw,
+              pair: 'XAUUSD',
+              symbol: 'XAUUSD',
+              name: 'Gold (XAU/USD)',
               direction: (data.direction || 'BUY').toUpperCase(),
               entry,
               sl,
@@ -743,24 +715,18 @@ export default function AITradingPage({
   // Filter signals by both Asset Category and Strategy Style (Scalping vs Day Trade)
   const filteredSignals = useMemo(() => {
     const res = deduplicatedSignals.filter((sig) => {
-      // 0. Supported Pairs allowlist check
+      // 0. Supported Pairs allowlist check - STRICTLY GOLD ONLY
       const asset = (sig.pair || sig.symbol || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
       const isGold = asset.includes('XAU') || asset.includes('GOLD');
-      const isSilver = asset.includes('XAG') || asset.includes('SILVER');
-      const isBtc = asset.includes('BTC');
-
-      if (!isGold && !isSilver && !isBtc) return false;
+      if (!isGold) return false;
 
       // 1. Trading Style Filter
       const isScalp = isSignalScalp(sig);
       if (tradeStyleFilter === 'scalping' && !isScalp) return false;
       if (tradeStyleFilter === 'daytrade' && isScalp) return false;
 
-      // 2. Asset Category Filter
-      if (signalFilter === 'all') return true;
-      if (signalFilter === 'gold') return isGold;
-      if (signalFilter === 'silver') return isSilver;
-      if (signalFilter === 'btc') return isBtc;
+      // 2. Asset Category Filter (Gold Only)
+      if (signalFilter !== 'all' && signalFilter !== 'gold') return false;
       return true;
     });
 
@@ -1712,15 +1678,15 @@ export default function AITradingPage({
             </div>
           )}
 
-          {/* Market Closed Banner above Signal Grid (Institutions do not trade 24/7) */}
-          {!activeSession.isOpen && signalFilter !== 'crypto' && (
+          {/* Market Closed Banner above Signal Grid (Gold interbank weekend break) */}
+          {!activeSession.isOpen && (
             <div className="ait-signals-market-closed-bar">
               <div className="ait-smcb-icon">
                 <LockIcon style={{ width: 15, height: 15 }} />
               </div>
               <div className="ait-smcb-content">
                 <strong>MARKET CLOSED • WEEKEND BREAK:</strong>
-                <span>Forex and Metals markets do not trade 24/7. Interbank trading re-opens Sunday 5:00 PM EST ({activeSession.reopensText || 'Monday 05:00 AM UTC+7'}). Select Crypto (BTCUSD) for continuous 24/7 weekend markets.</span>
+                <span>Gold (XAU/USD) markets do not trade 24/7 on weekends. Interbank trading re-opens Sunday 5:00 PM EST ({activeSession.reopensText || 'Monday 05:00 AM UTC+7'}).</span>
               </div>
             </div>
           )}
@@ -1743,33 +1709,27 @@ export default function AITradingPage({
           ) : (
             <div className={`ait-signals-grid ${!isVipUser ? 'ait-signals-blurred' : ''}`}>
               {paginatedSignals.map((sig) => {
-                const asset = (sig.pair || sig.symbol || 'XAUUSD').toUpperCase();
+                const asset = 'XAUUSD';
                 const dir = (sig.direction || sig.action || 'BUY').toUpperCase();
                 const isBuy = dir === 'BUY';
                 const rawEntry = sig.entry ?? sig.entry_price ?? sig.entryPrice ?? sig.price;
                 const rawTp = sig.tp ?? sig.take_profit ?? sig.takeProfit ?? sig.target;
                 const rawSl = sig.sl ?? sig.stop_loss ?? sig.stopLoss;
                 const isScalp = isSignalScalp(sig);
-                const isGoldAsset = asset.includes('XAU') || asset.includes('GOLD');
-                const isForexAsset = asset.includes('EUR') || asset.includes('GBP') || asset.includes('AUD') || asset.includes('JPY');
                 let entryNum = parseFloat(String(rawEntry ?? '').replace(/,/g, '')) || 0;
                 let slNum = parseFloat(String(rawSl ?? '').replace(/,/g, '')) || 0;
                 let tpNum = parseFloat(String(rawTp ?? '').replace(/,/g, '')) || 0;
 
-                // Absolute sanity guard: If BTCUSD/US30 has leaked Gold price (< 10000), fix to real spot price
-                if (asset.includes('BTC') && entryNum < 10000) entryNum = 81632.50;
-                if (asset.includes('US30') && entryNum < 10000) entryNum = 51830.00;
-                if (isGoldAsset && (entryNum < 1000 || entryNum > 10000)) entryNum = 4171.25;
+                if (entryNum < 1000 || entryNum > 10000) entryNum = 4171.25;
 
                 let slDist = entryNum > 0 && slNum > 0 ? Math.abs(entryNum - slNum) : 0;
                 let tpDist = entryNum > 0 && tpNum > 0 ? Math.abs(tpNum - entryNum) : 0;
 
-                const isWideBtcScalp = asset.includes('BTC') && isScalp && slDist > 250;
-                if (slDist < 0.001 || isWideBtcScalp) {
-                  slDist = asset.includes('BTC') ? (isScalp ? 120.0 : 850.0) : asset.includes('US30') ? (isScalp ? 65.0 : 180.0) : isGoldAsset ? (isScalp ? 2.5 : 10.0) : asset.includes('XAG') ? (isScalp ? 0.15 : 0.40) : 0.0025;
+                if (slDist < 0.001) {
+                  slDist = isScalp ? 2.5 : 10.0;
                 }
-                if (tpDist < 0.001 || isWideBtcScalp) {
-                  tpDist = asset.includes('BTC') ? (isScalp ? 180.0 : 1700.0) : asset.includes('US30') ? (isScalp ? 130.0 : 360.0) : isGoldAsset ? (isScalp ? 3.5 : 20.0) : asset.includes('XAG') ? (isScalp ? 0.30 : 0.80) : 0.0050;
+                if (tpDist < 0.001) {
+                  tpDist = isScalp ? 3.5 : 20.0;
                 }
 
                 // 🛑 STRICT REQUIREMENT: Intra trade (Day Trade) must have R:R >= 1:2.0+
@@ -1777,30 +1737,22 @@ export default function AITradingPage({
                   tpDist = slDist * 2.0;
                 }
 
-                const finalSl = (!isWideBtcScalp && slNum > 0 && Math.abs(entryNum - slNum) > 0.001) ? slNum : (isBuy ? entryNum - slDist : entryNum + slDist);
-                const finalTp = (!isWideBtcScalp && tpNum > 0 && Math.abs(entryNum - tpNum) > 0.001) ? tpNum : (isBuy ? entryNum + tpDist : entryNum - tpDist);
+                const finalSl = slNum > 0 && Math.abs(entryNum - slNum) > 0.001 ? slNum : (isBuy ? entryNum - slDist : entryNum + slDist);
+                const finalTp = tpNum > 0 && Math.abs(entryNum - tpNum) > 0.001 ? tpNum : (isBuy ? entryNum + tpDist : entryNum - tpDist);
 
                 const entry = formatLevelPrice(entryNum, asset);
                 const tp = formatLevelPrice(finalTp, asset);
                 const sl = formatLevelPrice(finalSl, asset);
 
-                const pipMult = isGoldAsset ? 100 : asset.includes('XAG') ? 1000 : asset.includes('JPY') ? 100 : isForexAsset ? 10000 : 1;
+                const pipMult = 100; // Gold: 1 pt = 100 cents / 10 pips
 
                 const slPts = Math.round(slDist * pipMult);
                 const tpPts = Math.round(tpDist * pipMult);
                 const slPct = entryNum > 0 ? ((slDist / entryNum) * 100).toFixed(2) : '0.00';
                 const tpPct = entryNum > 0 ? ((tpDist / entryNum) * 100).toFixed(2) : '0.00';
-                // 0.03 Lot USD Math: Gold 0.03 lot = 3 oz ($3.00 per $1.00 move). Forex 0.03 lot = $0.30/pip.
-                const slUsd = isGoldAsset
-                  ? (slDist * 100 * 0.03).toFixed(2)
-                  : isForexAsset
-                    ? (slPts * 0.30).toFixed(2)
-                    : (slDist * 0.03).toFixed(2);
-                const tpUsd = isGoldAsset
-                  ? (tpDist * 100 * 0.03).toFixed(2)
-                  : isForexAsset
-                    ? (tpPts * 0.30).toFixed(2)
-                    : (tpDist * 0.03).toFixed(2);
+                // 0.03 Lot USD Math: Gold 0.03 lot = 3 oz ($3.00 per $1.00 move)
+                const slUsd = (slDist * 100 * 0.03).toFixed(2);
+                const tpUsd = (tpDist * 100 * 0.03).toFixed(2);
 
                 const calculatedRrNum = slDist > 0 ? (tpDist / slDist).toFixed(1) : '1.5';
                 const rr = `1:${calculatedRrNum}`;
@@ -1812,7 +1764,7 @@ export default function AITradingPage({
                 // Always generate verified institutional confluences that explain WHY we trade,
                 // state 0.03 Lot per trade, and calculate exact TP & SL from the signal's real levels
                 const confluences = buildVerifiedTradeConfluences({
-                  pair: asset,
+                  pair: 'XAUUSD',
                   direction: dir,
                   entry: entryNum,
                   sl: finalSl,
@@ -1826,7 +1778,7 @@ export default function AITradingPage({
                 const source = sig.source || (sig.isFirestore ? 'GENZ VIP SIGNALS' : sig.isRealAiGenerated ? 'PIP AI (GEMINI 3.8)' : 'PIP AI SMC');
                 const opened = sig.opened || sig.timestamp || 'Today, Active';
                 const session = sig.session || activeSession.name;
-                const curPrice = Number(asset.includes('XAU') ? (liveGoldPrice || liveForexPrices.XAUUSD) : liveForexPrices[asset]) || null;
+                const curPrice = Number(liveGoldPrice || liveForexPrices.XAUUSD) || null;
                 const statusLower = String(sig.status || '').toLowerCase();
                 let isTp = statusLower === 'tp' || statusLower === 'win';
                 let isSl = statusLower === 'sl' || statusLower === 'loss';
@@ -1844,7 +1796,7 @@ export default function AITradingPage({
 
                 const cleanTf = (tf.match(/\b(1M|5M|15M|30M|1H|4H|D1)\b/i)?.[0] || tf || '15M').toUpperCase();
                 const timeframeTag = isScalp ? `SCALPING (${cleanTf})` : `INTRADAY (${cleanTf})`;
-                const assetSubtitle = isGoldAsset ? `Gold · ${cleanTf.toLowerCase()}` : `${asset.replace('USD', '')} · ${cleanTf.toLowerCase()}`;
+                const assetSubtitle = `Gold · ${cleanTf.toLowerCase()}`;
                 const displayConfluences = (confluences || [])
                   .map((item) => {
                     if (!item) return null;
@@ -1879,11 +1831,7 @@ export default function AITradingPage({
                     <div className="ait-card-top-row">
                       <div className="ait-card-asset-info">
                         <div className="ait-card-asset-icon">
-                          {isGoldAsset ? (
-                            <GoldAssetEmblem size={42} />
-                          ) : (
-                            <PairLogo pair={asset} />
-                          )}
+                          <GoldAssetEmblem size={42} />
                         </div>
                         <div className="ait-card-asset-titles">
                           <div className="ait-card-symbol-badge-line">

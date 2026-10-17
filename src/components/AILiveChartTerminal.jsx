@@ -11,7 +11,7 @@ import MarketAnalysisPanel from './MarketAnalysisPanel.jsx';
 
 const TV_LOCALE = 'en';
 
-export const SUPPORTED_PAIRS = ['XAUUSD', 'XAGUSD', 'BTCUSD'];
+export const SUPPORTED_PAIRS = ['XAUUSD'];
 
 const SYMBOLS = [
   { id: 'gold', symbol: 'OANDA:XAUUSD', label: 'XAU/USD (Gold)', name: 'Gold', pair: 'XAUUSD', pipScale: 0.1, defaultPrice: 4171.25 },
@@ -387,12 +387,8 @@ export default function AILiveChartTerminal({
     }) || null;
   }, [activeSignals, liveSignals, currentPairNorm, currentAsset.pair, closedSignalIds, marketExtremes, marketAnalysis, livePrice, hasVerifiedLivePrice]);
 
-  // Precision decimals for current asset
-  const decimals = currentPairNorm.includes('XAG')
-    ? 3
-    : currentPairNorm.includes('BTC')
-      ? 2
-      : 2;
+  // Precision decimals for Gold (strictly 2 decimals)
+  const decimals = 2;
 
   // Real-time live P&L and target distance meter for the active position (Locked strictly to 0.03 lot size)
   const POSITION_LOT_SIZE = 0.03;
@@ -404,11 +400,8 @@ export default function AILiveChartTerminal({
     const tp = Number(currentActiveSetup.tp);
     const sl = Number(currentActiveSetup.sl);
     const curr = hasVerifiedLivePrice && livePrice ? Number(livePrice) : entry;
-    const isGold = currentPairNorm.includes('XAU');
-    const isSilver = currentPairNorm.includes('XAG');
-    const isBtc = currentPairNorm.includes('BTC');
 
-    const mult = isGold ? 10 : isSilver ? 100 : 1;
+    const mult = 10; // Gold: $1.00 move = 10 pips
 
     const diff = isBuy ? curr - entry : entry - curr;
     const pips = diff * mult;
@@ -416,31 +409,11 @@ export default function AILiveChartTerminal({
     const riskDiff = Math.abs(entry - sl);
     const progressPct = targetDiff > 0 ? Math.min(100, Math.max(0, Math.round((Math.max(0, diff) / targetDiff) * 100))) : 50;
 
-    // Real Dollar P&L calculation strictly for 0.03 LOT SIZE
+    // Real Dollar P&L calculation strictly for Gold (0.03 LOT SIZE)
     // For Gold (XAUUSD): 1 standard lot = 100 oz ($100/pt). 0.03 lot = 3 oz ($3.00/pt)
-    // For Silver (XAGUSD): 1 standard lot = 5000 oz ($5000/pt). 0.03 lot = 150 oz ($150/pt)
-    // For Bitcoin (BTCUSD): 1 standard lot = 1 BTC. 0.03 lot = 0.03 BTC ($0.03/pt)
-    let dollarPnl = 0;
-    let tpProfitUsd = 0;
-    let slLossUsd = 0;
-
-    if (isGold) {
-      dollarPnl = diff * 100 * POSITION_LOT_SIZE; // $3.00 per point
-      tpProfitUsd = targetDiff * 100 * POSITION_LOT_SIZE;
-      slLossUsd = riskDiff * 100 * POSITION_LOT_SIZE;
-    } else if (isSilver) {
-      dollarPnl = diff * 5000 * POSITION_LOT_SIZE; // $150.00 per point
-      tpProfitUsd = targetDiff * 5000 * POSITION_LOT_SIZE;
-      slLossUsd = riskDiff * 5000 * POSITION_LOT_SIZE;
-    } else if (isBtc) {
-      dollarPnl = diff * POSITION_LOT_SIZE; // $0.03 per point
-      tpProfitUsd = targetDiff * POSITION_LOT_SIZE;
-      slLossUsd = riskDiff * POSITION_LOT_SIZE;
-    } else {
-      dollarPnl = diff * POSITION_LOT_SIZE;
-      tpProfitUsd = targetDiff * POSITION_LOT_SIZE;
-      slLossUsd = riskDiff * POSITION_LOT_SIZE;
-    }
+    const dollarPnl = diff * 100 * POSITION_LOT_SIZE; // $3.00 per point
+    const tpProfitUsd = targetDiff * 100 * POSITION_LOT_SIZE;
+    const slLossUsd = riskDiff * 100 * POSITION_LOT_SIZE;
 
     return {
       pips: pips >= 0 ? `+${pips.toFixed(1)}` : pips.toFixed(1),
@@ -452,7 +425,7 @@ export default function AILiveChartTerminal({
       slLossUsd: slLossUsd > 0 ? `-$${slLossUsd.toFixed(2)}` : '',
       lotSize: POSITION_LOT_SIZE,
     };
-  }, [currentActiveSetup, livePrice, hasVerifiedLivePrice, currentPairNorm, decimals]);
+  }, [currentActiveSetup, livePrice, hasVerifiedLivePrice, decimals]);
 
   // Live TP / SL touch detection for the active position (strictly requires verified live price)
   useEffect(() => {
@@ -500,9 +473,8 @@ export default function AILiveChartTerminal({
     if (hitTp) {
       setClosedSignalIds((prev) => new Set(prev).add(sId));
       playAiBeep('trade', isMuted);
-      const isGold = currentPairNorm.includes('XAU');
       const tpPts = Math.abs(tp - entry);
-      const tpProfitUsd = isGold ? tpPts * 100 * 0.03 : tpPts * 10;
+      const tpProfitUsd = tpPts * 100 * 0.03;
       setRecentOutcomeNotice({
         type: 'tp',
         text: isKhmer
@@ -518,9 +490,8 @@ export default function AILiveChartTerminal({
       return () => clearTimeout(timer);
     } else if (hitSl) {
       setClosedSignalIds((prev) => new Set(prev).add(sId));
-      const isGold = currentPairNorm.includes('XAU');
       const slPts = Math.abs(entry - sl);
-      const slLossUsd = isGold ? slPts * 100 * 0.03 : slPts * 10;
+      const slLossUsd = slPts * 100 * 0.03;
       setRecentOutcomeNotice({
         type: 'sl',
         text: isKhmer
