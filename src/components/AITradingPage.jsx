@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, limit, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase.js';
 import Footer from './Footer.jsx';
 import {
@@ -471,7 +471,19 @@ export default function AITradingPage({
     // 3. Query real signals from backend stream & Firestore database
     const unsubSubscribedSignals = subscribeSignals((sigs) => {
       if (Array.isArray(sigs) && sigs.length > 0) {
-        setServerSignals(sigs);
+        const cleanSigs = sigs.filter((s) => {
+          if (!s) return false;
+          const p = (s.pair || s.symbol || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+          const e = Number(s.entry ?? s.entry_price ?? s.entryPrice ?? s.price);
+          const sl = Number(s.sl ?? s.stop_loss ?? s.stopLoss);
+          const tp = Number(s.tp ?? s.take_profit ?? s.takeProfit);
+          if (p.includes('BTC') && (e < 10000 || Math.abs(e - sl) < 0.001)) return false;
+          if (p.includes('US30') && (e < 10000 || Math.abs(e - sl) < 0.001)) return false;
+          if (p.includes('XAU') && (e < 1000 || e > 10000)) return false;
+          if (e > 0 && sl > 0 && Math.abs(e - sl) < 0.001 && Math.abs(e - tp) < 0.001) return false;
+          return true;
+        });
+        setServerSignals(cleanSigs);
       }
     });
 
@@ -520,14 +532,27 @@ export default function AITradingPage({
             let sl = Number(data.sl ?? data.stop_loss ?? data.stopLoss);
             let tp = Number(data.tp ?? data.take_profit ?? data.takeProfit);
 
-            // 1. Sanitize leaked prices: If BTCUSD has Gold price (< 10000), fix to real BTC spot price
-            if (pairRaw.includes('BTC') && entry < 10000) {
-              entry = 81632.50;
-            } else if (pairRaw.includes('US30') && entry < 10000) {
-              entry = 51830.00;
+            // Filter out corrupted signals from previous accidental dispatches (e.g. BTCUSD with Gold's $4,165.40 price or identical TP/SL/Entry)
+            if (pairRaw.includes('BTC') && (entry < 10000 || Math.abs(entry - sl) < 0.001)) {
+              try {
+                deleteDoc(doc(db, 'signals', docSnap.id)).catch(() => {});
+              } catch {}
+              return;
+            }
+            if (pairRaw.includes('US30') && (entry < 10000 || Math.abs(entry - sl) < 0.001)) {
+              try {
+                deleteDoc(doc(db, 'signals', docSnap.id)).catch(() => {});
+              } catch {}
+              return;
+            }
+            if (entry > 0 && Math.abs(entry - sl) < 0.001 && Math.abs(entry - tp) < 0.001) {
+              try {
+                deleteDoc(doc(db, 'signals', docSnap.id)).catch(() => {});
+              } catch {}
+              return;
             }
 
-            // 2. Sanitize collapsed/identical SL or TP: Compute genuine asset-specific SL and TP
+            // Sanitize collapsed/identical SL or TP: Compute genuine asset-specific SL and TP
             const isBuy = (data.direction || 'BUY').toUpperCase() === 'BUY';
             const isScalp = (data.style || '').toLowerCase() === 'scalping' || (data.mode || '').toLowerCase().includes('scalp');
             const decimals = pairRaw.includes('EUR') || pairRaw.includes('GBP') ? 5 : pairRaw.includes('JPY') ? 3 : (pairRaw.includes('BTC') || pairRaw.includes('US30')) ? 1 : 2;
@@ -569,6 +594,14 @@ export default function AITradingPage({
               entry,
               sl,
               tp,
+              entry_price: entry,
+              entryPrice: entry,
+              price: entry,
+              stop_loss: sl,
+              stopLoss: sl,
+              take_profit: tp,
+              takeProfit: tp,
+              target: tp,
               rr: typeof data.rr === 'number' ? `1:${data.rr}` : data.rr || '1:2.5',
               session: data.session || 'London Open Killzone',
               timeframe: data.timeframe || '15m',
@@ -1868,25 +1901,39 @@ export default function AITradingPage({
                 const rawTp = sig.tp ?? sig.take_profit ?? sig.takeProfit ?? sig.target;
                 const rawSl = sig.sl ?? sig.stop_loss ?? sig.stopLoss;
                 const isScalp = isSignalScalp(sig);
-                const entryNum = parseFloat(String(rawEntry ?? '').replace(/,/g, '')) || 0;
+                const isGoldAsset = asset.includes('XAU') || asset.includes('GOLD');
+                const isForexAsset = asset.includes('EUR') || asset.includes('GBP') || asset.includes('AUD') || asset.includes('JPY');
+                let entryNum = parseFloat(String(rawEntry ?? '').replace(/,/g, '')) || 0;
                 let slNum = parseFloat(String(rawSl ?? '').replace(/,/g, '')) || 0;
                 let tpNum = parseFloat(String(rawTp ?? '').replace(/,/g, '')) || 0;
 
-                let slDist = entryNum > 0 && slNum > 0 ? Math.abs(entryNum - slNum) : (isScalp ? 2.5 : 10.0);
-                let tpDist = entryNum > 0 && tpNum > 0 ? Math.abs(tpNum - entryNum) : (isScalp ? 3.0 : 20.0);
+                // Absolute sanity guard: If BTCUSD/US30 has leaked Gold price (< 10000), fix to real spot price
+                if (asset.includes('BTC') && entryNum < 10000) entryNum = 81632.50;
+                if (asset.includes('US30') && entryNum < 10000) entryNum = 51830.00;
+                if (isGoldAsset && (entryNum < 1000 || entryNum > 10000)) entryNum = 4171.25;
+
+                let slDist = entryNum > 0 && slNum > 0 ? Math.abs(entryNum - slNum) : 0;
+                let tpDist = entryNum > 0 && tpNum > 0 ? Math.abs(tpNum - entryNum) : 0;
+
+                if (slDist < 0.001) {
+                  slDist = asset.includes('BTC') ? (isScalp ? 350.0 : 850.0) : asset.includes('US30') ? (isScalp ? 65.0 : 180.0) : isGoldAsset ? (isScalp ? 2.5 : 10.0) : 0.0025;
+                }
+                if (tpDist < 0.001) {
+                  tpDist = asset.includes('BTC') ? (isScalp ? 700.0 : 1700.0) : asset.includes('US30') ? (isScalp ? 130.0 : 360.0) : isGoldAsset ? (isScalp ? 3.5 : 20.0) : 0.0050;
+                }
 
                 // 🛑 STRICT REQUIREMENT: Intra trade (Day Trade) must have R:R >= 1:2.0+
                 if (!isScalp && entryNum > 0 && slDist > 0 && tpDist < slDist * 2.0) {
                   tpDist = slDist * 2.0;
-                  tpNum = isBuy ? entryNum + tpDist : entryNum - tpDist;
                 }
 
-                const entry = getDynamicSignalPrice(rawEntry, asset);
-                const tp = getDynamicSignalPrice(tpNum > 0 ? tpNum : rawTp, asset);
-                const sl = getDynamicSignalPrice(slNum > 0 ? slNum : rawSl, asset);
+                const finalSl = slNum > 0 && Math.abs(entryNum - slNum) > 0.001 ? slNum : (isBuy ? entryNum - slDist : entryNum + slDist);
+                const finalTp = tpNum > 0 && Math.abs(entryNum - tpNum) > 0.001 ? tpNum : (isBuy ? entryNum + tpDist : entryNum - tpDist);
 
-                const isGoldAsset = asset.includes('XAU') || asset.includes('GOLD');
-                const isForexAsset = asset.includes('EUR') || asset.includes('GBP') || asset.includes('AUD') || asset.includes('JPY');
+                const entry = formatLevelPrice(entryNum, asset);
+                const tp = formatLevelPrice(finalTp, asset);
+                const sl = formatLevelPrice(finalSl, asset);
+
                 const pipMult = isGoldAsset ? 100 : asset.includes('JPY') ? 100 : isForexAsset ? 10000 : 1;
 
                 const slPts = Math.round(slDist * pipMult);

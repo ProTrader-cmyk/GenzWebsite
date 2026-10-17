@@ -347,6 +347,100 @@ function playSuccessChime() {
   } catch {}
 }
 
+function playSupercarEngineStart(mode = 'scalp') {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+    const now = ctx.currentTime;
+    const isScalp = mode === 'scalp';
+
+    // 1. High-torque starter motor whine + rhythmic compression pulses (chug-chug)
+    for (let i = 0; i < 3; i++) {
+      const crankOsc = ctx.createOscillator();
+      const crankGain = ctx.createGain();
+      crankOsc.type = 'sawtooth';
+      const crankTime = now + (i * 0.065);
+      crankOsc.frequency.setValueAtTime(isScalp ? 85 + i * 20 : 70 + i * 15, crankTime);
+      crankOsc.frequency.exponentialRampToValueAtTime(35, crankTime + 0.045);
+      crankGain.gain.setValueAtTime(0.05, crankTime);
+      crankGain.gain.exponentialRampToValueAtTime(0.001, crankTime + 0.045);
+      crankOsc.connect(crankGain);
+      crankGain.connect(ctx.destination);
+      crankOsc.start(crankTime);
+      crankOsc.stop(crankTime + 0.05);
+    }
+
+    // 2. High-Octane Supercar V10 / V12 Combustion Ignition Roar!
+    const roarStart = now + 0.20;
+    const peakFreq = isScalp ? 440 : 360; // Scalp: V10 screaming rev; Intra: V12 deep roar
+    const baseFreq = isScalp ? 55 : 45;
+
+    // Sub-bass engine displacement body
+    const subOsc = ctx.createOscillator();
+    const subGain = ctx.createGain();
+    subOsc.type = 'sawtooth';
+    subOsc.frequency.setValueAtTime(baseFreq, roarStart);
+    subOsc.frequency.exponentialRampToValueAtTime(peakFreq, roarStart + 0.32);
+    subOsc.frequency.exponentialRampToValueAtTime(105, roarStart + 1.0);
+
+    // Resonant exhaust chamber filter
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(320, roarStart);
+    filter.frequency.exponentialRampToValueAtTime(1900, roarStart + 0.32);
+    filter.frequency.exponentialRampToValueAtTime(480, roarStart + 1.0);
+    filter.Q.setValueAtTime(4.2, roarStart);
+
+    subGain.gain.setValueAtTime(0.001, roarStart);
+    subGain.gain.linearRampToValueAtTime(0.12, roarStart + 0.09);
+    subGain.gain.exponentialRampToValueAtTime(0.07, roarStart + 0.45);
+    subGain.gain.exponentialRampToValueAtTime(0.001, roarStart + 1.15);
+
+    subOsc.connect(filter);
+    filter.connect(subGain);
+    subGain.connect(ctx.destination);
+    subOsc.start(roarStart);
+    subOsc.stop(roarStart + 1.2);
+
+    // 3. Second harmonic engine scream (overtone growl)
+    const screamOsc = ctx.createOscillator();
+    const screamGain = ctx.createGain();
+    screamOsc.type = 'triangle';
+    screamOsc.frequency.setValueAtTime(baseFreq * 2.5, roarStart + 0.05);
+    screamOsc.frequency.exponentialRampToValueAtTime(peakFreq * 1.8, roarStart + 0.34);
+    screamOsc.frequency.exponentialRampToValueAtTime(160, roarStart + 0.95);
+
+    screamGain.gain.setValueAtTime(0.001, roarStart + 0.05);
+    screamGain.gain.linearRampToValueAtTime(0.05, roarStart + 0.18);
+    screamGain.gain.exponentialRampToValueAtTime(0.001, roarStart + 0.95);
+
+    screamOsc.connect(screamGain);
+    screamGain.connect(ctx.destination);
+    screamOsc.start(roarStart + 0.05);
+    screamOsc.stop(roarStart + 1.0);
+
+    // 4. Exhaust Turbo Pop / Wastegate Flutter
+    const popTime = roarStart + 0.36;
+    const popOsc = ctx.createOscillator();
+    const popGain = ctx.createGain();
+    popOsc.type = 'sine';
+    popOsc.frequency.setValueAtTime(isScalp ? 880 : 720, popTime);
+    popOsc.frequency.exponentialRampToValueAtTime(130, popTime + 0.14);
+    popGain.gain.setValueAtTime(0.06, popTime);
+    popGain.gain.exponentialRampToValueAtTime(0.001, popTime + 0.14);
+    popOsc.connect(popGain);
+    popGain.connect(ctx.destination);
+    popOsc.start(popTime);
+    popOsc.stop(popTime + 0.15);
+  } catch (e) {
+    // Audio fallback
+  }
+}
+
 function buildDefaultSignal(pair, price, style = 'scalp') {
   const normPair = (pair || 'XAUUSD').toUpperCase().replace(/[^A-Z0-9]/g, '');
   const isGold = normPair.includes('XAU') || normPair.includes('GOLD');
@@ -530,6 +624,18 @@ export default function MarketAnalysisPanel({
 }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [pipMode, setPipMode] = useState('scalp'); // 'scalp' | 'daytrade'
+  const [engineStartAnimation, setEngineStartAnimation] = useState(null);
+
+  const handleSwitchPipMode = useCallback((nextMode) => {
+    if (nextMode === pipMode && !engineStartAnimation) return;
+    setPipMode(nextMode);
+    setEngineStartAnimation({ mode: nextMode, timestamp: Date.now() });
+    playSupercarEngineStart(nextMode);
+    setTimeout(() => {
+      setEngineStartAnimation((prev) => (prev && Date.now() - prev.timestamp >= 1250 ? null : prev));
+    }, 1350);
+  }, [pipMode, engineStartAnimation]);
+
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [scanTelemetry, setScanTelemetry] = useState('');
@@ -930,84 +1036,51 @@ export default function MarketAnalysisPanel({
         return false;
       };
 
+      // Switching pairs: strictly load previously saved valid signals for this pair without sending or dispatching any new signal
       const savedScalp = localStorage.getItem(`genz_locked_scalp_${pair}`);
       if (savedScalp) {
-        const parsed = JSON.parse(savedScalp);
-        if (isCorrupt(parsed)) {
-          const fresh = buildDefaultSignal(pair, p, 'scalp');
-          setScalpSignal(fresh);
-          localStorage.setItem(`genz_locked_scalp_${pair}`, JSON.stringify(fresh));
-        } else {
-          setScalpSignal(parsed);
+        try {
+          const parsed = JSON.parse(savedScalp);
+          if (!isCorrupt(parsed)) {
+            setScalpSignal(parsed);
+          } else {
+            setScalpSignal(null);
+            localStorage.removeItem(`genz_locked_scalp_${pair}`);
+          }
+        } catch {
+          setScalpSignal(null);
         }
       } else {
-        // First time initialization for this pair: lock at initial snapshot so it never moves
-        const initScalp = buildDefaultSignal(pair, p, 'scalp');
-        setScalpSignal(initScalp);
-        localStorage.setItem(`genz_locked_scalp_${pair}`, JSON.stringify(initScalp));
+        setScalpSignal(null);
       }
 
       const savedDay = localStorage.getItem(`genz_locked_daytrade_${pair}`);
       if (savedDay) {
-        const parsed = JSON.parse(savedDay);
-        if (isCorrupt(parsed)) {
-          const fresh = buildDefaultSignal(pair, p, 'daytrade');
-          setDayTradeSignal(fresh);
-          localStorage.setItem(`genz_locked_daytrade_${pair}`, JSON.stringify(fresh));
-        } else {
-          setDayTradeSignal(parsed);
+        try {
+          const parsed = JSON.parse(savedDay);
+          if (!isCorrupt(parsed)) {
+            setDayTradeSignal(parsed);
+          } else {
+            setDayTradeSignal(null);
+            localStorage.removeItem(`genz_locked_daytrade_${pair}`);
+          }
+        } catch {
+          setDayTradeSignal(null);
         }
       } else {
         setDayTradeSignal(null);
       }
     } catch {}
-  }, [pair, p]);
+  }, [pair]);
 
-  // Autonomous Intra Trade Monitor & Auto-Dispatch:
-  // When condition is met and market is OPEN, automatically dispatches signal without requiring user to scan!
+  // Keep intraConditionMet synchronized for UI display only (NEVER auto-dispatches on pair switch)
   useEffect(() => {
     if (!marketStatus.isOpen) {
       setIntraConditionMet(false);
       return;
     }
-
-    const met = intraConditionResult.met;
-    setIntraConditionMet(met);
-
-    if (met) {
-      const saved = localStorage.getItem(`genz_locked_daytrade_${pair}`);
-      let hasValid = false;
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          const e = Number(parsed.entry);
-          const s = Number(parsed.sl);
-          const isBad = Math.abs(e - s) < 0.001 || (pair.includes('BTC') && e < 10000) || (pair.includes('US30') && e < 10000);
-          if (!isBad) {
-            setDayTradeSignal(parsed);
-            hasValid = true;
-          }
-        } catch {}
-      }
-
-      if (!hasValid) {
-        const lockedPrice = p;
-        const fresh = buildDefaultSignal(pair, lockedPrice, 'daytrade');
-        setDayTradeSignal(fresh);
-        try {
-          localStorage.setItem(`genz_locked_daytrade_${pair}`, JSON.stringify(fresh));
-        } catch {}
-
-        // Autonomous Dispatch: sends signal to user as soon as condition is met!
-        dispatchSignalToSystem(fresh, 'daytrade');
-      }
-    } else {
-      setDayTradeSignal(null);
-      try {
-        localStorage.removeItem(`genz_locked_daytrade_${pair}`);
-      } catch {}
-    }
-  }, [pair, marketStatus.isOpen, intraConditionResult.met, p]);
+    setIntraConditionMet(Boolean(intraConditionResult.met));
+  }, [marketStatus.isOpen, intraConditionResult.met]);
 
   const currentScalpSignal = scalpSignal;
   const currentDayTradeSignal = dayTradeSignal;
@@ -1099,7 +1172,111 @@ Model: ${sig.model || 'ICT SMC Model'}`;
   ];
 
   return (
-    <div className="ait-ma-root ait-aii-root">
+    <div className={`ait-ma-root ait-aii-root ${engineStartAnimation ? `engine-revving mode-${engineStartAnimation.mode}` : ''}`}>
+      {/* SUPERCAR ENGINE IGNITION OVERLAY (LAMBORGHINI / FERRARI COCKPIT HUD) */}
+      {engineStartAnimation && (
+        <div
+          className={`ait-supercar-engine-hud mode-${engineStartAnimation.mode}`}
+          aria-hidden="true"
+        >
+          {/* Cockpit HUD Scanlines & Carbon Vignette */}
+          <div className="ait-sce-cockpit-grid" />
+          <div className="ait-sce-laser-sweep" />
+
+          {/* Top F1 / Supercar Steering Wheel Shift-Light LED Bar */}
+          <div className="ait-sce-top-cluster">
+            <div className="ait-sce-brand-pill">
+              <span className="ait-sce-brand-logo">
+                {engineStartAnimation.mode === 'scalp' ? '⚡ CORSA V10' : '🏎️ SCUDERIA V12'}
+              </span>
+              <span className="ait-sce-brand-tag">IGNITION ACTIVE</span>
+            </div>
+
+            <div className="ait-sce-shift-lights">
+              <span className="ait-sce-led led-green l1" />
+              <span className="ait-sce-led led-green l2" />
+              <span className="ait-sce-led led-green l3" />
+              <span className="ait-sce-led led-yellow l4" />
+              <span className="ait-sce-led led-yellow l5" />
+              <span className="ait-sce-led led-amber l6" />
+              <span className="ait-sce-led led-amber l7" />
+              <span className="ait-sce-led led-red l8" />
+              <span className="ait-sce-led led-red l9" />
+              <span className="ait-sce-led led-red l10" />
+              <span className="ait-sce-led led-blue l11" />
+              <span className="ait-sce-led led-blue l12" />
+            </div>
+
+            <div className="ait-sce-rpm-gauge">
+              <span className="ait-sce-rpm-num">
+                {engineStartAnimation.mode === 'scalp' ? '9,250' : '8,900'}
+              </span>
+              <span className="ait-sce-rpm-unit">RPM</span>
+            </div>
+          </div>
+
+          {/* Center Ignition Stage & Combustion Shockwaves */}
+          <div className="ait-sce-center-stage">
+            <div className="ait-sce-blast-ring r1" />
+            <div className="ait-sce-blast-ring r2" />
+            <div className="ait-sce-blast-ring r3" />
+
+            <div className="ait-sce-start-button">
+              <div className="ait-sce-btn-outer-ring" />
+              <div className="ait-sce-btn-inner-core">
+                <span className="ait-sce-engine-icon">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="3" />
+                    <path d="M12 2v3m0 14v3M2 12h3m14 0h3" />
+                    <path d="m4.93 4.93 2.12 2.12m9.9 9.9 2.12 2.12M4.93 19.07l2.12-2.12m9.9-9.9 2.12-2.12" />
+                  </svg>
+                </span>
+                <span className="ait-sce-btn-text">ENGINE</span>
+                <span className="ait-sce-btn-sub">START</span>
+              </div>
+            </div>
+
+            <div className="ait-sce-ignite-title">
+              {engineStartAnimation.mode === 'scalp' ? (
+                <>
+                  <h3 className="ait-sce-heading scalp">LAMBORGHINI V10 TWIN-TURBO</h3>
+                  <p className="ait-sce-subheading">CORSA HYPER-SCALP IGNITION • 1M/5M MICRO-SWEEP</p>
+                </>
+              ) : (
+                <>
+                  <h3 className="ait-sce-heading daytrade">FERRARI V12 NATURALLY ASPIRATED</h3>
+                  <p className="ait-sce-subheading">SCUDERIA CRT INTRA-TRADE • 15M/1H INSTITUTIONAL</p>
+                </>
+              )}
+            </div>
+
+            {/* Live Combustion Telemetry */}
+            <div className="ait-sce-telemetry-pills">
+              <span className="ait-sce-tel-item">
+                <span className="ait-sce-tel-dot" /> BOOST: <strong>2.6 BAR</strong>
+              </span>
+              <span className="ait-sce-tel-item">
+                <span className="ait-sce-tel-dot" /> COMPRESSION: <strong>12.8:1</strong>
+              </span>
+              <span className="ait-sce-tel-item">
+                <span className="ait-sce-tel-dot" /> OCTANE: <strong>100% CONFLUENCE</strong>
+              </span>
+            </div>
+          </div>
+
+          {/* Bottom Dual Exhaust Flame Nozzles */}
+          <div className="ait-sce-exhaust-bar">
+            <div className="ait-sce-exhaust-flame left" />
+            <div className="ait-sce-exhaust-center-track">
+              <span className="ait-sce-exhaust-label">
+                {engineStartAnimation.mode === 'scalp' ? 'EXHAUST FLUTTER • ACTIVE' : 'EXHAUST ROAR • ACTIVE'}
+              </span>
+            </div>
+            <div className="ait-sce-exhaust-flame right" />
+          </div>
+        </div>
+      )}
+
       {/* 1. TOP HEADER BAR (AI Intelligence — Smarter Analysis. Better Decisions.) */}
       <div className="ait-aii-topbar">
         <div className="ait-aii-brand">
@@ -1555,7 +1732,7 @@ Model: ${sig.model || 'ICT SMC Model'}`;
               <button
                 type="button"
                 className={`ait-pm-mode-tab ${pipMode === 'scalp' ? 'active scalp' : ''}`}
-                onClick={() => setPipMode('scalp')}
+                onClick={() => handleSwitchPipMode('scalp')}
               >
                 <span className="ait-pm-mode-icon"><IconZap width="17" height="17" /></span>
                 <div className="ait-pm-mode-meta">
@@ -1568,7 +1745,7 @@ Model: ${sig.model || 'ICT SMC Model'}`;
               <button
                 type="button"
                 className={`ait-pm-mode-tab ${pipMode === 'daytrade' ? 'active intra' : ''}`}
-                onClick={() => setPipMode('daytrade')}
+                onClick={() => handleSwitchPipMode('daytrade')}
               >
                 <span className="ait-pm-mode-icon"><IconTarget width="17" height="17" /></span>
                 <div className="ait-pm-mode-meta">
@@ -1937,7 +2114,7 @@ Model: ${sig.model || 'ICT SMC Model'}`;
                       type="button"
                       className="ait-pm-switch-scalp-btn"
                       onClick={() => {
-                        setPipMode('scalp');
+                        handleSwitchPipMode('scalp');
                         handleScanSignal('scalp');
                       }}
                     >

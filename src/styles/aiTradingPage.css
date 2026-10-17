@@ -4842,6 +4842,7 @@
   background: #080D1A;
   color: #F8FAFC;
   overflow: hidden;
+  position: relative;
 }
 
 .ait-ma-tabs-bar {
@@ -10499,3 +10500,509 @@
 
 
 
+
+
+/* ==========================================================================
+   SUPERCAR ENGINE IGNITION ANIMATION (LAMBORGHINI CORSA / FERRARI SCUDERIA)
+   Triggers exclusively on the Market Analysis Panel when switching pip modes
+   ========================================================================== */
+
+/* 1. Chassis Rumble on Market Panel */
+.ait-ma-root.engine-revving {
+  animation: supercarChassisRumble 0.72s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  transition: box-shadow 0.2s ease;
+}
+
+.ait-ma-root.engine-revving.mode-scalp {
+  box-shadow: inset 0 0 80px rgba(255, 107, 0, 0.35), 0 0 40px rgba(255, 170, 0, 0.2);
+}
+
+.ait-ma-root.engine-revving.mode-daytrade {
+  box-shadow: inset 0 0 80px rgba(239, 68, 68, 0.35), 0 0 40px rgba(0, 242, 254, 0.2);
+}
+
+@keyframes supercarChassisRumble {
+  0% {
+    transform: translate(0, 0);
+    filter: brightness(1);
+  }
+  8% {
+    transform: translate(-2px, 1.5px) scale(0.999);
+    filter: brightness(1.2) contrast(1.05);
+  }
+  16% {
+    transform: translate(2.5px, -1.8px) scale(1.002);
+  }
+  24% {
+    transform: translate(-2.5px, -1.2px);
+    filter: brightness(1.3) contrast(1.1);
+  }
+  32% {
+    transform: translate(2.2px, 2px);
+  }
+  42% {
+    transform: translate(-1.8px, 1.2px) scale(1.001);
+  }
+  54% {
+    transform: translate(1.2px, -1px);
+    filter: brightness(1.15);
+  }
+  68% {
+    transform: translate(-0.8px, 0.6px);
+  }
+  82% {
+    transform: translate(0.4px, -0.3px);
+  }
+  100% {
+    transform: translate(0, 0) scale(1);
+    filter: brightness(1);
+  }
+}
+
+/* 2. Cockpit HUD Overlay */
+.ait-supercar-engine-hud {
+  position: absolute;
+  inset: 0;
+  z-index: 999;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 14px 18px;
+  overflow: hidden;
+  backdrop-filter: blur(2px);
+  animation: supercarHudFade 1.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes supercarHudFade {
+  0% {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  12% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  75% {
+    opacity: 0.95;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.02);
+    visibility: hidden;
+  }
+}
+
+.ait-supercar-engine-hud.mode-scalp {
+  background: radial-gradient(circle at 50% 45%, rgba(255, 107, 0, 0.16) 0%, rgba(11, 17, 32, 0.88) 75%, rgba(7, 9, 13, 0.96) 100%);
+  border: 1px solid rgba(255, 107, 0, 0.5);
+}
+
+.ait-supercar-engine-hud.mode-daytrade {
+  background: radial-gradient(circle at 50% 45%, rgba(239, 68, 68, 0.18) 0%, rgba(11, 17, 32, 0.88) 75%, rgba(7, 9, 13, 0.96) 100%);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+}
+
+/* Scanlines & Laser Sweep */
+.ait-sce-cockpit-grid {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 20px 20px;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.ait-sce-laser-sweep {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #00F2FE, #FFF, #FFAA00, transparent);
+  box-shadow: 0 0 16px rgba(0, 242, 254, 0.8);
+  animation: supercarLaserDown 0.85s linear infinite;
+}
+
+@keyframes supercarLaserDown {
+  0% { top: 0%; opacity: 0; }
+  15% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+/* 3. Top F1 / Supercar Steering Wheel Shift Lights */
+.ait-sce-top-cluster {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(11, 17, 32, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 8px 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.ait-sce-brand-pill {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ait-sce-brand-logo {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #F8FAFC;
+}
+
+.ait-sce-brand-tag {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #38BDF8;
+  text-transform: uppercase;
+}
+
+.ait-sce-shift-lights {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: #050811;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ait-sce-led {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #1E293B;
+  transition: all 0.08s ease;
+  animation: ledIgnitionStrobe 0.8s ease-in-out forwards;
+}
+
+.ait-sce-led.led-green { animation-name: ledGreenFire; }
+.ait-sce-led.led-yellow { animation-name: ledYellowFire; }
+.ait-sce-led.led-amber { animation-name: ledAmberFire; }
+.ait-sce-led.led-red { animation-name: ledRedFire; }
+.ait-sce-led.led-blue { animation-name: ledBlueFire; }
+
+.ait-sce-led.l1 { animation-delay: 0.03s; }
+.ait-sce-led.l2 { animation-delay: 0.07s; }
+.ait-sce-led.l3 { animation-delay: 0.11s; }
+.ait-sce-led.l4 { animation-delay: 0.15s; }
+.ait-sce-led.l5 { animation-delay: 0.19s; }
+.ait-sce-led.l6 { animation-delay: 0.23s; }
+.ait-sce-led.l7 { animation-delay: 0.27s; }
+.ait-sce-led.l8 { animation-delay: 0.31s; }
+.ait-sce-led.l9 { animation-delay: 0.35s; }
+.ait-sce-led.l10 { animation-delay: 0.39s; }
+.ait-sce-led.l11 { animation-delay: 0.43s; }
+.ait-sce-led.l12 { animation-delay: 0.47s; }
+
+@keyframes ledGreenFire {
+  0% { background: #1E293B; box-shadow: none; }
+  100% { background: #10B981; box-shadow: 0 0 10px #10B981, 0 0 20px #10B981; }
+}
+
+@keyframes ledYellowFire {
+  0% { background: #1E293B; box-shadow: none; }
+  100% { background: #FACC15; box-shadow: 0 0 10px #FACC15, 0 0 20px #FACC15; }
+}
+
+@keyframes ledAmberFire {
+  0% { background: #1E293B; box-shadow: none; }
+  100% { background: #F97316; box-shadow: 0 0 10px #F97316, 0 0 20px #F97316; }
+}
+
+@keyframes ledRedFire {
+  0% { background: #1E293B; box-shadow: none; }
+  100% { background: #EF4444; box-shadow: 0 0 12px #EF4444, 0 0 24px #EF4444; }
+}
+
+@keyframes ledBlueFire {
+  0% { background: #1E293B; box-shadow: none; }
+  100% { background: #00F2FE; box-shadow: 0 0 14px #00F2FE, 0 0 28px #00F2FE; }
+}
+
+.ait-sce-rpm-gauge {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.ait-sce-rpm-num {
+  font-size: 16px;
+  font-weight: 900;
+  color: #FFF;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
+  animation: rpmCounterClimb 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes rpmCounterClimb {
+  0% { opacity: 0.2; transform: translateY(4px); }
+  50% { opacity: 1; transform: translateY(-2px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.ait-sce-rpm-unit {
+  font-size: 10px;
+  font-weight: 800;
+  color: #94A3B8;
+}
+
+/* 4. Center Ignition Stage */
+.ait-sce-center-stage {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  margin: auto 0;
+  padding: 10px 0;
+}
+
+/* Expanding combustion blast shockwaves */
+.ait-sce-blast-ring {
+  position: absolute;
+  top: 36px;
+  left: 50%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.mode-scalp .ait-sce-blast-ring {
+  border: 2px solid rgba(255, 107, 0, 0.7);
+  box-shadow: 0 0 35px rgba(255, 107, 0, 0.6), inset 0 0 35px rgba(255, 170, 0, 0.4);
+}
+
+.mode-daytrade .ait-sce-blast-ring {
+  border: 2px solid rgba(239, 68, 68, 0.7);
+  box-shadow: 0 0 35px rgba(239, 68, 68, 0.6), inset 0 0 35px rgba(0, 242, 254, 0.4);
+}
+
+.ait-sce-blast-ring.r1 {
+  animation: supercarBlastWave 0.85s cubic-bezier(0.1, 0.8, 0.2, 1) forwards;
+}
+.ait-sce-blast-ring.r2 {
+  animation: supercarBlastWave 0.85s cubic-bezier(0.1, 0.8, 0.2, 1) 0.12s forwards;
+}
+.ait-sce-blast-ring.r3 {
+  animation: supercarBlastWave 0.85s cubic-bezier(0.1, 0.8, 0.2, 1) 0.24s forwards;
+}
+
+@keyframes supercarBlastWave {
+  0% {
+    width: 30px;
+    height: 30px;
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.6);
+  }
+  100% {
+    width: 620px;
+    height: 620px;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.4);
+  }
+}
+
+/* Supercar Anodized Ignition Button */
+.ait-sce-start-button {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle, #1E293B, #0B1120);
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.8), 0 0 25px rgba(255, 107, 0, 0.4);
+  animation: starterButtonPulse 0.75s ease-in-out infinite alternate;
+}
+
+.mode-daytrade .ait-sce-start-button {
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.8), 0 0 25px rgba(239, 68, 68, 0.4);
+}
+
+@keyframes starterButtonPulse {
+  0% { transform: scale(0.96); }
+  100% { transform: scale(1.05); }
+}
+
+.ait-sce-btn-outer-ring {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 255, 255, 0.3);
+  animation: starterRingSpin 4s linear infinite;
+}
+
+@keyframes starterRingSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.ait-sce-btn-inner-core {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #FFF;
+}
+
+.ait-sce-engine-icon {
+  color: #FFAA00;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2px;
+}
+
+.mode-daytrade .ait-sce-engine-icon {
+  color: #EF4444;
+}
+
+.ait-sce-btn-text {
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: #94A3B8;
+  line-height: 1;
+}
+
+.ait-sce-btn-sub {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #FFF;
+  line-height: 1;
+}
+
+/* Titles */
+.ait-sce-ignite-title {
+  margin-top: 18px;
+}
+
+.ait-sce-heading {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.ait-sce-heading.scalp {
+  color: #FFAA00;
+  text-shadow: 0 0 20px rgba(255, 170, 0, 0.6), 0 0 40px rgba(255, 107, 0, 0.4);
+}
+
+.ait-sce-heading.daytrade {
+  color: #EF4444;
+  text-shadow: 0 0 20px rgba(239, 68, 68, 0.6), 0 0 40px rgba(0, 242, 254, 0.4);
+}
+
+.ait-sce-subheading {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #E2E8F0;
+  margin: 4px 0 0 0;
+  text-transform: uppercase;
+}
+
+/* Combustion Telemetry Pills */
+.ait-sce-telemetry-pills {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.ait-sce-tel-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(11, 17, 32, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 10px;
+  color: #94A3B8;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.ait-sce-tel-item strong {
+  color: #FFF;
+}
+
+.ait-sce-tel-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #10B981;
+  box-shadow: 0 0 6px #10B981;
+}
+
+/* 5. Bottom Dual Exhaust Flame Nozzles */
+.ait-sce-exhaust-bar {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ait-sce-exhaust-flame {
+  width: 45px;
+  height: 14px;
+  border-radius: 999px;
+  filter: blur(2px);
+  animation: exhaustFlameSpit 0.3s ease-in-out infinite alternate;
+}
+
+.mode-scalp .ait-sce-exhaust-flame {
+  background: linear-gradient(90deg, #FF3D00, #FFAA00, #FFF);
+  box-shadow: 0 0 20px #FF6B00, 0 0 40px #FFAA00;
+}
+
+.mode-daytrade .ait-sce-exhaust-flame {
+  background: linear-gradient(90deg, #EF4444, #00F2FE, #FFF);
+  box-shadow: 0 0 20px #EF4444, 0 0 40px #00F2FE;
+}
+
+@keyframes exhaustFlameSpit {
+  0% { transform: scaleX(0.7) scaleY(0.8); opacity: 0.6; }
+  100% { transform: scaleX(1.4) scaleY(1.2); opacity: 1; }
+}
+
+.ait-sce-exhaust-center-track {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ait-sce-exhaust-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: #64748B;
+  text-transform: uppercase;
+  font-family: 'JetBrains Mono', monospace;
+}
