@@ -21,10 +21,7 @@ import AILiveChartTerminal from './AILiveChartTerminal.jsx';
 import ReferralAccessModal from './ReferralAccessModal.jsx';
 import PairLogo, {
   GoldIngotLogo,
-  FlagEU,
-  FlagUK,
   BitcoinLogo,
-  US30Logo,
   SilverIngotLogo,
 } from './ui/PairLogo.jsx';
 import { GoldAssetEmblem, SignalStrengthBars, formatSignalDate, formatLevelPrice, parseDateInput } from './ui/SignalEmblems.jsx';
@@ -226,18 +223,6 @@ function getActiveTradingSession(pair = 'XAUUSD') {
     color: m.color,
     isOpen: true,
   };
-}
-
-// Data Binding Helper: extracts & formats price values dynamically from active signal payload
-function getDynamicSignalPrice(val, pair) {
-  if (val == null || val === '') return '---';
-  const str = String(val).trim();
-  const clean = str.replace(/,/g, '');
-  const num = parseFloat(clean);
-  if (!isNaN(num) && clean !== '' && !isNaN(Number(clean))) {
-    return formatSpotPrice(pair, num);
-  }
-  return str;
 }
 
 // Style classification helper: returns true only for actual scalping setups

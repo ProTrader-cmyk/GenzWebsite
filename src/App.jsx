@@ -3,18 +3,8 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import Navbar from './components/Navbar.jsx';
 import LandingHome from './components/LandingHome.jsx';
-import CategoryHome from './components/CategoryHome.jsx';
-import Home from './components/Home.jsx';
-import AppsHome from './components/AppsHome.jsx';
-import BacktestHome from './components/BacktestHome.jsx';
-import PsychologyHome from './components/PsychologyHome.jsx';
-import NewProductHome from './components/NewProductHome.jsx';
-import AdvancedHome from './components/AdvancedHome.jsx';
 import AccessGrantedModal from './components/AccessGrantedModal.jsx';
 import LessonFeedbackModal from './components/LessonFeedbackModal.jsx';
-import Login from './pages/Login.jsx';
-import Signup from './pages/Signup.jsx';
-import VerifyOtp from './pages/VerifyOtp.jsx';
 import { lessons, getNextLessonId } from './data/lessons.js';
 import { appsLessons, getNextAppsLessonId } from './data/appsLessons.js';
 import { backtestLessons, getNextBacktestLessonId } from './data/backtestLessons.js';
@@ -41,23 +31,24 @@ import { submitFeedback } from './data/feedback.js';
 
 const NAV_KEY = 'gzt_nav';
 
-// Lazy-loaded: each is a large, conditionally-rendered section (dashboard,
-// lesson content, profile) that most page loads never touch, so they get
-// their own chunk instead of bloating everyone's initial bundle. Every call
-// site below wraps its usage in <Suspense fallback={<BootScreen />}>.
+// Lazy-loaded secondary sections & auth pages so initial Homepage load stays fast and light
+const CategoryHome = lazy(() => import('./components/CategoryHome.jsx'));
+const Home = lazy(() => import('./components/Home.jsx'));
+const AppsHome = lazy(() => import('./components/AppsHome.jsx'));
+const BacktestHome = lazy(() => import('./components/BacktestHome.jsx'));
+const PsychologyHome = lazy(() => import('./components/PsychologyHome.jsx'));
+const NewProductHome = lazy(() => import('./components/NewProductHome.jsx'));
+const AdvancedHome = lazy(() => import('./components/AdvancedHome.jsx'));
+const Login = lazy(() => import('./pages/Login.jsx'));
+const Signup = lazy(() => import('./pages/Signup.jsx'));
+const VerifyOtp = lazy(() => import('./pages/VerifyOtp.jsx'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard.jsx'));
 const Profile = lazy(() => import('./components/Profile.jsx'));
 const NewsPage = lazy(() => import('./components/NewsPage.jsx'));
 const AITradingPage = lazy(() => import('./components/AITradingPage.jsx'));
 const ContactPage = lazy(() => import('./components/ContactPage.jsx'));
-// Dev/admin-only mock preview of the paid member area (Dashboard + Signals)
-// — gated below by isAdmin since it shows fabricated data, never real
-// numbers, and must never be reachable by an actual paying member.
 const MemberArea = lazy(() => import('./pages/MemberArea.jsx'));
 
-// Shared with the checkingSession screen below and every Suspense fallback
-// (AdminDashboard, lesson pages) so a lazy chunk fetch looks the same as the
-// app's normal boot loader instead of flashing a different spinner.
 function BootScreen() {
   return (
     <div className="app-boot-screen">
@@ -65,16 +56,6 @@ function BootScreen() {
       <span className="app-boot-spinner" />
     </div>
   );
-}
-
-// Always start on the Homepage ('home') when the user clicks or opens the website link
-function loadNav() {
-  try {
-    localStorage.removeItem(NAV_KEY);
-  } catch {
-    // ignore storage errors
-  }
-  return { section: 'home', view: 'home' };
 }
 
 export default function App() {
@@ -191,7 +172,7 @@ export default function App() {
   // leaving the section is keeping that same widget instance alive in
   // memory for the rest of this browser tab. Doesn't survive an actual page
   // refresh or reopening the site — nothing free from TradingView does.
-  const [hasVisitedNewProduct, setHasVisitedNewProduct] = useState(() => loadNav().section === 'new-product');
+  const [hasVisitedNewProduct, setHasVisitedNewProduct] = useState(false);
   useEffect(() => {
     if (section === 'new-product') setHasVisitedNewProduct(true);
   }, [section]);
@@ -436,15 +417,17 @@ export default function App() {
   // regardless of whatever session state this browser happens to be in.
   if (resetLink) {
     return (
-      <Login
-        resetLink={resetLink}
-        onExitResetFlow={() => setResetLink(null)}
-        onLogin={handleAuthSuccess}
-        onAuthStart={beginManualAuth}
-        onAuthCancel={cancelManualAuth}
-        onNeedVerification={handleNeedVerification}
-        onSwitchToSignup={() => setAuthView('signup')}
-      />
+      <Suspense fallback={<BootScreen />}>
+        <Login
+          resetLink={resetLink}
+          onExitResetFlow={() => setResetLink(null)}
+          onLogin={handleAuthSuccess}
+          onAuthStart={beginManualAuth}
+          onAuthCancel={cancelManualAuth}
+          onNeedVerification={handleNeedVerification}
+          onSwitchToSignup={() => setAuthView('signup')}
+        />
+      </Suspense>
     );
   }
 
@@ -454,38 +437,44 @@ export default function App() {
 
   if (pendingVerification) {
     return (
-      <VerifyOtp
-        pending={pendingVerification}
-        onAuthStart={beginManualAuth}
-        onVerified={handleAuthSuccess}
-        onCancel={async () => {
-          await logoutUser();
-          setPendingVerification(null);
-        }}
-      />
+      <Suspense fallback={<BootScreen />}>
+        <VerifyOtp
+          pending={pendingVerification}
+          onAuthStart={beginManualAuth}
+          onVerified={handleAuthSuccess}
+          onCancel={async () => {
+            await logoutUser();
+            setPendingVerification(null);
+          }}
+        />
+      </Suspense>
     );
   }
 
   if (!user && authView === 'login') {
     return (
-      <Login
-        onLogin={handleAuthSuccess}
-        onAuthStart={beginManualAuth}
-        onAuthCancel={cancelManualAuth}
-        onNeedVerification={handleNeedVerification}
-        onSwitchToSignup={() => setAuthView('signup')}
-        onBackToHome={() => setAuthView(null)}
-      />
+      <Suspense fallback={<BootScreen />}>
+        <Login
+          onLogin={handleAuthSuccess}
+          onAuthStart={beginManualAuth}
+          onAuthCancel={cancelManualAuth}
+          onNeedVerification={handleNeedVerification}
+          onSwitchToSignup={() => setAuthView('signup')}
+          onBackToHome={() => setAuthView(null)}
+        />
+      </Suspense>
     );
   }
 
   if (!user && authView === 'signup') {
     return (
-      <Signup
-        onNeedVerification={handleNeedVerification}
-        onSwitchToLogin={() => setAuthView('login')}
-        onBackToHome={() => setAuthView(null)}
-      />
+      <Suspense fallback={<BootScreen />}>
+        <Signup
+          onNeedVerification={handleNeedVerification}
+          onSwitchToLogin={() => setAuthView('login')}
+          onBackToHome={() => setAuthView(null)}
+        />
+      </Suspense>
     );
   }
 
@@ -701,34 +690,32 @@ export default function App() {
           user={user}
         />
       ) : (
-        <div className={`wrap${(section === 'member-preview' || (canAccessAITrading && section === 'ai-trading')) ? ' wrap-terminal' : ''}`}>
-        {section === 'categories' && (
-          <CategoryHome
-            onSelectCategory={selectCategory}
-            approved={approved}
-            isVip={isVip}
-            noticeTick={pendingNoticeTick}
-            user={user}
-            onRequireAuth={() => setAuthView('signup')}
-          />
-        )}
-        {!approved && user && ['news', 'new-product'].includes(section) && (
-          <CategoryHome
-            onSelectCategory={selectCategory}
-            approved={approved}
-            isVip={isVip}
-            noticeTick={pendingNoticeTick}
-            user={user}
-            onRequireAuth={() => setAuthView('signup')}
-          />
-        )}
-        {approved && section === 'news' && (
-          <Suspense fallback={<BootScreen />}>
+        <Suspense fallback={<BootScreen />}>
+          <div className={`wrap${(section === 'member-preview' || (canAccessAITrading && section === 'ai-trading')) ? ' wrap-terminal' : ''}`}>
+          {section === 'categories' && (
+            <CategoryHome
+              onSelectCategory={selectCategory}
+              approved={approved}
+              isVip={isVip}
+              noticeTick={pendingNoticeTick}
+              user={user}
+              onRequireAuth={() => setAuthView('signup')}
+            />
+          )}
+          {!approved && user && ['news', 'new-product'].includes(section) && (
+            <CategoryHome
+              onSelectCategory={selectCategory}
+              approved={approved}
+              isVip={isVip}
+              noticeTick={pendingNoticeTick}
+              user={user}
+              onRequireAuth={() => setAuthView('signup')}
+            />
+          )}
+          {approved && section === 'news' && (
             <NewsPage onBack={backToCategories} />
-          </Suspense>
-        )}
-        {section === 'ai-trading' && (
-          <Suspense fallback={<BootScreen />}>
+          )}
+          {section === 'ai-trading' && (
             <AITradingPage
               onBack={() => {
                 setSection('home');
@@ -749,10 +736,8 @@ export default function App() {
                 }
               }}
             />
-          </Suspense>
-        )}
-        {section === 'member-preview' && (
-          <Suspense fallback={<BootScreen />}>
+          )}
+          {section === 'member-preview' && (
             <MemberArea
               user={user}
               doneMap={doneMap}
@@ -760,18 +745,14 @@ export default function App() {
               onViewProfile={() => setSection('profile')}
               onExploreAI={() => setSection('ai-trading')}
             />
-          </Suspense>
-        )}
-        {section === 'contact' && (
-          <Suspense fallback={<BootScreen />}>
+          )}
+          {section === 'contact' && (
             <ContactPage onBack={backToCategories} />
-          </Suspense>
-        )}
-        {approved && hasVisitedNewProduct && (
-          <NewProductHome onBack={backToCategories} isActive={section === 'new-product'} />
-        )}
-        {user && section === 'profile' && (
-          <Suspense fallback={<BootScreen />}>
+          )}
+          {approved && hasVisitedNewProduct && (
+            <NewProductHome onBack={backToCategories} isActive={section === 'new-product'} />
+          )}
+          {user && section === 'profile' && (
             <Profile
               onBack={backToCategories}
               uid={user.uid}
@@ -781,69 +762,67 @@ export default function App() {
               calendarOnly={!approved}
               hideFooter={!approved}
             />
-          </Suspense>
-        )}
-        {section === 'technical' && effectiveView === 'home' && (
-          <Home
-            doneMap={doneMap}
-            onSelectLesson={navigate}
-            onBack={backToCategories}
-            approved={approved}
-            allowedLessons={allowedLessons}
-            isAdmin={isAdmin}
-          />
-        )}
-        {section === 'apps' && effectiveView === 'home' && (
-          <AppsHome
-            doneMap={doneMap}
-            onSelectLesson={navigate}
-            onBack={backToCategories}
-            approved={approved}
-            allowedLessons={allowedLessons}
-            isAdmin={isAdmin}
-          />
-        )}
-        {section === 'backtest' && effectiveView === 'home' && (
-          <BacktestHome
-            doneMap={doneMap}
-            onSelectLesson={navigate}
-            onBack={backToCategories}
-            approved={approved}
-            allowedLessons={allowedLessons}
-            isAdmin={isAdmin}
-          />
-        )}
-        {section === 'psychology' && effectiveView === 'home' && (
-          <PsychologyHome
-            doneMap={doneMap}
-            onSelectLesson={navigate}
-            onBack={backToCategories}
-            approved={approved}
-            allowedLessons={allowedLessons}
-            isAdmin={isAdmin}
-          />
-        )}
-        {section === 'advanced' && effectiveView === 'home' && (
-          <AdvancedHome
-            doneMap={doneMap}
-            onSelectLesson={navigate}
-            onBack={backToCategories}
-            approved={approved}
-            allowedLessons={allowedLessons}
-            isAdmin={isAdmin}
-          />
-        )}
-        {(section === 'technical' ||
-          section === 'apps' ||
-          section === 'backtest' ||
-          section === 'psychology' ||
-          section === 'advanced') &&
-          CurrentLesson && (
-            <Suspense fallback={<BootScreen />}>
-              <CurrentLesson onNavigate={navigate} onDone={() => markDone(view)} />
-            </Suspense>
           )}
-        </div>
+          {section === 'technical' && effectiveView === 'home' && (
+            <Home
+              doneMap={doneMap}
+              onSelectLesson={navigate}
+              onBack={backToCategories}
+              approved={approved}
+              allowedLessons={allowedLessons}
+              isAdmin={isAdmin}
+            />
+          )}
+          {section === 'apps' && effectiveView === 'home' && (
+            <AppsHome
+              doneMap={doneMap}
+              onSelectLesson={navigate}
+              onBack={backToCategories}
+              approved={approved}
+              allowedLessons={allowedLessons}
+              isAdmin={isAdmin}
+            />
+          )}
+          {section === 'backtest' && effectiveView === 'home' && (
+            <BacktestHome
+              doneMap={doneMap}
+              onSelectLesson={navigate}
+              onBack={backToCategories}
+              approved={approved}
+              allowedLessons={allowedLessons}
+              isAdmin={isAdmin}
+            />
+          )}
+          {section === 'psychology' && effectiveView === 'home' && (
+            <PsychologyHome
+              doneMap={doneMap}
+              onSelectLesson={navigate}
+              onBack={backToCategories}
+              approved={approved}
+              allowedLessons={allowedLessons}
+              isAdmin={isAdmin}
+            />
+          )}
+          {section === 'advanced' && effectiveView === 'home' && (
+            <AdvancedHome
+              doneMap={doneMap}
+              onSelectLesson={navigate}
+              onBack={backToCategories}
+              approved={approved}
+              allowedLessons={allowedLessons}
+              isAdmin={isAdmin}
+            />
+          )}
+          {(section === 'technical' ||
+            section === 'apps' ||
+            section === 'backtest' ||
+            section === 'psychology' ||
+            section === 'advanced') &&
+            CurrentLesson && (
+              <CurrentLesson onNavigate={navigate} onDone={() => markDone(view)} />
+            )}
+          </div>
+        </Suspense>
       )}
 
       <AccessGrantedModal kind={accessAlert} onClose={() => setAccessAlert(null)} />
@@ -855,39 +834,7 @@ export default function App() {
         />
       )}
 
-      {/* ── GLOBAL LIVE SIGNAL & BREAKING NEWS ALERT TOAST ── */}
-      {globalNotifToast && (
-        <div
-          className={`notif-toast-banner ${globalNotifToast.type === 'news' ? 'news' : globalNotifToast.direction === 'sell' ? 'sell' : 'buy'}`}
-          onClick={() => {
-            if (globalNotifToast.type === 'news') {
-              setSection('news');
-            } else {
-              setSection('ai-trading');
-            }
-            setGlobalNotifToast(null);
-          }}
-          style={{ cursor: 'pointer', zIndex: 99999 }}
-        >
-          <span className="notif-toast-icon">
-            {globalNotifToast.type === 'news' ? '📰' : '⚡'}
-          </span>
-          <div className="notif-toast-text">
-            <strong>{globalNotifToast.title}</strong>
-            <span>{globalNotifToast.body}</span>
-          </div>
-          <button
-            className="notif-toast-close"
-            onClick={(e) => {
-              e.stopPropagation();
-              setGlobalNotifToast(null);
-            }}
-            aria-label="Close notification"
-          >
-            ✕
-          </button>
-        </div>
-      )}
+      {renderGlobalToast()}
     </>
   );
 }
