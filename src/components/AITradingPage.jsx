@@ -280,22 +280,20 @@ function deduplicateActiveSignals(signals) {
     const isActive = sig.status === 'active' || sig.resultType === 'active' || (!sig.status && !sig.resultType);
     const styleKey = isSignalScalp(sig) ? 'scalp' : 'daytrade';
 
-    // If it's a real Firestore signal, always include it
-    if (!sig.isFirestore) {
-      if (isActive) {
-        const activeKey = `${asset}-${tf}-${styleKey}`;
-        if (seenActiveSetups.has(activeKey)) {
-          continue;
-        }
-        seenActiveSetups.add(activeKey);
-      }
+    const entryNumVal = Number(sig.entry ?? sig.entry_price ?? sig.entryPrice ?? sig.price ?? 0);
+    const entryCheck = entryNumVal > 0 ? entryNumVal.toFixed(2) : String(sig.entry ?? '').trim();
+    const exactKey = `${asset}-${tf}-${direction}-${entryCheck}-${styleKey}`;
+    if (entryCheck && seenExactSetups.has(exactKey)) {
+      continue;
+    }
+    if (entryCheck) seenExactSetups.add(exactKey);
 
-      const entryCheck = String(sig.entry ?? sig.entry_price ?? sig.entryPrice ?? sig.price ?? '').trim();
-      const exactKey = `${asset}-${tf}-${direction}-${entryCheck}-${styleKey}`;
-      if (entryCheck && seenExactSetups.has(exactKey)) {
+    if (!sig.isFirestore && isActive) {
+      const activeKey = `${asset}-${tf}-${styleKey}`;
+      if (seenActiveSetups.has(activeKey)) {
         continue;
       }
-      if (entryCheck) seenExactSetups.add(exactKey);
+      seenActiveSetups.add(activeKey);
     }
 
     if (sigId) seenIds.add(sigId);
@@ -676,9 +674,12 @@ export default function AITradingPage({
           prev.map((s) => {
             if (s.id === sig.id) {
               const isTp = outcome === 'tp';
+              const nowMs = Date.now();
               return {
                 ...s,
                 status: outcome,
+                closedAt: s.closedAt || nowMs,
+                updatedAt: nowMs,
                 badgeClass: isTp ? 'win' : 'loss',
                 resultBadge: isTp ? '✓ TP HIT' : '✕ STOP LOSS',
                 statusLabel: isTp ? 'Completed (TP Hit)' : 'Closed (Stopped Out)',
@@ -2129,22 +2130,30 @@ export default function AITradingPage({
                       const openedTimeVal = sig.publishedAt || sig.opened || sig.timestamp || sig.createdAt || Date.now();
                       const openedTimeStr = formatSignalDate(openedTimeVal);
 
-                      let closedTimeVal = null;
-                      if (isTp || isSl || sig.closedAt || sig.updatedAt) {
-                        closedTimeVal = sig.closedAt || sig.updatedAt;
-                      } else {
-                        const openedDate = parseDateInput(openedTimeVal) || new Date();
-                        const tfStr = String(tf || '15m').toLowerCase();
-                        let durationMins = 30;
-                        if (tfStr.includes('1m')) durationMins = 5;
-                        else if (tfStr.includes('5m')) durationMins = 15;
-                        else if (tfStr.includes('15m')) durationMins = 30;
-                        else if (tfStr.includes('30m')) durationMins = 60;
-                        else if (tfStr.includes('1h')) durationMins = 120;
-                        else if (tfStr.includes('4h')) durationMins = 240;
-                        closedTimeVal = new Date(openedDate.getTime() + durationMins * 60000);
+                      const isStillActive =
+                        !isTp &&
+                        !isSl &&
+                        statusLower !== 'closed' &&
+                        statusLower !== 'cancelled' &&
+                        statusLower !== 'no_trade';
+
+                      let closedTimeStr = '— · Still Active';
+                      if (!isStillActive) {
+                        let closedTimeVal = sig.closedAt || sig.updatedAt || null;
+                        if (!closedTimeVal) {
+                          const openedDate = parseDateInput(openedTimeVal) || new Date();
+                          const tfStr = String(tf || '15m').toLowerCase();
+                          let durationMins = 30;
+                          if (tfStr.includes('1m')) durationMins = 5;
+                          else if (tfStr.includes('5m')) durationMins = 15;
+                          else if (tfStr.includes('15m')) durationMins = 30;
+                          else if (tfStr.includes('30m')) durationMins = 60;
+                          else if (tfStr.includes('1h')) durationMins = 120;
+                          else if (tfStr.includes('4h')) durationMins = 240;
+                          closedTimeVal = new Date(openedDate.getTime() + durationMins * 60000);
+                        }
+                        closedTimeStr = formatSignalDate(closedTimeVal);
                       }
-                      const closedTimeStr = formatSignalDate(closedTimeVal);
 
                       return (
                         <div className="ait-card-meta-list">
@@ -2163,7 +2172,12 @@ export default function AITradingPage({
 
                           <div className="ait-meta-row">
                             <span className="ait-meta-key">Closed</span>
-                            <span className="ait-meta-val date ait-mono">{closedTimeStr}</span>
+                            <span
+                              className="ait-meta-val date ait-mono"
+                              style={isStillActive ? { color: '#10B981', fontWeight: 700 } : undefined}
+                            >
+                              {closedTimeStr}
+                            </span>
                           </div>
                         </div>
                       );
