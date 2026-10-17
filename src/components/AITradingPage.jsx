@@ -541,14 +541,15 @@ export default function AITradingPage({
             // Sanitize collapsed/identical SL or TP: Compute genuine asset-specific SL and TP
             const isBuy = (data.direction || 'BUY').toUpperCase() === 'BUY';
             const isScalp = (data.style || '').toLowerCase() === 'scalping' || (data.mode || '').toLowerCase().includes('scalp');
-            const decimals = pairRaw.includes('EUR') || pairRaw.includes('GBP') ? 5 : pairRaw.includes('JPY') ? 3 : (pairRaw.includes('BTC') || pairRaw.includes('US30')) ? 1 : 2;
+            const decimals = pairRaw.includes('EUR') || pairRaw.includes('GBP') ? 5 : (pairRaw.includes('JPY') || pairRaw.includes('XAG') || pairRaw.includes('SILVER')) ? 3 : pairRaw.includes('US30') ? 1 : 2;
 
-            if (!sl || !tp || isNaN(sl) || isNaN(tp) || Math.abs(entry - sl) < 0.001 || Math.abs(entry - tp) < 0.001) {
+            const isOldWideBtcScalp = pairRaw.includes('BTC') && isScalp && sl > 0 && Math.abs(entry - sl) > 250;
+            if (!sl || !tp || isNaN(sl) || isNaN(tp) || Math.abs(entry - sl) < 0.001 || Math.abs(entry - tp) < 0.001 || isOldWideBtcScalp) {
               let slDist = 10.0;
               let tpDist = 20.0;
               if (pairRaw.includes('BTC')) {
-                slDist = isScalp ? 350.0 : 850.0;
-                tpDist = isScalp ? 700.0 : 1700.0;
+                slDist = isScalp ? 120.0 : 850.0;
+                tpDist = isScalp ? 180.0 : 1700.0;
               } else if (pairRaw.includes('US30')) {
                 slDist = isScalp ? 65.0 : 180.0;
                 tpDist = isScalp ? 130.0 : 360.0;
@@ -1905,11 +1906,12 @@ export default function AITradingPage({
                 let slDist = entryNum > 0 && slNum > 0 ? Math.abs(entryNum - slNum) : 0;
                 let tpDist = entryNum > 0 && tpNum > 0 ? Math.abs(tpNum - entryNum) : 0;
 
-                if (slDist < 0.001) {
-                  slDist = asset.includes('BTC') ? (isScalp ? 350.0 : 850.0) : asset.includes('US30') ? (isScalp ? 65.0 : 180.0) : isGoldAsset ? (isScalp ? 2.5 : 10.0) : 0.0025;
+                const isWideBtcScalp = asset.includes('BTC') && isScalp && slDist > 250;
+                if (slDist < 0.001 || isWideBtcScalp) {
+                  slDist = asset.includes('BTC') ? (isScalp ? 120.0 : 850.0) : asset.includes('US30') ? (isScalp ? 65.0 : 180.0) : isGoldAsset ? (isScalp ? 2.5 : 10.0) : asset.includes('XAG') ? (isScalp ? 0.15 : 0.40) : 0.0025;
                 }
-                if (tpDist < 0.001) {
-                  tpDist = asset.includes('BTC') ? (isScalp ? 700.0 : 1700.0) : asset.includes('US30') ? (isScalp ? 130.0 : 360.0) : isGoldAsset ? (isScalp ? 3.5 : 20.0) : 0.0050;
+                if (tpDist < 0.001 || isWideBtcScalp) {
+                  tpDist = asset.includes('BTC') ? (isScalp ? 180.0 : 1700.0) : asset.includes('US30') ? (isScalp ? 130.0 : 360.0) : isGoldAsset ? (isScalp ? 3.5 : 20.0) : asset.includes('XAG') ? (isScalp ? 0.30 : 0.80) : 0.0050;
                 }
 
                 // 🛑 STRICT REQUIREMENT: Intra trade (Day Trade) must have R:R >= 1:2.0+
@@ -1917,17 +1919,19 @@ export default function AITradingPage({
                   tpDist = slDist * 2.0;
                 }
 
-                const finalSl = slNum > 0 && Math.abs(entryNum - slNum) > 0.001 ? slNum : (isBuy ? entryNum - slDist : entryNum + slDist);
-                const finalTp = tpNum > 0 && Math.abs(entryNum - tpNum) > 0.001 ? tpNum : (isBuy ? entryNum + tpDist : entryNum - tpDist);
+                const finalSl = (!isWideBtcScalp && slNum > 0 && Math.abs(entryNum - slNum) > 0.001) ? slNum : (isBuy ? entryNum - slDist : entryNum + slDist);
+                const finalTp = (!isWideBtcScalp && tpNum > 0 && Math.abs(entryNum - tpNum) > 0.001) ? tpNum : (isBuy ? entryNum + tpDist : entryNum - tpDist);
 
                 const entry = formatLevelPrice(entryNum, asset);
                 const tp = formatLevelPrice(finalTp, asset);
                 const sl = formatLevelPrice(finalSl, asset);
 
-                const pipMult = isGoldAsset ? 100 : asset.includes('JPY') ? 100 : isForexAsset ? 10000 : 1;
+                const pipMult = isGoldAsset ? 100 : asset.includes('XAG') ? 1000 : asset.includes('JPY') ? 100 : isForexAsset ? 10000 : 1;
 
                 const slPts = Math.round(slDist * pipMult);
                 const tpPts = Math.round(tpDist * pipMult);
+                const slPct = entryNum > 0 ? ((slDist / entryNum) * 100).toFixed(2) : '0.00';
+                const tpPct = entryNum > 0 ? ((tpDist / entryNum) * 100).toFixed(2) : '0.00';
                 // 0.03 Lot USD Math: Gold 0.03 lot = 3 oz ($3.00 per $1.00 move). Forex 0.03 lot = $0.30/pip.
                 const slUsd = isGoldAsset
                   ? (slDist * 100 * 0.03).toFixed(2)
@@ -1940,7 +1944,7 @@ export default function AITradingPage({
                     ? (tpPts * 0.30).toFixed(2)
                     : (tpDist * 0.03).toFixed(2);
 
-                const calculatedRrNum = slDist > 0 ? (tpDist / slDist).toFixed(1) : '2.0';
+                const calculatedRrNum = slDist > 0 ? (tpDist / slDist).toFixed(1) : '1.5';
                 const rr = `1:${calculatedRrNum}`;
                 const bePriceVal = entryNum > 0 ? (isBuy ? entryNum + slDist : entryNum - slDist) : null;
                 const conf = sig.confidence || (isBuy ? 91 : 89);
@@ -1953,8 +1957,8 @@ export default function AITradingPage({
                   pair: asset,
                   direction: dir,
                   entry: entryNum,
-                  sl: slNum,
-                  tp: tpNum,
+                  sl: finalSl,
+                  tp: finalTp,
                   style: isScalp ? 'scalping' : 'daytrade',
                   timeframe: tf,
                   refHigh: sig.refCandleHigh,
@@ -1970,8 +1974,8 @@ export default function AITradingPage({
                 let isSl = statusLower === 'sl' || statusLower === 'loss';
 
                 // Real-time evaluation against current price
-                if (!isTp && !isSl && curPrice && curPrice > 0 && tpNum > 0 && slNum > 0) {
-                  const evalRes = evaluateSignalOutcome(sig, curPrice);
+                if (!isTp && !isSl && curPrice && curPrice > 0 && finalTp > 0 && finalSl > 0) {
+                  const evalRes = evaluateSignalOutcome({ ...sig, sl: finalSl, tp: finalTp }, curPrice);
                   if (evalRes === 'tp') isTp = true;
                   else if (evalRes === 'sl') isSl = true;
                 }
@@ -2047,19 +2051,33 @@ export default function AITradingPage({
                       <div className="ait-card-timeframe-tag">{timeframeTag}</div>
                     </div>
 
-                    {/* Price Levels: Entry, Target, Stop */}
+                    {/* Price Levels: Entry, Take Profit (TP), Stop Loss (SL), Risk-to-reward */}
                     <div className="ait-card-levels-vertical ait-mono">
                       <div className="ait-level-row">
                         <span className="ait-level-key">Entry</span>
                         <span className="ait-level-val entry">{isVipUser ? formatLevelPrice(entry, asset) : '••••••'}</span>
                       </div>
-                      <div className="ait-level-row">
-                        <span className="ait-level-key">Target</span>
-                        <span className="ait-level-val target">{isVipUser ? formatLevelPrice(tp, asset) : '••••••'}</span>
+                      <div className="ait-level-row ait-level-row-with-sub">
+                        <span className="ait-level-key">Take Profit (TP)</span>
+                        <div className="ait-level-val-stack">
+                          <span className="ait-level-val target">{isVipUser ? formatLevelPrice(tp, asset) : '••••••'}</span>
+                          {isVipUser && (
+                            <span className="ait-level-sub target">+{tpPts} points · +{tpPct}%</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="ait-level-row ait-level-row-with-sub">
+                        <span className="ait-level-key">Stop Loss (SL)</span>
+                        <div className="ait-level-val-stack">
+                          <span className="ait-level-val stop">{isVipUser ? formatLevelPrice(sl, asset) : '••••••'}</span>
+                          {isVipUser && (
+                            <span className="ait-level-sub stop">−{slPts} points · −{slPct}%</span>
+                          )}
+                        </div>
                       </div>
                       <div className="ait-level-row">
-                        <span className="ait-level-key">Stop</span>
-                        <span className="ait-level-val stop">{isVipUser ? formatLevelPrice(sl, asset) : '••••••'}</span>
+                        <span className="ait-level-key">Risk-to-reward</span>
+                        <span className="ait-level-val rr">{rr}</span>
                       </div>
                     </div>
 

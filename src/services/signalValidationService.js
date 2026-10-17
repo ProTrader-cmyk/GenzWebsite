@@ -32,7 +32,7 @@ export const PAIR_CONFIGS = {
   BTCUSD: {
     symbol: 'BTC/USD',
     name: 'Bitcoin',
-    decimals: 1,
+    decimals: 2,
     minSlDistScalp: 90,
     minTpDistScalp: 135,
     minSlDistDaytrade: 400,

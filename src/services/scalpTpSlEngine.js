@@ -73,20 +73,23 @@ export const SCALP_ASSET_CONFIGS = {
     pair: 'BTCUSD',
     symbol: 'BTC/USD',
     name: 'Bitcoin',
-    decimals: 1,
-    tickSize: 0.1,
-    unitLabel: 'pts',
-    pointMultiplier: 1, // $1.0 = 1 pt on BTC
+    decimals: 2,
+    tickSize: 0.01,
+    unitLabel: 'points',
+    pointMultiplier: 1, // $1.0 = 1 point on BTC
     // Realistic transaction costs ($ USD per BTC)
     estimatedSpread: 10.0,
     maxAllowedSpread: 35.0,
     estimatedSlippage: 6.0,
     commissionPerUnit: 14.0,
     // 5-Minute ATR & Volatility parameters ($ USD)
-    defaultAtr5m: 145.0,
+    defaultAtr5m: 120.0,
     minAtr5m: 55.0,
     maxAtr5m: 520.0,
-    // Stop Loss bounds for Scalping ($ USD)
+    // Default & Stop Loss bounds for Scalping ($ USD / points)
+    defaultSlDist: 120.0,
+    defaultTpDist: 180.0,
+    preferredScalpRr: 1.5,
     minSlDist: 90.0,
     maxSlDist: 320.0,
     atrNoiseFloorMult: 0.85,
@@ -363,6 +366,8 @@ export function calculateStructureScalpTpSl({
     const netRr = Math.max(0, tpDist - totalCost) / slDist;
     const slPts = Math.round(slDist * cfg.pointMultiplier);
     const tpPts = Math.round(tpDist * cfg.pointMultiplier);
+    const slPct = ((slDist / entry) * 100).toFixed(2);
+    const tpPct = ((tpDist / entry) * 100).toFixed(2);
 
     const signalObj = {
       pair: norm,
@@ -379,10 +384,12 @@ export function calculateStructureScalpTpSl({
       breakEvenTrigger: beTrigger,
       slDistance: Number(slDist.toFixed(dec)),
       tpDistance: Number(tpDist.toFixed(dec)),
-      slDistanceFormatted: `-$${slDist.toFixed(dec)} (${slPts} ${cfg.unitLabel})`,
-      tpDistanceFormatted: `+$${tpDist.toFixed(dec)} (${tpPts} ${cfg.unitLabel})`,
+      slDistanceFormatted: `−${slPts} points · −${slPct}%`,
+      tpDistanceFormatted: `+${tpPts} points · +${tpPct}%`,
       slPts,
       tpPts,
+      slPct: Number(slPct),
+      tpPct: Number(tpPct),
       rr: `1:${grossRr.toFixed(1)}`,
       rrNumeric: Number(grossRr.toFixed(2)),
       netRr: `1:${netRr.toFixed(1)}`,
@@ -393,8 +400,8 @@ export function calculateStructureScalpTpSl({
       invalidationLevel: Number(invLevel.toFixed(dec)),
       levelExplanations: {
         entry: `15M/1H CRT ${isBuy ? 'Discount FVG' : 'Premium FVG'} entry at $${formatSpotPrice(norm, entry)}`,
-        sl: `$${formatSpotPrice(norm, sl)} (-$${slDist.toFixed(dec)}) — Placed $${dt.invalidationBuffer.toFixed(dec)} beyond 15M/1H structural ${isBuy ? 'swing low' : 'swing high'} ($${formatSpotPrice(norm, invLevel)})`,
-        tp: `$${formatSpotPrice(norm, tp)} (+$${tpDist.toFixed(dec)}) — Targets opposing 1H liquidity pool at 1:${grossRr.toFixed(1)} R:R (Net 1:${netRr.toFixed(1)})`,
+        sl: `$${formatSpotPrice(norm, sl)} (−${slPts} points · −${slPct}%) — Placed $${dt.invalidationBuffer.toFixed(dec)} beyond 15M/1H structural ${isBuy ? 'swing low' : 'swing high'} ($${formatSpotPrice(norm, invLevel)})`,
+        tp: `$${formatSpotPrice(norm, tp)} (+${tpPts} points · +${tpPct}%) — Targets opposing 1H liquidity pool at 1:${grossRr.toFixed(1)} R:R (Net 1:${netRr.toFixed(1)})`,
       },
     };
 
@@ -420,10 +427,29 @@ export function calculateStructureScalpTpSl({
     Number((cfg.atrNoiseFloorMult * atr5m + currentSpread).toFixed(dec))
   );
 
+  const hasExplicitSwing =
+    sSwingLow != null ||
+    sSwingHigh != null ||
+    structure.orderBlockLow != null ||
+    structure.orderBlockHigh != null ||
+    structure.fvgBoundary != null;
+
+  const hasExplicitOpposing =
+    sOppRes != null ||
+    sOppSup != null ||
+    structure.opposingLiquidity != null ||
+    structure.targetSwingHigh != null ||
+    structure.targetSwingLow != null;
+
   let invalidationLevel = null;
   let invalidationSource = '';
 
-  if (isBuy) {
+  if (norm === 'BTCUSD' && !hasExplicitSwing) {
+    const defaultBtcSlDist = cfg.defaultSlDist || 120.0;
+    const swingDist = Math.max(20.0, defaultBtcSlDist - noiseBuffer);
+    invalidationLevel = Number((isBuy ? entry - swingDist : entry + swingDist).toFixed(dec));
+    invalidationSource = isBuy ? '5M micro-swing & FVG base' : '5M micro-swing & FVG top';
+  } else if (isBuy) {
     // Collect candidate bullish invalidation levels strictly below entry
     const candidates = [
       { val: sSwingLow, label: '5M swing low' },
@@ -480,7 +506,10 @@ export function calculateStructureScalpTpSl({
 
   let slDist = Math.abs(entry - rawSl);
 
-  if (structure.enforceExactSl === true) {
+  if (norm === 'BTCUSD' && !hasExplicitSwing && structure.enforceExactSl !== true) {
+    slDist = cfg.defaultSlDist || 120.0;
+    rawSl = isBuy ? entry - slDist : entry + slDist;
+  } else if (structure.enforceExactSl === true) {
     if (slDist < cfg.minSlDist) {
       const msg = `Stop loss distance ($${slDist.toFixed(dec)}) is inside normal 5m market noise (min required: $${cfg.minSlDist.toFixed(dec)}).`;
       return {
@@ -522,43 +551,45 @@ export function calculateStructureScalpTpSl({
   let opposingLevel = null;
   let opposingSource = '';
 
-  if (isBuy) {
-    // Look for opposing resistance / liquidity pools above entry
-    const oppCandidates = [
-      { val: structure.opposingLiquidity, label: '5M opposing liquidity pool' },
-      { val: structure.targetSwingHigh, label: 'previous 5M/15M swing high' },
-      { val: sOppRes, label: 'intraday resistance zone' },
-      { val: marketAnalysis?.sessionHigh, label: 'session high liquidity' },
-      { val: marketAnalysis?.levels?.r1Num, label: 'R1 intraday pivot' },
-    ].filter((c) => c.val != null && !isNaN(Number(c.val)) && Number(c.val) > entry + currentSpread * 2);
+  if (!(norm === 'BTCUSD' && !hasExplicitOpposing)) {
+    if (isBuy) {
+      // Look for opposing resistance / liquidity pools above entry
+      const oppCandidates = [
+        { val: structure.opposingLiquidity, label: '5M opposing liquidity pool' },
+        { val: structure.targetSwingHigh, label: 'previous 5M/15M swing high' },
+        { val: sOppRes, label: 'intraday resistance zone' },
+        { val: marketAnalysis?.sessionHigh, label: 'session high liquidity' },
+        { val: marketAnalysis?.levels?.r1Num, label: 'R1 intraday pivot' },
+      ].filter((c) => c.val != null && !isNaN(Number(c.val)) && Number(c.val) > entry + currentSpread * 2);
 
-    const sortedOpp = oppCandidates
-      .map((c) => ({ ...c, val: Number(c.val), dist: Number(c.val) - entry }))
-      .filter((c) => c.dist >= 0.4 * atr5m || c.val === structure.opposingLiquidity || c.val === sOppRes)
-      .sort((a, b) => a.dist - b.dist);
+      const sortedOpp = oppCandidates
+        .map((c) => ({ ...c, val: Number(c.val), dist: Number(c.val) - entry }))
+        .filter((c) => c.dist >= 0.4 * atr5m || c.val === structure.opposingLiquidity || c.val === sOppRes)
+        .sort((a, b) => a.dist - b.dist);
 
-    if (sortedOpp.length > 0 && sortedOpp[0].dist <= maxAtrTpReach) {
-      opposingLevel = sortedOpp[0].val;
-      opposingSource = sortedOpp[0].label;
-    }
-  } else {
-    // SELL: Look for opposing support / liquidity pools below entry
-    const oppCandidates = [
-      { val: structure.opposingLiquidity, label: '5M opposing liquidity pool' },
-      { val: structure.targetSwingLow, label: 'previous 5M/15M swing low' },
-      { val: sOppSup, label: 'intraday support zone' },
-      { val: marketAnalysis?.sessionLow, label: 'session low liquidity' },
-      { val: marketAnalysis?.levels?.s1Num, label: 'S1 intraday pivot' },
-    ].filter((c) => c.val != null && !isNaN(Number(c.val)) && Number(c.val) < entry - currentSpread * 2);
+      if (sortedOpp.length > 0 && sortedOpp[0].dist <= maxAtrTpReach) {
+        opposingLevel = sortedOpp[0].val;
+        opposingSource = sortedOpp[0].label;
+      }
+    } else {
+      // SELL: Look for opposing support / liquidity pools below entry
+      const oppCandidates = [
+        { val: structure.opposingLiquidity, label: '5M opposing liquidity pool' },
+        { val: structure.targetSwingLow, label: 'previous 5M/15M swing low' },
+        { val: sOppSup, label: 'intraday support zone' },
+        { val: marketAnalysis?.sessionLow, label: 'session low liquidity' },
+        { val: marketAnalysis?.levels?.s1Num, label: 'S1 intraday pivot' },
+      ].filter((c) => c.val != null && !isNaN(Number(c.val)) && Number(c.val) < entry - currentSpread * 2);
 
-    const sortedOpp = oppCandidates
-      .map((c) => ({ ...c, val: Number(c.val), dist: entry - Number(c.val) }))
-      .filter((c) => c.dist >= 0.4 * atr5m || c.val === structure.opposingLiquidity || c.val === sOppSup)
-      .sort((a, b) => a.dist - b.dist);
+      const sortedOpp = oppCandidates
+        .map((c) => ({ ...c, val: Number(c.val), dist: entry - Number(c.val) }))
+        .filter((c) => c.dist >= 0.4 * atr5m || c.val === structure.opposingLiquidity || c.val === sOppSup)
+        .sort((a, b) => a.dist - b.dist);
 
-    if (sortedOpp.length > 0 && sortedOpp[0].dist <= maxAtrTpReach) {
-      opposingLevel = sortedOpp[0].val;
-      opposingSource = sortedOpp[0].label;
+      if (sortedOpp.length > 0 && sortedOpp[0].dist <= maxAtrTpReach) {
+        opposingLevel = sortedOpp[0].val;
+        opposingSource = sortedOpp[0].label;
+      }
     }
   }
 
@@ -572,7 +603,9 @@ export function calculateStructureScalpTpSl({
   // Determine required minimum R:R
   const isOneToOneAllowed = Boolean(allowOneToOne === true && backtestValidated === true);
   const minGrossRr = isOneToOneAllowed ? 1.0 : 1.5;
-  const preferredGrossRr = 2.0;
+  const preferredGrossRr = norm === 'BTCUSD' && !hasExplicitSwing && !hasExplicitOpposing
+    ? (cfg.preferredScalpRr || 1.5)
+    : 2.0;
 
   const preferredTpDist = Number((finalSlDist * preferredGrossRr).toFixed(dec));
   const minRequiredTpDist = Math.max(
@@ -603,8 +636,8 @@ export function calculateStructureScalpTpSl({
   } else if (preferredTpDist <= maxAchievableTpDist) {
     finalTpDist = preferredTpDist;
     tpSelectionBasis = opposingLevel != null
-      ? `2:1 structure expansion inside ${opposingSource} ($${formatSpotPrice(norm, opposingLevel)})`
-      : `2:1 scalp liquidity projection (${(preferredTpDist / atr5m).toFixed(1)}x 5M ATR)`;
+      ? `${preferredGrossRr.toFixed(1)}:1 structure expansion inside ${opposingSource} ($${formatSpotPrice(norm, opposingLevel)})`
+      : `1:${preferredGrossRr.toFixed(1)} scalp liquidity projection (${(preferredTpDist / atr5m).toFixed(1)}x 5M ATR)`;
   } else {
     finalTpDist = Number(maxAchievableTpDist.toFixed(dec));
     tpSelectionBasis = `Capped at realistic scalp structure limit (${(finalTpDist / atr5m).toFixed(1)}x 5M ATR)`;
@@ -650,8 +683,10 @@ export function calculateStructureScalpTpSl({
   // 7. Construct Level Explanations for Signal Card Display
   const slPts = Math.round(finalSlDist * cfg.pointMultiplier);
   const tpPts = Math.round(finalTpDist * cfg.pointMultiplier);
-  const slDistanceFormatted = `-$${finalSlDist.toFixed(dec)} (${slPts} ${cfg.unitLabel})`;
-  const tpDistanceFormatted = `+$${finalTpDist.toFixed(dec)} (${tpPts} ${cfg.unitLabel})`;
+  const slPct = ((finalSlDist / entry) * 100).toFixed(2);
+  const tpPct = ((finalTpDist / entry) * 100).toFixed(2);
+  const slDistanceFormatted = `−${slPts} points · −${slPct}%`;
+  const tpDistanceFormatted = `+${tpPts} points · +${tpPct}%`;
 
   const levelExplanations = {
     entry: `${entryTriggerDesc}`,
@@ -686,6 +721,8 @@ export function calculateStructureScalpTpSl({
     tpDistanceFormatted,
     slPts,
     tpPts,
+    slPct: Number(slPct),
+    tpPct: Number(tpPct),
     rr: `1:${grossRr.toFixed(1)}`,
     rrNumeric: Number(grossRr.toFixed(2)),
     netRr: `1:${netRr.toFixed(1)}`,

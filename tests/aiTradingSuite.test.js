@@ -679,7 +679,7 @@ describe('AI Trading Page & Signal Engine Test Suite', () => {
 
       // Verify distinct decimals, spreads, and SL/TP bounds
       assert.equal(SCALP_ASSET_CONFIGS.XAUUSD.decimals, 2);
-      assert.equal(SCALP_ASSET_CONFIGS.BTCUSD.decimals, 1);
+      assert.equal(SCALP_ASSET_CONFIGS.BTCUSD.decimals, 2);
       assert.equal(SCALP_ASSET_CONFIGS.XAGUSD.decimals, 3);
 
       assert.notEqual(SCALP_ASSET_CONFIGS.XAUUSD.minSlDist, SCALP_ASSET_CONFIGS.BTCUSD.minSlDist);
@@ -709,7 +709,24 @@ describe('AI Trading Page & Signal Engine Test Suite', () => {
       assert.ok(setup.levelExplanations.tp.length > 10);
     });
 
-    it('3. Bitcoin (BTCUSD) Scalp: uses realistic nearby scalp target ($140–$580) instead of wide $1,020 swing target', () => {
+    it('3. Bitcoin (BTCUSD) Scalp: matches exact BTCUSD · BUY setup (Entry 81,749.10 -> TP 81,929.10 [+180 points · +0.22%], SL 81,629.10 [−120 points · −0.15%], R:R 1:1.5)', () => {
+      const exactSetup = calculateStructureScalpTpSl({
+        pair: 'BTCUSD',
+        direction: 'BUY',
+        entryPrice: 81749.10,
+      });
+
+      assert.equal(exactSetup.ok, true);
+      assert.equal(exactSetup.direction, 'BUY');
+      assert.equal(exactSetup.entry, 81749.10);
+      assert.equal(exactSetup.tp, 81929.10);
+      assert.equal(exactSetup.sl, 81629.10);
+      assert.equal(exactSetup.tpDistance, 180);
+      assert.equal(exactSetup.slDistance, 120);
+      assert.equal(exactSetup.tpDistanceFormatted, '+180 points · +0.22%');
+      assert.equal(exactSetup.slDistanceFormatted, '−120 points · −0.15%');
+      assert.equal(exactSetup.rr, '1:1.5');
+
       const setup = calculateStructureScalpTpSl({
         pair: 'BTCUSD',
         direction: 'SELL',

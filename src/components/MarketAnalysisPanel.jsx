@@ -457,7 +457,7 @@ function buildDefaultSignal(pair, price, style = 'scalp', direction = 'BUY', mar
   const isSilver = normPair === 'XAGUSD';
   const isBtc = normPair === 'BTCUSD';
 
-  const decimals = isSilver ? 3 : isBtc ? 1 : 2;
+  const decimals = isSilver ? 3 : isBtc ? 2 : 2;
   const p = Number(price);
   if (!p || isNaN(p) || p <= 0) {
     return {
@@ -504,6 +504,10 @@ function buildDefaultSignal(pair, price, style = 'scalp', direction = 'BUY', mar
       tpDistance: scalpResult.tpDistance,
       slDistanceFormatted: scalpResult.slDistanceFormatted,
       tpDistanceFormatted: scalpResult.tpDistanceFormatted,
+      slPts: scalpResult.slPts,
+      tpPts: scalpResult.tpPts,
+      slPct: scalpResult.slPct,
+      tpPct: scalpResult.tpPct,
       breakEvenTrigger: scalpResult.breakEvenTrigger,
       rr: scalpResult.rr,
       rrNumeric: scalpResult.rrNumeric,
@@ -551,6 +555,12 @@ function buildDefaultSignal(pair, price, style = 'scalp', direction = 'BUY', mar
   const tp2Val = Number((isBuy ? entryVal + tp2Dist : entryVal - tp2Dist).toFixed(decimals));
   const beVal = beDist ? Number((isBuy ? entryVal + beDist : entryVal - beDist).toFixed(decimals)) : null;
 
+  const ptMult = isGold ? 100 : isSilver ? 1000 : 1;
+  const slPts = Math.round(slDist * ptMult);
+  const tpPts = Math.round(tp1Dist * ptMult);
+  const slPct = ((slDist / entryVal) * 100).toFixed(2);
+  const tpPct = ((tp1Dist / entryVal) * 100).toFixed(2);
+
   const modelName = isGold
     ? '3-Candle CRT Daily Liquidation Model'
     : isSilver
@@ -574,8 +584,12 @@ function buildDefaultSignal(pair, price, style = 'scalp', direction = 'BUY', mar
     tp2: tp2Val,
     slDistance: slDist,
     tpDistance: tp1Dist,
-    slDistanceFormatted: `-$${slDist.toFixed(decimals)}`,
-    tpDistanceFormatted: `+$${tp1Dist.toFixed(decimals)}`,
+    slDistanceFormatted: `−${slPts} points · −${slPct}%`,
+    tpDistanceFormatted: `+${tpPts} points · +${tpPct}%`,
+    slPts,
+    tpPts,
+    slPct: Number(slPct),
+    tpPct: Number(tpPct),
     breakEvenTrigger: beVal,
     rr: '1:2.0',
     rrNumeric: 2.0,
@@ -583,8 +597,8 @@ function buildDefaultSignal(pair, price, style = 'scalp', direction = 'BUY', mar
     netRrNumeric: 1.92,
     levelExplanations: {
       entry: `${dirStr} execution at live spot ($${entryVal.toFixed(decimals)}) aligned with 15M/1H multi-timeframe structure.`,
-      sl: `Placed $${slDist.toFixed(decimals)} ${isBuy ? 'below' : 'above'} 15M/1H invalidation swing ($${slVal.toFixed(decimals)}).`,
-      tp: `Targets next 1H institutional liquidity pool $${tp1Dist.toFixed(decimals)} away ($${tpVal.toFixed(decimals)}) for 1:2.0 R:R.`,
+      sl: `Placed −${slPts} points · −${slPct}% ${isBuy ? 'below' : 'above'} 15M/1H invalidation swing ($${slVal.toFixed(decimals)}).`,
+      tp: `Targets next 1H institutional liquidity pool (+${tpPts} points · +${tpPct}%) for 1:2.0 R:R.`,
     },
     pipsGain,
     session: 'Active Institutional Overlap',
@@ -745,7 +759,7 @@ export default function MarketAnalysisPanel({
   const isCrypto = pair.includes('BTC') || pair.includes('ETH');
   const isJpy = pair.includes('JPY');
   const isForex = !isGold && !isCrypto && !pair.includes('US30');
-  const decimals = isForex ? 5 : isJpy ? 3 : isCrypto ? 1 : 2;
+  const decimals = isForex ? 5 : isJpy ? 3 : isCrypto ? 2 : 2;
   const priceDecimals = isGold ? 3 : decimals;
 
   const rawPrice = Number(livePrice) || Number(marketAnalysis?.price) || currentAsset.defaultPrice || 4169.735;
@@ -1062,8 +1076,15 @@ export default function MarketAnalysisPanel({
       const savedScalp = localStorage.getItem(`genz_locked_scalp_${pair}`);
       if (savedScalp) {
         try {
-          const parsed = JSON.parse(savedScalp);
+          let parsed = JSON.parse(savedScalp);
           if (!isCorruptOrInvalid(parsed)) {
+            if (pair === 'BTCUSD' && Math.abs((parsed.slDistance || Math.abs(parsed.entry - parsed.sl)) - 120) > 1) {
+              const refreshed = buildDefaultSignal('BTCUSD', parsed.entry, 'scalp', parsed.direction || 'BUY', marketAnalysis);
+              if (refreshed && refreshed.ok) {
+                parsed = { ...parsed, ...refreshed, id: parsed.id || refreshed.id };
+                localStorage.setItem(`genz_locked_scalp_${pair}`, JSON.stringify(parsed));
+              }
+            }
             setScalpSignal(parsed);
           } else {
             setScalpSignal(null);
@@ -2049,12 +2070,17 @@ Model: ${sig.model || 'ICT SMC Model'}${explanationsText}`;
               const sTp = Number(currentScalpSignal.tp1 ?? currentScalpSignal.tp);
               const sSlDist = currentScalpSignal.slDistance ?? Math.abs(sEntry - sSl);
               const sTpDist = currentScalpSignal.tpDistance ?? Math.abs(sTp - sEntry);
-              const sSlDistFmt = currentScalpSignal.slDistanceFormatted || `-$${sSlDist.toFixed(decimals)}`;
-              const sTpDistFmt = currentScalpSignal.tpDistanceFormatted || `+$${sTpDist.toFixed(decimals)}`;
-              const sRr = currentScalpSignal.rr || (sSlDist > 0 ? `1:${(sTpDist / sSlDist).toFixed(1)}` : '1:2.0');
+              const ptMult = isGold ? 100 : pair === 'XAGUSD' ? 1000 : 1;
+              const sSlPts = currentScalpSignal.slPts ?? Math.round(sSlDist * ptMult);
+              const sTpPts = currentScalpSignal.tpPts ?? Math.round(sTpDist * ptMult);
+              const sSlPct = sEntry > 0 ? ((sSlDist / sEntry) * 100).toFixed(2) : '0.00';
+              const sTpPct = sEntry > 0 ? ((sTpDist / sEntry) * 100).toFixed(2) : '0.00';
+              const sSlDistFmt = `−${sSlPts} points · −${sSlPct}%`;
+              const sTpDistFmt = `+${sTpPts} points · +${sTpPct}%`;
+              const sRr = currentScalpSignal.rr || (sSlDist > 0 ? `1:${(sTpDist / sSlDist).toFixed(1)}` : '1:1.5');
               const sNetRr = currentScalpSignal.netRr || null;
               const sExpl = currentScalpSignal.levelExplanations || {
-                entry: `${currentScalpSignal.direction} execution at live spot ($${formatCommaPrice(sEntry, decimals)}) after 1M/5M structure confirmation.`,
+                entry: `${currentScalpSignal.direction} execution at live spot (${formatCommaPrice(sEntry, decimals)}) after 1M/5M structure confirmation.`,
                 sl: `Placed ${sSlDistFmt} beyond nearest market-structure invalidation point + ATR noise buffer.`,
                 tp: `Targets nearest opposing liquidity pool (${sTpDistFmt}) for realistic scalp R:R (${sRr}).`,
               };
@@ -2075,16 +2101,16 @@ Model: ${sig.model || 'ICT SMC Model'}${explanationsText}`;
                         )}
                       </span>
                       <div className="ait-pm-sr-pair-wrap">
-                        <strong className="ait-pm-sr-pair">{pair}</strong>
+                        <strong className="ait-pm-sr-pair">{pair} · {(currentScalpSignal?.direction || 'BUY').toUpperCase()}</strong>
                         <span className="ait-pm-sr-tf-tag">1M / 5M SCALP</span>
                       </div>
                     </div>
 
                     <div className="ait-pm-sr-metrics">
                       <div className="ait-pm-sr-item">
-                        <span className="ait-pm-sr-label">ENTRY PRICE</span>
+                        <span className="ait-pm-sr-label">Entry</span>
                         <strong className="ait-pm-sr-val text-cyan ait-mono">
-                          ${formatCommaPrice(sEntry, decimals)}
+                          {formatCommaPrice(sEntry, decimals)}
                         </strong>
                         <span className="ait-pm-sr-tag-badge text-cyan">Live Spot</span>
                       </div>
@@ -2092,21 +2118,9 @@ Model: ${sig.model || 'ICT SMC Model'}${explanationsText}`;
                       <div className="ait-pm-sr-divider" />
 
                       <div className="ait-pm-sr-item">
-                        <span className="ait-pm-sr-label">STOP LOSS (SL)</span>
-                        <strong className="ait-pm-sr-val text-red ait-mono">
-                          ${formatCommaPrice(sSl, decimals)}
-                        </strong>
-                        <span className="ait-pm-sr-tag-badge text-red" title="SL Distance from Entry">
-                          {sSlDistFmt}
-                        </span>
-                      </div>
-
-                      <div className="ait-pm-sr-divider" />
-
-                      <div className="ait-pm-sr-item">
-                        <span className="ait-pm-sr-label">TAKE PROFIT (TP)</span>
+                        <span className="ait-pm-sr-label">Take Profit (TP)</span>
                         <strong className="ait-pm-sr-val text-emerald ait-mono">
-                          ${formatCommaPrice(sTp, decimals)}
+                          {formatCommaPrice(sTp, decimals)}
                         </strong>
                         <span className="ait-pm-sr-tag-badge text-emerald" title="TP Distance from Entry">
                           {sTpDistFmt}
@@ -2116,7 +2130,19 @@ Model: ${sig.model || 'ICT SMC Model'}${explanationsText}`;
                       <div className="ait-pm-sr-divider" />
 
                       <div className="ait-pm-sr-item">
-                        <span className="ait-pm-sr-label">REWARD : RISK</span>
+                        <span className="ait-pm-sr-label">Stop Loss (SL)</span>
+                        <strong className="ait-pm-sr-val text-red ait-mono">
+                          {formatCommaPrice(sSl, decimals)}
+                        </strong>
+                        <span className="ait-pm-sr-tag-badge text-red" title="SL Distance from Entry">
+                          {sSlDistFmt}
+                        </span>
+                      </div>
+
+                      <div className="ait-pm-sr-divider" />
+
+                      <div className="ait-pm-sr-item">
+                        <span className="ait-pm-sr-label">Risk-to-reward</span>
                         <strong className="ait-pm-sr-val text-cyan ait-mono">
                           {sRr}
                         </strong>
@@ -2161,12 +2187,12 @@ Model: ${sig.model || 'ICT SMC Model'}${explanationsText}`;
                       <p className="ait-pm-le-text">{sExpl.entry}</p>
                     </div>
                     <div className="ait-pm-le-item">
-                      <span className="ait-pm-le-badge red">SL WHY</span>
-                      <p className="ait-pm-le-text">{sExpl.sl}</p>
-                    </div>
-                    <div className="ait-pm-le-item">
                       <span className="ait-pm-le-badge emerald">TP WHY</span>
                       <p className="ait-pm-le-text">{sExpl.tp}</p>
+                    </div>
+                    <div className="ait-pm-le-item">
+                      <span className="ait-pm-le-badge red">SL WHY</span>
+                      <p className="ait-pm-le-text">{sExpl.sl}</p>
                     </div>
                   </div>
                 </div>
@@ -2222,12 +2248,17 @@ Model: ${sig.model || 'ICT SMC Model'}${explanationsText}`;
               const dTp = Number(dayTradeSignal.tp1 ?? dayTradeSignal.tp);
               const dSlDist = dayTradeSignal.slDistance ?? Math.abs(dEntry - dSl);
               const dTpDist = dayTradeSignal.tpDistance ?? Math.abs(dTp - dEntry);
-              const dSlDistFmt = dayTradeSignal.slDistanceFormatted || `-$${dSlDist.toFixed(decimals)}`;
-              const dTpDistFmt = dayTradeSignal.tpDistanceFormatted || `+$${dTpDist.toFixed(decimals)}`;
+              const ptMult = isGold ? 100 : pair === 'XAGUSD' ? 1000 : 1;
+              const dSlPts = dayTradeSignal.slPts ?? Math.round(dSlDist * ptMult);
+              const dTpPts = dayTradeSignal.tpPts ?? Math.round(dTpDist * ptMult);
+              const dSlPct = dEntry > 0 ? ((dSlDist / dEntry) * 100).toFixed(2) : '0.00';
+              const dTpPct = dEntry > 0 ? ((dTpDist / dEntry) * 100).toFixed(2) : '0.00';
+              const dSlDistFmt = `−${dSlPts} points · −${dSlPct}%`;
+              const dTpDistFmt = `+${dTpPts} points · +${dTpPct}%`;
               const dRr = dayTradeSignal.rr || (dSlDist > 0 ? `1:${(dTpDist / dSlDist).toFixed(1)}` : '1:2.0');
               const dExpl = dayTradeSignal.levelExplanations || {
-                entry: `${dayTradeSignal.direction} execution at live spot ($${formatCommaPrice(dEntry, decimals)}) aligned with 15M/1H multi-timeframe structure.`,
-                sl: `Placed ${dSlDistFmt} beyond 15M/1H invalidation swing ($${formatCommaPrice(dSl, decimals)}).`,
+                entry: `${dayTradeSignal.direction} execution at live spot (${formatCommaPrice(dEntry, decimals)}) aligned with 15M/1H multi-timeframe structure.`,
+                sl: `Placed ${dSlDistFmt} beyond 15M/1H invalidation swing (${formatCommaPrice(dSl, decimals)}).`,
                 tp: `Targets 1H opposing liquidity zone (${dTpDistFmt}) for ${dRr} R:R.`,
               };
 
@@ -2247,16 +2278,16 @@ Model: ${sig.model || 'ICT SMC Model'}${explanationsText}`;
                         )}
                       </span>
                       <div className="ait-pm-sr-pair-wrap">
-                        <strong className="ait-pm-sr-pair">{pair}</strong>
+                        <strong className="ait-pm-sr-pair">{pair} · {(dayTradeSignal.direction || 'BUY').toUpperCase()}</strong>
                         <span className="ait-pm-sr-tf-tag cyan">CRT 15M/1H</span>
                       </div>
                     </div>
 
                     <div className="ait-pm-sr-metrics">
                       <div className="ait-pm-sr-item">
-                        <span className="ait-pm-sr-label">ENTRY PRICE</span>
+                        <span className="ait-pm-sr-label">Entry</span>
                         <strong className="ait-pm-sr-val text-cyan ait-mono">
-                          ${formatCommaPrice(dEntry, decimals)}
+                          {formatCommaPrice(dEntry, decimals)}
                         </strong>
                         <span className="ait-pm-sr-tag-badge text-cyan">Live Spot</span>
                       </div>
@@ -2264,19 +2295,9 @@ Model: ${sig.model || 'ICT SMC Model'}${explanationsText}`;
                       <div className="ait-pm-sr-divider" />
 
                       <div className="ait-pm-sr-item">
-                        <span className="ait-pm-sr-label">STOP LOSS (SL)</span>
-                        <strong className="ait-pm-sr-val text-red ait-mono">
-                          ${formatCommaPrice(dSl, decimals)}
-                        </strong>
-                        <span className="ait-pm-sr-tag-badge text-red">{dSlDistFmt}</span>
-                      </div>
-
-                      <div className="ait-pm-sr-divider" />
-
-                      <div className="ait-pm-sr-item">
-                        <span className="ait-pm-sr-label">TAKE PROFIT (TP)</span>
+                        <span className="ait-pm-sr-label">Take Profit (TP)</span>
                         <strong className="ait-pm-sr-val text-emerald ait-mono">
-                          ${formatCommaPrice(dTp, decimals)}
+                          {formatCommaPrice(dTp, decimals)}
                         </strong>
                         <span className="ait-pm-sr-tag-badge text-emerald">{dTpDistFmt}</span>
                       </div>
@@ -2284,12 +2305,22 @@ Model: ${sig.model || 'ICT SMC Model'}${explanationsText}`;
                       <div className="ait-pm-sr-divider" />
 
                       <div className="ait-pm-sr-item">
-                        <span className="ait-pm-sr-label">REWARD : RISK</span>
+                        <span className="ait-pm-sr-label">Stop Loss (SL)</span>
+                        <strong className="ait-pm-sr-val text-red ait-mono">
+                          {formatCommaPrice(dSl, decimals)}
+                        </strong>
+                        <span className="ait-pm-sr-tag-badge text-red">{dSlDistFmt}</span>
+                      </div>
+
+                      <div className="ait-pm-sr-divider" />
+
+                      <div className="ait-pm-sr-item">
+                        <span className="ait-pm-sr-label">Risk-to-reward</span>
                         <strong className="ait-pm-sr-val text-cyan ait-mono">
                           {dRr}
                         </strong>
                         <span className="ait-pm-sr-tag-badge text-cyan">
-                          {dayTradeSignal.breakEvenTrigger ? `BE $${formatCommaPrice(dayTradeSignal.breakEvenTrigger, decimals)}` : 'CRT Swing'}
+                          {dayTradeSignal.breakEvenTrigger ? `BE ${formatCommaPrice(dayTradeSignal.breakEvenTrigger, decimals)}` : 'CRT Swing'}
                         </span>
                       </div>
                     </div>

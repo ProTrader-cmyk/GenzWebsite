@@ -420,7 +420,7 @@ export function calculateRealIctSetup(pair, spotPrice, preferredDir = null, styl
   const isIndex = normPair === 'US30' || normPair.includes('NAS');
   const isForex = !isGold && !isSilver && !isCrypto && !isIndex && (normPair.includes('EUR') || normPair.includes('GBP') || normPair.includes('JPY') || normPair.includes('USD'));
 
-  const decimals = isSilver ? 3 : isForex ? (normPair.includes('JPY') ? 3 : 5) : isIndex ? 1 : isCrypto ? 1 : 2;
+  const decimals = isSilver ? 3 : isForex ? (normPair.includes('JPY') ? 3 : 5) : isIndex ? 1 : 2;
   const current = Number(spotPrice);
 
   const isScalp = style === 'scalping' || style === 'scalp';
@@ -483,8 +483,8 @@ export function calculateRealIctSetup(pair, spotPrice, preferredDir = null, styl
         riskPips = 0.125;
         rewardPips = 0.250; // 1:2.0 R:R
       } else if (isCrypto) {
-        riskPips = 165.0;
-        rewardPips = 330.0; // 1:2.0 R:R
+        riskPips = 120.0;
+        rewardPips = 180.0; // 1:1.5 R:R (+180 points / -120 points)
       } else if (isIndex) {
         riskPips = 65.0;
         rewardPips = 130.0;
