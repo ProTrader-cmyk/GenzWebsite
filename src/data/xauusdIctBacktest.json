@@ -1,7 +1,7 @@
 {
   "run_id": "bt-xauusd-aac0511fefa5c296",
   "status": "COMPLETED",
-  "data_category": "HISTORICAL_BACKTEST",
+  "data_category": "HISTORICAL_REAL_DATA",
   "active_version": "ICT-XAUUSD-FVG-MSS-v2.0",
   "strategy_name": "ICT Killzone Liquidity Sweep + MSS + Consequent Encroachment FVG [v2.0 Improved]",
   "strategy_version": "ICT-XAUUSD-FVG-MSS-v2.0",

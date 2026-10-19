@@ -259,7 +259,7 @@ export default function MemberSignals({ plan = 'elite' }) {
   useEffect(() => {
     const unsub = subscribeSignals((list) => {
       if (Array.isArray(list) && list.length > 0) {
-        const filtered = list.filter((s) => s.id?.startsWith('ICT-XAU-') || s.isBacktest);
+        const filtered = list.filter((s) => s.id?.startsWith('ICT-XAU-') || s.isRealData || s.isBacktest || s.strategy_version?.includes('ICT-XAUUSD'));
         setSignals(filtered.length > 0 ? filtered : BACKTEST_SIGNALS);
       } else {
         setSignals(BACKTEST_SIGNALS);
@@ -290,8 +290,8 @@ export default function MemberSignals({ plan = 'elite' }) {
       if (cancelled) return;
       setLivePrices((prev) => ({ ...prev, ...incoming }));
 
-      // Instant TP / SL outcome evaluation on every single live tick (strictly non-backtest active setups)
-      const activeList = signals.filter((s) => s.status === 'active' && !s.isBacktest);
+      // Instant TP / SL outcome evaluation on every single live tick (strictly non-baseline active setups)
+      const activeList = signals.filter((s) => s.status === 'active' && !s.isHistoricalBaseline);
       for (const s of activeList) {
         const pair = s.pair || 'XAUUSD';
         const currentPrice = incoming[pair];

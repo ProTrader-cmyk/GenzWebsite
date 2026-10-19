@@ -304,7 +304,7 @@ export default function AILiveChartTerminal({
         const list = [];
         snapshot.forEach((d) => {
           const data = d.data();
-          if (d.id.startsWith('ICT-XAU-') || Boolean(data.isBacktest)) {
+          if (d.id.startsWith('ICT-XAU-') || Boolean(data.isRealData) || Boolean(data.isBacktest) || data.strategy_version?.includes('ICT-XAUUSD')) {
             list.push({ id: d.id, ...data });
           }
         });
@@ -443,7 +443,7 @@ export default function AILiveChartTerminal({
     // Find active intra trade setup candidate from list, even if currentActiveSetup already suppressed it
     const list = activeSignals && activeSignals.length > 0 ? activeSignals : liveSignals;
     const targetSetup = currentActiveSetup || list.find((s) => {
-      if (!s || closedSignalIds.has(s.id) || s.isBacktest) return false;
+      if (!s || closedSignalIds.has(s.id) || s.isHistoricalBaseline) return false;
       if (!isIntraTradeSignal(s)) return false;
       const sPair = (s.pair || s.symbol || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
       const isMatch = sPair === currentPairNorm || 

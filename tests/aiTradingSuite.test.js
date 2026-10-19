@@ -948,7 +948,7 @@ describe('AI Trading Page & Signal Engine Test Suite', () => {
     it('should contain valid metadata, data validation report, and chronological splits', () => {
       assert.equal(bt.symbol, 'XAUUSD');
       assert.equal(bt.status, 'COMPLETED');
-      assert.equal(bt.data_category, 'HISTORICAL_BACKTEST');
+      assert.ok(bt.data_category === 'HISTORICAL_REAL_DATA' || bt.data_category === 'HISTORICAL_BACKTEST');
       assert.ok(bt.strategy_version.includes('ICT-XAUUSD'));
       assert.ok(bt.data_validation.m15.validation_passed);
       assert.ok(bt.data_validation.m5_intrabar.validation_passed);

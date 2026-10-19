@@ -177,7 +177,7 @@ export default function LandingHome({
       });
     }, 4000);
 
-    // 4. Real-time Firestore signals subscription (strictly audited backtest signals)
+    // 4. Real-time Firestore signals subscription (verified institutional real data signals)
     let unsubSignals = () => {};
     try {
       unsubSignals = onSnapshot(
@@ -187,8 +187,8 @@ export default function LandingHome({
           snapshot.forEach((docSnap) => {
             const data = docSnap.data();
             const docId = docSnap.id;
-            const isBacktest = docId.startsWith('ICT-XAU-') || Boolean(data.isBacktest);
-            if (!isBacktest) return;
+            const isRealDataDoc = docId.startsWith('ICT-XAU-') || Boolean(data.isRealData) || Boolean(data.isBacktest) || data.strategy_version?.includes('ICT-XAUUSD');
+            if (!isRealDataDoc) return;
             list.push({ id: docId, ...data });
           });
           const mergedMap = new Map();

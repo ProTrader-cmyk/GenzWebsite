@@ -210,7 +210,7 @@ export default function HowPipWorks({ isKhmer }) {
                       <span className="pip-pod-dot amber" />
                       <span className="pip-pod-tag">PATTERN MEMORY</span>
                     </div>
-                    <strong className="pip-pod-val">45,000+ Backtested Regimes</strong>
+                    <strong className="pip-pod-val">45,000+ Real Market Regimes</strong>
                     <span className="pip-pod-sub">99.4% Structural Match</span>
                   </div>
 

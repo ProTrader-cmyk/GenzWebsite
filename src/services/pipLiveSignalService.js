@@ -124,9 +124,6 @@ export function getStoredPipSignals() {
 export async function saveSignalToFirestore(signal) {
   if (!signal) return null;
   try {
-    const id = signal.id || `sig-${Date.now()}`;
-    const docRef = doc(db, 'signals', id);
-
     let normPair = (signal.pair || signal.symbol || 'XAUUSD').toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (normPair.includes('XAU') || normPair.includes('GOLD')) normPair = 'XAUUSD';
     else if (normPair.includes('EUR')) normPair = 'EURUSD';
@@ -135,6 +132,14 @@ export async function saveSignalToFirestore(signal) {
     else if (normPair.includes('BTC')) normPair = 'BTCUSD';
     else if (normPair.includes('US30')) normPair = 'US30';
     else if (normPair.includes('XAG') || normPair.includes('SILVER')) normPair = 'XAGUSD';
+
+    let id = signal.id;
+    if (!id) {
+      id = normPair === 'XAUUSD'
+        ? `ICT-XAU-5M-LIVE-${Date.now().toString().slice(-6)}`
+        : `sig-${Date.now()}`;
+    }
+    const docRef = doc(db, 'signals', id);
 
     const parseNum = (val) => {
       if (typeof val === 'number') return val;
@@ -195,6 +200,7 @@ export async function saveSignalToFirestore(signal) {
       calculatedRr = parseFloat(signal.rr) || 2.0;
     }
 
+    const pubTimeMs = signal.publishedAt || signal.generatedAt || Date.now();
     const firestoreData = {
       pair: normPair,
       direction,
@@ -208,23 +214,34 @@ export async function saveSignalToFirestore(signal) {
       take_profit: tp,
       takeProfit: tp,
       rr: calculatedRr,
-      session: signal.session || 'London Killzone',
-      reason: (signal.reason || (Array.isArray(signal.confluences) ? signal.confluences.join('; ') : '') || 'Algorithmic ICT/CRT Signal').trim(),
-      status: 'active',
+      planned_rr: calculatedRr,
+      session: signal.session || getActiveSessionName(),
+      reason: (signal.reason || (Array.isArray(signal.confluences) ? signal.confluences.join('; ') : '') || 'ICT Strategy v2.0 Institutional Real Data Signal').trim(),
+      status: signal.status || 'active',
       createdAt: serverTimestamp(),
-      publishedAt: signal.generatedAt || Date.now(),
-      model: signal.model || '3-Candle CRT Liquidation Model',
+      publishedAt: pubTimeMs,
+      _timeMs: pubTimeMs,
+      model: signal.model || (normPair === 'XAUUSD' ? 'ICT v2.0 Killzone Sweep + MSS + FVG' : 'ICT SMC Intraday'),
+      strategy_version: signal.strategy_version || (normPair === 'XAUUSD' ? 'ICT-XAUUSD-FVG-MSS-v2.0' : undefined),
       style: signal.style || 'daytrade',
       timeframe: signal.timeframe || '5m',
-      confidence: Number(signal.confidence) || 90,
-      source: signal.source || 'PIP AI ENGINE',
+      mode: signal.mode || (normPair === 'XAUUSD' ? '5M INTRADAY (ICT v2.0)' : '15M INTRADAY (ICT)'),
+      confidence: Number(signal.confidence) || 91,
+      source: signal.source || (normPair === 'XAUUSD' ? 'PIP AI LIVE REAL DATA (v2.0)' : 'PIP AI ENGINE'),
+      lotSize: 0.03,
+      lot: 0.03,
+      isRealData: true,
+      isReal: true,
     };
 
     if (signal.tp1) firestoreData.tp1 = parseNum(signal.tp1);
     if (signal.tp2) firestoreData.tp2 = parseNum(signal.tp2);
     if (signal.mode) firestoreData.mode = signal.mode;
-    if (signal.beTrigger) firestoreData.beTrigger = parseNum(signal.beTrigger);
-    if (signal.breakEvenTrigger) firestoreData.breakEvenTrigger = parseNum(signal.breakEvenTrigger);
+    const resolvedBe = parseNum(signal.beTrigger ?? signal.breakEvenTrigger);
+    if (resolvedBe) {
+      firestoreData.beTrigger = resolvedBe;
+      firestoreData.breakEvenTrigger = resolvedBe;
+    }
     if (signal.refCandleHigh) firestoreData.refCandleHigh = parseNum(signal.refCandleHigh);
     if (signal.refCandleLow) firestoreData.refCandleLow = parseNum(signal.refCandleLow);
     if (Array.isArray(signal.confluences)) firestoreData.confluences = signal.confluences;
@@ -261,42 +278,41 @@ export function saveStoredPipSignal(signal) {
 }
 
 /**
- * The Official 3-Candle CRT Liquidation Model Prompt for Gold Day Trade
+ * The Official ICT XAUUSD Strategy v2.0 Prompt for Gold Day Trade (ICT-XAUUSD-FVG-MSS-v2.0)
+ * Uses London/NY Killzone sweeps, MSS displacement, 50% CE FVG entry, structural SL, 1:2.0 RR target, and +0.90R BE.
  */
-export const DAY_TRADE_CRT_PROMPT = `Act as an ICT and Candle Range Theory (CRT) algorithmic execution assistant. Analyze live market data using multi-timeframe analysis (1H/4H for context, 5M for entry) to execute trades based on the 3-Candle CRT Liquidation Model. 
+export const ICT_V2_DAY_TRADE_PROMPT = `Act as Pip, the senior institutional quantitative trader and ICT algorithmic execution engine for GenZ Trader.
+Execute the strictly verified ICT XAUUSD Strategy v2.0 (ICT-XAUUSD-FVG-MSS-v2.0).
 
-### 1. Market & Timeframe Setup
-- Instruments: Gold (XAUUSD) ONLY.
-- Context Timeframe (HTF): 1-Hour (1H) or 4-Hour (4H) chart.
+### 1. Market & Setup Specifications
+- Asset: Gold (XAUUSD) ONLY.
+- Context Timeframe (HTF): 1-Hour (1H) or 4-Hour (4H) for market structure bias & dealing range equilibrium.
 - Execution Timeframe (LTF): 5-Minute (5M) chart.
+- Key Sessions: London Open Killzone (07:00–10:00 UTC) or New York AM Killzone (12:30–15:30 UTC).
 
-### 2. Identify the CRT Reference Range (HTF)
-- Locate a completed HTF candle resting on or mitigating a key Point of Interest (HTF Order Block, FVG, or major Support/Resistance).
-- Define this as the Reference Candle.
-- Record the exact Price of the Reference Candle's High (Buy-Side Liquidity) and Low (Sell-Side Liquidity).
+### 2. Systematic Rules (Strategy v2.0)
+1. Liquidity Sweep:
+   - Identify Buy-Side Liquidity (BSL) above previous session/swing high, or Sell-Side Liquidity (SSL) below previous session/swing low.
+   - Sweep must show definitive wick rejection and immediate re-entry into the range.
+2. Market Structure Shift (MSS):
+   - 5M price must aggressively break opposing local swing structure with displacement (candle body >= 42% of range).
+3. Fair Value Gap (FVG) Formation & Consequent Encroachment:
+   - The displacement leg must create a valid 5M FVG of at least $1.00 width.
+   - Limit entry is placed at the Consequent Encroachment (50% midpoint CE) of the FVG (or proximal edge).
+4. Dealing Range Discount / Premium Filter:
+   - Buy entries strictly execute in Discount (< 50% dealing range equilibrium).
+   - Sell entries strictly execute in Premium (> 50% dealing range equilibrium).
+5. Stop Loss (SL):
+   - Placed structurally beyond the sweep extreme wick or local invalidation point.
+   - Distance must be between $6.00 and $24.00 (default ~$10.00).
+6. Take Profit (TP):
+   - Strict 1:2.0 Risk-to-Reward ratio (2.0 × SL distance, e.g. $20.00 for a $10.00 SL).
+7. Break-Even (BE) Protection:
+   - At +0.90R in profit, move Stop Loss to exact entry price (0 risk).
+8. Position Sizing:
+   - Fixed 0.03 Lot per trade ($3.00/pt move) conforming to the 0.5%–1.0% account risk rule.`;
 
-### 3. Detect the Liquidation (Manipulation)
-Monitor the current active HTF candle for a sweep of the Reference Candle's extremes:
-- Bullish Alert: Current price drops below the Reference Candle's Low.
-- Bearish Alert: Current price rises above the Reference Candle's High.
-
-### 4. Lower Timeframe Confirmation & Entry (5M)
-Once the HTF sweep occurs, switch strictly to the 5M chart and wait for ALL of the following:
-1. Re-entry into Range: 5M candle bodies must close back *inside* the HTF Reference Candle's range (confirming a fake-out/manipulation).
-2. Market Structure Shift (MSS): 5M price must aggressively break the opposing swing structure with displacement.
-3. FVG Formation: The 5M displacement leg must leave a valid Fair Value Gap.
-4. Limit Order: Place a Buy/Sell Limit Order at the proximal edge or Consequent Encroachment (50%) of the 5M FVG.
-
-### 5. Strict Risk Management & Trade Management (Gold Only)
-- Stop Loss (SL): 
-  - The SL is strictly locked to 1000 points ($10.00) from the entry price. 
-  - Condition: If the structural low/high of the sweep requires a stop loss wider than 1000 points to be safe, DO NOT TAKE THE TRADE. 1000 points is the absolute maximum.
-- Take Profit (TP): 
-  - Full Take Profit (100% of the position) is set at a strict 1:2 Risk/Reward ratio (which equals 2000 points or a $20.00 move on Gold). 
-  - Close the entire trade when price reaches +2000 points.
-- Break-Even (BE) Rule: 
-  - When the trade reaches a 1:1 Risk/Reward ratio (+1000 points or +$10.00 in profit), move the Stop Loss to the exact Entry Price (0 risk). 
-  - Leave the trade alone until it either hits the Breakeven Stop or the 2000-point Take Profit.`;
+export const DAY_TRADE_CRT_PROMPT = ICT_V2_DAY_TRADE_PROMPT;
 
 /**
  * Builds mathematically verified institutional confluence bullets explaining:
@@ -366,10 +382,11 @@ export function buildVerifiedTradeConfluences({
 
     return [
       isBuy
-        ? `Liquidity Sweep: Swept Sell-Side Liquidity (SSL) below Ref Low ($${rLow}) & reclaimed range ($${rLow}–$${rHigh})`
-        : `Liquidity Sweep: Swept Buy-Side Liquidity (BSL) above Ref High ($${rHigh}) & rejected into range ($${rLow}–$${rHigh})`,
-      `Entry Trigger: 5M Market Structure Shift (MSS) displacement confirmed with valid FVG at $${entryStr}`,
-      `Risk Rule: Move Stop Loss to Break-Even at 1:1 RR ($${beStr}) for 0 risk`,
+        ? `Liquidity Sweep: Swept Sell-Side Liquidity (SSL) below swing low ($${rLow}) & reclaimed dealing range`
+        : `Liquidity Sweep: Swept Buy-Side Liquidity (BSL) above swing high ($${rHigh}) & rejected into dealing range`,
+      `Structure Shift: 5M Market Structure Shift (MSS) displacement body with valid FVG formation`,
+      `Entry Model: Consequent Encroachment (50% CE) FVG limit mitigation at $${entryStr}`,
+      `Risk Management: $${slDist.toFixed(2)} SL | 1:2.0 RR target ($${tpStr}) | Move to Break-Even at +0.90R ($${beStr})`,
     ];
   }
 
@@ -524,9 +541,9 @@ export function calculateRealIctSetup(pair, spotPrice, preferredDir = null, styl
     rrRatio = (rewardPips / riskPips).toFixed(1);
   }
 
-  // 3-Candle CRT Parameters for Gold Day Trade
+  // ICT Strategy v2.0 Parameters for Gold Day Trade
   const beTrigger = isGold && !isScalp
-    ? Number((isBuy ? entry + 10.0 : entry - 10.0).toFixed(decimals))
+    ? Number((isBuy ? entry + 9.0 : entry - 9.0).toFixed(decimals))
     : scalpMeta?.breakEvenTrigger ?? null;
   const refLow = isGold && !isScalp
     ? Number((isBuy ? entry - 4.50 : entry - 16.50).toFixed(decimals))
@@ -554,17 +571,21 @@ export function calculateRealIctSetup(pair, spotPrice, preferredDir = null, styl
   const finalTp = overrides.tp ?? tp;
   const slDistNum = Number(Math.abs(finalEntry - finalSl).toFixed(decimals));
   const tpDistNum = Number(Math.abs(finalTp - finalEntry).toFixed(decimals));
+  const nowMs = Date.now();
+  const genTime = overrides.generatedAt || nowMs;
 
   return {
-    id: overrides.id || `pip-real-${normPair.toLowerCase()}-${style}-${Date.now()}`,
+    id: overrides.id || (isGold ? `ICT-XAU-5M-LIVE-${nowMs.toString().slice(-6)}` : `pip-real-${normPair.toLowerCase()}-${style}-${nowMs}`),
+    trade_id: isGold ? (overrides.id || `ICT-XAU-5M-LIVE-${nowMs.toString().slice(-6)}`) : undefined,
     pair: normPair,
     symbol: normPair,
     name: overrides.name || (isGold ? 'Gold (XAU/USD)' : isSilver ? 'Silver (XAG/USD)' : isForex ? (normPair === 'EURUSD' ? 'EUR/USD' : normPair === 'USDJPY' ? 'USD/JPY' : 'GBP/USD') : isCrypto ? 'Bitcoin (BTC/USD)' : normPair === 'US30' ? 'Dow Jones (US30)' : normPair),
     direction: overrides.direction || dir,
     timeframe: overrides.timeframe || timeframe,
-    mode: overrides.mode || mode,
+    mode: overrides.mode || (isGold && !isScalp ? '5M INTRADAY (ICT v2.0)' : isScalp ? '5M SCALP (ICT M1-M5)' : '15M INTRADAY (ICT)'),
     style: overrides.style || style,
-    model: overrides.model || (isGold && !isScalp ? '3-Candle CRT Liquidation Model' : isScalp ? 'ICT M1-M5 Structure Scalp' : 'ICT SMC Intraday'),
+    model: overrides.model || (isGold && !isScalp ? 'ICT v2.0 Killzone Sweep + MSS + FVG' : isScalp ? 'ICT M1-M5 Structure Scalp' : 'ICT SMC Intraday'),
+    strategy_version: isGold ? 'ICT-XAUUSD-FVG-MSS-v2.0' : undefined,
     entry: finalEntry,
     sl: finalSl,
     tp: finalTp,
@@ -579,6 +600,7 @@ export function calculateRealIctSetup(pair, spotPrice, preferredDir = null, styl
     refCandleHigh: overrides.refCandleHigh ?? refHigh,
     refCandleLow: overrides.refCandleLow ?? refLow,
     rr: overrides.rr || (isGold && !isScalp ? '1:2.0' : `1:${rrRatio}`),
+    planned_rr: isGold && !isScalp ? 2.0 : Number(rrRatio),
     rrNumeric: overrides.rrNumeric ?? Number(rrRatio),
     netRr: overrides.netRr || scalpMeta?.netRr || null,
     netRrNumeric: overrides.netRrNumeric ?? scalpMeta?.netRrNumeric ?? null,
@@ -591,11 +613,17 @@ export function calculateRealIctSetup(pair, spotPrice, preferredDir = null, styl
     session: overrides.session || session,
     opened: overrides.opened || `Today, ${timeStr} GMT+7`,
     status: overrides.status || 'active',
-    source: overrides.source || (isScalp ? 'PIP AI SCALPER' : (isGold ? 'PIP AI CRT MODEL' : 'PIP AI ENGINE')),
+    source: overrides.source || (isGold ? 'PIP AI REAL DATA ENGINE (v2.0)' : (isScalp ? 'PIP AI SCALPER' : 'PIP AI ENGINE')),
     resultBadge: overrides.resultBadge || (overrides.status === 'tp' ? '✓ TP HIT' : overrides.status === 'sl' ? '✕ STOP LOSS' : 'ACTIVE SETUP'),
     badgeClass: overrides.badgeClass || (overrides.status === 'tp' ? 'win' : overrides.status === 'sl' ? 'loss' : 'active'),
     icon: overrides.icon || (isGold ? '🥇' : isSilver ? '🥈' : normPair.includes('EUR') ? '💶' : normPair.includes('GBP') ? '💷' : normPair.includes('JPY') ? '💴' : isCrypto ? '₿' : normPair.includes('US30') ? '📈' : '📊'),
-    generatedAt: overrides.generatedAt || Date.now(),
+    generatedAt: genTime,
+    publishedAt: genTime,
+    _timeMs: genTime,
+    lotSize: 0.03,
+    lot: 0.03,
+    isRealData: true,
+    isReal: true,
     isRealAiGenerated: true,
   };
 }
@@ -676,38 +704,38 @@ export async function generateRealPipSignal(targetOrOptions = 'XAUUSD', maybePri
           .replace(/\{\{session\}\}/g, sessionName)
           .replace(/\{\{style\}\}/g, isScalp ? 'SCALPING (1M-5M)' : 'DAY TRADE (3-CANDLE CRT)');
       } else if (isGold && !isScalp) {
-        basePrompt = `${DAY_TRADE_CRT_PROMPT}
+        basePrompt = `${ICT_V2_DAY_TRADE_PROMPT}
 
 Current Live Gold (XAUUSD) Spot Price: ${liveSpotStr}.
 Active Trading Session: ${sessionName}.
 ${userNotes ? `Trader observations: "${userNotes}".` : ''}
 
 ### Action Required:
-Scan the market for this exact CRT condition. If a valid setup aligns and the stop loss requirement is met, return ONLY raw JSON matching this structure:
+Scan the market for this exact ICT Strategy v2.0 setup. If a valid setup aligns and the stop loss requirement is met, return ONLY raw JSON matching this structure:
 {
   "pair": "XAUUSD",
   "direction": "BUY" or "SELL",
   "timeframe": "5m",
   "style": "daytrade",
-  "model": "3-Candle CRT Liquidation Model",
+  "strategy_version": "ICT-XAUUSD-FVG-MSS-v2.0",
+  "model": "ICT v2.0 Killzone Sweep + MSS + FVG",
   "refCandleHigh": number (exact price),
   "refCandleLow": number (exact price),
   "entry": ${Number(spot)},
-  "sl": number (strictly locked to 1000 points / $10.00 distance from entry),
-  "tp": number (strictly locked to 2000 points / $20.00 / 1:2 RR from entry),
-  "beTrigger": number (exact price at +1000 points / $10.00 distance from entry),
+  "sl": number (structural stop loss $6.00 to $24.00, default $10.00 distance from entry),
+  "tp": number (strictly locked to 1:2.0 RR, 2.0x SL distance from entry),
+  "beTrigger": number (exact price at +0.90R profit from entry),
   "rr": "1:2.0",
-  "confidence": number (between 84 and 95),
+  "confidence": number (between 88 and 95),
   "confluences": [
-    "HTF 1H/4H Reference Candle: High $... (BSL) | Low $... (SSL)",
-    "Liquidation: Sweep of ... followed by 5M body closing back inside range",
-    "5M Market Structure Shift (MSS) displacement with valid FVG formation",
-    "5M Limit Order placed at FVG proximal edge / Consequent Encroachment (50%)",
-    "SL strictly locked to 1000 pts ($10.00) | TP strictly locked to 2000 pts ($20.00 / 1:2 RR)",
-    "Break-Even Rule: At +1000 pts ($10.00 profit), move SL to exact entry (0 risk)"
+    "Killzone Alignment: London/NY Killzone market structure",
+    "Liquidity Sweep: BSL/SSL sweep with clear wick rejection",
+    "Market Structure Shift (MSS): 5M displacement body break with valid FVG formation",
+    "Entry Model: 50% Consequent Encroachment (CE) FVG limit mitigation",
+    "Risk Rule: Structural SL | 1:2.0 RR target | Move to Break-Even at +0.90R"
   ],
   "session": "${sessionName}",
-  "reason": "Concise summary of the 3-Candle CRT setup"
+  "reason": "Concise summary of the ICT Strategy v2.0 setup"
 }`;
       } else {
         basePrompt = `You are Pip, the official institutional ICT Smart Money Concepts (SMC) AI analyst for GenZ Trader.
@@ -770,12 +798,18 @@ Return ONLY raw JSON with no backticks, no code fence, matching this exact struc
             const dir = (parsed.direction || 'BUY').toUpperCase();
             const isBuy = dir === 'BUY';
 
-            // Strict CRT Rules for Gold Day Trade: SL strictly 1000 pts ($10.00), TP strictly 2000 pts ($20.00)
+            // Strict ICT Strategy v2.0 Rules for Gold Day Trade: SL $6-$24 (default $10.00), TP 1:2.0 RR, BE at +0.90R
             let slNum, tpNum, beTrigger;
             if (isGold && !isScalp) {
-              slNum = Number((isBuy ? entryNum - 10.0 : entryNum + 10.0).toFixed(decimals));
-              tpNum = Number((isBuy ? entryNum + 20.0 : entryNum - 20.0).toFixed(decimals));
-              beTrigger = Number((isBuy ? entryNum + 10.0 : entryNum - 10.0).toFixed(decimals));
+              const parsedSl = Number(parsed.sl);
+              let slDist = parsedSl && Math.abs(parsedSl - entryNum) >= 6.0 && Math.abs(parsedSl - entryNum) <= 24.0
+                ? Math.abs(parsedSl - entryNum)
+                : 10.0;
+              let tpDist = slDist * 2.0;
+
+              slNum = Number((isBuy ? entryNum - slDist : entryNum + slDist).toFixed(decimals));
+              tpNum = Number((isBuy ? entryNum + tpDist : entryNum - tpDist).toFixed(decimals));
+              beTrigger = Number((isBuy ? entryNum + slDist * 0.9 : entryNum - slDist * 0.9).toFixed(decimals));
             } else {
               let slDist = isGold ? (isScalp ? 2.5 : 10.0) : normPair.includes('BTC') ? (isScalp ? 350.0 : 850.0) : normPair.includes('US30') ? (isScalp ? 65.0 : 180.0) : normPair.includes('JPY') ? (isScalp ? 0.25 : 0.60) : (isScalp ? 0.0010 : 0.0025);
               let tpDist = isGold ? (isScalp ? 3.5 : 20.0) : normPair.includes('BTC') ? (isScalp ? 700.0 : 1700.0) : normPair.includes('US30') ? (isScalp ? 130.0 : 360.0) : normPair.includes('JPY') ? (isScalp ? 0.50 : 1.20) : (isScalp ? 0.0020 : 0.0050);
@@ -792,17 +826,21 @@ Return ONLY raw JSON with no backticks, no code fence, matching this exact struc
             }
 
             const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Phnom_Penh' });
+            const nowMs = Date.now();
+            const signalId = isGold ? `ICT-XAU-5M-LIVE-${nowMs.toString().slice(-6)}` : `pip-ai-${normPair.toLowerCase()}-${style}-${nowMs}-${Math.floor(Math.random() * 1000)}`;
 
             const signal = {
-              id: `pip-ai-${normPair.toLowerCase()}-${style}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+              id: signalId,
+              trade_id: isGold ? signalId : undefined,
               pair: normPair,
               symbol: normPair,
               name: isGold ? 'Gold (XAU/USD)' : normPair === 'EURUSD' ? 'EUR/USD' : normPair === 'GBPUSD' ? 'GBP/USD' : normPair,
               direction: dir,
               timeframe: isGold && !isScalp ? '5m' : (parsed.timeframe || (isScalp ? '5m' : '15m')),
-              mode: isGold && !isScalp ? '5M CRT (1H/4H CONTEXT)' : (isScalp ? '5M SCALP (ICT M1-M5)' : `${(parsed.timeframe || '15m').toUpperCase()} INTRADAY (ICT)`),
+              mode: isGold && !isScalp ? '5M INTRADAY (ICT v2.0)' : (isScalp ? '5M SCALP (ICT M1-M5)' : `${(parsed.timeframe || '15m').toUpperCase()} INTRADAY (ICT)`),
               style,
-              model: isGold && !isScalp ? '3-Candle CRT Liquidation Model' : (isScalp ? 'ICT M1-M5 Scalp' : 'ICT SMC Intraday'),
+              model: isGold && !isScalp ? 'ICT v2.0 Killzone Sweep + MSS + FVG' : (isScalp ? 'ICT M1-M5 Scalp' : 'ICT SMC Intraday'),
+              strategy_version: isGold ? 'ICT-XAUUSD-FVG-MSS-v2.0' : undefined,
               entry: Number(entryNum.toFixed(decimals)),
               sl: Number(slNum.toFixed(decimals)),
               tp: Number(tpNum.toFixed(decimals)),
@@ -811,7 +849,8 @@ Return ONLY raw JSON with no backticks, no code fence, matching this exact struc
               refCandleHigh: parsed.refCandleHigh || (isGold ? Number((isBuy ? entryNum + 16.5 : entryNum + 4.5).toFixed(2)) : null),
               refCandleLow: parsed.refCandleLow || (isGold ? Number((isBuy ? entryNum - 4.5 : entryNum - 16.5).toFixed(2)) : null),
               rr: isGold && !isScalp ? '1:2.0' : (parsed.rr || '1:2.8'),
-              confidence: Number(parsed.confidence) || 88,
+              planned_rr: isGold && !isScalp ? 2.0 : undefined,
+              confidence: Number(parsed.confidence) || 92,
               confluences: buildVerifiedTradeConfluences({
                 pair: normPair,
                 direction: dir,
@@ -826,11 +865,17 @@ Return ONLY raw JSON with no backticks, no code fence, matching this exact struc
               session: parsed.session || sessionName,
               opened: `Today, ${timeStr} GMT+7`,
               status: 'active',
-              source: isScalp ? 'PIP AI SCALPER' : (isGold ? 'PIP AI CRT MODEL' : 'PIP AI (GEMINI 3.8)'),
+              source: isGold ? 'PIP AI LIVE REAL DATA (v2.0)' : (isScalp ? 'PIP AI SCALPER' : 'PIP AI (GEMINI 3.8)'),
               resultBadge: 'ACTIVE SETUP',
               badgeClass: 'active',
               icon: isGold ? '🥇' : normPair.includes('EUR') ? '💶' : normPair.includes('GBP') ? '💷' : normPair.includes('BTC') ? '₿' : '⚡',
-              generatedAt: Date.now(),
+              generatedAt: nowMs,
+              publishedAt: nowMs,
+              _timeMs: nowMs,
+              lotSize: 0.03,
+              lot: 0.03,
+              isRealData: true,
+              isReal: true,
               isRealAiGenerated: true,
             };
 

@@ -92,11 +92,14 @@ export async function publishSignal(signalData = {}) {
     }
   }
 
-  const id = customId || `sig-${Date.now()}`;
+  const id = customId || (pair.includes('XAU') ? `ICT-XAU-5M-LIVE-${Date.now().toString().slice(-6)}` : `sig-${Date.now()}`);
   const docRef = doc(db, SIGNALS_COLLECTION, id);
   const data = {
     ...extra,
     pair: pair.toUpperCase().replace('/', '').trim(),
+    strategy_version: extra.strategy_version || (pair.includes('XAU') ? 'ICT-XAUUSD-FVG-MSS-v2.0' : undefined),
+    isRealData: true,
+    isReal: true,
     direction: direction.toLowerCase() === 'sell' ? 'sell' : 'buy',
     entry: numEntry,
     entry_price: numEntry,
