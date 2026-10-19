@@ -97,6 +97,21 @@ export function validateSignal(candidate, currentPrice, options = {}) {
     };
   }
 
+  // 1b. Strategy Restriction Check: strictly Scalp or Intraday ONLY
+  const rawStyle = candidate.style || options.style;
+  if (rawStyle) {
+    const cleanStyle = String(rawStyle).toLowerCase().trim();
+    const isAllowedStyle = cleanStyle.includes('scalp') || cleanStyle.includes('daytrade') || cleanStyle.includes('intra') || cleanStyle.includes('crt');
+    if (!isAllowedStyle) {
+      return {
+        isValid: false,
+        code: 'NO_SIGNAL',
+        reasonCode: 'UNSUPPORTED_STRATEGY',
+        error: `NO TRADE: Only Scalp and Intraday strategies are permitted. Rejected: "${rawStyle}".`,
+      };
+    }
+  }
+
   // 2. Active Asset Context Check (Prevents race condition / cross-pair contamination)
   if (activePair && normalizePair(activePair) !== normPair) {
     return {
@@ -324,12 +339,12 @@ export function validateSignal(candidate, currentPrice, options = {}) {
     status: 'active',
     marketPriceAtGeneration: curP,
     timestamp: candidate.timestamp || Date.now(),
-    marketTimestamp: candidate.marketTimestamp || Date.now(),
-    strategyVersion: 'ICT-SMC-v4.2',
+    strategyVersion: candidate.strategyVersion || candidate.strategy_version || (isScalp ? 'ICT-SMC-v4.2' : 'ICT-CRT-v4.2'),
+    strategy_version: candidate.strategy_version || candidate.strategyVersion || (isScalp ? 'ICT-XAUUSD-SCALP-v2.0' : 'ICT-XAUUSD-FVG-MSS-v2.0'),
     confluences: Array.isArray(candidate.confluences) && candidate.confluences.length > 0
       ? candidate.confluences
       : ['Fair Value Gap (FVG) Liquidity Sweep', 'Institutional Order Block Retest', 'Discount / Premium Dealing Range Alignment'],
-    model: candidate.model || 'ICT SMC Model',
+    model: candidate.model || (isScalp ? 'Pip Scalp M1-M5 Quant Imbalance Model' : 'ICT v2.0 Killzone Sweep + MSS + FVG'),
     confidence: candidate.confidence || null,
   };
 

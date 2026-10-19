@@ -412,23 +412,28 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
       if (currentSpot) setLivePrices((prev) => ({ ...prev, [aiPair]: currentSpot }));
 
       const base64Images = [aiHtfImage, aiLtfImage].filter(Boolean);
+      const chosenStyle = signalDraft.style || 'daytrade';
       const res = await generateAiSignal({
         notes: aiNotes,
-        pair: aiPair,
+        pair: aiPair || 'XAUUSD',
         base64Images,
         currentPrice: currentSpot,
+        style: chosenStyle,
       });
 
       setSignalDraft({
-        pair: res.pair || aiPair || 'XAUUSD',
+        pair: 'XAUUSD',
         direction: res.direction || 'buy',
         entry: res.entry ? String(res.entry) : '',
         sl: res.sl ? String(res.sl) : '',
         tp: res.tp ? String(res.tp) : '',
-        rr: '1:2',
+        rr: res.rr ? `1:${res.rr}` : '1:2',
         session: res.session || 'London Killzone',
         reason: res.reason || '',
         status: 'active',
+        style: res.style || chosenStyle,
+        model: res.model,
+        strategy_version: res.strategy_version,
       });
       setSignalSuccess('✨ Pip analyzed live market price & setup and auto-filled the parameters! Review or edit levels below before publishing.');
       setTimeout(() => {

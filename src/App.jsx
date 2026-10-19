@@ -105,6 +105,7 @@ export default function App() {
   // waiting to notice the network change and reconnect — during which the
   // whole app sat behind a blank screen for no real reason, since the
   // cached `user` above was sitting right there the whole time.
+  const [checkingSession, setCheckingSession] = useState(() => !loadSession());
   const initialNav = getPersistedNavState();
   const [section, setSection] = useState(() => initialNav?.section || 'home');
   const [view, setView] = useState(() => initialNav?.view || 'home');

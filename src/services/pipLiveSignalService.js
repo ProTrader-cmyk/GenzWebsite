@@ -311,7 +311,12 @@ Execute the strictly verified ICT XAUUSD Strategy v2.0 (ICT-XAUUSD-FVG-MSS-v2.0)
 7. Break-Even (BE) Protection:
    - At +0.90R in profit, move Stop Loss to exact entry price (0 risk).
 8. Position Sizing:
-   - Fixed 0.03 Lot per trade ($3.00/pt move) conforming to the 0.5%–1.0% account risk rule.`;
+   - Fixed 0.03 Lot per trade ($3.00/pt move) conforming to the 0.5%–1.0% account risk rule.
+
+### 3. Setup Confirmation & NO TRADE Rule
+- Every signal must strictly satisfy ALL confirmation conditions above.
+- If market conditions are consolidative, choppy, lack a definitive liquidity sweep, or fail MSS displacement, return tradeAllowed=false with the specific reason.
+- Never force a trade or produce generic predictions. If neither strategy confirms a valid trading setup, return NO TRADE.`;
 
 export const DAY_TRADE_CRT_PROMPT = ICT_V2_DAY_TRADE_PROMPT;
 
@@ -343,7 +348,12 @@ Execute the strictly verified Pip Scalp M1-M5 Quant Imbalance Model (ICT-XAUUSD-
 6. Break-Even (BE) Protection:
    - When price reaches +$2.50 (+1.0R / +25 pips), automatically move Stop Loss to exact entry price.
 7. Position Sizing:
-   - Fixed 0.03 Lot per trade conforming to strict 0.5%–1.0% account risk rule.`;
+   - Fixed 0.03 Lot per trade conforming to strict 0.5%–1.0% account risk rule.
+
+### 3. Setup Confirmation & NO TRADE Rule
+- Every signal must strictly satisfy ALL confirmation conditions above.
+- If micro structure sweep, 1M displacement, or fresh imbalance tap is not confirmed, return tradeAllowed=false with the specific reason.
+- Never force a trade or produce generic predictions. If neither strategy confirms a valid trading setup, return NO TRADE.`;
 
 /**
  * Builds mathematically verified institutional confluence bullets explaining:
@@ -468,34 +478,56 @@ export function calculateRealIctSetup(pair, spotPrice, preferredDir = null, styl
   const isIndex = normPair === 'US30' || normPair.includes('NAS');
   const isForex = !isGold && !isSilver && !isCrypto && !isIndex && (normPair.includes('EUR') || normPair.includes('GBP') || normPair.includes('JPY') || normPair.includes('USD'));
 
+  const isScalp = style === 'scalping' || style === 'scalp';
+  const isIntra = style === 'daytrade' || style === 'intra' || style === 'intraday';
+
+  // Strictly enforce Gold only and Scalp or Intraday only
+  if (!isGold && !overrides.allowNonGold) {
+    console.info(`[calculateRealIctSetup] NO TRADE: Only Gold (XAUUSD) is permitted for AI trading signals. Rejected: ${normPair}`);
+    return null;
+  }
+  if (!isScalp && !isIntra && !overrides.allowNonIctStyle) {
+    console.info(`[calculateRealIctSetup] NO TRADE: Only Scalp and Intraday strategies are permitted. Rejected: ${style}`);
+    return null;
+  }
+
   const decimals = isSilver ? 3 : isForex ? (normPair.includes('JPY') ? 3 : 5) : isIndex ? 1 : 2;
   const current = Number(spotPrice);
 
-  const isScalp = style === 'scalping' || style === 'scalp';
-  const timeframe = isScalp ? '5m' : (isGold ? '5m' : '15m');
+  const timeframe = isScalp ? '1m / 5m' : (isGold ? '5m' : '15m');
   const mode = isScalp
-    ? '5M SCALP (ICT M1-M5)'
+    ? '1M/5M PIP SCALP (QUANT IMBALANCE)'
     : isGold
-      ? '5M CRT (1H/4H CONTEXT)'
+      ? '5M INTRADAY (ICT v2.0)'
       : '15M INTRADAY (ICT)';
 
-  // Direction determination based on session momentum & cyclical market phase
-  const hour = new Date().getUTCHours();
-  const dir = preferredDir
-    ? preferredDir.toUpperCase()
-    : isGold
-      ? (hour >= 7 && hour <= 15 ? 'BUY' : 'SELL')
-      : isForex
-        ? (normPair.includes('EUR') ? 'BUY' : 'SELL')
-        : 'BUY';
+  // Direction determination strictly requires technical bias or confirmed direction
+  let dir = preferredDir ? preferredDir.toUpperCase() : null;
+  if (!dir && overrides.direction) {
+    dir = overrides.direction.toUpperCase();
+  }
+  if (!dir && overrides.marketAnalysis?.bias) {
+    const bias = overrides.marketAnalysis.bias.toUpperCase();
+    if (bias.includes('BULL')) dir = 'BUY';
+    else if (bias.includes('BEAR')) dir = 'SELL';
+  }
+  if (!dir) {
+    if (overrides.allowFallbackDir) {
+      const hour = new Date().getUTCHours();
+      dir = (hour >= 7 && hour <= 15) ? 'BUY' : 'SELL';
+    } else {
+      console.info('[calculateRealIctSetup] NO TRADE: Direction not confirmed by market structure or bias.');
+      return null;
+    }
+  }
 
   const isBuy = dir === 'BUY';
 
   // For Scalping on supported assets (Gold, BTC, Silver), use structure & ATR engine
   let entry = Number(current.toFixed(decimals));
-  let sl, tp, tp2 = null, rrRatio, scalpMeta = null;
+  let sl, tp, tp2 = null, rrRatio = isGold ? (isScalp ? '1.8' : '2.0') : '2.0', scalpMeta = null;
 
-  if (isScalp && (isGold || isSilver || normPair === 'BTCUSD')) {
+  if (isScalp && (isGold || isSilver || normPair === 'BTCUSD') && !overrides.useFixedScalpRules) {
     const scalpCalc = calculateStructureScalpTpSl({
       pair: normPair,
       direction: dir,
@@ -517,6 +549,9 @@ export function calculateRealIctSetup(pair, spotPrice, preferredDir = null, styl
       tp2 = scalpCalc.tp2;
       rrRatio = scalpCalc.rrNumeric.toFixed(1);
       scalpMeta = scalpCalc;
+    } else if (!overrides.allowStructureViolation) {
+      console.info(`[calculateRealIctSetup] NO TRADE: Scalp confirmation failed: ${scalpCalc.reason || 'Structure condition not met.'}`);
+      return null;
     }
   }
 
@@ -569,7 +604,7 @@ export function calculateRealIctSetup(pair, spotPrice, preferredDir = null, styl
     sl = Number((isBuy ? entry - riskPips : entry + riskPips).toFixed(decimals));
     tp = Number((isBuy ? entry + rewardPips : entry - rewardPips).toFixed(decimals));
     tp2 = Number((isBuy ? entry + rewardPips * 1.35 : entry - rewardPips * 1.35).toFixed(decimals));
-    rrRatio = (rewardPips / riskPips).toFixed(1);
+    rrRatio = isGold ? (isScalp ? '1.8' : '2.0') : (rewardPips / riskPips).toFixed(1);
   }
 
   // ICT Strategy v2.0 Parameters for Gold Day Trade & Pip Scalp
@@ -701,32 +736,56 @@ export async function generateRealPipSignal(targetOrOptions = 'XAUUSD', maybePri
   const normPair = (pair || 'XAUUSD').toUpperCase().replace(/[^A-Z]/g, '');
   const isGold = normPair.includes('XAU') || normPair.includes('GOLD');
 
-  // 1. Fetch real spot price from live broker feed if not supplied
+  // 1. Asset Restriction: Strictly Gold (XAUUSD) ONLY
+  if (!isGold) {
+    console.info(`[pipLiveSignalService] NO TRADE: AI trading signals are strictly restricted to Gold (XAUUSD). Rejected: ${normPair}`);
+    return null;
+  }
+
+  // 2. Strategy Restriction: Strictly Scalp or Intraday ONLY
+  const normStyle = String(style).toLowerCase().trim();
+  const isScalp = normStyle === 'scalping' || normStyle === 'scalp';
+  const isIntra = normStyle === 'daytrade' || normStyle === 'intra' || normStyle === 'intraday';
+
+  if (!isScalp && !isIntra) {
+    console.info(`[pipLiveSignalService] NO TRADE: Only Scalp and Intraday strategies are permitted. Rejected: ${style}`);
+    return null;
+  }
+
+  const effectiveStyle = isScalp ? 'scalping' : 'daytrade';
+
+  // 3. Fetch real spot price from live broker feed if not supplied
   let spot = currentPrice;
   if (!spot || isNaN(Number(spot))) {
     try {
-      spot = await fetchLivePrice(normPair);
+      spot = await fetchLivePrice('XAUUSD');
     } catch (err) {
       console.warn('[pipLiveSignalService] Error fetching spot price:', err);
     }
   }
 
   if (!spot || isNaN(Number(spot)) || Number(spot) <= 0) {
-    spot = normPair === 'XAUUSD' ? 4171.25 : normPair === 'EURUSD' ? 1.12250 : normPair === 'GBPUSD' ? 1.32700 : normPair === 'BTCUSD' ? 81632.50 : normPair === 'US30' ? 51830.00 : normPair === 'USDJPY' ? 149.20 : 34.20;
+    spot = 4171.25;
   }
 
-  // 2. Query real live technical analysis from TradingView scanner
+  // 4. Query real live technical analysis from TradingView scanner
   let analysisData = null;
   try {
-    analysisData = await run15mMarketReanalysis(normPair, spot);
+    analysisData = await run15mMarketReanalysis('XAUUSD', spot);
   } catch (err) {
     console.warn('[pipLiveSignalService] Error querying live 15m analysis:', err);
   }
 
-  const liveSpotStr = formatSpotPrice(normPair, spot);
+  // 5. Evaluate strict market trading conditions for the selected strategy
+  const cond = evaluateMarketTradingConditions('XAUUSD', analysisData, isScalp ? 'scalp' : 'daytrade');
+  if (!cond.met) {
+    console.info(`[pipLiveSignalService] NO TRADE: ${cond.reason || 'Trading conditions not met for ' + (isScalp ? 'Scalp' : 'Intraday')}`);
+    return null;
+  }
+
+  const liveSpotStr = formatSpotPrice('XAUUSD', spot);
   const sessionName = getActiveSessionName();
   const apiKey = getPipApiKey();
-  const isScalp = style === 'scalping';
 
   // If Gemini API Key is available, prompt Pip AI directly for live analysis
   if (apiKey) {
@@ -734,11 +793,11 @@ export async function generateRealPipSignal(targetOrOptions = 'XAUUSD', maybePri
       let basePrompt;
       if (customScanPromptTemplate) {
         basePrompt = customScanPromptTemplate
-          .replace(/\{\{pair\}\}/g, normPair)
+          .replace(/\{\{pair\}\}/g, 'XAUUSD')
           .replace(/\{\{spot\}\}/g, liveSpotStr)
           .replace(/\{\{session\}\}/g, sessionName)
-          .replace(/\{\{style\}\}/g, isScalp ? 'SCALPING (1M-5M)' : 'DAY TRADE (3-CANDLE CRT)');
-      } else if (isGold && !isScalp) {
+          .replace(/\{\{style\}\}/g, isScalp ? 'SCALPING (1M-5M)' : 'DAY TRADE (5M CRT)');
+      } else if (!isScalp) {
         basePrompt = `${ICT_V2_DAY_TRADE_PROMPT}
 
 Current Live Gold (XAUUSD) Spot Price: ${liveSpotStr}.
@@ -746,8 +805,9 @@ Active Trading Session: ${sessionName}.
 ${userNotes ? `Trader observations: "${userNotes}".` : ''}
 
 ### Action Required:
-Scan the market for this exact ICT Strategy v2.0 setup. If a valid setup aligns and the stop loss requirement is met, return ONLY raw JSON matching this structure:
+Scan the market for this exact ICT Strategy v2.0 setup. If all confirmation conditions align, return ONLY raw JSON matching this structure:
 {
+  "tradeAllowed": true,
   "pair": "XAUUSD",
   "direction": "BUY" or "SELL",
   "timeframe": "5m",
@@ -771,8 +831,14 @@ Scan the market for this exact ICT Strategy v2.0 setup. If a valid setup aligns 
   ],
   "session": "${sessionName}",
   "reason": "Concise summary of the ICT Strategy v2.0 setup"
+}
+
+If confirmation conditions are NOT met, return ONLY:
+{
+  "tradeAllowed": false,
+  "reason": "NO TRADE: [Explanation of unconfirmed rule]"
 }`;
-      } else if (isGold && isScalp) {
+      } else {
         basePrompt = `${PIP_SCALP_GOLD_PROMPT}
 
 Current Live Gold (XAUUSD) Spot Price: ${liveSpotStr}.
@@ -780,8 +846,9 @@ Active Trading Session: ${sessionName}.
 ${userNotes ? `Trader observations: "${userNotes}".` : ''}
 
 ### Action Required:
-Scan the market for this exact Pip Scalp Strategy v2.0 setup. If a valid setup aligns, return ONLY raw JSON matching this structure:
+Scan the market for this exact Pip Scalp Strategy v2.0 setup. If all confirmation conditions align, return ONLY raw JSON matching this structure:
 {
+  "tradeAllowed": true,
   "pair": "XAUUSD",
   "direction": "BUY" or "SELL",
   "timeframe": "1m / 5m",
@@ -802,39 +869,12 @@ Scan the market for this exact Pip Scalp Strategy v2.0 setup. If a valid setup a
   ],
   "session": "${sessionName}",
   "reason": "Concise summary of the Pip Scalp M1-M5 setup"
-}`;
-      } else {
-        basePrompt = `You are Pip, the official institutional ICT Smart Money Concepts (SMC) AI analyst for GenZ Trader.
-Analyze the live market for ${normPair} at the exact real-time live spot price: ${liveSpotStr}.
-Active Trading Session: ${sessionName}.
-Trading Style: ${isScalp ? 'SCALPING (5m/1m micro-structure, fast liquidity sweep, tight target)' : 'DAY TRADE (15m/1h structure, session high/low sweep, OTE discount/premium)'}.
-${userNotes ? `Trader observations: "${userNotes}".` : ''}
+}
 
-Execute a strict 5-point ICT institutional audit:
-1. Higher Timeframe Bias & Dealing Range Equilibrium (50%)
-2. Liquidity Sweep (Asian Session Extreme, Previous Day High/Low, or Buy-Side/Sell-Side Liquidity)
-3. Market Structure Shift (MSS) & Fair Value Gap (FVG) / Order Block
-4. Optimal Trade Entry (OTE 62%–79% Fibonacci discount/premium zone)
-5. Actionable Signal Proposal with minimum 1:2.5 Risk-to-Reward ratio
-
-Return ONLY raw JSON with no backticks, no code fence, matching this exact structure:
+If confirmation conditions are NOT met, return ONLY:
 {
-  "pair": "${normPair}",
-  "direction": "BUY" or "SELL",
-  "timeframe": "${isScalp ? '5m' : '15m'}",
-  "style": "${style}",
-  "entry": ${Number(spot)},
-  "sl": number (stop loss strictly beyond structural swing point),
-  "tp": number (logical opposing liquidity pool, minimum 1:2.5 R:R),
-  "rr": "1:2.8",
-  "confidence": number (between 82 and 94),
-  "confluences": [
-    "bullet point 1 describing the liquidity sweep",
-    "bullet point 2 describing the displacement & FVG",
-    "bullet point 3 describing the OTE discount/premium alignment"
-  ],
-  "session": "${sessionName}",
-  "reason": "Concise summary of the institutional setup"
+  "tradeAllowed": false,
+  "reason": "NO TRADE: [Explanation of unconfirmed rule]"
 }`;
       }
 
@@ -857,16 +897,20 @@ Return ONLY raw JSON with no backticks, no code fence, matching this exact struc
           const jsonMatch = candidate.match(/\{[\s\S]*\}/);
           if (jsonMatch) {
             const parsed = JSON.parse(jsonMatch[0]);
-            const isGold = normPair.includes('XAU') || normPair.includes('GOLD');
-            const decimals = normPair.includes('EUR') || normPair.includes('GBP') ? 5 : normPair.includes('BTC') ? 1 : 2;
 
+            // If Gemini explicitly says tradeAllowed=false or reason indicates NO TRADE, respect risk discipline
+            if (parsed.tradeAllowed === false || parsed.tradeAllowed === 'false' || !parsed.direction || String(parsed.reason || '').toUpperCase().includes('NO TRADE')) {
+              console.info(`[pipLiveSignalService] NO TRADE: Setup not confirmed by Gemini: ${parsed.reason || 'Confirmation failed'}`);
+              return null;
+            }
+
+            const decimals = 2;
             const entryNum = Number(parsed.entry) || Number(spot);
-            const dir = (parsed.direction || 'BUY').toUpperCase();
+            const dir = (parsed.direction || cond.direction || 'BUY').toUpperCase();
             const isBuy = dir === 'BUY';
 
-            // Strict ICT Strategy v2.0 Rules for Gold Day Trade: SL $6-$24 (default $10.00), TP 1:2.0 RR, BE at +0.90R
             let slNum, tpNum, beTrigger;
-            if (isGold && !isScalp) {
+            if (!isScalp) {
               const parsedSl = Number(parsed.sl);
               let slDist = parsedSl && Math.abs(parsedSl - entryNum) >= 6.0 && Math.abs(parsedSl - entryNum) <= 24.0
                 ? Math.abs(parsedSl - entryNum)
@@ -877,64 +921,58 @@ Return ONLY raw JSON with no backticks, no code fence, matching this exact struc
               tpNum = Number((isBuy ? entryNum + tpDist : entryNum - tpDist).toFixed(decimals));
               beTrigger = Number((isBuy ? entryNum + slDist * 0.9 : entryNum - slDist * 0.9).toFixed(decimals));
             } else {
-              let slDist = isGold ? (isScalp ? 2.5 : 10.0) : normPair.includes('BTC') ? (isScalp ? 350.0 : 850.0) : normPair.includes('US30') ? (isScalp ? 65.0 : 180.0) : normPair.includes('JPY') ? (isScalp ? 0.25 : 0.60) : (isScalp ? 0.0010 : 0.0025);
-              let tpDist = isGold ? (isScalp ? 3.5 : 20.0) : normPair.includes('BTC') ? (isScalp ? 700.0 : 1700.0) : normPair.includes('US30') ? (isScalp ? 130.0 : 360.0) : normPair.includes('JPY') ? (isScalp ? 0.50 : 1.20) : (isScalp ? 0.0020 : 0.0050);
-
-              const parsedSl = Number(parsed.sl);
-              const parsedTp = Number(parsed.tp);
-              slNum = parsedSl && Math.abs(parsedSl - entryNum) > slDist * 0.4
-                ? parsedSl
-                : Number((isBuy ? entryNum - slDist : entryNum + slDist).toFixed(decimals));
-              tpNum = parsedTp && Math.abs(parsedTp - entryNum) > tpDist * 0.4
-                ? parsedTp
-                : Number((isBuy ? entryNum + tpDist : entryNum - tpDist).toFixed(decimals));
-              beTrigger = Number(parsed.beTrigger) || null;
+              // Scalp: $2.50 SL, $4.50 TP (1:1.8 RR), BE at +$2.50
+              slNum = Number((isBuy ? entryNum - 2.50 : entryNum + 2.50).toFixed(decimals));
+              tpNum = Number((isBuy ? entryNum + 4.50 : entryNum - 4.50).toFixed(decimals));
+              beTrigger = Number((isBuy ? entryNum + 2.50 : entryNum - 2.50).toFixed(decimals));
             }
 
             const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Phnom_Penh' });
             const nowMs = Date.now();
-            const signalId = isGold ? `ICT-XAU-5M-LIVE-${nowMs.toString().slice(-6)}` : `pip-ai-${normPair.toLowerCase()}-${style}-${nowMs}-${Math.floor(Math.random() * 1000)}`;
+            const signalId = isScalp
+              ? `ICT-XAU-SCALP-LIVE-${nowMs.toString().slice(-6)}`
+              : `ICT-XAU-5M-LIVE-${nowMs.toString().slice(-6)}`;
 
             const signal = {
               id: signalId,
-              trade_id: isGold ? signalId : undefined,
-              pair: normPair,
-              symbol: normPair,
-              name: isGold ? 'Gold (XAU/USD)' : normPair === 'EURUSD' ? 'EUR/USD' : normPair === 'GBPUSD' ? 'GBP/USD' : normPair,
+              trade_id: signalId,
+              pair: 'XAUUSD',
+              symbol: 'XAUUSD',
+              name: 'Gold (XAU/USD)',
               direction: dir,
-              timeframe: isGold && !isScalp ? '5m' : (parsed.timeframe || (isScalp ? '5m' : '15m')),
-              mode: isGold && !isScalp ? '5M INTRADAY (ICT v2.0)' : (isScalp ? '5M SCALP (ICT M1-M5)' : `${(parsed.timeframe || '15m').toUpperCase()} INTRADAY (ICT)`),
-              style,
-              model: isGold && !isScalp ? 'ICT v2.0 Killzone Sweep + MSS + FVG' : (isScalp ? 'ICT M1-M5 Scalp' : 'ICT SMC Intraday'),
-              strategy_version: isGold ? 'ICT-XAUUSD-FVG-MSS-v2.0' : undefined,
+              timeframe: isScalp ? '1m / 5m' : '5m',
+              mode: isScalp ? '1M/5M PIP SCALP (QUANT IMBALANCE)' : '5M INTRADAY (ICT v2.0)',
+              style: effectiveStyle,
+              model: isScalp ? 'Pip Scalp M1-M5 Quant Imbalance Model' : 'ICT v2.0 Killzone Sweep + MSS + FVG',
+              strategy_version: isScalp ? 'ICT-XAUUSD-SCALP-v2.0' : 'ICT-XAUUSD-FVG-MSS-v2.0',
               entry: Number(entryNum.toFixed(decimals)),
               sl: Number(slNum.toFixed(decimals)),
               tp: Number(tpNum.toFixed(decimals)),
               beTrigger,
               breakEvenTrigger: beTrigger,
-              refCandleHigh: parsed.refCandleHigh || (isGold ? Number((isBuy ? entryNum + 16.5 : entryNum + 4.5).toFixed(2)) : null),
-              refCandleLow: parsed.refCandleLow || (isGold ? Number((isBuy ? entryNum - 4.5 : entryNum - 16.5).toFixed(2)) : null),
-              rr: isGold && !isScalp ? '1:2.0' : (parsed.rr || '1:2.8'),
-              planned_rr: isGold && !isScalp ? 2.0 : undefined,
+              refCandleHigh: parsed.refCandleHigh || Number((isBuy ? entryNum + 16.5 : entryNum + 4.5).toFixed(2)),
+              refCandleLow: parsed.refCandleLow || Number((isBuy ? entryNum - 4.5 : entryNum - 16.5).toFixed(2)),
+              rr: isScalp ? '1:1.8' : '1:2.0',
+              planned_rr: isScalp ? 1.8 : 2.0,
               confidence: Number(parsed.confidence) || 92,
               confluences: buildVerifiedTradeConfluences({
-                pair: normPair,
+                pair: 'XAUUSD',
                 direction: dir,
                 entry: Number(entryNum.toFixed(decimals)),
                 sl: Number(slNum.toFixed(decimals)),
                 tp: Number(tpNum.toFixed(decimals)),
-                style,
-                timeframe: isGold && !isScalp ? '5m' : (parsed.timeframe || (isScalp ? '5m' : '15m')),
+                style: effectiveStyle,
+                timeframe: isScalp ? '1m / 5m' : '5m',
                 refHigh: parsed.refCandleHigh,
                 refLow: parsed.refCandleLow,
               }),
               session: parsed.session || sessionName,
               opened: `Today, ${timeStr} GMT+7`,
               status: 'active',
-              source: isGold ? 'PIP AI LIVE REAL DATA (v2.0)' : (isScalp ? 'PIP AI SCALPER' : 'PIP AI (GEMINI 3.8)'),
+              source: isScalp ? 'PIP AI SCALPER (REAL DATA)' : 'PIP AI LIVE REAL DATA (v2.0)',
               resultBadge: 'ACTIVE SETUP',
               badgeClass: 'active',
-              icon: isGold ? '🥇' : normPair.includes('EUR') ? '💶' : normPair.includes('GBP') ? '💷' : normPair.includes('BTC') ? '₿' : '⚡',
+              icon: '🥇',
               generatedAt: nowMs,
               publishedAt: nowMs,
               _timeMs: nowMs,
@@ -955,11 +993,17 @@ Return ONLY raw JSON with no backticks, no code fence, matching this exact struc
     }
   }
 
-  // Pure algorithmic SMC fallback directly calculated from the real live spot price and TradingView scanner analysis
-  const prefDir = analysisData ? (analysisData.bias.includes('BULL') ? 'BUY' : 'SELL') : null;
-  const signal = calculateRealIctSetup(normPair, spot, prefDir, style, {
-    confidence: analysisData?.confidence || 90,
+  // Pure algorithmic SMC fallback directly calculated from the confirmed direction and live spot price
+  const signal = calculateRealIctSetup('XAUUSD', spot, cond.direction, effectiveStyle, {
+    confidence: analysisData?.confidence || 92,
+    marketAnalysis: analysisData,
   });
+
+  if (!signal) {
+    console.info('[pipLiveSignalService] NO TRADE: Algorithmic calculation produced no setup.');
+    return null;
+  }
+
   saveStoredPipSignal(signal);
   return signal;
 }

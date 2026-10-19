@@ -1,0 +1,688 @@
+//@version=6
+indicator(title = "Pip AI — Gold Institutional Terminal [Scalp & Intraday]", shorttitle = "Pip AI", overlay = true, max_labels_count = 500, max_lines_count = 500, max_boxes_count = 500)
+
+// ============================================================================
+// 1. USER SETTINGS & CONFIGURATION
+// ============================================================================
+grp_mode   = "1. Trading Engine Mode & Timeframe"
+enforceGold = input.bool(true, "Strictly Enforce Gold (XAUUSD) Only", group = grp_mode, tooltip = "Rejects non-Gold pairs and shows NO TRADE alert to prevent strategy misapplication.")
+
+grp_kz     = "2. Institutional Sessions & Killzones (UTC)"
+filterSessions = input.bool(true, "Filter Trades by Institutional Killzones", group = grp_kz, tooltip = "Only triggers setups during London Open (07:00-09:00 UTC) and New York AM (12:30-15:00 UTC).")
+extendScalpKz  = input.bool(true, "Extend Scalp Killzone Windows (+1 Hour)", group = grp_kz, tooltip = "Extends Scalp London KZ to 10:00 UTC and NY AM KZ to 15:30 UTC for micro momentum.")
+
+grp_scalp  = "3. Strategy 1: Scalp Parameters (M1 & M5)"
+scalpSlPts = input.float(2.50, "Scalp Stop-Loss Distance ($)", minval = 1.00, maxval = 6.00, step = 0.25, group = grp_scalp, tooltip = "Fixed institutional $2.50 (25 pips) stop loss beyond sweep wick.")
+scalpTpPts = input.float(4.50, "Scalp Take-Profit Distance ($)", minval = 2.00, maxval = 12.00, step = 0.25, group = grp_scalp, tooltip = "Fixed institutional $4.50 (45 pips) take profit yielding 1:1.80 R:R.")
+scalpBeTrigger = input.float(2.50, "Scalp Break-Even Trigger ($)", minval = 1.00, maxval = 5.00, step = 0.25, group = grp_scalp, tooltip = "Moves Stop-Loss to Entry (+friction) when price achieves +$2.50 (+1.0R).")
+
+grp_intra  = "4. Strategy 2: Intraday Parameters (M15 & H1)"
+intraRrTarget  = input.float(2.0, "Intraday Target Risk/Reward Ratio", minval = 1.5, maxval = 4.0, step = 0.1, group = grp_intra, tooltip = "Target 1:2.0 Risk-to-Reward ratio based on structural stop.")
+intraMinSl     = input.float(6.00, "Intraday Min Stop Loss Floor ($)", minval = 3.00, maxval = 12.00, step = 0.50, group = grp_intra)
+intraMaxSl     = input.float(24.00, "Intraday Max Stop Loss Distance ($)", minval = 12.00, maxval = 50.00, step = 1.00, group = grp_intra)
+intraBeTriggerR= input.float(0.90, "Intraday Break-Even Trigger (R Multiple)", minval = 0.50, maxval = 1.50, step = 0.05, group = grp_intra, tooltip = "Moves Stop-Loss to Entry (+friction) at +0.90R.")
+requireDiscPrem= input.bool(true, "Enforce Discount (Buy) / Premium (Sell)", group = grp_intra, tooltip = "Longs occur in Discount (<= equilibrium + 0.20 ATR); Shorts in Premium.")
+requireHtfBias = input.bool(true, "Enforce 1H Higher Timeframe Trend Bias", group = grp_intra, tooltip = "Longs require 1H EMA 96 >= EMA 288 (Bullish HTF); Shorts require Bearish HTF.")
+
+grp_cost   = "5. Realistic Trading Friction (Gold Futures/Spot)"
+spreadCost = input.float(0.20, "Estimated Spread ($/oz)", minval = 0.00, maxval = 1.00, step = 0.05, group = grp_cost)
+commCost   = input.float(0.07, "Commission ($/oz)", minval = 0.00, maxval = 0.50, step = 0.01, group = grp_cost)
+slipCost   = input.float(0.05, "Estimated Slippage ($/oz)", minval = 0.00, maxval = 0.50, step = 0.01, group = grp_cost)
+totalFriction = spreadCost + commCost + slipCost
+
+grp_vis    = "6. Visual Display & Dashboard HUD"
+showHudTable   = input.bool(true, "Display Timeframe-Tailored Institutional UI", group = grp_vis)
+showTpSlLines  = input.bool(true, "Draw Entry / TP / SL / BE Target Lines", group = grp_vis)
+showFvgBoxes   = input.bool(true, "Highlight Mitigated Fair Value Gaps (FVG)", group = grp_vis)
+showPrevTrades = input.bool(true, "Plot Historical Closed Trades on Chart", group = grp_vis)
+hudPosition    = input.string("Top Right", "Dashboard HUD Screen Position", options = ["Top Right", "Bottom Right", "Top Left", "Bottom Left"], group = grp_vis)
+
+// ============================================================================
+// 2. TIMEFRAME DETECTION & DYNAMIC VIEW ROUTING
+// ============================================================================
+isGoldAsset = str.contains(syminfo.ticker, "XAU") or str.contains(syminfo.ticker, "GOLD") or str.contains(syminfo.ticker, "GC") or str.contains(syminfo.root, "GC")
+
+isM1  = timeframe.period == "1"  or (timeframe.isminutes and timeframe.multiplier == 1)
+isM5  = timeframe.period == "5"  or (timeframe.isminutes and timeframe.multiplier == 5)
+isM15 = timeframe.period == "15" or (timeframe.isminutes and timeframe.multiplier == 15)
+isH1  = timeframe.period == "60" or timeframe.period == "1H" or (timeframe.isminutes and timeframe.multiplier == 60)
+
+bool isScalpStrategy = isM1 or isM5
+bool isIntraStrategy = isM15 or isH1
+bool isUnsupportedTf = not (isM1 or isM5 or isM15 or isH1)
+
+// ============================================================================
+// 3. INSTITUTIONAL KILLZONES & SESSIONS (UTC)
+// ============================================================================
+londonSessionStr = (isScalpStrategy and extendScalpKz) ? "0700-1000:23456" : "0700-0900:23456"
+inLondonKz = not na(time(timeframe.period, londonSessionStr, "UTC"))
+
+nySessionStr = (isScalpStrategy and extendScalpKz) ? "1230-1530:23456" : "1230-1500:23456"
+inNyKz = not na(time(timeframe.period, nySessionStr, "UTC"))
+
+inAsianSession = not na(time(timeframe.period, "0000-0600:23456", "UTC"))
+
+inValidSession = not filterSessions or (inLondonKz or inNyKz)
+currentSessionLabel = inLondonKz ? "London Open Killzone" : inNyKz ? "New York AM Killzone" : inAsianSession ? "Asian Accumulation" : "Interbank Off-Hours"
+
+var float asianHigh = na
+var float asianLow  = na
+if inAsianSession
+    asianHigh := na(asianHigh) ? high : math.max(asianHigh, high)
+    asianLow  := na(asianLow)  ? low  : math.min(asianLow, low)
+if ta.change(time("D")) != 0
+    asianHigh := na
+    asianLow  := na
+
+// ============================================================================
+// 4. HIGHER TIMEFRAME BIAS & DEALING RANGE
+// ============================================================================
+atr14 = ta.atr(14)
+
+[htfEmaFast, htfEmaSlow] = request.security(syminfo.tickerid, "60", [ta.ema(close[1], 96), ta.ema(close[1], 288)], gaps = barmerge.gaps_off, lookahead = barmerge.lookahead_off)
+
+htfBullish = na(htfEmaFast) or na(htfEmaSlow) or (htfEmaFast >= htfEmaSlow)
+htfBearish = na(htfEmaFast) or na(htfEmaSlow) or (htfEmaFast < htfEmaSlow)
+htfBiasLabel = htfBullish ? "BULLISH (1H EMA)" : "BEARISH (1H EMA)"
+
+rangeHigh   = ta.highest(high, 32)
+rangeLow    = ta.lowest(low, 32)
+equilibrium = (rangeHigh + rangeLow) / 2.0
+
+[pdh, pdl] = request.security(syminfo.tickerid, "D", [high[1], low[1]], gaps = barmerge.gaps_off, lookahead = barmerge.lookahead_off)
+
+plot(isH1 ? htfEmaFast : na, "1H EMA Fast (96)", color = color.aqua, linewidth = 2)
+plot(isH1 ? htfEmaSlow : na, "1H EMA Slow (288)", color = color.orange, linewidth = 2)
+plot(isH1 ? equilibrium : na, "1H Equilibrium (50%)", color = color.yellow, linewidth = 1, style = plot.style_linebr)
+
+// ============================================================================
+// 5. CAUSAL SWING IDENTIFICATION, MSS & FVG ENGINE
+// ============================================================================
+fractalLen = isScalpStrategy ? 2 : 3
+pivHi = ta.pivothigh(high, fractalLen, fractalLen)
+pivLo = ta.pivotlow(low, fractalLen, fractalLen)
+
+var float lastSwingHigh    = na
+var float lastSwingLow     = na
+var int   lastSwingHighBar = na
+var int   lastSwingLowBar  = na
+
+if not na(pivHi)
+    lastSwingHigh    := pivHi
+    lastSwingHighBar := bar_index - fractalLen
+if not na(pivLo)
+    lastSwingLow     := pivLo
+    lastSwingLowBar  := bar_index - fractalLen
+
+sweepLookback = isScalpStrategy ? 14 : 24
+recentMinLow  = ta.lowest(low, sweepLookback)
+recentMaxHigh = ta.highest(high, sweepLookback)
+
+minorHigh = ta.highest(high[1], 5)
+minorLow  = ta.lowest(low[1], 5)
+
+c1Range = math.max(0.01, high[1] - low[1])
+c1Body  = math.abs(close[1] - open[1])
+c0Range = math.max(0.01, high - low)
+c0Body  = math.abs(close - open)
+
+dispThreshold = 0.42
+bullDisp = (close[1] > open[1] and c1Body / c1Range >= dispThreshold) or (close > open and c0Body / c0Range >= dispThreshold)
+bearDisp = (close[1] < open[1] and c1Body / c1Range >= dispThreshold) or (close < open and c0Body / c0Range >= dispThreshold)
+
+bullSweep = (not na(pdl) and recentMinLow < pdl and close > pdl) or (not na(asianLow) and recentMinLow < asianLow and close > asianLow) or (not na(lastSwingLow) and (bar_index - lastSwingLowBar >= 3) and recentMinLow < lastSwingLow and close > lastSwingLow)
+bearSweep = (not na(pdh) and recentMaxHigh > pdh and close < pdh) or (not na(asianHigh) and recentMaxHigh > asianHigh and close < asianHigh) or (not na(lastSwingHigh) and (bar_index - lastSwingHighBar >= 3) and recentMaxHigh > lastSwingHigh and close < lastSwingHigh)
+
+bullMss = close >= minorHigh or (close > high[1] and close > high[2])
+bearMss = close <= minorLow  or (close < low[1]  and close < low[2])
+
+bullFvgGap = low - high[2]
+bearFvgGap = low[2] - high
+
+minFvgSize = isScalpStrategy ? math.max(0.40, 0.08 * atr14) : math.max(1.00, 0.08 * atr14)
+hasBullFvg = bullFvgGap >= minFvgSize
+hasBearFvg = bearFvgGap >= minFvgSize
+
+bullFvgTop = low
+bullFvgBot = high[2]
+bullFvgCe  = (bullFvgTop + bullFvgBot) / 2.0
+bullEntryPrice = math.round(bullFvgCe, 2)
+
+bearFvgBot = high
+bearFvgTop = low[2]
+bearFvgCe  = (bearFvgTop + bearFvgBot) / 2.0
+bearEntryPrice = math.round(bearFvgCe, 2)
+
+inDiscount = not requireDiscPrem or (bullEntryPrice <= equilibrium + 0.20 * atr14)
+inPremium  = not requireDiscPrem or (bearEntryPrice >= equilibrium - 0.20 * atr14)
+
+bullHtfOk = not requireHtfBias or htfBullish
+bearHtfOk = not requireHtfBias or htfBearish
+
+// ============================================================================
+// 6. CAUSAL TRADE EXECUTION ENGINE & SIMULATOR
+// ============================================================================
+var int   activeDirection  = 0
+var float activeEntry      = na
+var float activeSl         = na
+var float activeTp         = na
+var float activeBeTrigger  = na
+var bool  isBeMoved        = false
+var int   entryBarIndex    = na
+var string activeModelName = ""
+
+isTradeAllowed = (not enforceGold or isGoldAsset) and (not isUnsupportedTf) and inValidSession
+canTriggerTrade = isM1 or isM15
+
+buyCondition  = barstate.isconfirmed and canTriggerTrade and isTradeAllowed and activeDirection == 0 and hasBullFvg and bullDisp and bullSweep and bullMss and inDiscount and bullHtfOk
+sellCondition = barstate.isconfirmed and canTriggerTrade and isTradeAllowed and activeDirection == 0 and hasBearFvg and bearDisp and bearSweep and bearMss and inPremium and bearHtfOk
+
+var int   totalTradesCount = 0
+var int   winTradesCount   = 0
+var int   lossTradesCount  = 0
+var int   beTradesCount    = 0
+var float cumulativeNetPnl = 0.0
+var float grossWinsPnl     = 0.0
+var float grossLossPnl     = 0.0
+
+bool triggeredBuy      = false
+bool triggeredSell     = false
+bool triggeredBeMoved  = false
+bool triggeredTpWin    = false
+bool triggeredSlLoss   = false
+bool triggeredTimeExit = false
+
+if activeDirection != 0
+    if not isBeMoved
+        if activeDirection == 1 and high >= activeBeTrigger
+            activeSl  := activeEntry + totalFriction
+            isBeMoved := true
+            triggeredBeMoved := true
+        else if activeDirection == -1 and low <= activeBeTrigger
+            activeSl  := activeEntry - totalFriction
+            isBeMoved := true
+            triggeredBeMoved := true
+
+    bool hitSl = (activeDirection == 1 and low <= activeSl) or (activeDirection == -1 and high >= activeSl)
+    bool hitTp = (activeDirection == 1 and high >= activeTp) or (activeDirection == -1 and low <= activeTp)
+    
+    int maxHoldBars = isScalpStrategy ? 45 : (isM15 ? 12 : 3)
+    bool hitMaxHold = (bar_index - entryBarIndex) >= maxHoldBars
+
+    if hitSl
+        float rawExit  = activeSl
+        float grossPnl = activeDirection == 1 ? (rawExit - activeEntry) : (activeEntry - rawExit)
+        float netPnl   = grossPnl - totalFriction
+        
+        totalTradesCount += 1
+        cumulativeNetPnl += netPnl
+        
+        if isBeMoved
+            beTradesCount += 1
+        else
+            lossTradesCount += 1
+            grossLossPnl += math.abs(netPnl)
+            triggeredSlLoss := true
+
+        if showPrevTrades and canTriggerTrade
+            string slLabelTxt = (isBeMoved ? "BE STOP\n$" : "SL HIT\n-$") + str.tostring(math.abs(netPnl), "#.##")
+            label.new(bar_index, rawExit, text = slLabelTxt, color = isBeMoved ? color.orange : color.red, textcolor = color.white, style = activeDirection == 1 ? label.style_label_up : label.style_label_down, size = size.tiny)
+
+        activeDirection := 0
+        activeEntry     := na
+        activeSl        := na
+        activeTp        := na
+        isBeMoved       := false
+
+    else if hitTp
+        float rawExit  = activeTp
+        float grossPnl = activeDirection == 1 ? (rawExit - activeEntry) : (activeEntry - rawExit)
+        float netPnl   = grossPnl - totalFriction
+        
+        totalTradesCount += 1
+        winTradesCount   += 1
+        cumulativeNetPnl += netPnl
+        grossWinsPnl     += netPnl
+        triggeredTpWin   := true
+
+        if showPrevTrades and canTriggerTrade
+            string tpLabelTxt = "TP HIT\n+$" + str.tostring(netPnl, "#.##")
+            label.new(bar_index, rawExit, text = tpLabelTxt, color = color.green, textcolor = color.white, style = activeDirection == 1 ? label.style_label_down : label.style_label_up, size = size.tiny)
+
+        activeDirection := 0
+        activeEntry     := na
+        activeSl        := na
+        activeTp        := na
+        isBeMoved       := false
+
+    else if hitMaxHold
+        float rawExit  = close
+        float grossPnl = activeDirection == 1 ? (rawExit - activeEntry) : (activeEntry - rawExit)
+        float netPnl   = grossPnl - totalFriction
+        
+        totalTradesCount += 1
+        cumulativeNetPnl += netPnl
+        if netPnl > 0
+            winTradesCount += 1
+            grossWinsPnl   += netPnl
+        else
+            lossTradesCount += 1
+            grossLossPnl    += math.abs(netPnl)
+        triggeredTimeExit := true
+
+        if showPrevTrades and canTriggerTrade
+            string timeLabelTxt = "TIME EXIT\n" + (netPnl >= 0 ? "+$" : "-$") + str.tostring(math.abs(netPnl), "#.##")
+            label.new(bar_index, rawExit, text = timeLabelTxt, color = color.purple, textcolor = color.white, style = label.style_label_left, size = size.tiny)
+
+        activeDirection := 0
+        activeEntry     := na
+        activeSl        := na
+        activeTp        := na
+        isBeMoved       := false
+
+var line entryLine = na
+var line slLine    = na
+var line tpLine    = na
+var line beLine    = na
+var box  fvgBox    = na
+
+if buyCondition
+    activeDirection := 1
+    activeEntry     := bullEntryPrice
+    entryBarIndex   := bar_index
+    isBeMoved       := false
+    triggeredBuy    := true
+    
+    if isM1
+        activeModelName := "Pip Scalp M1 Quant Imbalance Model (ICT-XAUUSD-SCALP-v2.0)"
+        activeSl        := math.round(bullEntryPrice - scalpSlPts, 2)
+        activeTp        := math.round(bullEntryPrice + scalpTpPts, 2)
+        activeBeTrigger := math.round(bullEntryPrice + scalpBeTrigger, 2)
+    else
+        activeModelName := "ICT v2.0 Killzone Sweep + MSS + FVG (ICT-XAUUSD-FVG-MSS-v2.0)"
+        float rawSlDist = math.max(intraMinSl, math.min(intraMaxSl, (bullEntryPrice - recentMinLow) + 0.25 * atr14))
+        activeSl        := math.round(bullEntryPrice - rawSlDist, 2)
+        activeTp        := math.round(bullEntryPrice + rawSlDist * intraRrTarget, 2)
+        activeBeTrigger := math.round(bullEntryPrice + rawSlDist * intraBeTriggerR, 2)
+
+    float slDist = activeEntry - activeSl
+    float tpDist = activeTp - activeEntry
+    float plannedRr = slDist > 0 ? (tpDist / slDist) : (isM1 ? 1.8 : 2.0)
+
+    string titleHeader = isM1 ? "🟢 BUY SCALP (M1)" : "🟢 BUY INTRADAY (M15)"
+    string signalText = str.format("{0}\nEntry: ${1, number, #.##}\nSL: ${2, number, #.##} (-${3, number, #.##})\nTP: ${4, number, #.##} (+${5, number, #.##})\nR:R Target: 1:{6, number, #.#}", titleHeader, activeEntry, activeSl, slDist, activeTp, tpDist, plannedRr)
+    
+    label.new(bar_index, low - 0.50 * atr14, text = signalText, color = color.new(#00c853, 0), textcolor = color.white, style = label.style_label_up, size = size.small)
+
+    if showTpSlLines
+        line.delete(entryLine)
+        line.delete(slLine)
+        line.delete(tpLine)
+        line.delete(beLine)
+        entryLine := line.new(bar_index, activeEntry, bar_index + 15, activeEntry, color = color.aqua, width = 2)
+        slLine    := line.new(bar_index, activeSl,    bar_index + 15, activeSl,    color = color.red,  width = 2)
+        tpLine    := line.new(bar_index, activeTp,    bar_index + 15, activeTp,    color = color.lime, width = 2)
+        beLine    := line.new(bar_index, activeBeTrigger, bar_index + 15, activeBeTrigger, color = color.orange, width = 1, style = line.style_dashed)
+
+    if showFvgBoxes
+        box.delete(fvgBox)
+        fvgBox := box.new(bar_index - 2, bullFvgTop, bar_index + 15, bullFvgBot, border_color = color.green, bgcolor = color.new(color.green, 85))
+
+else if sellCondition
+    activeDirection := -1
+    activeEntry     := bearEntryPrice
+    entryBarIndex   := bar_index
+    isBeMoved       := false
+    triggeredSell   := true
+    
+    if isM1
+        activeModelName := "Pip Scalp M1 Quant Imbalance Model (ICT-XAUUSD-SCALP-v2.0)"
+        activeSl        := math.round(bearEntryPrice + scalpSlPts, 2)
+        activeTp        := math.round(bearEntryPrice - scalpTpPts, 2)
+        activeBeTrigger := math.round(bearEntryPrice - scalpBeTrigger, 2)
+    else
+        activeModelName := "ICT v2.0 Killzone Sweep + MSS + FVG (ICT-XAUUSD-FVG-MSS-v2.0)"
+        float rawSlDist = math.max(intraMinSl, math.min(intraMaxSl, (recentMaxHigh - bearEntryPrice) + 0.25 * atr14))
+        activeSl        := math.round(bearEntryPrice + rawSlDist, 2)
+        activeTp        := math.round(bearEntryPrice - rawSlDist * intraRrTarget, 2)
+        activeBeTrigger := math.round(bearEntryPrice - rawSlDist * intraBeTriggerR, 2)
+
+    float slDist = activeSl - activeEntry
+    float tpDist = activeEntry - activeTp
+    float plannedRr = slDist > 0 ? (tpDist / slDist) : (isM1 ? 1.8 : 2.0)
+
+    string titleHeader = isM1 ? "🔴 SELL SCALP (M1)" : "🔴 SELL INTRADAY (M15)"
+    string signalText = str.format("{0}\nEntry: ${1, number, #.##}\nSL: ${2, number, #.##} (-${3, number, #.##})\nTP: ${4, number, #.##} (+${5, number, #.##})\nR:R Target: 1:{6, number, #.#}", titleHeader, activeEntry, activeSl, slDist, activeTp, tpDist, plannedRr)
+
+    label.new(bar_index, high + 0.50 * atr14, text = signalText, color = color.new(#d50000, 0), textcolor = color.white, style = label.style_label_down, size = size.small)
+
+    if showTpSlLines
+        line.delete(entryLine)
+        line.delete(slLine)
+        line.delete(tpLine)
+        line.delete(beLine)
+        entryLine := line.new(bar_index, activeEntry, bar_index + 15, activeEntry, color = color.aqua, width = 2)
+        slLine    := line.new(bar_index, activeSl,    bar_index + 15, activeSl,    color = color.red,  width = 2)
+        tpLine    := line.new(bar_index, activeTp,    bar_index + 15, activeTp,    color = color.lime, width = 2)
+        beLine    := line.new(bar_index, activeBeTrigger, bar_index + 15, activeBeTrigger, color = color.orange, width = 1, style = line.style_dashed)
+
+    if showFvgBoxes
+        box.delete(fvgBox)
+        fvgBox := box.new(bar_index - 2, bearFvgTop, bar_index + 15, bearFvgBot, border_color = color.red, bgcolor = color.new(color.red, 85))
+
+if activeDirection != 0 and showTpSlLines and not na(entryLine)
+    line.set_x2(entryLine, bar_index + 4)
+    line.set_x2(slLine,    bar_index + 4)
+    line.set_x2(tpLine,    bar_index + 4)
+    line.set_x2(beLine,    bar_index + 4)
+    if isBeMoved
+        line.set_y1(slLine, activeSl)
+        line.set_y2(slLine, activeSl)
+        line.set_color(slLine, color.orange)
+
+// ============================================================================
+// 7. TIMEFRAME-TAILORED BEAUTIFUL UI DASHBOARD (M1, M5, M15, H1)
+// ============================================================================
+var table uiTable = na
+
+tablePos = position.top_right
+if hudPosition == "Bottom Right"
+    tablePos := position.bottom_right
+else if hudPosition == "Top Left"
+    tablePos := position.top_left
+else if hudPosition == "Bottom Left"
+    tablePos := position.bottom_left
+
+if barstate.islast and showHudTable
+    if na(uiTable)
+        uiTable := table.new(tablePos, 2, 14, bgcolor = color.new(#0b0e14, 10), border_width = 1, border_color = color.new(#2a2e39, 40))
+
+    float winratePct   = totalTradesCount > 0 ? (float(winTradesCount) / float(totalTradesCount) * 100.0) : 0.0
+
+    // ------------------------------------------------------------------------
+    // VIEW 1: M1 (1-MINUTE) -> BEAUTIFUL BUY & SELL BUTTON UI + TP & SL SCALP
+    // ------------------------------------------------------------------------
+    if isM1
+        table.cell(uiTable, 0, 0, "⚡ PIP SCALP TERMINAL", bgcolor = color.new(#1a237e, 10), text_color = color.white, text_size = size.small)
+        table.cell(uiTable, 1, 0, "M1 EXECUTION COCKPIT", bgcolor = color.new(#1a237e, 10), text_color = color.aqua, text_size = size.small)
+
+        if activeDirection == 1
+            table.cell(uiTable, 0, 1, "[  🟢 BUY SCALP ACTIVE  ]", bgcolor = color.new(#00c853, 0), text_color = color.white, text_size = size.small)
+            table.cell(uiTable, 1, 1, isBeMoved ? "🛡️ BE PROTECTED" : "RUNNING TO +$4.50 TP", bgcolor = color.new(#00c853, 30), text_color = color.white, text_size = size.small)
+        else if activeDirection == -1
+            table.cell(uiTable, 0, 1, "[  🔴 SELL SCALP ACTIVE  ]", bgcolor = color.new(#d50000, 0), text_color = color.white, text_size = size.small)
+            table.cell(uiTable, 1, 1, isBeMoved ? "🛡️ BE PROTECTED" : "RUNNING TO +$4.50 TP", bgcolor = color.new(#d50000, 30), text_color = color.white, text_size = size.small)
+        else if buyCondition
+            table.cell(uiTable, 0, 1, "[  🟢 CLICK BUY SCALP  ]", bgcolor = color.new(#00e676, 10), text_color = color.black, text_size = size.small)
+            table.cell(uiTable, 1, 1, "⚡ TAP 50% CE CONFIRMED", bgcolor = color.new(#00e676, 20), text_color = color.white, text_size = size.small)
+        else if sellCondition
+            table.cell(uiTable, 0, 1, "[  🔴 CLICK SELL SCALP  ]", bgcolor = color.new(#ff1744, 10), text_color = color.white, text_size = size.small)
+            table.cell(uiTable, 1, 1, "⚡ TAP 50% CE CONFIRMED", bgcolor = color.new(#ff1744, 20), text_color = color.white, text_size = size.small)
+        else
+            table.cell(uiTable, 0, 1, "[  🟢 BUY SCALP (M1)  ]", bgcolor = color.new(#1b5e20, 20), text_color = color.new(color.white, 20), text_size = size.small)
+            table.cell(uiTable, 1, 1, "[  🔴 SELL SCALP (M1)  ]", bgcolor = color.new(#b71c1c, 20), text_color = color.new(color.white, 20), text_size = size.small)
+
+        string m1Status = "SCANNING 1M MOMENTUM"
+        color m1Color = inValidSession ? color.aqua : color.orange
+        if activeDirection == 1
+            m1Status := "LONG IN PROGRESS"
+            m1Color := color.lime
+        else if activeDirection == -1
+            m1Status := "SHORT IN PROGRESS"
+            m1Color := color.red
+        else if not inValidSession
+            m1Status := "OFF-HOURS / CHOP RISK"
+            m1Color := color.orange
+        else if hasBullFvg or hasBearFvg
+            m1Status := "READY FOR IMBALANCE TAP"
+            m1Color := color.aqua
+
+        table.cell(uiTable, 0, 2, "Execution State", text_color = color.silver, text_size = size.small)
+        table.cell(uiTable, 1, 2, m1Status, text_color = m1Color, text_size = size.small)
+
+        table.cell(uiTable, 0, 3, "Scalp Entry", text_color = color.silver, text_size = size.small)
+        string m1EntryStr = activeDirection != 0 ? ("$" + str.tostring(activeEntry, "#.##")) : ("$" + str.tostring(close, "#.##") + " (Market)")
+        table.cell(uiTable, 1, 3, m1EntryStr, text_color = color.white, text_size = size.small)
+
+        table.cell(uiTable, 0, 4, "Scalp Stop Loss (SL)", text_color = color.silver, text_size = size.small)
+        string m1SlStr = activeDirection != 0 ? ("$" + str.tostring(activeSl, "#.##") + " (-$" + str.tostring(math.abs(activeEntry - activeSl), "#.##") + ")") : "-$2.50 (25 Pips Fixed)"
+        table.cell(uiTable, 1, 4, m1SlStr, text_color = color.red, text_size = size.small)
+
+        table.cell(uiTable, 0, 5, "Scalp Take Profit (TP)", text_color = color.silver, text_size = size.small)
+        string m1TpStr = activeDirection != 0 ? ("$" + str.tostring(activeTp, "#.##") + " (+$" + str.tostring(math.abs(activeTp - activeEntry), "#.##") + ")") : "+$4.50 (45 Pips Fixed)"
+        table.cell(uiTable, 1, 5, m1TpStr, text_color = color.lime, text_size = size.small)
+
+        table.cell(uiTable, 0, 6, "Risk-to-Reward (R:R)", text_color = color.silver, text_size = size.small)
+        table.cell(uiTable, 1, 6, "1:1.80 Scalp Multiplier", text_color = color.yellow, text_size = size.small)
+
+        table.cell(uiTable, 0, 7, "Auto Break-Even (BE)", text_color = color.silver, text_size = size.small)
+        table.cell(uiTable, 1, 7, isBeMoved ? "LOCKED AT ENTRY (+Friction)" : "Triggers at +$2.50 (+1.0R)", text_color = isBeMoved ? color.orange : color.silver, text_size = size.small)
+
+        table.cell(uiTable, 0, 8, "Trading Costs", text_color = color.silver, text_size = size.small)
+        table.cell(uiTable, 1, 8, "$" + str.tostring(totalFriction, "#.##") + "/oz (Spread $0.20 + Comm $0.07)", text_color = color.silver, text_size = size.small)
+
+        table.cell(uiTable, 0, 9, "Active Session", text_color = color.silver, text_size = size.small)
+        table.cell(uiTable, 1, 9, currentSessionLabel, text_color = inValidSession ? color.lime : color.orange, text_size = size.small)
+
+        table.cell(uiTable, 0, 10, "M1 Simulated Win Rate", text_color = color.silver, text_size = size.small)
+        table.cell(uiTable, 1, 10, str.tostring(winratePct, "#.#") + "% (" + str.tostring(winTradesCount) + "W / " + str.tostring(lossTradesCount) + "L / " + str.tostring(beTradesCount) + "BE)", text_color = winratePct >= 50.0 ? color.lime : color.orange, text_size = size.small)
+
+        table.cell(uiTable, 0, 11, "Multi-Timeframe Workflow", text_color = color.gray, text_size = size.tiny)
+        table.cell(uiTable, 1, 11, "💡 Click 5M to inspect full Scalp Setup", text_color = color.yellow, text_size = size.tiny)
+
+    // ------------------------------------------------------------------------
+    // VIEW 2: M5 (5-MINUTE) -> SET UP FOR SCALP (RADAR & LIQUIDITY MAP)
+    // ------------------------------------------------------------------------
+    else if isM5
+        table.cell(uiTable, 0, 0, "🎯 PIP SCALP SETUP RADAR", bgcolor = color.new(#4a148c, 10), text_color = color.white, text_size = size.small)
+        table.cell(uiTable, 1, 0, "5M STRUCTURE & LIQUIDITY", bgcolor = color.new(#4a148c, 10), text_color = color.yellow, text_size = size.small)
+
+        string m5SetupStatus = "SCANNING 5M LIQUIDITY SWINGS"
+        color m5SetupColor = color.aqua
+        if bullSweep and hasBullFvg
+            m5SetupStatus := "BULLISH SCALP SETUP ARMED"
+            m5SetupColor := color.lime
+        else if bearSweep and hasBearFvg
+            m5SetupStatus := "BEARISH SCALP SETUP ARMED"
+            m5SetupColor := color.red
+        else if bullSweep
+            m5SetupStatus := "SSL SWEPT: AWAITING FVG"
+            m5SetupColor := color.yellow
+        else if bearSweep
+            m5SetupStatus := "BSL SWEPT: AWAITING FVG"
+            m5SetupColor := color.orange
+
+        table.cell(uiTable, 0, 1, "Scalp Setup Readiness", text_color = color.silver, text_size = size.small)
+        table.cell(uiTable, 1, 1, m5SetupStatus, bgcolor = color.new(m5SetupColor, 75), text_color = color.white, text_size = size.small)
+
+        table.cell(uiTable, 0, 2, "Liquidity Sweep (5M)", text_color = color.silver, text_size = size.small)
+        string sweepText = bullSweep ? "✅ SSL Swept & Reclaimed" : bearSweep ? "✅ BSL Swept & Reclaimed" : "⏳ Watching Asian/Swing Extremes"
+        table.cell(uiTable, 1, 2, sweepText, text_color = (bullSweep or bearSweep) ? color.lime : color.orange, text_size = size.small)
+
+        table.cell(uiTable, 0, 3, "Displacement MSS", text_color = color.silver, text_size = size.small)
+        string dispText = bullDisp ? "✅ Bullish Body Break (>=42%)" : bearDisp ? "✅ Bearish Body Break (>=42%)" : "⏳ Normal Range (No Impulse)"
+        table.cell(uiTable, 1, 3, dispText, text_color = (bullDisp or bearDisp) ? color.lime : color.silver, text_size = size.small)
+
+        table.cell(uiTable, 0, 4, "5M Fair Value Gap", text_color = color.silver, text_size = size.small)
+        string fvgText = hasBullFvg ? ("✅ Bull FVG ($" + str.tostring(bullFvgCe, "#.##") + ")") : hasBearFvg ? ("✅ Bear FVG ($" + str.tostring(bearFvgCe, "#.##") + ")") : "⏳ Awaiting 3-Candle Gap"
+        table.cell(uiTable, 1, 4, fvgText, text_color = (hasBullFvg or hasBearFvg) ? color.lime : color.silver, text_size = size.small)
+
+        table.cell(uiTable, 0, 5, "Asian Range (00-06 UTC)", text_color = color.silver, text_size = size.small)
+        string asianStr = not na(asianHigh) ? ("H: $" + str.tostring(asianHigh, "#.##") + " | L: $" + str.tostring(asianLow, "#.##")) : "Calculating Session..."
+        table.cell(uiTable, 1, 5, asianStr, text_color = color.white, text_size = size.small)
+
+        table.cell(uiTable, 0, 6, "5M Reference Swings", text_color = color.silver, text_size = size.small)
+        string swingStr = "Hi: $" + str.tostring(lastSwingHigh, "#.##") + " | Lo: $" + str.tostring(lastSwingLow, "#.##")
+        table.cell(uiTable, 1, 6, swingStr, text_color = color.yellow, text_size = size.small)
+
+        table.cell(uiTable, 0, 7, "5M Equilibrium (50%)", text_color = color.silver, text_size = size.small)
+        table.cell(uiTable, 1, 7, "$" + str.tostring(equilibrium, "#.##") + " (" + (close < equilibrium ? "Discount" : "Premium") + ")", text_color = color.white, text_size = size.small)
+
+        table.cell(uiTable, 0, 8, "Target Scalp Parameters", text_color = color.silver, text_size = size.small)
+        table.cell(uiTable, 1, 8, "SL: $2.50 | TP: $4.50 | BE: +$2.50", text_color = color.lime, text_size = size.small)
+
+        table.cell(uiTable, 0, 9, "Action Required", text_color = color.white, text_size = size.small)
+        table.cell(uiTable, 1, 9, "👉 SWITCH TO 1M CHART TO EXECUTE", bgcolor = color.new(#00e676, 30), text_color = color.white, text_size = size.small)
+
+        table.cell(uiTable, 0, 10, "Scalp Killzone Window", text_color = color.silver, text_size = size.small)
+        table.cell(uiTable, 1, 10, currentSessionLabel, text_color = inValidSession ? color.lime : color.orange, text_size = size.small)
+
+        table.cell(uiTable, 0, 11, "Setup Rule Notice", text_color = color.gray, text_size = size.tiny)
+        table.cell(uiTable, 1, 11, "ICT-XAUUSD-SCALP-v2.0 • 5M Sweep + 1M Tap", text_color = color.silver, text_size = size.tiny)
+
+    // ------------------------------------------------------------------------
+    // VIEW 3: M15 (15-MINUTE) -> BEAUTIFUL BUY & SELL BUTTON UI + INTRADAY TP/SL
+    // ------------------------------------------------------------------------
+    else if isM15
+        table.cell(uiTable, 0, 0, "🏛️ PIP INTRADAY TERMINAL", bgcolor = color.new(#004d40, 10), text_color = color.white, text_size = size.small)
+        table.cell(uiTable, 1, 0, "M15 EXECUTION COCKPIT", bgcolor = color.new(#004d40, 10), text_color = color.lime, text_size = size.small)
+
+        if activeDirection == 1
+            table.cell(uiTable, 0, 1, "[  🟢 BUY INTRADAY ACTIVE  ]", bgcolor = color.new(#00c853, 0), text_color = color.white, text_size = size.small)
+            table.cell(uiTable, 1, 1, isBeMoved ? "🛡️ BE PROTECTED" : "TARGETING 1:2.0 RR TP", bgcolor = color.new(#00c853, 30), text_color = color.white, text_size = size.small)
+        else if activeDirection == -1
+            table.cell(uiTable, 0, 1, "[  🔴 SELL INTRADAY ACTIVE  ]", bgcolor = color.new(#d50000, 0), text_color = color.white, text_size = size.small)
+            table.cell(uiTable, 1, 1, isBeMoved ? "🛡️ BE PROTECTED" : "TARGETING 1:2.0 RR TP", bgcolor = color.new(#d50000, 30), text_color = color.white, text_size = size.small)
+        else if buyCondition
+            table.cell(uiTable, 0, 1, "[  🟢 CLICK BUY INTRADAY  ]", bgcolor = color.new(#00e676, 10), text_color = color.black, text_size = size.small)
+            table.cell(uiTable, 1, 1, "⚡ 15M FVG MITIGATION", bgcolor = color.new(#00e676, 20), text_color = color.white, text_size = size.small)
+        else if sellCondition
+            table.cell(uiTable, 0, 1, "[  🔴 CLICK SELL INTRADAY  ]", bgcolor = color.new(#ff1744, 10), text_color = color.white, text_size = size.small)
+            table.cell(uiTable, 1, 1, "⚡ 15M FVG MITIGATION", bgcolor = color.new(#ff1744, 20), text_color = color.white, text_size = size.small)
+        else
+            table.cell(uiTable, 0, 1, "[  🟢 BUY INTRADAY (M15)  ]", bgcolor = color.new(#1b5e20, 20), text_color = color.new(color.white, 20), text_size = size.small)
+            table.cell(uiTable, 1, 1, "[  🔴 SELL INTRADAY (M15)  ]", bgcolor = color.new(#b71c1c, 20), text_color = color.new(color.white, 20), text_size = size.small)
+
+        string m15Status = "MONITORING KILLZONE"
+        color m15Color = inValidSession ? color.teal : color.orange
+        if activeDirection == 1
+            m15Status := "INTRADAY LONG IN POSITION"
+            m15Color := color.lime
+        else if activeDirection == -1
+            m15Status := "INTRADAY SHORT IN POSITION"
+            m15Color := color.red
+        else if not inValidSession
+            m15Status := "OFF-HOURS / CHOP RISK"
+            m1Color := color.orange
+        else if hasBullFvg or hasBearFvg
+            m15Status := "MITIGATING 15M FVG"
+            m1Color := color.aqua
+
+        table.cell(uiTable, 0, 2, "Execution State", text_color = color.silver, text_size = size.small)
+        table.cell(uiTable, 1, 2, m15Status, text_color = m15Color, text_size = size.small)
+
+        table.cell(uiTable, 0, 3, "Intraday Entry", text_color = color.silver, text_size = size.small)
+        string m15EntryStr = activeDirection != 0 ? ("$" + str.tostring(activeEntry, "#.##")) : ("$" + str.tostring(close, "#.##") + " (Market)")
+        table.cell(uiTable, 1, 3, m15EntryStr, text_color = color.white, text_size = size.small)
+
+        table.cell(uiTable, 0, 4, "Intraday Stop Loss (SL)", text_color = color.silver, text_size = size.small)
+        string m15SlStr = activeDirection != 0 ? ("$" + str.tostring(activeSl, "#.##") + " (-$" + str.tostring(math.abs(activeEntry - activeSl), "#.##") + ")") : "Structural ($6.00 to $24.00)"
+        table.cell(uiTable, 1, 4, m15SlStr, text_color = color.red, text_size = size.small)
+
+        table.cell(uiTable, 0, 5, "Intraday Take Profit (TP)", text_color = color.silver, text_size = size.small)
+        string m15TpStr = activeDirection != 0 ? ("$" + str.tostring(activeTp, "#.##") + " (+$" + str.tostring(math.abs(activeTp - activeEntry), "#.##") + ")") : "1:2.00 Target Multiple"
+        table.cell(uiTable, 1, 5, m15TpStr, text_color = color.lime, text_size = size.small)
+
+        table.cell(uiTable, 0, 6, "Risk-to-Reward (R:R)", text_color = color.silver, text_size = size.small)
+        table.cell(uiTable, 1, 6, "1:2.00 Institutional Target", text_color = color.yellow, text_size = size.small)
+
+        table.cell(uiTable, 0, 7, "Auto Break-Even (BE)", text_color = color.silver, text_size = size.small)
+        table.cell(uiTable, 1, 7, isBeMoved ? "LOCKED AT ENTRY (+Friction)" : "Triggers at +0.90R Move", text_color = isBeMoved ? color.orange : color.silver, text_size = size.small)
+
+        table.cell(uiTable, 0, 8, "1H Trend Filter", text_color = color.silver, text_size = size.small)
+        table.cell(uiTable, 1, 8, htfBiasLabel, text_color = htfBullish ? color.lime : color.red, text_size = size.small)
+
+        table.cell(uiTable, 0, 9, "Market Valuation", text_color = color.silver, text_size = size.small)
+        table.cell(uiTable, 1, 9, close <= equilibrium ? "DISCOUNT (Favors Longs)" : "PREMIUM (Favors Shorts)", text_color = close <= equilibrium ? color.lime : color.red, text_size = size.small)
+
+        table.cell(uiTable, 0, 10, "M15 Simulated Win Rate", text_color = color.silver, text_size = size.small)
+        table.cell(uiTable, 1, 10, str.tostring(winratePct, "#.#") + "% (" + str.tostring(winTradesCount) + "W / " + str.tostring(lossTradesCount) + "L / " + str.tostring(beTradesCount) + "BE)", text_color = winratePct >= 50.0 ? color.lime : color.orange, text_size = size.small)
+
+        table.cell(uiTable, 0, 11, "Multi-Timeframe Workflow", text_color = color.gray, text_size = size.tiny)
+        table.cell(uiTable, 1, 11, "💡 Click 1H to inspect Macro Setup & Levels", text_color = color.yellow, text_size = size.tiny)
+
+    // ------------------------------------------------------------------------
+    // VIEW 4: H1 (1-HOUR) -> SET UP OR ANALYSIS FOR INTRA TRADE
+    // ------------------------------------------------------------------------
+    else if isH1
+        table.cell(uiTable, 0, 0, "📊 PIP INTRADAY MACRO", bgcolor = color.new(#0d47a1, 10), text_color = color.white, text_size = size.small)
+        table.cell(uiTable, 1, 0, "1H SETUP & MACRO ANALYSIS", bgcolor = color.new(#0d47a1, 10), text_color = color.yellow, text_size = size.small)
+
+        table.cell(uiTable, 0, 1, "1H Institutional Trend", text_color = color.silver, text_size = size.small)
+        string h1TrendStr = htfBullish ? "🟢 BULLISH (EMA 96 > EMA 288)" : "🔴 BEARISH (EMA 96 < EMA 288)"
+        table.cell(uiTable, 1, 1, h1TrendStr, bgcolor = color.new(htfBullish ? color.green : color.red, 75), text_color = color.white, text_size = size.small)
+
+        table.cell(uiTable, 0, 2, "32-Bar Equilibrium (50%)", text_color = color.silver, text_size = size.small)
+        string eqStr = "$" + str.tostring(equilibrium, "#.##") + " (" + (close <= equilibrium ? "DISCOUNT ZONE" : "PREMIUM ZONE") + ")"
+        table.cell(uiTable, 1, 2, eqStr, text_color = close <= equilibrium ? color.lime : color.red, text_size = size.small)
+
+        table.cell(uiTable, 0, 3, "Prior Day Liquidity (PDH/PDL)", text_color = color.silver, text_size = size.small)
+        string pdStr = "PDH: $" + str.tostring(pdh, "#.##") + "\nPDL: $" + str.tostring(pdl, "#.##")
+        table.cell(uiTable, 1, 3, pdStr, text_color = color.white, text_size = size.small)
+
+        table.cell(uiTable, 0, 4, "Asian Session (00-06 UTC)", text_color = color.silver, text_size = size.small)
+        string h1AsianStr = not na(asianHigh) ? ("High: $" + str.tostring(asianHigh, "#.##") + " | Low: $" + str.tostring(asianLow, "#.##")) : "Computing Session..."
+        table.cell(uiTable, 1, 4, h1AsianStr, text_color = color.yellow, text_size = size.small)
+
+        table.cell(uiTable, 0, 5, "Intraday Playbook Bias", text_color = color.silver, text_size = size.small)
+        string playbookText = htfBullish ? "LOOK FOR LONGS: Wait for SSL sweep below Asian Low/PDL, then M15 MSS" : "LOOK FOR SHORTS: Wait for BSL sweep above Asian High/PDH, then M15 MSS"
+        table.cell(uiTable, 1, 5, playbookText, text_color = htfBullish ? color.lime : color.orange, text_size = size.small)
+
+        table.cell(uiTable, 0, 6, "Key Opening Killzones", text_color = color.silver, text_size = size.small)
+        table.cell(uiTable, 1, 6, "London: 07-09 UTC | NY AM: 12:30-15 UTC", text_color = color.aqua, text_size = size.small)
+
+        table.cell(uiTable, 0, 7, "Risk & Reward Standard", text_color = color.silver, text_size = size.small)
+        table.cell(uiTable, 1, 7, "1:2.00 Target RR | BE Trigger at +0.90R", text_color = color.yellow, text_size = size.small)
+
+        table.cell(uiTable, 0, 8, "Execution Cost", text_color = color.silver, text_size = size.small)
+        table.cell(uiTable, 1, 8, "$" + str.tostring(totalFriction, "#.##") + "/oz (Spread+Comm+Slip)", text_color = color.silver, text_size = size.small)
+
+        table.cell(uiTable, 0, 9, "Action Required", text_color = color.white, text_size = size.small)
+        table.cell(uiTable, 1, 9, "👉 SWITCH TO 15M CHART TO EXECUTE", bgcolor = color.new(#00e5ff, 30), text_color = color.white, text_size = size.small)
+
+        table.cell(uiTable, 0, 10, "Simulated Net PnL", text_color = color.silver, text_size = size.small)
+        table.cell(uiTable, 1, 10, (cumulativeNetPnl >= 0 ? "+$" : "-$") + str.tostring(math.abs(cumulativeNetPnl), "#.##") + " (" + str.tostring(totalTradesCount) + " trades)", text_color = cumulativeNetPnl >= 0 ? color.lime : color.red, text_size = size.small)
+
+        table.cell(uiTable, 0, 11, "Strategy Engine Notice", text_color = color.gray, text_size = size.tiny)
+        table.cell(uiTable, 1, 11, "ICT-XAUUSD-FVG-MSS-v2.0 • Zero Repainting", text_color = color.gray, text_size = size.tiny)
+
+    // ------------------------------------------------------------------------
+    // VIEW 5: OTHER TIMEFRAMES -> UNSUPPORTED NOTICE
+    // ------------------------------------------------------------------------
+    else
+        table.cell(uiTable, 0, 0, "⚠️ PIP AI GOLD ENGINE", bgcolor = color.new(#b71c1c, 10), text_color = color.white, text_size = size.small)
+        table.cell(uiTable, 1, 0, "UNSUPPORTED TIMEFRAME", bgcolor = color.new(#b71c1c, 10), text_color = color.yellow, text_size = size.small)
+
+        table.cell(uiTable, 0, 1, "Current Timeframe", text_color = color.silver, text_size = size.small)
+        table.cell(uiTable, 1, 1, timeframe.period + " (Trade Prohibited)", text_color = color.red, text_size = size.small)
+
+        table.cell(uiTable, 0, 2, "Strategy Navigation", text_color = color.silver, text_size = size.small)
+        table.cell(uiTable, 1, 2, "👉 Click 1M: Scalp Buy/Sell UI & Execution\n👉 Click 5M: Scalp Setup Radar & Liquidity\n👉 Click 15M: Intraday Buy/Sell UI & Execution\n👉 Click 1H: Intraday Macro Setup & Analysis", text_color = color.white, text_size = size.small)
+
+// ============================================================================
+// 8. TRADINGVIEW REAL-TIME ALERTS & WEBHOOK DISPATCH
+// ============================================================================
+if triggeredBuy
+    string buyAlertMsg = str.format("Pip AI Gold Alert: BUY Setup Triggered on XAUUSD!\nTimeframe: {0}\nEntry Price: ${1, number, #.##}\nStop Loss: ${2, number, #.##}\nTake Profit: ${3, number, #.##}\nBreak-Even: ${4, number, #.##}", timeframe.period, activeEntry, activeSl, activeTp, activeBeTrigger)
+    alert(buyAlertMsg, alert.freq_once_per_bar_close)
+
+if triggeredSell
+    string sellAlertMsg = str.format("Pip AI Gold Alert: SELL Setup Triggered on XAUUSD!\nTimeframe: {0}\nEntry Price: ${1, number, #.##}\nStop Loss: ${2, number, #.##}\nTake Profit: ${3, number, #.##}\nBreak-Even: ${4, number, #.##}", timeframe.period, activeEntry, activeSl, activeTp, activeBeTrigger)
+    alert(sellAlertMsg, alert.freq_once_per_bar_close)
+
+if triggeredBeMoved
+    alert("Pip AI Gold Alert: Protective Break-Even Triggered! Stop-Loss moved to entry (+friction).", alert.freq_once_per_bar_close)
+
+if triggeredTpWin
+    alert("Pip AI Gold Alert: TAKE PROFIT Target Achieved on XAUUSD!", alert.freq_once_per_bar_close)
+
+if triggeredSlLoss
+    alert("Pip AI Gold Alert: Stop-Loss Level Hit on XAUUSD.", alert.freq_once_per_bar_close)
+
+alertcondition(triggeredBuy, "Pip AI: Gold Buy Setup", "Pip AI Gold (XAUUSD) BUY Setup Triggered")
+alertcondition(triggeredSell, "Pip AI: Gold Sell Setup", "Pip AI Gold (XAUUSD) SELL Setup Triggered")
+alertcondition(triggeredBeMoved, "Pip AI: Break-Even Protection", "Pip AI Gold: Stop-Loss moved to Break-Even")
+alertcondition(triggeredTpWin, "Pip AI: Take Profit Target Hit", "Pip AI Gold: Take Profit Target Reached")
+alertcondition(triggeredSlLoss, "Pip AI: Stop Loss Hit", "Pip AI Gold: Stop Loss Triggered")
+alertcondition(enforceGold and not isGoldAsset, "Pip AI: Non-Gold Asset Warning", "Pip AI Indicator applied to invalid non-Gold symbol")
+alertcondition(isUnsupportedTf, "Pip AI: Unsupported Timeframe", "Pip AI Indicator requires M1, M5, M15, or H1")

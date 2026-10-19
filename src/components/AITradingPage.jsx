@@ -341,25 +341,36 @@ export default function AITradingPage({
     setIsScanningSetup(true);
     setPipScanNotice(null);
     try {
-      let currentPrice = liveGoldPrice;
-      if (scanTargetPair !== 'XAUUSD') {
-        currentPrice = liveForexPrices[scanTargetPair] || (await fetchLivePrice(scanTargetPair));
-      }
+      const currentPrice = liveGoldPrice || (await fetchLivePrice('XAUUSD')) || 4171.25;
       const style = tradeStyleFilter === 'scalping' ? 'scalping' : 'daytrade';
-      const signal = await generateRealPipSignal(scanTargetPair, currentPrice, style);
+      const signal = await generateRealPipSignal('XAUUSD', currentPrice, style);
       if (signal) {
         await saveSignalToFirestore(signal);
         setFirestoreSignals((prev) => [signal, ...prev.filter((s) => s.id !== signal.id)]);
         setPipScanNotice({
+          type: 'SIGNAL',
           pair: signal.pair,
           dir: signal.direction,
           entry: signal.entry,
           time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Phnom_Penh' }),
         });
         setTimeout(() => setPipScanNotice(null), 8000);
+      } else {
+        setPipScanNotice({
+          type: 'NO_TRADE',
+          reason: 'Neither Scalp nor Intraday strategy confirmed a valid setup in current market conditions. Risk preserved.',
+          time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Phnom_Penh' }),
+        });
+        setTimeout(() => setPipScanNotice(null), 8000);
       }
     } catch (err) {
       console.warn('[AITradingPage] Market scan trigger notice:', err);
+      setPipScanNotice({
+        type: 'NO_TRADE',
+        reason: err?.message || 'Confirmation conditions not met.',
+        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Phnom_Penh' }),
+      });
+      setTimeout(() => setPipScanNotice(null), 8000);
     } finally {
       setIsScanningSetup(false);
     }
@@ -1687,10 +1698,21 @@ export default function AITradingPage({
           </div>
 
           {pipScanNotice && (
-            <div className="ait-scanner-success-notice ait-mono">
-              <IconZap size={14} color="#10B981" />
+            <div
+              className="ait-scanner-success-notice ait-mono"
+              style={pipScanNotice.type === 'NO_TRADE' ? { borderColor: 'rgba(245, 158, 11, 0.4)', background: 'rgba(245, 158, 11, 0.08)' } : undefined}
+            >
+              <IconZap size={14} color={pipScanNotice.type === 'NO_TRADE' ? '#F59E0B' : '#10B981'} />
               <span>
-                <strong>PIP AI BROADCAST:</strong> Real institutional signal generated for <strong>{pipScanNotice.pair}</strong> ({pipScanNotice.dir}) @ <strong>{pipScanNotice.entry}</strong> ({pipScanNotice.time})
+                {pipScanNotice.type === 'NO_TRADE' ? (
+                  <>
+                    <strong style={{ color: '#F59E0B' }}>PIP AI STATUS: NO TRADE</strong> — {pipScanNotice.reason} ({pipScanNotice.time})
+                  </>
+                ) : (
+                  <>
+                    <strong>PIP AI BROADCAST:</strong> Real institutional signal generated for <strong>{pipScanNotice.pair}</strong> ({pipScanNotice.dir}) @ <strong>{pipScanNotice.entry}</strong> ({pipScanNotice.time})
+                  </>
+                )}
               </span>
             </div>
           )}

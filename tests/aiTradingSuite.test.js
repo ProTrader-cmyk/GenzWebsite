@@ -39,6 +39,15 @@ import {
   evaluateHistoricalScalpSetup,
 } from '../src/services/scalpTpSlEngine.js';
 
+import {
+  calculateRealIctSetup,
+  generateRealPipSignal,
+} from '../src/services/pipLiveSignalService.js';
+
+import {
+  generateAiSignal,
+} from '../src/data/signals.js';
+
 describe('AI Trading Page & Signal Engine Test Suite', () => {
   // --------------------------------------------------------------------------
   // Requirement 1: Limit Trading Pairs to Three (Gold, Silver, Bitcoin)
@@ -1115,6 +1124,116 @@ describe('AI Trading Page & Signal Engine Test Suite', () => {
       // Writing invalid / null removes or handles safely
       setStorageItem('corrupted_key', undefined);
       assert.equal(getStorageItem('corrupted_key', 'safe_fallback'), 'safe_fallback');
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // Requirement 17: Strict Strategy Enforcement (Scalp and Intraday Only, with NO TRADE Rules)
+  // --------------------------------------------------------------------------
+  describe('17. Strict Strategy Enforcement (Scalp & Intraday Only, NO TRADE Verification)', () => {
+    it('1. calculateRealIctSetup strictly adheres to Scalp strategy parameters ($2.50 SL, $4.50 TP, 1:1.8 RR)', () => {
+      const scalpSignal = calculateRealIctSetup('XAUUSD', 4165.00, 'BUY', 'scalping', {
+        useFixedScalpRules: true,
+      });
+
+      assert.ok(scalpSignal);
+      assert.equal(scalpSignal.pair, 'XAUUSD');
+      assert.equal(scalpSignal.direction, 'BUY');
+      assert.equal(scalpSignal.entry, 4165.00);
+      assert.equal(scalpSignal.sl, 4162.50); // $2.50 SL
+      assert.equal(scalpSignal.tp, 4169.50); // $4.50 TP
+      assert.equal(scalpSignal.beTrigger, 4167.50); // +$2.50 BE trigger
+      assert.equal(scalpSignal.rr, '1:1.8');
+      assert.equal(scalpSignal.planned_rr, 1.8);
+      assert.equal(scalpSignal.timeframe, '1m / 5m');
+      assert.equal(scalpSignal.style, 'scalping');
+      assert.equal(scalpSignal.strategy_version, 'ICT-XAUUSD-SCALP-v2.0');
+      assert.equal(scalpSignal.model, 'Pip Scalp M1-M5 Quant Imbalance Model');
+    });
+
+    it('2. calculateRealIctSetup strictly adheres to Intraday strategy parameters ($10.00 SL, $20.00 TP, 1:2.0 RR)', () => {
+      const intraSignal = calculateRealIctSetup('XAUUSD', 4165.00, 'SELL', 'daytrade');
+
+      assert.ok(intraSignal);
+      assert.equal(intraSignal.pair, 'XAUUSD');
+      assert.equal(intraSignal.direction, 'SELL');
+      assert.equal(intraSignal.entry, 4165.00);
+      assert.equal(intraSignal.sl, 4175.00); // $10.00 SL
+      assert.equal(intraSignal.tp, 4145.00); // $20.00 TP
+      assert.equal(intraSignal.beTrigger, 4156.00); // +0.90R (+$9.00) BE trigger
+      assert.equal(intraSignal.rr, '1:2.0');
+      assert.equal(intraSignal.planned_rr, 2.0);
+      assert.equal(intraSignal.timeframe, '5m');
+      assert.equal(intraSignal.style, 'daytrade');
+      assert.equal(intraSignal.strategy_version, 'ICT-XAUUSD-FVG-MSS-v2.0');
+      assert.equal(intraSignal.model, 'ICT v2.0 Killzone Sweep + MSS + FVG');
+    });
+
+    it('3. calculateRealIctSetup returns null (NO TRADE) for non-Gold pairs without override', () => {
+      const nonGold = calculateRealIctSetup('EURUSD', 1.0850, 'BUY', 'daytrade');
+      assert.equal(nonGold, null);
+
+      const btc = calculateRealIctSetup('BTCUSD', 82000, 'BUY', 'scalping');
+      assert.equal(btc, null);
+    });
+
+    it('4. calculateRealIctSetup returns null (NO TRADE) for unsupported trading strategies', () => {
+      const swing = calculateRealIctSetup('XAUUSD', 4165.00, 'BUY', 'swing');
+      assert.equal(swing, null);
+
+      const grid = calculateRealIctSetup('XAUUSD', 4165.00, 'BUY', 'grid');
+      assert.equal(grid, null);
+    });
+
+    it('5. calculateRealIctSetup returns null (NO TRADE) when market direction is unconfirmed', () => {
+      const unconfirmed = calculateRealIctSetup('XAUUSD', 4165.00, null, 'daytrade');
+      assert.equal(unconfirmed, null);
+    });
+
+    it('6. generateRealPipSignal returns null (NO TRADE) for non-Gold or unsupported styles', async () => {
+      const eurRes = await generateRealPipSignal('EURUSD', 1.0850, 'daytrade');
+      assert.equal(eurRes, null);
+
+      const swingRes = await generateRealPipSignal('XAUUSD', 4165.00, 'swing');
+      assert.equal(swingRes, null);
+    });
+
+    it('7. generateAiSignal rejects non-Gold assets and unsupported styles with NO TRADE', async () => {
+      await assert.rejects(
+        () => generateAiSignal({ pair: 'EURUSD', style: 'daytrade', base64Images: ['data:image/png;base64,123', 'data:image/png;base64,456'] }),
+        /NO TRADE: AI trading signals are strictly restricted to Gold/
+      );
+
+      await assert.rejects(
+        () => generateAiSignal({ pair: 'XAUUSD', style: 'arbitrage', base64Images: ['data:image/png;base64,123', 'data:image/png;base64,456'] }),
+        /NO TRADE: Only Scalp and Intraday strategies are permitted/
+      );
+    });
+
+    it('8. validateSignal rejects candidates with unsupported strategy types', () => {
+      const candidate = {
+        pair: 'XAUUSD',
+        direction: 'BUY',
+        entry: 4165.00,
+        sl: 4162.50,
+        tp: 4169.50,
+        style: 'momentum-grid',
+      };
+      const res = validateSignal(candidate, 4165.00);
+      assert.equal(res.isValid, false);
+      assert.equal(res.code, 'NO_SIGNAL');
+      assert.equal(res.reasonCode, 'UNSUPPORTED_STRATEGY');
+      assert.ok(res.error.includes('NO TRADE'));
+    });
+
+    it('9. executeScanStep4_FinalDecision formats clear NO TRADE rejection message', () => {
+      const step1 = { ok: true, price: 4165.0 };
+      const step2Failed = { ok: true, conditionMet: false, reason: 'Chop consolidation. No displacement.' };
+      const decision = executeScanStep4_FinalDecision(step1, step2Failed, null);
+
+      assert.equal(decision.outcome, 'NO_SIGNAL');
+      assert.equal(decision.code, 'NO_VALID_SETUP');
+      assert.ok(decision.message.startsWith('NO TRADE:'));
     });
   });
 });

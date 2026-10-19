@@ -161,13 +161,29 @@ export async function generateAiSignal({
   base64Image = null,
   base64Images = [],
   currentPrice = null,
+  style = 'daytrade',
 }) {
+  const normPair = (pair || 'XAUUSD').toUpperCase().replace(/[^A-Z]/g, '').trim();
+  const isGold = normPair.includes('XAU') || normPair.includes('GOLD');
+  if (!isGold) {
+    throw new Error(`NO TRADE: AI trading signals are strictly restricted to Gold (XAUUSD). Rejected: ${normPair}`);
+  }
+
+  const normStyle = String(style || 'daytrade').toLowerCase().trim();
+  const isScalp = normStyle === 'scalping' || normStyle === 'scalp';
+  const isIntra = normStyle === 'daytrade' || normStyle === 'intra' || normStyle === 'intraday';
+
+  if (!isScalp && !isIntra) {
+    throw new Error(`NO TRADE: Only Scalp and Intraday strategies are permitted. Rejected: ${style}`);
+  }
+
+  const effectiveStyle = isScalp ? 'scalping' : 'daytrade';
+
   const apiKey = getPipApiKey();
   if (!apiKey) {
     throw new Error('Pip AI API key is not configured. Please add VITE_GEMINI_API_KEY in your environment or Settings.');
   }
 
-  const normPair = (pair || 'XAUUSD').toUpperCase().replace('/', '').trim();
   const allImages = [
     ...(Array.isArray(base64Images) ? base64Images : []),
     ...(base64Image ? [base64Image] : []),
@@ -180,7 +196,7 @@ export async function generateAiSignal({
   let activePrice = currentPrice ? parseFloat(currentPrice) : null;
   if (!activePrice || isNaN(activePrice)) {
     try {
-      activePrice = await fetchLivePrice(normPair);
+      activePrice = await fetchLivePrice('XAUUSD');
     } catch (err) {
       console.warn('[generateAiSignal] Could not fetch live spot price:', err);
     }
@@ -189,36 +205,78 @@ export async function generateAiSignal({
   if (!Number.isFinite(activePrice) || activePrice <= 0) {
     throw new Error('Pip cannot verify the chart entry because the live OANDA price is unavailable. Refresh the chart and try again.');
   }
-  const spotPriceStr = formatSpotPrice(normPair, activePrice);
+  const spotPriceStr = formatSpotPrice('XAUUSD', activePrice);
 
-  const systemInstruction = `You are Pip, an evidence-first ICT/SMC signal analyst. Never invent chart evidence or force a trade.
-You receive exactly two screenshots in order: image 1 is HTF (1H/4H), image 2 is LTF (15m/5m). If either chart, timeframe, price scale, swing points, or required evidence is unreadable, set tradeAllowed=false and explain why. Treat admin notes as hypotheses, not proof.
+  const systemInstruction = isScalp
+    ? `You are Pip, the institutional ICT Smart Money Concepts quantitative execution engine for GenZ Trader.
+You are evaluating Gold (XAUUSD) for the verified Pip Scalp M1-M5 Quant Imbalance Model (ICT-XAUUSD-SCALP-v2.0).
+Never invent chart evidence or force a trade.
+You receive exactly two screenshots in order: image 1 is Context (5M), image 2 is Execution (1M/5M). If either chart, timeframe, price scale, swing points, or required evidence is unreadable, set tradeAllowed=false with a clear explanation.
 
-Before allowing a signal, assess every check:
-1. HTF structure: identify the latest meaningful swing high/low and bullish or bearish bias using visible BOS/CHoCH/MSS price action.
-2. Liquidity: identify BSL/SSL and a visible sweep/reclaim. An ordinary touch is not a sweep.
-3. PD array: identify a visible, unmitigated, directionally aligned FVG/iFVG, order block, breaker, or mitigation block; estimate its exact low/high from the chart scale.
-4. Fibonacci: anchor the retracement to the actual displacement swing low/high. For a bullish impulse measure low-to-high and retracement down from the high; for bearish measure high-to-low and retracement up from the low. Report both swing prices and retracement percent. Require 61.8%-79% OTE and overlap between the OTE price and the selected PD-array zone.
-5. LTF execution: require a direction-aligned MSS/BOS with displacement after the liquidity event. Entry MUST equal the supplied live chart quote at the quote's displayed precision, and that exact price must be inside the PD-array/OTE overlap. If the quote is not in the overlap, set tradeAllowed=false; never substitute another entry.
-6. Risk & Gold CRT Model:
-   For Gold (XAUUSD) Day Trade, apply the 3-Candle CRT Liquidation Model:
-   - Identify HTF 1H/4H Reference Candle mitigating a POI; record High (BSL) and Low (SSL).
-   - Detect Liquidation: Active candle sweeps Reference Low (Bullish) or High (Bearish).
-   - 5M Confirmation: 5M body closes back inside HTF range + MSS displacement + FVG. Limit order at proximal edge or Consequent Encroachment (50%).
-   - Stop Loss (SL): Strictly locked to 1000 points ($10.00) from entry. If structural sweep invalidation requires >1000 points, set tradeAllowed=false.
-   - Take Profit (TP): Full TP at strict 1:2 R:R (2000 points / $20.00 move on Gold).
-   - Break-Even Rule: At 1:1 R:R (+1000 points / $10.00 profit), move SL to entry price (0 risk).
+Strict Confirmation Rules for Scalp:
+1. Liquidity Sweep: Identify Asian extreme or micro swing high/low liquidity sweep with clear wick rejection.
+2. Market Structure Shift (MSS): 1M displacement body break through opposing local swing point.
+3. Imbalance Tap: Fresh 1M Fair Value Gap (FVG) or 5M volume imbalance; entry at Consequent Encroachment (50% CE) or proximal edge.
+4. Risk Bounds:
+   - Stop Loss (SL): Strictly locked to $2.50 (25 pips) from entry.
+   - Take Profit (TP): Strictly locked to $4.50 (45 pips / 1:1.8 RR).
+   - Break-Even: Move SL to entry at +$2.50 (+1.0R) profit.
+5. Live Price Lock: Entry MUST equal the supplied live chart quote (${spotPriceStr}).
 
-Set tradeAllowed=true only when HTF bias, liquidity sweep, valid PD array, independently consistent Fibonacci OTE overlap, and LTF structure confirmation are all clearly visible. If any are missing, unclear, or conflict, set tradeAllowed=false. Never fill gaps with assumptions.
-Current live OANDA chart quote for ${normPair}: ${spotPriceStr}. Return this exact value as entry only if it is inside the verified confluence; otherwise return tradeAllowed=false.
-
-Return only raw JSON with these keys:
+If ANY condition is missing or unconfirmed, return tradeAllowed=false.
+Return only raw JSON:
 {
   "tradeAllowed": boolean,
-  "pair": "${normPair}",
+  "pair": "XAUUSD",
+  "direction": "buy" or "sell",
+  "timeframe": "1m / 5m",
+  "style": "scalping",
+  "strategy_version": "ICT-XAUUSD-SCALP-v2.0",
+  "model": "Pip Scalp M1-M5 Quant Imbalance Model",
+  "htfBias": "bullish" or "bearish",
+  "htfStructureEvidence": "string",
+  "liquidityEvidence": "string",
+  "ltfStructureEvidence": "string",
+  "pdArrayType": "1M FVG or 5M Imbalance",
+  "pdArrayLow": number,
+  "pdArrayHigh": number,
+  "fibSwingLow": number,
+  "fibSwingHigh": number,
+  "fibRetracementPercent": number,
+  "entry": ${Number(spotPriceStr)},
+  "sl": number (entry - 2.50 for buy, entry + 2.50 for sell),
+  "tp": number (entry + 4.50 for buy, entry - 4.50 for sell),
+  "beTrigger": number (entry + 2.50 for buy, entry - 2.50 for sell),
+  "rr": 1.8,
+  "session": "London Killzone" or "New York AM Killzone" or "Other",
+  "reason": "Concise setup rationale or specific reason there is NO TRADE."
+}`
+    : `You are Pip, an evidence-first ICT/SMC signal analyst for GenZ Trader.
+You are evaluating Gold (XAUUSD) for the verified ICT XAUUSD Strategy v2.0 (3-Candle CRT Liquidation Model, ICT-XAUUSD-FVG-MSS-v2.0).
+Never invent chart evidence or force a trade.
+You receive exactly two screenshots in order: image 1 is HTF (1H/4H), image 2 is LTF (15m/5m). If either chart, timeframe, price scale, swing points, or required evidence is unreadable, set tradeAllowed=false and explain why.
+
+Strict Confirmation Rules for Intraday:
+1. HTF Reference Structure: Identify HTF 1H/4H Reference Candle mitigating a POI; record High (BSL) and Low (SSL).
+2. Liquidation: Active candle sweeps Reference Low (Bullish) or High (Bearish) during London/NY Killzone.
+3. 5M Confirmation: 5M body closes back inside HTF range + MSS displacement + FVG. Limit order at proximal edge or Consequent Encroachment (50%).
+4. Fibonacci OTE: Require 61.8%-79% OTE overlap with the selected PD-array zone.
+5. Risk & Reward:
+   - Stop Loss (SL): Strictly locked to 1000 points ($10.00) from entry.
+   - Take Profit (TP): Strict 1:2.0 R:R (2000 points / $20.00 move on Gold).
+   - Break-Even: Move SL to entry at +0.90R (+900 points / $9.00 profit).
+6. Live Price Lock: Entry MUST equal the supplied live chart quote (${spotPriceStr}).
+
+If ANY condition is missing or unconfirmed, return tradeAllowed=false.
+Return only raw JSON:
+{
+  "tradeAllowed": boolean,
+  "pair": "XAUUSD",
   "direction": "buy" or "sell",
   "timeframe": "5m",
-  "model": "3-Candle CRT Liquidation Model",
+  "style": "daytrade",
+  "strategy_version": "ICT-XAUUSD-FVG-MSS-v2.0",
+  "model": "ICT v2.0 Killzone Sweep + MSS + FVG",
   "refCandleHigh": number,
   "refCandleLow": number,
   "htfBias": "bullish" or "bearish",
@@ -231,13 +289,13 @@ Return only raw JSON with these keys:
   "fibSwingLow": number,
   "fibSwingHigh": number,
   "fibRetracementPercent": number,
-  "entry": number,
-  "sl": number,
-  "tp": number,
-  "beTrigger": number,
+  "entry": ${Number(spotPriceStr)},
+  "sl": number (entry - 10.00 for buy, entry + 10.00 for sell),
+  "tp": number (entry + 20.00 for buy, entry - 20.00 for sell),
+  "beTrigger": number (entry + 9.00 for buy, entry - 9.00 for sell),
   "rr": 2.0,
   "session": "London Killzone" or "New York AM Killzone" or "Other",
-  "reason": "Concise setup rationale or specific reason there is no valid trade."
+  "reason": "Concise setup rationale or specific reason there is NO TRADE."
 }`;
 
   const userPrompt = `Analyze ${normPair} using the attached HTF (image 1) and LTF (image 2) charts. Apply every evidence and no-trade rule.
@@ -319,19 +377,19 @@ Use actual visible price-scale values and do not fabricate precision. Return tra
   const parsed = JSON.parse(jsonMatch[0]);
 
   if (parsed.tradeAllowed !== true) {
-    throw new Error(`Pip found no confirmed setup. ${parsed.reason || 'Wait for all structure, liquidity, PD-array, and Fibonacci checks to align.'}`);
+    throw new Error(`NO TRADE: ${parsed.reason || 'Wait for all structure, liquidity, PD-array, and Fibonacci checks to align.'}`);
   }
 
   const rawDir = String(parsed.direction || '').toLowerCase();
-  if (rawDir !== 'buy' && rawDir !== 'sell') throw new Error('Pip returned an invalid trade direction.');
+  if (rawDir !== 'buy' && rawDir !== 'sell') throw new Error('NO TRADE: Pip returned an invalid trade direction.');
   const direction = rawDir;
   const htfBias = String(parsed.htfBias || '').toLowerCase();
   const evidenceFields = ['htfStructureEvidence', 'liquidityEvidence', 'ltfStructureEvidence', 'pdArrayType'];
   if (evidenceFields.some((key) => typeof parsed[key] !== 'string' || !parsed[key].trim())) {
-    throw new Error('Pip did not provide all required market-structure and PD-array evidence. Please retry with clearer charts.');
+    throw new Error('NO TRADE: Pip did not provide all required market-structure and PD-array evidence. Please retry with clearer charts.');
   }
   if ((direction === 'buy' && htfBias !== 'bullish') || (direction === 'sell' && htfBias !== 'bearish')) {
-    throw new Error('Pip signal direction does not match the higher-timeframe market bias.');
+    throw new Error('NO TRADE: Pip signal direction does not match the higher-timeframe market bias.');
   }
 
   let entry = Number(parsed.entry);
@@ -345,7 +403,7 @@ Use actual visible price-scale values and do not fabricate precision. Return tra
   const swingRange = swingHigh - swingLow;
   if (![entry, sl, tp, pdLow, pdHigh, swingLow, swingHigh, statedFibPercent].every(Number.isFinite) ||
       entry <= 0 || sl <= 0 || tp <= 0 || pdLow <= 0 || pdHigh <= pdLow || swingLow <= 0 || swingRange <= 0) {
-    throw new Error('Pip returned incomplete or invalid price levels. Please retry with readable chart scales.');
+    throw new Error('NO TRADE: Pip returned incomplete or invalid price levels. Please retry with readable chart scales.');
   }
 
   const chartQuote = Number(spotPriceStr);
@@ -371,39 +429,43 @@ Use actual visible price-scale values and do not fabricate precision. Return tra
   const entryInOte = entry >= fibBandLow - priceTolerance && entry <= fibBandHigh + priceTolerance;
   if (statedFibPercent < 61.8 || statedFibPercent > 79 || fibPercent < 61.8 - 1.5 || fibPercent > 79 + 1.5 ||
       Math.abs(statedFibPercent - fibPercent) > 3 || !arraysOverlapFib || !entryInPdArray || !entryInOte) {
-    throw new Error('Pip could not verify that the entry overlaps both the PD array and the 61.8%-79% Fibonacci OTE zone. No signal was created.');
+    throw new Error('NO TRADE: Pip could not verify that the entry overlaps both the PD array and the 61.8%-79% Fibonacci OTE zone. No signal was created.');
   }
 
-  const decimals = normPair.includes('EUR') || normPair.includes('GBP') || normPair.includes('AUD') ? 5
-    : normPair.includes('JPY') ? 3
-      : normPair.includes('BTC') || normPair.includes('US30') ? 1 : 2;
+  const decimals = 2;
   const roundFactor = 10 ** decimals;
   entry = Math.round(entry * roundFactor) / roundFactor;
   sl = Math.round(sl * roundFactor) / roundFactor;
   tp = Math.round(tp * roundFactor) / roundFactor;
   const risk = direction === 'buy' ? entry - sl : sl - entry;
   const reward = direction === 'buy' ? tp - entry : entry - tp;
-  if (risk <= 0 || reward <= 0) throw new Error('Pip stop loss or target is on the wrong side of the entry.');
+  if (risk <= 0 || reward <= 0) throw new Error('NO TRADE: Pip stop loss or target is on the wrong side of the entry.');
   const proposedRr = reward / risk;
-  if (Math.abs(proposedRr - 2) > 0.3) throw new Error('Pip setup does not meet the required 1:2 risk-to-reward ratio.');
+  const expectedRr = isScalp ? 1.8 : 2.0;
+  if (Math.abs(proposedRr - expectedRr) > 0.4) {
+    throw new Error(`NO TRADE: ${isScalp ? 'Scalp' : 'Intraday'} setup does not meet the required 1:${expectedRr} risk-to-reward ratio.`);
+  }
   if (activePrice && (direction === 'buy' ? activePrice <= sl || activePrice >= tp : activePrice >= sl || activePrice <= tp)) {
-    throw new Error('The live price has already invalidated or completed this setup. Refresh both charts and analyze again.');
+    throw new Error('NO TRADE: The live price has already invalidated or completed this setup. Refresh both charts and analyze again.');
   }
 
-  // Keep Pip's structural entry and invalidation level. Normalize only the
-  // target to the app's strict 1:2 convention after checking its proposed RR.
-  tp = Number((direction === 'buy' ? entry + risk * 2 : entry - risk * 2).toFixed(decimals));
+  // Keep Pip's structural entry and invalidation level. Normalize only the target to the strict strategy convention
+  tp = Number((direction === 'buy' ? entry + risk * expectedRr : entry - risk * expectedRr).toFixed(decimals));
   const otePercent = fibPercent.toFixed(1);
   const structuralSummary = `HTF ${htfBias}: ${parsed.htfStructureEvidence}. Liquidity: ${parsed.liquidityEvidence}. LTF: ${parsed.ltfStructureEvidence}. PD array: ${parsed.pdArrayType} ${pdLow}-${pdHigh}; ${otePercent}% OTE from swing ${swingLow}-${swingHigh}, overlapping at entry ${entry}.`;
 
   return {
-    pair: normPair,
+    pair: 'XAUUSD',
     direction,
     entry,
     sl,
     tp,
-    rr: 2.0,
-    session: parsed.session || 'Other',
-    reason: `${parsed.reason || 'Structure, liquidity, PD array, and Fibonacci confluence confirmed.'} ${structuralSummary}`,
+    rr: expectedRr,
+    style: effectiveStyle,
+    model: isScalp ? 'Pip Scalp M1-M5 Quant Imbalance Model' : 'ICT v2.0 Killzone Sweep + MSS + FVG',
+    strategy_version: isScalp ? 'ICT-XAUUSD-SCALP-v2.0' : 'ICT-XAUUSD-FVG-MSS-v2.0',
+    timeframe: isScalp ? '1m / 5m' : '5m',
+    session: parsed.session || 'London Killzone',
+    reason: `${parsed.reason || 'Structure, liquidity, PD array, and strategy confirmation verified.'} ${structuralSummary}`,
   };
 }

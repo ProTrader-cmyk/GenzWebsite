@@ -359,7 +359,9 @@ export function executeScanStep4_FinalDecision(step1Result, step2Result, step3Re
       outcome: 'NO_SIGNAL',
       step: 4,
       code: 'NO_VALID_SETUP',
-      message: step2Result.reason || 'No valid trading setup found.',
+      message: step2Result.reason?.includes('NO TRADE')
+        ? step2Result.reason
+        : `NO TRADE: ${step2Result.reason || 'No valid trading setup found.'}`,
       signal: null,
     };
   }
@@ -370,7 +372,9 @@ export function executeScanStep4_FinalDecision(step1Result, step2Result, step3Re
       outcome: 'NO_SIGNAL',
       step: 4,
       code: step3Result?.reasonCode || 'VALIDATION_REJECTED',
-      message: step3Result?.error || 'Candidate signal rejected during validation.',
+      message: step3Result?.error?.includes('NO TRADE')
+        ? step3Result.error
+        : `NO TRADE: ${step3Result?.error || 'Candidate signal rejected during validation.'}`,
       signal: null,
     };
   }
