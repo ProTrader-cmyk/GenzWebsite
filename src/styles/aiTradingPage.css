@@ -1440,79 +1440,52 @@
 /* Verified Scorecard Header & Switcher */
 .ait-scorecard-header-bar {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 16px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
 }
 .ait-scorecard-title-group {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  gap: 6px;
 }
 .ait-scorecard-kicker {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: #10B981;
   display: flex;
   align-items: center;
-  gap: 6px;
-}
-.ait-scorecard-sub-pills {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.ait-perf-summary-pill {
-  font-size: 11.5px;
-  padding: 4px 10px;
-  border-radius: 8px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 700;
-}
-.ait-perf-summary-pill.scalp {
-  background: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.35);
-  color: #10B981;
-}
-.ait-perf-summary-pill.intra {
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.35);
-  color: #F59E0B;
+  gap: 5px;
 }
 .ait-scorecard-toggle-group {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  background: rgba(0, 0, 0, 0.3);
-  padding: 4px;
-  border-radius: 12px;
+  gap: 3px;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 3px;
+  border-radius: 10px;
   border: 1px solid var(--faint);
   width: fit-content;
 }
 .ait-scorecard-tab-btn {
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   color: var(--mute);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  padding: 6px 12px;
-  border-radius: 8px;
+  padding: 4px 9px;
+  border-radius: 7px;
   cursor: pointer;
   transition: all 0.2s ease;
   font-family: inherit;
+  white-space: nowrap;
 }
 .ait-scorecard-tab-btn:hover {
   color: var(--text);
-}
-.ait-scorecard-tab-btn.active {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-  font-weight: 800;
 }
 .ait-scorecard-tab-btn.scalp.active {
   background: rgba(16, 185, 129, 0.2);
@@ -1527,27 +1500,27 @@
 .ait-scorecards-dual-wrap {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
-/* Verified Scorecard Box (Top Right of Screenshot) */
+/* Verified Scorecard Box (Top Right of Terminal) */
 .ait-gold-scorecard {
   background: linear-gradient(165deg, rgba(16, 185, 129, 0.08), var(--bg1) 60%);
   border: 1px solid rgba(16, 185, 129, 0.35);
-  border-radius: 18px;
-  padding: 24px 26px;
-  box-shadow: 0 15px 40px -10px rgba(16, 185, 129, 0.12);
+  border-radius: 16px;
+  padding: 16px 18px;
+  box-shadow: 0 10px 30px -8px rgba(16, 185, 129, 0.12);
   transition: all 0.25s ease;
 }
 .ait-gold-scorecard.scalp-card {
   background: linear-gradient(165deg, rgba(16, 185, 129, 0.10), var(--bg1) 60%);
   border: 1px solid rgba(16, 185, 129, 0.4);
-  box-shadow: 0 15px 40px -10px rgba(16, 185, 129, 0.15);
+  box-shadow: 0 10px 30px -8px rgba(16, 185, 129, 0.15);
 }
 .ait-gold-scorecard.intra-card {
   background: linear-gradient(165deg, rgba(245, 158, 11, 0.10), var(--bg1) 60%);
   border: 1px solid rgba(245, 158, 11, 0.4);
-  box-shadow: 0 15px 40px -10px rgba(245, 158, 11, 0.15);
+  box-shadow: 0 10px 30px -8px rgba(245, 158, 11, 0.15);
 }
 .ait-live-real-badge.scalp {
   color: #10B981;
@@ -1560,41 +1533,43 @@
   border-color: rgba(245, 158, 11, 0.35);
 }
 .ait-scorecard-label {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 800;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: #10B981;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
 }
 .ait-live-real-badge {
   margin-left: auto;
-  font-size: 9.5px;
+  font-size: 8.5px;
   font-weight: 800;
   color: #10B981;
   background: rgba(16, 185, 129, 0.12);
   border: 1px solid rgba(16, 185, 129, 0.3);
-  padding: 2px 8px;
-  border-radius: 12px;
+  padding: 2px 7px;
+  border-radius: 10px;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  letter-spacing: 0.04em;
+  gap: 4px;
+  letter-spacing: 0.03em;
 }
 .ait-scorecard-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 14px;
+  gap: 10px 14px;
+  margin-bottom: 12px;
 }
 .ait-score-num {
-  font-size: 32px;
+  font-size: 22px;
   font-weight: 900;
   color: #10B981;
-  line-height: 1;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
 }
 .ait-score-signals {
   color: #00F2FE;
@@ -1606,18 +1581,19 @@
   color: #10B981;
 }
 .ait-score-sub {
-  font-size: 11.5px;
+  font-size: 10px;
   color: var(--mute);
-  margin-top: 4px;
+  margin-top: 3px;
+  line-height: 1.25;
 }
 .ait-score-pill-row {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 16px;
-  padding-top: 14px;
+  gap: 6px 12px;
+  padding-top: 10px;
   border-top: 1px solid var(--faint);
-  font-size: 12.5px;
+  font-size: 10.5px;
   font-weight: 700;
 }
 .ait-score-active-pill {
@@ -1625,12 +1601,6 @@
 }
 .ait-score-pf {
   color: #F59E0B;
-}
-.ait-scorecard-fineprint {
-  font-size: 10.5px;
-  color: var(--mute);
-  margin-top: 10px;
-  opacity: 0.75;
 }
 
 /* Educational Notice Banner */

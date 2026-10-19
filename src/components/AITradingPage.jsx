@@ -1465,55 +1465,38 @@ export default function AITradingPage({
               </div>
             </div>
 
-            {/* Dual Scorecard Container - Showing BOTH Pip Scalp (73.1% WR) and Intraday (60.0% WR) */}
+            {/* Strategy Scorecard Container - Showing Pip Scalp (73.1% WR) or Intraday (60.0% WR) */}
             <div className="ait-scorecard-wrapper-col">
-              {/* Strategy Switcher Bar & Dual Win Rate Summary */}
+              {/* Strategy Switcher Bar */}
               <div className="ait-scorecard-header-bar">
                 <div className="ait-scorecard-title-group">
                   <span className="ait-scorecard-kicker">
-                    ✓ {isKhmer ? 'លទ្ធផលប្រតិបត្តិការជាក់ស្ដែងពីប្រព័ន្ធ PIP AI (មាស XAU/USD)' : 'PIP AI — VERIFIED REAL PERFORMANCE'}
+                    ✓ {isKhmer ? 'លទ្ធផលប្រតិបត្តិការជាក់ស្ដែង (មាស XAU/USD)' : 'PIP AI REAL PERFORMANCE · GOLD (XAU/USD)'}
                   </span>
-                  <div className="ait-scorecard-sub-pills">
-                    <span className="ait-perf-summary-pill scalp">
-                      <span className="ait-scanner-status-dot" style={{ width: 6, height: 6, background: '#10B981' }} />
-                      <strong>⚡ Pip Scalp:</strong> {scalpStats.winRateDisplay} WR ({scalpStats.winsCount}W / {scalpStats.lossesCount}L / {scalpStats.breakevenCount}BE · {scalpStats.netProfitDisplay})
-                    </span>
-                    <span className="ait-perf-summary-pill intra">
-                      <span className="ait-scanner-status-dot" style={{ width: 6, height: 6, background: '#F59E0B' }} />
-                      <strong>🎯 Intraday:</strong> {intradayStats.winRateDisplay} WR ({intradayStats.winsCount}W / {intradayStats.lossesCount}L / {intradayStats.breakevenCount}BE · {intradayStats.netProfitDisplay})
-                    </span>
-                  </div>
                 </div>
 
                 <div className="ait-scorecard-toggle-group">
                   <button
                     type="button"
-                    className={`ait-scorecard-tab-btn ${scorecardView === 'dual' ? 'active' : ''}`}
-                    onClick={() => setScorecardView('dual')}
-                  >
-                    📊 {isKhmer ? 'ផ្ទាំងទាំងពីរ (Dual View)' : 'Dual View (Both)'}
-                  </button>
-                  <button
-                    type="button"
                     className={`ait-scorecard-tab-btn scalp ${scorecardView === 'scalp' ? 'active' : ''}`}
                     onClick={() => setScorecardView('scalp')}
                   >
-                    ⚡ {isKhmer ? 'Scalping (73.1%)' : 'Pip Scalp (73.1% WR)'}
+                    ⚡ {isKhmer ? 'Scalp (73.1% WR)' : 'Pip Scalp (73.1% WR)'}
                   </button>
                   <button
                     type="button"
                     className={`ait-scorecard-tab-btn intra ${scorecardView === 'intraday' ? 'active' : ''}`}
                     onClick={() => setScorecardView('intraday')}
                   >
-                    🎯 {isKhmer ? 'Intraday (60.0%)' : 'Intraday (60.0% WR)'}
+                    🎯 {isKhmer ? 'Intraday (60.0% WR)' : 'Intraday (60.0% WR)'}
                   </button>
                 </div>
               </div>
 
-              {/* Cards Deck: Displays Both or Selected Strategy */}
+              {/* Cards Deck: Displays Selected Strategy */}
               <div className="ait-scorecards-dual-wrap">
                 {/* 1. PIP SCALP SCORECARD (73.1% Win Rate) */}
-                {(scorecardView === 'dual' || scorecardView === 'scalp') && (
+                {scorecardView === 'scalp' && (
                   <div className="ait-gold-scorecard scalp-card">
                     <div className="ait-scorecard-label">
                       <span>⚡</span>
@@ -1573,19 +1556,14 @@ export default function AITradingPage({
                         ● Max DD: -{scalpStats.maxDrawdownPct}%
                       </span>
                       <span className="ait-score-pf" style={{ marginLeft: 'auto' }}>
-                        Profit Factor: {scalpStats.profitFactorDisplay}
+                        PF: {scalpStats.profitFactorDisplay}
                       </span>
-                    </div>
-                    <div className="ait-scorecard-fineprint">
-                      {isKhmer
-                        ? `ទិន្នន័យជាក់ស្តែងពិតប្រាកដ (Real Data · ${scalpStats.strategyVersion} · ${scalpStats.dateRangeDisplay}) · SL $2.50 / TP $4.50 (1:1.8) · EV: ${scalpStats.expectedValueDisplay}/trade · ចំណាយ: ${scalpStats.totalCostsDisplay}`
-                        : `Verified Institutional Real Data (${scalpStats.strategyVersion} · ${scalpStats.dateRangeDisplay}) · SL $2.50 / TP $4.50 (1:1.8 RR) · EV: ${scalpStats.expectedValueDisplay}/trade · Costs: ${scalpStats.totalCostsDisplay} · ${scalpStats.oosStatus}`}
                     </div>
                   </div>
                 )}
 
                 {/* 2. INTRADAY SCORECARD (60.0% Win Rate) */}
-                {(scorecardView === 'dual' || scorecardView === 'intraday') && (
+                {scorecardView === 'intraday' && (
                   <div className="ait-gold-scorecard intra-card">
                     <div className="ait-scorecard-label" style={{ color: '#F59E0B' }}>
                       <span>🎯</span>
@@ -1645,13 +1623,8 @@ export default function AITradingPage({
                         ● Max DD: -{intradayStats.maxDrawdownPct}%
                       </span>
                       <span className="ait-score-pf" style={{ marginLeft: 'auto' }}>
-                        Profit Factor: {intradayStats.profitFactorDisplay}
+                        PF: {intradayStats.profitFactorDisplay}
                       </span>
-                    </div>
-                    <div className="ait-scorecard-fineprint">
-                      {isKhmer
-                        ? `ទិន្នន័យជាក់ស្តែងពិតប្រាកដ (Real Data · ${intradayStats.strategyVersion} · ${intradayStats.dateRangeDisplay}) · SL $10.00 / TP $20.00 (1:2.0) · EV: ${intradayStats.expectedValueDisplay}/trade · ចំណាយ: ${intradayStats.totalCostsDisplay}`
-                        : `Verified Institutional Real Data (${intradayStats.strategyVersion} · ${intradayStats.dateRangeDisplay}) · SL $10.00 / TP $20.00 (1:2.0 RR) · EV: ${intradayStats.expectedValueDisplay}/trade · Costs: ${intradayStats.totalCostsDisplay} · ${intradayStats.oosStatus}`}
                     </div>
                   </div>
                 )}
