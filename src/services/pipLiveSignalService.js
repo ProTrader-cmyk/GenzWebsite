@@ -135,8 +135,9 @@ export async function saveSignalToFirestore(signal) {
 
     let id = signal.id;
     if (!id) {
+      const isScalp = signal.style === 'scalping' || signal.mode?.includes('SCALP') || signal.strategy_version?.includes('SCALP');
       id = normPair === 'XAUUSD'
-        ? `ICT-XAU-5M-LIVE-${Date.now().toString().slice(-6)}`
+        ? (isScalp ? `ICT-XAU-SCALP-LIVE-${Date.now().toString().slice(-6)}` : `ICT-XAU-5M-LIVE-${Date.now().toString().slice(-6)}`)
         : `sig-${Date.now()}`;
     }
     const docRef = doc(db, 'signals', id);
@@ -313,6 +314,36 @@ Execute the strictly verified ICT XAUUSD Strategy v2.0 (ICT-XAUUSD-FVG-MSS-v2.0)
    - Fixed 0.03 Lot per trade ($3.00/pt move) conforming to the 0.5%–1.0% account risk rule.`;
 
 export const DAY_TRADE_CRT_PROMPT = ICT_V2_DAY_TRADE_PROMPT;
+
+/**
+ * The Official Pip Scalp XAUUSD Strategy v2.0 Prompt for Gold Scalping (ICT-XAUUSD-SCALP-v2.0)
+ * Uses 5M Liquidity Sweeps, 1M MSS Displacement, 1M FVG / Imbalance Tap, structural $2.50 SL, 1:1.8 RR ($4.50 TP), and +1.0R (+$2.50) BE.
+ */
+export const PIP_SCALP_GOLD_PROMPT = `Act as Pip, the senior institutional quantitative trader and ICT algorithmic execution engine for GenZ Trader.
+Execute the strictly verified Pip Scalp M1-M5 Quant Imbalance Model (ICT-XAUUSD-SCALP-v2.0).
+
+### 1. Market & Setup Specifications
+- Asset: Gold (XAUUSD) ONLY.
+- Context Timeframe: 5-Minute (5M) for local market structure & liquidity sweep.
+- Execution Timeframe: 1-Minute (1M) or 5-Minute (5M) for MSS and imbalance tap.
+- Key Sessions: London Open Killzone (07:00–10:00 UTC) or New York AM Killzone (12:30–15:30 UTC).
+
+### 2. Systematic Rules (Strategy v2.0 Scalp)
+1. Liquidity Sweep:
+   - Identify Buy-Side Liquidity (BSL) or Sell-Side Liquidity (SSL) around Asian session extremes or micro swing highs/lows.
+   - Sweep must show definitive wick rejection.
+2. Market Structure Shift (MSS):
+   - Fast 1M displacement body break through opposing local swing point.
+3. Fair Value Gap (FVG) / Imbalance Tap:
+   - Entry triggered at Consequent Encroachment (50% CE) or proximal edge of 1M FVG / 5M volume imbalance.
+4. Stop Loss (SL):
+   - Strictly locked at $2.50 (25 pips / points) placed just beyond local 1M sweep wick.
+5. Take Profit (TP):
+   - Strictly locked at $4.50 (45 pips / points) for an exact 1:1.8 Risk-to-Reward ratio.
+6. Break-Even (BE) Protection:
+   - When price reaches +$2.50 (+1.0R / +25 pips), automatically move Stop Loss to exact entry price.
+7. Position Sizing:
+   - Fixed 0.03 Lot per trade conforming to strict 0.5%–1.0% account risk rule.`;
 
 /**
  * Builds mathematically verified institutional confluence bullets explaining:
@@ -494,8 +525,8 @@ export function calculateRealIctSetup(pair, spotPrice, preferredDir = null, styl
     let riskPips, rewardPips;
     if (isScalp) {
       if (isGold) {
-        riskPips = 2.00;
-        rewardPips = 4.00; // 1:2.0 R:R
+        riskPips = 2.50; // $2.50 SL (25 pips)
+        rewardPips = 4.50; // $4.50 TP (45 pips / 1:1.8 RR)
       } else if (isSilver) {
         riskPips = 0.125;
         rewardPips = 0.250; // 1:2.0 R:R
@@ -541,10 +572,12 @@ export function calculateRealIctSetup(pair, spotPrice, preferredDir = null, styl
     rrRatio = (rewardPips / riskPips).toFixed(1);
   }
 
-  // ICT Strategy v2.0 Parameters for Gold Day Trade
+  // ICT Strategy v2.0 Parameters for Gold Day Trade & Pip Scalp
   const beTrigger = isGold && !isScalp
     ? Number((isBuy ? entry + 9.0 : entry - 9.0).toFixed(decimals))
-    : scalpMeta?.breakEvenTrigger ?? null;
+    : isGold && isScalp
+      ? Number((isBuy ? entry + 2.50 : entry - 2.50).toFixed(decimals))
+      : scalpMeta?.breakEvenTrigger ?? null;
   const refLow = isGold && !isScalp
     ? Number((isBuy ? entry - 4.50 : entry - 16.50).toFixed(decimals))
     : null;
@@ -559,7 +592,7 @@ export function calculateRealIctSetup(pair, spotPrice, preferredDir = null, styl
     sl,
     tp,
     style,
-    timeframe,
+    timeframe: isGold && isScalp ? '1m / 5m' : timeframe,
     refHigh,
     refLow,
   });
@@ -574,18 +607,20 @@ export function calculateRealIctSetup(pair, spotPrice, preferredDir = null, styl
   const nowMs = Date.now();
   const genTime = overrides.generatedAt || nowMs;
 
+  const tradeIdGen = overrides.id || (isGold ? (isScalp ? `ICT-XAU-SCALP-LIVE-${nowMs.toString().slice(-6)}` : `ICT-XAU-5M-LIVE-${nowMs.toString().slice(-6)}`) : `pip-real-${normPair.toLowerCase()}-${style}-${nowMs}`);
+
   return {
-    id: overrides.id || (isGold ? `ICT-XAU-5M-LIVE-${nowMs.toString().slice(-6)}` : `pip-real-${normPair.toLowerCase()}-${style}-${nowMs}`),
-    trade_id: isGold ? (overrides.id || `ICT-XAU-5M-LIVE-${nowMs.toString().slice(-6)}`) : undefined,
+    id: tradeIdGen,
+    trade_id: isGold ? tradeIdGen : undefined,
     pair: normPair,
     symbol: normPair,
     name: overrides.name || (isGold ? 'Gold (XAU/USD)' : isSilver ? 'Silver (XAG/USD)' : isForex ? (normPair === 'EURUSD' ? 'EUR/USD' : normPair === 'USDJPY' ? 'USD/JPY' : 'GBP/USD') : isCrypto ? 'Bitcoin (BTC/USD)' : normPair === 'US30' ? 'Dow Jones (US30)' : normPair),
     direction: overrides.direction || dir,
-    timeframe: overrides.timeframe || timeframe,
-    mode: overrides.mode || (isGold && !isScalp ? '5M INTRADAY (ICT v2.0)' : isScalp ? '5M SCALP (ICT M1-M5)' : '15M INTRADAY (ICT)'),
+    timeframe: overrides.timeframe || (isGold && isScalp ? '1m / 5m' : timeframe),
+    mode: overrides.mode || (isGold && isScalp ? '1M/5M PIP SCALP (QUANT IMBALANCE)' : isGold && !isScalp ? '5M INTRADAY (ICT v2.0)' : isScalp ? '5M SCALP (ICT M1-M5)' : '15M INTRADAY (ICT)'),
     style: overrides.style || style,
-    model: overrides.model || (isGold && !isScalp ? 'ICT v2.0 Killzone Sweep + MSS + FVG' : isScalp ? 'ICT M1-M5 Structure Scalp' : 'ICT SMC Intraday'),
-    strategy_version: isGold ? 'ICT-XAUUSD-FVG-MSS-v2.0' : undefined,
+    model: overrides.model || (isGold && isScalp ? 'Pip Scalp M1-M5 Quant Imbalance Model' : isGold && !isScalp ? 'ICT v2.0 Killzone Sweep + MSS + FVG' : isScalp ? 'ICT M1-M5 Structure Scalp' : 'ICT SMC Intraday'),
+    strategy_version: isGold ? (isScalp ? 'ICT-XAUUSD-SCALP-v2.0' : 'ICT-XAUUSD-FVG-MSS-v2.0') : undefined,
     entry: finalEntry,
     sl: finalSl,
     tp: finalTp,
@@ -599,9 +634,9 @@ export function calculateRealIctSetup(pair, spotPrice, preferredDir = null, styl
     breakEvenTrigger: overrides.breakEvenTrigger ?? beTrigger,
     refCandleHigh: overrides.refCandleHigh ?? refHigh,
     refCandleLow: overrides.refCandleLow ?? refLow,
-    rr: overrides.rr || (isGold && !isScalp ? '1:2.0' : `1:${rrRatio}`),
-    planned_rr: isGold && !isScalp ? 2.0 : Number(rrRatio),
-    rrNumeric: overrides.rrNumeric ?? Number(rrRatio),
+    rr: overrides.rr || (isGold && isScalp ? '1:1.8' : isGold && !isScalp ? '1:2.0' : `1:${rrRatio}`),
+    planned_rr: isGold && isScalp ? 1.8 : isGold && !isScalp ? 2.0 : Number(rrRatio),
+    rrNumeric: overrides.rrNumeric ?? (isGold && isScalp ? 1.8 : isGold && !isScalp ? 2.0 : Number(rrRatio)),
     netRr: overrides.netRr || scalpMeta?.netRr || null,
     netRrNumeric: overrides.netRrNumeric ?? scalpMeta?.netRrNumeric ?? null,
     levelExplanations: overrides.levelExplanations || scalpMeta?.levelExplanations || {
@@ -736,6 +771,37 @@ Scan the market for this exact ICT Strategy v2.0 setup. If a valid setup aligns 
   ],
   "session": "${sessionName}",
   "reason": "Concise summary of the ICT Strategy v2.0 setup"
+}`;
+      } else if (isGold && isScalp) {
+        basePrompt = `${PIP_SCALP_GOLD_PROMPT}
+
+Current Live Gold (XAUUSD) Spot Price: ${liveSpotStr}.
+Active Trading Session: ${sessionName}.
+${userNotes ? `Trader observations: "${userNotes}".` : ''}
+
+### Action Required:
+Scan the market for this exact Pip Scalp Strategy v2.0 setup. If a valid setup aligns, return ONLY raw JSON matching this structure:
+{
+  "pair": "XAUUSD",
+  "direction": "BUY" or "SELL",
+  "timeframe": "1m / 5m",
+  "style": "scalping",
+  "strategy_version": "ICT-XAUUSD-SCALP-v2.0",
+  "model": "Pip Scalp M1-M5 Quant Imbalance Model",
+  "entry": ${Number(spot)},
+  "sl": number (strictly $2.50 distance from entry),
+  "tp": number (strictly $4.50 distance from entry, 1:1.8 RR),
+  "beTrigger": number (exact price at +$2.50 profit from entry),
+  "rr": "1:1.8",
+  "confidence": number (between 88 and 96),
+  "confluences": [
+    "M5 Liquidity Sweep: Micro swing SSL/BSL sweep with fast rejection",
+    "M1 Displacement: Immediate MSS body break creating fresh imbalance",
+    "Entry Model: Consequent Encroachment (50% CE) or FVG tap execution",
+    "Risk Rule: Structural SL $2.50 | 1:1.8 RR Target ($4.50) | Move SL to BE at +$2.50"
+  ],
+  "session": "${sessionName}",
+  "reason": "Concise summary of the Pip Scalp M1-M5 setup"
 }`;
       } else {
         basePrompt = `You are Pip, the official institutional ICT Smart Money Concepts (SMC) AI analyst for GenZ Trader.

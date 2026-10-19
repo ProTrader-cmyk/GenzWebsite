@@ -983,6 +983,48 @@ describe('AI Trading Page & Signal Engine Test Suite', () => {
       assert.ok(Array.isArray(m.equity_curve) && m.equity_curve.length === bt.trades.length + 1);
     });
   });
+
+  // --------------------------------------------------------------------------
+  // Requirement 15: Dual Strategy Performance (Scalp 73.1% vs Intraday 60.0%) & Gold-Only Integrity
+  // --------------------------------------------------------------------------
+  describe('15. Dual Strategy Performance & Gold-Only Integrity', () => {
+    it('should maintain distinct, verified performance metrics for Scalp vs Intraday', async () => {
+      const { INTRADAY_STRATEGY_STATS, SCALP_STRATEGY_STATS, INTRADAY_SIGNALS, SCALP_SIGNALS, BACKTEST_SIGNALS } = await import('../src/data/backtestSignals.js');
+      
+      // Scalp Strategy v2.0
+      assert.equal(SCALP_STRATEGY_STATS.winRateDisplay, '73.1%');
+      assert.equal(SCALP_STRATEGY_STATS.totalTracked, 26);
+      assert.equal(SCALP_STRATEGY_STATS.winsCount, 19);
+      assert.equal(SCALP_STRATEGY_STATS.lossesCount, 5);
+      assert.equal(SCALP_STRATEGY_STATS.breakevenCount, 2);
+      assert.equal(SCALP_STRATEGY_STATS.netProfitDisplay, '+$684.20');
+      assert.equal(SCALP_STRATEGY_STATS.avgRrDisplay, '1:1.8');
+      assert.equal(SCALP_STRATEGY_STATS.symbol, 'XAUUSD');
+      assert.equal(SCALP_SIGNALS.length, 26);
+
+      // Intraday Strategy v2.0
+      assert.equal(INTRADAY_STRATEGY_STATS.winRateDisplay, '60.0%');
+      assert.equal(INTRADAY_STRATEGY_STATS.totalTracked, 20);
+      assert.equal(INTRADAY_STRATEGY_STATS.winsCount, 12);
+      assert.equal(INTRADAY_STRATEGY_STATS.lossesCount, 4);
+      assert.equal(INTRADAY_STRATEGY_STATS.breakevenCount, 4);
+      assert.equal(INTRADAY_STRATEGY_STATS.netProfitDisplay, '+$808.78');
+      assert.equal(INTRADAY_STRATEGY_STATS.avgRrDisplay, '1:2.0');
+      assert.equal(INTRADAY_STRATEGY_STATS.symbol, 'XAUUSD');
+      assert.equal(INTRADAY_SIGNALS.length, 20);
+
+      // Win rates must be strictly different
+      assert.notEqual(SCALP_STRATEGY_STATS.winRatePct, INTRADAY_STRATEGY_STATS.winRatePct);
+      assert.ok(SCALP_STRATEGY_STATS.winRatePct > INTRADAY_STRATEGY_STATS.winRatePct);
+
+      // Total Backtest Signals
+      assert.equal(BACKTEST_SIGNALS.length, 46);
+      for (const sig of BACKTEST_SIGNALS) {
+        assert.equal(sig.pair, 'XAUUSD');
+        assert.equal(sig.symbol, 'XAUUSD');
+      }
+    });
+  });
 });
 
 

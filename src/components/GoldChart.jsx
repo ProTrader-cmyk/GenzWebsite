@@ -10,11 +10,7 @@ const TV_LOCALE = 'en';
 // All OANDA (same feed/company as the gold chart) — real forex data, not a
 // crypto proxy, so no disclosure needed for any of these.
 const SYMBOLS = [
-  { id: 'gold', symbol: 'OANDA:XAUUSD', label: 'Gold' },
-  { id: 'silver', symbol: 'OANDA:XAGUSD', label: 'Silver' },
-  { id: 'eurusd', symbol: 'OANDA:EURUSD', label: 'EUR/USD' },
-  { id: 'gbpusd', symbol: 'OANDA:GBPUSD', label: 'GBP/USD' },
-  { id: 'usdjpy', symbol: 'OANDA:USDJPY', label: 'USD/JPY' },
+  { id: 'gold', symbol: 'OANDA:XAUUSD', label: 'Gold (XAU/USD)' },
 ];
 
 const TIMEFRAMES = [

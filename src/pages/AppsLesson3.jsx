@@ -27,7 +27,7 @@ const CONTENT = {
     h1: '១. របៀបរក Pair ដែលចង់ Trade',
     findSteps: [
       'បើក TradingView → ចុចលើរូប 🔍 (Search) នៅជ្រុងខាងលើឆ្វេង',
-      'វាយឈ្មោះ Symbol ដែលចង់រក (ឧ. "XAUUSD" សម្រាប់ Gold ឬ "EURUSD")',
+      'វាយឈ្មោះ Symbol ដែលចង់រក (ឧ. "XAUUSD" សម្រាប់ Gold)',
       'ជ្រើសរើស Symbol ពី Broker/Exchange ដែលបង្ហាញក្នុងបញ្ជី',
       'Chart នឹងផ្លាស់ប្តូរទៅបង្ហាញ Pair ដែលអ្នកជ្រើសរើសភ្លាមៗ',
     ],
@@ -151,7 +151,7 @@ const CONTENT = {
     h1: '1. How to Find a Pair You Want to Trade',
     findSteps: [
       'Open TradingView → click the 🔍 (Search) icon in the top-left',
-      'Type the Symbol you\'re looking for (e.g. "XAUUSD" for Gold, or "EURUSD")',
+      'Type the Symbol you\'re looking for (e.g. "XAUUSD" for Gold)',
       'Select the Symbol from the Broker/Exchange list that appears',
       'The chart will instantly switch to show the Pair you selected',
     ],
@@ -275,7 +275,7 @@ const CONTENT = {
     h1: '1. 如何找到你想交易的 Pair',
     findSteps: [
       '打开 TradingView → 点击左上角的 🔍（Search）图标',
-      '输入想查找的 Symbol（例如 Gold 的 "XAUUSD"，或 "EURUSD"）',
+      '输入想查找的 Symbol（例如 Gold 的 "XAUUSD"）',
       '从弹出的 Broker/Exchange 列表中选择该 Symbol',
       '图表会立即切换显示你选择的 Pair',
     ],

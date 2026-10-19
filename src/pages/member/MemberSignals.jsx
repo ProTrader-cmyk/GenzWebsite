@@ -75,16 +75,17 @@ function extractConfluenceTags(signal) {
 function SignalCard({ signal, livePrice }) {
   const [open, setOpen] = useState(false);
 
-  const asset = (signal.pair || 'XAUUSD').toUpperCase();
-  const isGold = asset.includes('XAU') || asset.includes('GOLD');
+  const asset = 'XAUUSD';
+  const isGold = true;
   const dir = (signal.direction || 'BUY').toUpperCase();
   const isBuy = dir === 'BUY';
-  const tf = (signal.timeframe || signal.mode || '15m').toUpperCase();
-  const cleanTf = (tf.match(/\b(1M|5M|15M|30M|1H|4H|D1)\b/i)?.[0] || '15M').toUpperCase();
-  const timeframeTag = `INTRADAY (${cleanTf})`;
+  const isScalp = signal.style === 'scalping' || signal.mode?.includes('SCALP') || signal.strategy_version?.includes('SCALP');
+  const tf = (signal.timeframe || signal.mode || (isScalp ? '5m' : '15m')).toUpperCase();
+  const cleanTf = (tf.match(/\b(1M|5M|15M|30M|1H|4H|D1)\b/i)?.[0] || (isScalp ? '5M' : '15M')).toUpperCase();
+  const timeframeTag = isScalp ? `SCALP (${cleanTf})` : `INTRADAY (${cleanTf})`;
   const assetSubtitle = signal.trade_id
     ? `${signal.trade_id} · Gold · ${cleanTf.toLowerCase()}`
-    : isGold ? `Gold · ${cleanTf.toLowerCase()}` : `${asset.replace('USD', '')} · ${cleanTf.toLowerCase()}`;
+    : `Gold · ${cleanTf.toLowerCase()}`;
 
   const entryNum = parseFloat(signal.entry) || 0;
   const slNum = parseFloat(signal.sl) || 0;

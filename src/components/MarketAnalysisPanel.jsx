@@ -928,19 +928,7 @@ export default function MarketAnalysisPanel({
     };
   }, [p, pair, isGold, isCrypto, decimals, marketAnalysis, activeSession, timeframe, calendarList, marketStatus]);
 
-  const assetSubtitle = isGold
-    ? 'Gold Spot / U.S. Dollar'
-    : pair === 'EURUSD'
-      ? 'Euro / U.S. Dollar'
-      : pair === 'GBPUSD'
-        ? 'British Pound / U.S. Dollar'
-        : pair === 'USDJPY'
-          ? 'U.S. Dollar / Japanese Yen'
-          : pair === 'BTCUSD'
-            ? 'Bitcoin / U.S. Dollar'
-            : pair === 'US30'
-              ? 'Dow Jones 30 Cash Index'
-              : currentAsset.label || 'Institutional Spot Asset';
+  const assetSubtitle = 'Gold Spot / U.S. Dollar';
 
   const handleCopyTradingPlan = () => {
     const planText = [
