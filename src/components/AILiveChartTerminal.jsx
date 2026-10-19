@@ -9,6 +9,7 @@ import { run15mMarketReanalysis, get15mCandleTimeRemaining } from '../services/m
 import { getMarketHoursStatus } from '../services/marketHoursService.js';
 import MarketAnalysisPanel from './MarketAnalysisPanel.jsx';
 import { BACKTEST_SIGNALS } from '../data/backtestSignals.js';
+import { usePersistentState } from '../utils/statePersistence.js';
 
 const TV_LOCALE = 'en';
 
@@ -144,16 +145,16 @@ export default function AILiveChartTerminal({
   const [symbolId, setSymbolId] = useState('gold');
   const activeSymbolIdRef = useRef(symbolId);
   activeSymbolIdRef.current = symbolId;
-  const [timeframe, setTimeframe] = useState('15');
-  const [selectedModel, setSelectedModel] = useState('smc');
-  const [isMuted, setIsMuted] = useState(false);
+  const [timeframe, setTimeframe] = usePersistentState('gzt_term_timeframe', '15');
+  const [selectedModel, setSelectedModel] = usePersistentState('gzt_term_selectedModel', 'smc');
+  const [isMuted, setIsMuted] = usePersistentState('gzt_term_isMuted', false);
   const [tvFullscreen, setTvFullscreen] = useState(false);
-  const [isTheatreMode, setIsTheatreMode] = useState(false);
-  const [msobActive, setMsobActive] = useState(true);
-  const [workstationView, setWorkstationView] = useState('split'); // 'split' | 'chart' | 'analysis'
+  const [isTheatreMode, setIsTheatreMode] = usePersistentState('gzt_term_isTheatreMode', false);
+  const [msobActive, setMsobActive] = usePersistentState('gzt_term_msobActive', true);
+  const [workstationView, setWorkstationView] = usePersistentState('gzt_term_workstationView', 'split'); // 'split' | 'chart' | 'analysis'
 
   // MSOB HUD Position & Drag State (Safe from clickable TradingView header controls)
-  const [hudCustomPos, setHudCustomPos] = useState(null); // { left, top }
+  const [hudCustomPos, setHudCustomPos] = usePersistentState('gzt_term_hudCustomPos', null, { debounceMs: 200 }); // { left, top }
   const [isDraggingHud, setIsDraggingHud] = useState(false);
   const dragStartRef = useRef(null);
   const hudCardRef = useRef(null);
@@ -162,8 +163,8 @@ export default function AILiveChartTerminal({
   const [liveSignals, setLiveSignals] = useState(BACKTEST_SIGNALS);
   const [closedSignalIds, setClosedSignalIds] = useState(() => new Set());
   const [recentOutcomeNotice, setRecentOutcomeNotice] = useState(null);
-  const [autoSetupActive, setAutoSetupActive] = useState(true);
-  const [setupCustomPos, setSetupCustomPos] = useState(null);
+  const [autoSetupActive, setAutoSetupActive] = usePersistentState('gzt_term_autoSetupActive', true);
+  const [setupCustomPos, setSetupCustomPos] = usePersistentState('gzt_term_setupCustomPos', null, { debounceMs: 200 });
   const [isDraggingSetup, setIsDraggingSetup] = useState(false);
   const dragSetupStartRef = useRef(null);
   const setupCardRef = useRef(null);

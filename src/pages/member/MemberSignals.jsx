@@ -11,6 +11,7 @@ import {
 import { GoldAssetEmblem, SignalStrengthBars, formatSignalDate, formatLevelPrice, parseDateInput } from '../../components/ui/SignalEmblems.jsx';
 import PairLogo from '../../components/ui/PairLogo.jsx';
 import { BACKTEST_SIGNALS } from '../../data/backtestSignals.js';
+import { usePersistentState } from '../../utils/statePersistence.js';
 import '../../styles/aiTradingPage.css';
 
 const STATUS_FILTERS = [
@@ -253,7 +254,7 @@ function SignalCard({ signal, livePrice }) {
 export default function MemberSignals({ plan = 'elite' }) {
   const [signals, setSignals] = useState(BACKTEST_SIGNALS);
   const [loading, setLoading] = useState(false);
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = usePersistentState('gzt_memsig_statusFilter', 'all');
   const [toast, setToast] = useState(null);
   const [livePrices, setLivePrices] = useState({});
 

@@ -13,6 +13,7 @@ import {
   registerForSignalPush,
 } from '../services/pushNotificationService.js';
 import { getUserPlan } from '../data/auth.js';
+import { usePersistentState, useScrollPersistence } from '../utils/statePersistence.js';
 
 const common = { width: 19, height: 19, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' };
 
@@ -59,8 +60,9 @@ const PLAN_OPTIONS = [
 ];
 
 export default function MemberArea({ user, doneMap, onExit, initialView = 'dashboard', onExploreAI }) {
+  useScrollPersistence('member_area');
   const isAdmin = user?.role === 'admin' || user?.role === 'dev';
-  const [showComingSoon, setShowComingSoon] = useState(true);
+  const [showComingSoon, setShowComingSoon] = usePersistentState('gzt_member_showComingSoon', true, { userId: user?.uid });
 
   if (showComingSoon) {
     return (
@@ -78,10 +80,10 @@ export default function MemberArea({ user, doneMap, onExit, initialView = 'dashb
   const userPlan = getUserPlan(user);
 
   // Admins can preview any tier ('starter', 'pro', 'elite'); members always use their actual assigned plan
-  const [previewPlan, setPreviewPlan] = useState(() => {
+  const [previewPlan, setPreviewPlan] = usePersistentState('gzt_member_previewPlan', () => {
     if (userPlan && userPlan !== 'free') return userPlan;
     return isAdmin ? 'elite' : 'starter';
-  });
+  }, { userId: user?.uid });
 
   const activePlan = isAdmin ? previewPlan : userPlan;
   const isProOrElite = activePlan === 'pro' || activePlan === 'elite';
@@ -94,12 +96,12 @@ export default function MemberArea({ user, doneMap, onExit, initialView = 'dashb
     }
   }, [userPlan]);
 
-  const [view, setView] = useState(() => {
+  const [view, setView] = usePersistentState('gzt_member_active_view', () => {
     if (initialView === 'pip' && !hasPipAccess && !isAdmin) {
       return 'dashboard';
     }
     return initialView;
-  });
+  }, { userId: user?.uid });
 
   // Keep view in sync if initialView prop changes
   useEffect(() => {

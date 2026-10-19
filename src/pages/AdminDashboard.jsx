@@ -40,6 +40,7 @@ import {
   getNotificationPermission,
   requestNotificationPermission,
 } from '../services/pushNotificationService.js';
+import { usePersistentState, useScrollPersistence } from '../utils/statePersistence.js';
 import {
   sendTelegramSignal,
   getTelegramConfig,
@@ -105,9 +106,10 @@ function formatSignalAge(mins) {
 }
 
 export default function AdminDashboard({ admin, onLogout, onViewSite }) {
+  useScrollPersistence('admin_dashboard');
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState('all');
+  const [tab, setTab] = usePersistentState('gzt_admin_tab', 'all', { userId: admin?.uid });
   const [searchQuery, setSearchQuery] = useState('');
   const [updatingUid, setUpdatingUid] = useState(null);
   const [error, setError] = useState('');
@@ -131,10 +133,10 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
   const [feedbackLoading, setFeedbackLoading] = useState(true);
   const [feedbackError, setFeedbackError] = useState('');
   const [showFeedback, setShowFeedback] = useState(false);
-  const [adminSection, setAdminSection] = useState('members'); // 'members' | 'configure' | 'payments'
+  const [adminSection, setAdminSection] = usePersistentState('gzt_admin_section', 'members', { userId: admin?.uid }); // 'members' | 'configure' | 'payments'
   const [payments, setPayments] = useState([]);
   const [paymentsLoading, setPaymentsLoading] = useState(true);
-  const [paymentFilter, setPaymentFilter] = useState('all'); // 'all' | 'pending' | 'approved' | 'rejected'
+  const [paymentFilter, setPaymentFilter] = usePersistentState('gzt_admin_paymentFilter', 'all', { userId: admin?.uid }); // 'all' | 'pending' | 'approved' | 'rejected'
   const [paymentSearch, setPaymentSearch] = useState('');
   const [processingPaymentId, setProcessingPaymentId] = useState(null);
   const [hideMembers, setHideMembers] = useState(() => {
@@ -163,7 +165,7 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
   const [signalError, setSignalError] = useState('');
   const [signalSuccess, setSignalSuccess] = useState('');
   const [updatingSignalId, setUpdatingSignalId] = useState(null);
-  const [signalTab, setSignalTab] = useState('all'); // 'all' | 'active' | 'tp' | 'sl'
+  const [signalTab, setSignalTab] = usePersistentState('gzt_admin_signalTab', 'all', { userId: admin?.uid }); // 'all' | 'active' | 'tp' | 'sl'
 
   const signalCounts = useMemo(() => {
     const total = signals.length;
@@ -205,18 +207,18 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
   // Live Market Prices & Automated TP/SL State
   const [livePrices, setLivePrices] = useState({});
   const lastObservedPrices = useRef({});
-  const [autoTrackingEnabled, setAutoTrackingEnabled] = useState(true);
+  const [autoTrackingEnabled, setAutoTrackingEnabled] = usePersistentState('gzt_admin_autoTracking', true, { userId: admin?.uid });
   const [isCheckingPrices, setIsCheckingPrices] = useState(false);
   const [lastCheckedTime, setLastCheckedTime] = useState(null);
 
   // AI Generator Form State (Option B Dual-Timeframe)
-  const [aiPair, setAiPair] = useState('XAUUSD');
+  const [aiPair, setAiPair] = usePersistentState('gzt_admin_aiPair', 'XAUUSD', { userId: admin?.uid });
   const [aiNotes, setAiNotes] = useState('');
   const [aiHtfImage, setAiHtfImage] = useState(null); // Chart 1: HTF 1H/4H
   const [aiLtfImage, setAiLtfImage] = useState(null); // Chart 2: LTF 15m/5m
   const [aiGenerating, setAiGenerating] = useState(false);
-  const [showChartUpload, setShowChartUpload] = useState(false);
-  const [showAdminChart, setShowAdminChart] = useState(true);
+  const [showChartUpload, setShowChartUpload] = usePersistentState('gzt_admin_showChartUpload', false, { userId: admin?.uid });
+  const [showAdminChart, setShowAdminChart] = usePersistentState('gzt_admin_showAdminChart', true, { userId: admin?.uid });
 
   // Draft Signal Form State
   const [signalDraft, setSignalDraft] = useState({

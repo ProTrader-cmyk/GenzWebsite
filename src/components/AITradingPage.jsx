@@ -25,6 +25,7 @@ import PairLogo, {
   GoldIngotLogo,
 } from './ui/PairLogo.jsx';
 import { GoldAssetEmblem, SignalStrengthBars, formatSignalDate, formatLevelPrice, parseDateInput } from './ui/SignalEmblems.jsx';
+import { usePersistentState, useScrollPersistence } from '../utils/statePersistence.js';
 import '../styles/aiTradingPage.css';
 
 // =========================================================================
@@ -314,9 +315,11 @@ export default function AITradingPage({
     (userPlan !== 'free' && (!user.subscriptionExpiresAt || user.subscriptionExpiresAt > Date.now()))
   );
 
+  useScrollPersistence('ai_trading');
+
   // Active showcase tab: 'vision' | 'macro' | 'guardian' | 'coach'
-  const [activeEngine, setActiveEngine] = useState('vision');
-  const [openFaqIndex, setOpenFaqIndex] = useState(null);
+  const [activeEngine, setActiveEngine] = usePersistentState('gzt_ai_activeEngine', 'vision');
+  const [openFaqIndex, setOpenFaqIndex] = usePersistentState('gzt_ai_openFaqIndex', null);
   const [serverSignals, setServerSignals] = useState([]);
 
   // Real live spot prices
@@ -329,7 +332,7 @@ export default function AITradingPage({
   const [firestoreSignals, setFirestoreSignals] = useState(BACKTEST_SIGNALS);
   const [signalsLoaded, setSignalsLoaded] = useState(true);
   const [pipScanNotice, setPipScanNotice] = useState(null);
-  const [scanTargetPair, setScanTargetPair] = useState('XAUUSD');
+  const [scanTargetPair, setScanTargetPair] = usePersistentState('gzt_ai_scanTargetPair', 'XAUUSD');
   const [isScanningSetup, setIsScanningSetup] = useState(false);
   const [showReferralModal, setShowReferralModal] = useState(!isVipUser);
 
@@ -368,23 +371,23 @@ export default function AITradingPage({
     }
   }, [referralNoticeTick, isVipUser]);
 
-  // Interactive Risk Guardian calculator states (100% mathematically exact)
-  const [calcBalance, setCalcBalance] = useState(50000);
-  const [calcRiskPct, setCalcRiskPct] = useState(1.0);
-  const [calcSlPips, setCalcSlPips] = useState(25);
+  // Interactive Risk Guardian calculator states (100% mathematically exact, persistent across refreshes)
+  const [calcBalance, setCalcBalance] = usePersistentState('gzt_ai_calcBalance', 50000, { debounceMs: 250 });
+  const [calcRiskPct, setCalcRiskPct] = usePersistentState('gzt_ai_calcRiskPct', 1.0, { debounceMs: 250 });
+  const [calcSlPips, setCalcSlPips] = usePersistentState('gzt_ai_calcSlPips', 25, { debounceMs: 250 });
 
   // Interactive Pip Coach question state
-  const [pipActiveIndex, setPipActiveIndex] = useState(0);
+  const [pipActiveIndex, setPipActiveIndex] = usePersistentState('gzt_ai_pipActiveIndex', 0);
 
   // Filter for signals / market quotes
-  const [signalFilter, setSignalFilter] = useState('all');
+  const [signalFilter, setSignalFilter] = usePersistentState('gzt_ai_signalFilter', 'all');
   // Trading style filter: 'all' | 'scalping' | 'daytrade'
-  const [tradeStyleFilter, setTradeStyleFilter] = useState('all');
+  const [tradeStyleFilter, setTradeStyleFilter] = usePersistentState('gzt_ai_tradeStyleFilter', 'all');
   // Scorecard display view: 'dual' (both) | 'scalp' | 'intraday'
-  const [scorecardView, setScorecardView] = useState('dual');
-  const [expandedCardId, setExpandedCardId] = useState(null);
+  const [scorecardView, setScorecardView] = usePersistentState('gzt_ai_scorecardView', 'dual');
+  const [expandedCardId, setExpandedCardId] = usePersistentState('gzt_ai_expandedCardId', null);
   // Pagination: exactly 6 trades per page
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = usePersistentState('gzt_ai_currentPage', 1);
   const PAGE_SIZE = 6;
 
   useEffect(() => {

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { dateKey } from '../data/journal.js';
+import { usePersistentState } from '../utils/statePersistence.js';
 
 // Strict local storage key for real user activity only
 const STORAGE_PREFIX = 'genz_real_study_hours_';
@@ -30,10 +31,10 @@ function localDateString(date) {
 }
 
 export default function UserActivityHoursChart({ uid }) {
-  const [rangeType, setRangeType] = useState('7d'); // '7d' (default) | '14d' | '30d' | 'custom'
+  const [rangeType, setRangeType] = usePersistentState('gzt_activity_rangeType', '7d', { userId: uid }); // '7d' (default) | '14d' | '30d' | 'custom'
   const [today, setToday] = useState(() => new Date());
   const todayDateStr = useMemo(() => localDateString(today), [today]);
-  const [customDate, setCustomDate] = useState(todayDateStr);
+  const [customDate, setCustomDate] = usePersistentState('gzt_activity_customDate', todayDateStr, { userId: uid });
   const [hoveredBarIndex, setHoveredBarIndex] = useState(null);
   const [liveSeconds, setLiveSeconds] = useState(0);
 

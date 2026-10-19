@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { useTheme } from '../theme/ThemeContext.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
+import { usePersistentState } from '../utils/statePersistence.js';
 
 // TradingView's embed widget doesn't have a Khmer locale, so this is always
 // English regardless of the site's own selected language.
@@ -49,8 +50,8 @@ export default function GoldChart({ initialSymbol = 'gold', defaultTimeframe = '
   const { theme } = useTheme();
   const { lang } = useLanguage();
   const t = getStrings(lang)?.newProduct ?? {};
-  const [symbolId, setSymbolId] = useState(initialSymbol);
-  const [timeframe, setTimeframe] = useState(defaultTimeframe);
+  const [symbolId, setSymbolId] = usePersistentState('gzt_goldchart_symbol', initialSymbol);
+  const [timeframe, setTimeframe] = usePersistentState('gzt_goldchart_tf', defaultTimeframe);
   const symbol = SYMBOLS.find((s) => s.id === symbolId) ?? SYMBOLS[0];
   const tvContainerId = `tv-gold-${useId().replace(/:/g, '')}`;
   const tvContainerRef = useRef(null);

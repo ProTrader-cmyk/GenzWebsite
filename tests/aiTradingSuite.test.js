@@ -1025,7 +1025,100 @@ describe('AI Trading Page & Signal Engine Test Suite', () => {
       }
     });
   });
+
+  // --------------------------------------------------------------------------
+  // Requirement 16: Universal State Persistence & Page Refresh Integrity
+  // --------------------------------------------------------------------------
+  describe('16. Universal State Persistence & Page Refresh Integrity', () => {
+    it('should correctly write, read, and remove primitives, objects, and arrays in storage', async () => {
+      const { getStorageItem, setStorageItem, removeStorageItem } = await import('../src/utils/statePersistence.js');
+
+      // Primitives
+      setStorageItem('test_str', 'scalping');
+      assert.equal(getStorageItem('test_str'), 'scalping');
+
+      setStorageItem('test_bool_true', true);
+      assert.equal(getStorageItem('test_bool_true'), true);
+
+      setStorageItem('test_bool_false', false);
+      assert.equal(getStorageItem('test_bool_false'), false);
+
+      setStorageItem('test_num', 4175.50);
+      assert.equal(getStorageItem('test_num'), 4175.50);
+
+      // Objects & Arrays
+      const testLayout = { workstationView: 'split', timeframe: '15', msobActive: true };
+      setStorageItem('test_layout', testLayout);
+      assert.deepEqual(getStorageItem('test_layout'), testLayout);
+
+      const testArray = ['XAUUSD', '15m', 'ICT'];
+      setStorageItem('test_arr', testArray);
+      assert.deepEqual(getStorageItem('test_arr'), testArray);
+
+      // Fallback on missing key
+      assert.equal(getStorageItem('non_existent_key', 'fallback_val'), 'fallback_val');
+
+      // Safe Removal
+      removeStorageItem('test_str');
+      assert.equal(getStorageItem('test_str'), null);
+
+      removeStorageItem('test_layout');
+      assert.equal(getStorageItem('test_layout'), null);
+    });
+
+    it('should isolate user-specific settings between different user IDs', async () => {
+      const { resolveStorageKey, setStorageItem, getStorageItem } = await import('../src/utils/statePersistence.js');
+
+      const userA = 'user_alpha_123';
+      const userB = 'user_beta_456';
+
+      const keyA = resolveStorageKey('gzt_profile_period', userA);
+      const keyB = resolveStorageKey('gzt_profile_period', userB);
+
+      assert.equal(keyA, 'gzt_profile_period_uid_user_alpha_123');
+      assert.equal(keyB, 'gzt_profile_period_uid_user_beta_456');
+      assert.notEqual(keyA, keyB);
+
+      setStorageItem(keyA, '3m');
+      setStorageItem(keyB, '1w');
+
+      assert.equal(getStorageItem(keyA), '3m');
+      assert.equal(getStorageItem(keyB), '1w');
+    });
+
+    it('should correctly save, retrieve, and clear navigation state across refresh', async () => {
+      const { getPersistedNavState, savePersistedNavState, clearPersistedNavState } = await import('../src/utils/statePersistence.js');
+
+      // Save navigation state for AI Trading section
+      savePersistedNavState({ section: 'ai-trading', view: 'home', adminViewingSite: true });
+      const nav1 = getPersistedNavState();
+      assert.ok(nav1);
+      assert.equal(nav1.section, 'ai-trading');
+      assert.equal(nav1.view, 'home');
+      assert.equal(nav1.adminViewingSite, true);
+
+      // Save navigation state for Admin portal
+      savePersistedNavState({ section: 'home', view: 'home', adminViewingSite: false });
+      const nav2 = getPersistedNavState();
+      assert.ok(nav2);
+      assert.equal(nav2.adminViewingSite, false);
+
+      // Clear on logout
+      clearPersistedNavState();
+      const navAfterClear = getPersistedNavState();
+      assert.equal(navAfterClear, null);
+    });
+
+    it('should handle invalid or corrupted storage content gracefully with fallback', async () => {
+      const { getStorageItem, setStorageItem } = await import('../src/utils/statePersistence.js');
+
+      // Writing invalid / null removes or handles safely
+      setStorageItem('corrupted_key', undefined);
+      assert.equal(getStorageItem('corrupted_key', 'safe_fallback'), 'safe_fallback');
+    });
+  });
 });
+
 
 
 

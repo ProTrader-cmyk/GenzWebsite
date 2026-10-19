@@ -28,6 +28,12 @@ import {
 } from './services/pushNotificationService.js';
 import { startNewsWatcher } from './services/newsNotificationService.js';
 import { submitFeedback } from './data/feedback.js';
+import {
+  getPersistedNavState,
+  savePersistedNavState,
+  clearPersistedNavState,
+  useScrollPersistence,
+} from './utils/statePersistence.js';
 
 const NAV_KEY = 'gzt_nav';
 
@@ -99,10 +105,10 @@ export default function App() {
   // waiting to notice the network change and reconnect — during which the
   // whole app sat behind a blank screen for no real reason, since the
   // cached `user` above was sitting right there the whole time.
-  const [checkingSession, setCheckingSession] = useState(() => !loadSession());
-  // Always show Homepage ('home') first when user clicks the website link
-  const [section, setSection] = useState('home');
-  const [view, setView] = useState('home');
+  const initialNav = getPersistedNavState();
+  const [section, setSection] = useState(() => initialNav?.section || 'home');
+  const [view, setView] = useState(() => initialNav?.view || 'home');
+  useScrollPersistence(`app_${section}_${view}`);
   const [doneMap, setDoneMap] = useState({});
   // { lessonId, lessonTitle } while the post-lesson feedback prompt is open, else null.
   const [feedbackPrompt, setFeedbackPrompt] = useState(null);
@@ -204,9 +210,8 @@ export default function App() {
   // an admin grants access while this tab is open (or on next visit if it
   // wasn't); AccessGrantedModal renders it.
   const [accessAlert, setAccessAlert] = useState(null);
-  // Default to viewing the Homepage first when clicking the website link;
-  // admins can open the Admin Dashboard at any time via the Navbar "Admin" button.
-  const [adminViewingSite, setAdminViewingSite] = useState(true);
+  // Preserve whether admin was viewing the site or admin dashboard on refresh
+  const [adminViewingSite, setAdminViewingSite] = useState(() => (initialNav?.adminViewingSite !== undefined ? initialNav.adminViewingSite : true));
   // While a Login/VerifyOtp page owns its own zoom-then-handoff transition
   // (see handleAuthSuccess), this stops the listener below from swapping
   // `user` out from under it the instant Firebase's sign-in resolves —
@@ -286,17 +291,33 @@ export default function App() {
     return unsubscribe;
   }, [user?.uid]);
 
+  // Synchronize active navigation state to localStorage and clean URL query params
   useEffect(() => {
+    savePersistedNavState({ section, view, adminViewingSite });
+  }, [section, view, adminViewingSite]);
+
+  // Support browser back/forward buttons with persistent state sync
+  useEffect(() => {
+    function handlePopState() {
+      const nav = getPersistedNavState();
+      if (nav) {
+        if (nav.section) setSection(nav.section);
+        if (nav.view) setView(nav.view);
+        if (typeof nav.adminViewingSite === 'boolean') setAdminViewingSite(nav.adminViewingSite);
+      }
+    }
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const isInitialMountRef = useRef(true);
+  useEffect(() => {
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false;
+      return;
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [section, view, user]);
-
-  useEffect(() => {
-    try {
-      localStorage.removeItem(NAV_KEY);
-    } catch {
-      // ignore storage errors
-    }
-  }, []);
 
   // 'home' or a lesson id — every nav action (lesson card, back link,
   // prev-lesson link) goes through this one function.
@@ -409,7 +430,7 @@ export default function App() {
     setView('home');
     setAdminViewingSite(true);
     setAccessAlert(null);
-    localStorage.removeItem(NAV_KEY);
+    clearPersistedNavState();
   }
 
   // Takes priority over everything else below, logged in or not — clicking

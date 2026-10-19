@@ -20,6 +20,7 @@ import {
   getNotificationPermission,
 } from '../services/pushNotificationService.js';
 import { sendTelegramSignal } from '../services/telegramService.js';
+import { usePersistentState } from '../utils/statePersistence.js';
 
 const NEWS_API_URL = (import.meta.env.VITE_NEWS_API_URL || 'https://genzapi-production.up.railway.app').replace(/\/$/, '');
 
@@ -625,8 +626,8 @@ export default function MarketAnalysisPanel({
   onReanalyze = () => {},
   onSelectAsset,
 }) {
-  const [activeTab, setActiveTab] = useState('overview');
-  const [pipMode, setPipMode] = useState('scalp'); // 'scalp' | 'daytrade'
+  const [activeTab, setActiveTab] = usePersistentState('gzt_map_activeTab', 'overview');
+  const [pipMode, setPipMode] = usePersistentState('gzt_map_pipMode', 'scalp'); // 'scalp' | 'daytrade'
   const [engineStartAnimation, setEngineStartAnimation] = useState(null);
 
   const handleSwitchPipMode = useCallback((nextMode) => {

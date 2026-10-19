@@ -4,6 +4,7 @@ import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getStrings } from '../i18n/strings.js';
 import { analyzeGoldImpact } from '../utils/goldImpactAnalyzer.js';
 import { classifyNewsArticle, formatNewsTime } from '../utils/newsClassifier.js';
+import { usePersistentState, useScrollPersistence } from '../utils/statePersistence.js';
 import '../styles/newsPage.css';
 
 // =========================================================================
@@ -143,10 +144,12 @@ export default function NewsPage({ onBack }) {
   const isKhmer = lang === 'km' || lang === 'kh';
   const t = getStrings(lang).news;
 
-  // View & Filter States
-  const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'high' | 'medium' | 'low' | 'CENTRAL BANK' | 'COMMODITIES' | 'MACRO' | 'FOREX' | 'CRYPTO'
-  const [searchQuery, setSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
+  useScrollPersistence('news_page');
+
+  // View & Filter States (Persistent across page refreshes)
+  const [activeFilter, setActiveFilter] = usePersistentState('gzt_news_activeFilter', 'all'); // 'all' | 'high' | 'medium' | 'low' | 'CENTRAL BANK' | 'COMMODITIES' | 'MACRO' | 'FOREX' | 'CRYPTO'
+  const [searchQuery, setSearchQuery] = usePersistentState('gzt_news_searchQuery', '', { debounceMs: 250 });
+  const [currentPage, setCurrentPage] = usePersistentState('gzt_news_currentPage', 1);
   const PAGE_SIZE = 10;
 
   // Data States

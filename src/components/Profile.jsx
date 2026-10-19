@@ -10,6 +10,7 @@ import { db } from '../firebase.js';
 import { DollarIcon, TrendUpIcon, StarIcon, CameraIcon } from './ui/CategoryIcons.jsx';
 import MemberAcademy from '../pages/member/MemberAcademy.jsx';
 import UserActivityHoursChart from './UserActivityHoursChart.jsx';
+import { usePersistentState, useScrollPersistence } from '../utils/statePersistence.js';
 
 const LOCALE_BY_LANG = { kh: 'km-KH', en: 'en-US' };
 const PERIOD_DAYS = { '1w': 7, '1m': 30, '3m': 90 };
@@ -127,7 +128,9 @@ export default function Profile({ onBack, uid, user, hideFooter = false, doneMap
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const [period, setPeriod] = useState('1m');
+  useScrollPersistence('user_profile');
+
+  const [period, setPeriod] = usePersistentState('gzt_profile_period', '1m', { userId: uid });
   const [chartEntries, setChartEntries] = useState({});
   const [chartLoading, setChartLoading] = useState(true);
   const [hoverIdx, setHoverIdx] = useState(null);
