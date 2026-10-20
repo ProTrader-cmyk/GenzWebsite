@@ -4390,6 +4390,30 @@
   opacity: 0.35;
 }
 
+.ait-sig-card.is-locked-setup {
+  position: relative;
+}
+
+.ait-sig-card.is-locked-setup .ait-card-levels-vertical {
+  opacity: 0.85;
+}
+
+.ait-card-locked-banner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 10px 0 6px;
+  padding: 6px 12px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px dashed rgba(245, 158, 11, 0.4);
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #F59E0B;
+  letter-spacing: 0.5px;
+}
+
 /* Pip AI Real Live Scanner Trigger Bar */
 .ait-pip-scanner-trigger-bar {
   display: flex;

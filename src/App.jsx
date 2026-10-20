@@ -402,6 +402,9 @@ export default function App() {
     setAdminViewingSite(true);
     setSection('home');
     setView('home');
+    try {
+      localStorage.setItem('gzt_term_timeframe', JSON.stringify('15'));
+    } catch {}
   }
 
   // Called synchronously right before Login calls signInWithEmailAndPassword

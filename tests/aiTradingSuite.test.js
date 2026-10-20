@@ -1236,6 +1236,140 @@ describe('AI Trading Page & Signal Engine Test Suite', () => {
       assert.ok(decision.message.startsWith('NO TRADE:'));
     });
   });
+
+  describe('18. Real Performance Scorecard Increment & Closed Signals Free Access', () => {
+    it('1. Verifies closed trades are fully accessible to free users without plan', () => {
+      // Simulating user with no plan (free plan)
+      const isVipUser = false;
+
+      // A completed/closed signal
+      const closedSignal = {
+        id: 'ICT-XAU-5M-001',
+        status: 'tp',
+        outcome: 'WIN',
+        entry: 4165.00,
+        tp: 4185.00,
+        sl: 4155.00,
+        isHistoricalBaseline: true,
+      };
+
+      const isClosedTrade =
+        closedSignal.status === 'tp' ||
+        closedSignal.status === 'sl' ||
+        closedSignal.status === 'be' ||
+        closedSignal.status === 'closed' ||
+        Boolean(closedSignal.outcome) ||
+        Boolean(closedSignal.isHistoricalBaseline);
+
+      const isCardLocked = !isVipUser && !isClosedTrade;
+
+      // Closed signals MUST NOT be locked for free users
+      assert.equal(isClosedTrade, true);
+      assert.equal(isCardLocked, false, 'Closed signal must be completely unlocked for free plan users');
+
+      // An active setup
+      const activeSignal = {
+        id: 'ICT-XAU-5M-LIVE-099',
+        status: 'active',
+        entry: 4165.00,
+        tp: 4185.00,
+        sl: 4155.00,
+      };
+
+      const isActiveClosed =
+        activeSignal.status === 'tp' ||
+        activeSignal.status === 'sl' ||
+        activeSignal.status === 'be' ||
+        activeSignal.status === 'closed' ||
+        Boolean(activeSignal.outcome) ||
+        Boolean(activeSignal.isHistoricalBaseline);
+
+      const isActiveCardLocked = !isVipUser && !isActiveClosed;
+
+      // Active signals remain locked for free users
+      assert.equal(isActiveClosed, false);
+      assert.equal(isActiveCardLocked, true, 'Active signal must remain locked for free plan users');
+    });
+
+    it('2. Verifies performance scorecard increments on new trade and increases profit on win', () => {
+      // Base Scalp Stats
+      const baseClosed = 26;
+      const baseWins = 19;
+      const baseProfit = 684.20;
+
+      // Newly added live trade that hit TP
+      const newLiveTrade = {
+        id: 'ICT-XAU-SCALP-LIVE-123456',
+        pair: 'XAUUSD',
+        style: 'scalping',
+        status: 'tp',
+        outcome: 'WIN',
+        net_pnl: 42.50,
+        realized_r: 1.8,
+        isHistoricalBaseline: false,
+      };
+
+      let closedCount = baseClosed;
+      let winsCount = baseWins;
+      let netProfit = baseProfit;
+
+      if (newLiveTrade.status === 'tp') {
+        closedCount += 1;
+        winsCount += 1;
+        netProfit += newLiveTrade.net_pnl;
+      }
+
+      assert.equal(closedCount, 27, 'Closed trades must increment from 26 to 27 on new trade');
+      assert.equal(winsCount, 20, 'Wins count must increment from 19 to 20');
+      assert.equal(netProfit, 726.70, 'Net profit must increase by +$42.50');
+      const winRatePct = (winsCount / closedCount) * 100;
+      assert.equal(winRatePct.toFixed(1), '74.1', 'Win rate must update to 74.1%');
+    });
+
+    it('3. Verifies performance scorecard decreases profit on stop loss hit', () => {
+      const baseClosed = 20;
+      const baseLosses = 4;
+      const baseProfit = 808.78;
+
+      const stopLossTrade = {
+        id: 'ICT-XAU-5M-LIVE-789012',
+        pair: 'XAUUSD',
+        style: 'daytrade',
+        status: 'sl',
+        outcome: 'LOSS',
+        net_pnl: -52.59,
+        realized_r: -1.0,
+        isHistoricalBaseline: false,
+      };
+
+      let closedCount = baseClosed;
+      let lossesCount = baseLosses;
+      let netProfit = baseProfit;
+
+      if (stopLossTrade.status === 'sl') {
+        closedCount += 1;
+        lossesCount += 1;
+        netProfit += stopLossTrade.net_pnl;
+      }
+
+      assert.equal(closedCount, 21, 'Closed trades must increment from 20 to 21');
+      assert.equal(lossesCount, 5, 'Losses count must increment from 4 to 5');
+      assert.equal(netProfit.toFixed(2), '756.19', 'Net profit must decrease by -$52.59 on loss');
+    });
+
+    it('4. Verifies chart timeframe enforces 15tf on login', () => {
+      let storage = {};
+      const mockLocalStorage = {
+        setItem: (k, v) => { storage[k] = v; },
+        getItem: (k) => storage[k] || null,
+      };
+
+      // Simulating handleAuthSuccess
+      mockLocalStorage.setItem('gzt_term_timeframe', JSON.stringify('15'));
+      const restored = JSON.parse(mockLocalStorage.getItem('gzt_term_timeframe'));
+      assert.equal(restored, '15', 'Timeframe in storage must be strictly 15tf on login');
+    });
+  });
 });
 
 

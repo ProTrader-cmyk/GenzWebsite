@@ -146,6 +146,18 @@ export default function AILiveChartTerminal({
   const activeSymbolIdRef = useRef(symbolId);
   activeSymbolIdRef.current = symbolId;
   const [timeframe, setTimeframe] = usePersistentState('gzt_term_timeframe', '15');
+
+  // When user logs in, ensure the chart timeframe defaults to 15m
+  const prevUserUidRef = useRef(user?.uid || null);
+  useEffect(() => {
+    if (user?.uid && user.uid !== prevUserUidRef.current) {
+      setTimeframe('15');
+      try {
+        localStorage.setItem('gzt_term_timeframe', JSON.stringify('15'));
+      } catch {}
+    }
+    prevUserUidRef.current = user?.uid || null;
+  }, [user?.uid, setTimeframe]);
   const [selectedModel, setSelectedModel] = usePersistentState('gzt_term_selectedModel', 'smc');
   const [isMuted, setIsMuted] = usePersistentState('gzt_term_isMuted', false);
   const [tvFullscreen, setTvFullscreen] = useState(false);

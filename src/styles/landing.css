@@ -49,13 +49,32 @@
 .nav-mobile-auth-row {
   display: flex;
   gap: 10px;
-  padding: 12px 14px;
+  padding: 12px 0 14px;
   border-top: 1px solid var(--faint);
   margin-top: 6px;
+}
+.nav-mobile-auth-row.top {
+  border-top: none;
+  border-bottom: 1px solid var(--faint);
+  margin-top: 0;
+  margin-bottom: 8px;
+  padding: 4px 0 14px;
 }
 .nav-mobile-auth-row button {
   flex: 1;
   text-align: center;
+  padding: 10px 14px;
+  font-size: 13.5px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 860px) {
+  .nav-auth-btns {
+    display: none !important;
+  }
 }
 
 .auth-back-to-home-btn {
@@ -1206,6 +1225,22 @@
   .lnd-hero-form { flex-direction: column; border-radius: 18px; padding: 12px; gap: 10px; }
   .lnd-hero-submit-btn { width: 100%; justify-content: center; }
   .lnd-bottom-cta-box { padding: 36px 20px; }
+  .lnd-hero-badge {
+    padding: 6px 14px !important;
+    gap: 8px !important;
+    max-width: calc(100% - 24px);
+    margin-bottom: 20px;
+    border-radius: 20px !important;
+  }
+  .lnd-badge-text {
+    font-size: 11px !important;
+    line-height: 1.35;
+    text-align: left;
+    white-space: normal;
+  }
+  .lnd-ai-circuit-canvas {
+    opacity: 0.22 !important;
+  }
 }
 
 /* =========================================================================

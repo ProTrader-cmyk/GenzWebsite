@@ -422,8 +422,8 @@ export default function LandingHome({
             </span>
             <span className="lnd-badge-text">
               {isKhmer
-                ? 'PIP AI NEURAL ENGINE • យុទ្ធសាស្ត្រ Smart Money Concept (SMC) & Macro Intelligence'
-                : 'PIP AI NEURAL ENGINE • Institutional Smart Money Concepts & Macro Intelligence'}
+                ? 'PIP AI NEURAL ENGINE • យុទ្ធសាស្ត្រ SMC & Macro Intelligence'
+                : 'PIP AI NEURAL ENGINE • Institutional SMC & Macro Intelligence'}
             </span>
           </div>
 

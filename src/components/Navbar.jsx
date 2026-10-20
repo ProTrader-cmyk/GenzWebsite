@@ -164,6 +164,20 @@ export default function Navbar({
 
       {menuOpen && (
         <div className="nav-mobile-menu">
+          {!user && (
+            <div className="nav-mobile-auth-row top">
+              {onLoginClick && (
+                <button type="button" className="nav-auth-login-btn" onClick={() => handleNav(onLoginClick)}>
+                  {t.login}
+                </button>
+              )}
+              {onSignupClick && (
+                <button type="button" className="nav-auth-start-btn" onClick={() => handleNav(onSignupClick)}>
+                  {t.signup}
+                </button>
+              )}
+            </div>
+          )}
           {user && (
             <div className="profile-menu-mobile-details">
               <ProfileDetails
@@ -225,21 +239,6 @@ export default function Navbar({
                 {t.contact}
               </button>
             </>
-          )}
-
-          {!user && (
-            <div className="nav-mobile-auth-row">
-              {onLoginClick && (
-                <button type="button" className="nav-auth-login-btn" onClick={() => handleNav(onLoginClick)}>
-                  {t.login}
-                </button>
-              )}
-              {onSignupClick && (
-                <button type="button" className="nav-auth-start-btn" onClick={() => handleNav(onSignupClick)}>
-                  {t.signup}
-                </button>
-              )}
-            </div>
           )}
 
           {isAdmin && (
