@@ -776,18 +776,16 @@ export default function App() {
             />
           )}
           {section === 'member-preview' && (
-            approved ? (
-              <MemberArea
-                user={user}
-                doneMap={doneMap}
-                onExit={backToCategories}
-                onViewProfile={() => setSection('profile')}
-                onExploreAI={() => setSection('ai-trading')}
-                onViewAdmin={() => setAdminViewingSite(false)}
-              />
-            ) : (
-              <div className="member-access-required"><h2>Member Area access required</h2><p>Sign in with an approved member account to open your private member space.</p><button type="button" onClick={() => setAuthView('login')}>Sign in</button></div>
-            )
+            // Everyone gets the Coming Soon page (MemberArea gates the real area to
+            // admin/dev only), so don't block unapproved users with a sign-in wall.
+            <MemberArea
+              user={user}
+              doneMap={doneMap}
+              onExit={backToCategories}
+              onViewProfile={() => setSection('profile')}
+              onExploreAI={() => setSection('ai-trading')}
+              onViewAdmin={() => setAdminViewingSite(false)}
+            />
           )}
           {section === 'contact' && (
             <ContactPage onBack={backToCategories} />
