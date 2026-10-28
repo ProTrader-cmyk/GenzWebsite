@@ -17,6 +17,7 @@ export default function VerifyOtp({ pending, onAuthStart, onVerified, onCancel }
   const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+  const [needsNewCode, setNeedsNewCode] = useState(false);
   const boxRefs = useRef([]);
 
   function submitCode(code) {
@@ -27,7 +28,11 @@ export default function VerifyOtp({ pending, onAuthStart, onVerified, onCancel }
       if (!result.ok) {
         setError(result.error);
         setDigits(Array(OTP_LENGTH).fill(''));
-        boxRefs.current[0]?.focus();
+        if (result.needsNewCode) {
+          setNeedsNewCode(true);
+        } else {
+          boxRefs.current[0]?.focus();
+        }
         return;
       }
       const profile = await fetchUserProfile(pending.uid);
@@ -107,7 +112,13 @@ export default function VerifyOtp({ pending, onAuthStart, onVerified, onCancel }
     const result = await resendOtp(pending, lang);
     setResending(false);
     setInfo(result.ok ? t.resent : '');
-    if (!result.ok) setError(result.error);
+    if (result.ok) {
+      setNeedsNewCode(false);
+      setDigits(Array(OTP_LENGTH).fill(''));
+      setTimeout(() => boxRefs.current[0]?.focus(), 0);
+    } else {
+      setError(result.error);
+    }
   }
 
   return (
@@ -143,6 +154,7 @@ export default function VerifyOtp({ pending, onAuthStart, onVerified, onCancel }
                 inputMode="numeric"
                 maxLength={1}
                 className="otp-box"
+                disabled={needsNewCode}
                 value={digit}
                 onChange={(e) => handleDigitChange(i, e)}
                 onKeyDown={(e) => handleKeyDown(i, e)}
@@ -158,11 +170,19 @@ export default function VerifyOtp({ pending, onAuthStart, onVerified, onCancel }
           {loading && <div className="auth-info">{t.confirming}</div>}
         </form>
 
-        <div className="auth-switch">
-          <button type="button" className="auth-link" onClick={handleResend} disabled={resending}>
-            {resending ? t.resending : t.resend}
+        {needsNewCode && (
+          <button type="button" className="auth-btn" onClick={handleResend} disabled={resending}>
+            {resending ? <><span className="auth-btn-spinner" aria-hidden="true" />{t.resending}</> : t.resend}
           </button>
-        </div>
+        )}
+
+        {!needsNewCode && (
+          <div className="auth-switch">
+            <button type="button" className="auth-link" onClick={handleResend} disabled={resending}>
+              {resending ? t.resending : t.resend}
+            </button>
+          </div>
+        )}
         <div className="auth-switch">
           <button type="button" className="auth-link" onClick={onCancel}>
             {t.back}

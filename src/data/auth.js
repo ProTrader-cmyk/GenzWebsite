@@ -172,7 +172,10 @@ export async function verifyOtp({ uid, code }, lang) {
       too_many_attempts: t.errTooManyAttempts,
       wrong_code: t.errWrongCode,
     };
-    return { ok: false, error: map[body.code] || t.errInvalidOrExpired };
+    // The stored code is dead (expired / used up / gone) — the UI should
+    // steer the user to request a fresh one instead of retyping.
+    const needsNewCode = body.code !== 'wrong_code';
+    return { ok: false, error: map[body.code] || t.errInvalidOrExpired, needsNewCode };
   } catch (err) {
     console.error('Verify OTP error:', err);
     return { ok: false, error: t.errInvalidOrExpired };
