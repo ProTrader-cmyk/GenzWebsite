@@ -94,7 +94,9 @@ async function issueOtp(_account, throwOnEmailError = false) {
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      throw new Error(body.error || `OTP request failed (${res.status})`);
+      const err = new Error(body.error || `OTP request failed (${res.status})`);
+      if (res.status === 429) err.retryAfterSec = Math.max(1, Math.ceil((body.retryAfterMs || 60000) / 1000));
+      throw err;
     }
     return { ok: true };
   } catch (emailErr) {
@@ -151,7 +153,8 @@ export async function resendOtp({ uid, email, name }, lang) {
     return { ok: true };
   } catch (err) {
     console.error('Resend OTP error:', err);
-    return { ok: false, error: getStrings(lang).otp.errResendFailed };
+    const t = getStrings(lang).otp;
+    return { ok: false, error: err.retryAfterSec ? t.errWait(err.retryAfterSec) : t.errResendFailed };
   }
 }
 

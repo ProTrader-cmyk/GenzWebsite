@@ -105,6 +105,7 @@ export const strings = {
       errTooManyAttempts: 'ព្យាយាមច្រើនដងពេក។ សូមផ្ញើលេខកូដថ្មី។',
       errWrongCode: 'លេខកូដមិនត្រឹមត្រូវទេ។',
       errResendFailed: 'មិនអាចផ្ញើលេខកូដបានទេ។ សូមព្យាយាមម្តងទៀត។',
+      errWait: (s) => (s >= 90 ? `សូមរង់ចាំ ${Math.ceil(s / 60)} នាទី មុនពេលស្នើសុំលេខកូដថ្មី។` : `សូមរង់ចាំ ${s} វិនាទី មុនពេលស្នើសុំលេខកូដថ្មី។`),
     },
     resetPassword: {
       title: 'កំណត់ពាក្យសម្ងាត់ថ្មី',
@@ -529,6 +530,7 @@ export const strings = {
       errTooManyAttempts: 'Too many attempts. Please request a new code.',
       errWrongCode: 'Incorrect code.',
       errResendFailed: 'Could not send code. Please try again.',
+      errWait: (s) => (s >= 90 ? `Please wait ${Math.ceil(s / 60)} minutes before requesting a new code.` : `Please wait ${s} seconds before requesting a new code.`),
     },
     resetPassword: {
       title: 'Set a New Password',
