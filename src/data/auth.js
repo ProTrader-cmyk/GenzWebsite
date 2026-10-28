@@ -15,13 +15,11 @@ import {
   orderBy,
   serverTimestamp,
 } from 'firebase/firestore';
-import emailjs from '@emailjs/browser';
 import { auth, db } from '../firebase.js';
 import { getStrings } from '../i18n/strings.js';
 
 const NEWS_API_URL = import.meta.env.VITE_NEWS_API_URL;
 const SESSION_KEY = 'gzt_session';
-const OTP_TTL_MS = 10 * 60 * 1000; // 6-digit code is valid for 10 minutes
 const LOGIN_ATTEMPTS_COLLECTION = 'loginAttempts';
 const MAX_LOGIN_ATTEMPTS = 4;
 const LOGIN_LOCKOUT_MS = 2 * 60 * 1000; // 2 minutes
@@ -62,10 +60,6 @@ async function clearLoginAttempts(email) {
   await deleteDoc(doc(db, LOGIN_ATTEMPTS_COLLECTION, email));
 }
 
-const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID || 'service_9q9ebg9';
-const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'template_ggdfya4';
-const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'sromfJQSH_S0KZ4Go';
-
 function authErrorMessage(code, lang) {
   const t = getStrings(lang).auth;
   switch (code) {
@@ -86,50 +80,25 @@ function authErrorMessage(code, lang) {
   }
 }
 
-function generateOtpCode() {
-  return String(Math.floor(100000 + Math.random() * 900000));
-}
-
-async function sendOtpEmail({ email, code, expiresAt, name }) {
-  const formattedTime = new Date(expiresAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-  const recipientName = name || email.split('@')[0];
-  await emailjs.send(
-    EMAILJS_SERVICE_ID,
-    EMAILJS_TEMPLATE_ID,
-    {
-      email,
-      to_email: email,
-      user_email: email,
-      recipient: email,
-      reply_to: email,
-      passcode: code,
-      code,
-      otp: code,
-      verification_code: code,
-      name: recipientName,
-      to_name: recipientName,
-      user_name: recipientName,
-      time: formattedTime,
-    },
-    { publicKey: EMAILJS_PUBLIC_KEY }
-  );
-}
-
-// Creates a fresh 6-digit code for uid, stores it in Firestore, and emails it.
-async function issueOtp({ uid, email, name }, throwOnEmailError = false) {
-  const code = generateOtpCode();
-  const expiresAt = Date.now() + OTP_TTL_MS;
-  await setDoc(doc(db, 'otps', uid), {
-    code,
-    email,
-    expiresAt,
-    attempts: 0,
-  });
+// Asks genztrader-news-api to create a fresh 6-digit code for the signed-in
+// account and email it. Done server-side so the EmailJS keys never ship in
+// the browser bundle and sends can be rate-limited — the server only ever
+// emails the signed-in account's own address.
+async function issueOtp(_account, throwOnEmailError = false) {
   try {
-    await sendOtpEmail({ email, code, expiresAt, name });
+    const token = await auth.currentUser?.getIdToken();
+    if (!token) throw new Error('Not signed in');
+    const res = await fetch(`${NEWS_API_URL}/api/auth/otp/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || `OTP request failed (${res.status})`);
+    }
     return { ok: true };
   } catch (emailErr) {
-    console.error('Failed to send OTP email via EmailJS:', emailErr);
+    console.error('Failed to send OTP email:', emailErr);
     if (throwOnEmailError) throw emailErr;
     return { ok: false, error: emailErr };
   }
