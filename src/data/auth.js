@@ -157,26 +157,26 @@ export async function resendOtp({ uid, email, name }, lang) {
 
 export async function verifyOtp({ uid, code }, lang) {
   const t = getStrings(lang).otp;
-  const ref = doc(db, 'otps', uid);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) {
+  try {
+    const token = await auth.currentUser?.getIdToken();
+    if (!token) return { ok: false, error: t.errInvalidOrExpired };
+    const res = await fetch(`${NEWS_API_URL}/api/auth/otp/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ code: String(code || '').trim() }),
+    });
+    if (res.ok) return { ok: true };
+    const body = await res.json().catch(() => ({}));
+    const map = {
+      expired: t.errExpired,
+      too_many_attempts: t.errTooManyAttempts,
+      wrong_code: t.errWrongCode,
+    };
+    return { ok: false, error: map[body.code] || t.errInvalidOrExpired };
+  } catch (err) {
+    console.error('Verify OTP error:', err);
     return { ok: false, error: t.errInvalidOrExpired };
   }
-  const otp = snap.data();
-  if (Date.now() > otp.expiresAt) {
-    return { ok: false, error: t.errExpired };
-  }
-  if (otp.attempts >= 5) {
-    return { ok: false, error: t.errTooManyAttempts };
-  }
-  if (otp.code !== code.trim()) {
-    await updateDoc(ref, { attempts: otp.attempts + 1 });
-    return { ok: false, error: t.errWrongCode };
-  }
-
-  await updateDoc(doc(db, 'users', uid), { emailVerified: true });
-  await deleteDoc(ref);
-  return { ok: true };
 }
 
 // Loads the Firestore profile (name/email/status/emailVerified) for a signed-in uid.

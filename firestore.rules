@@ -71,7 +71,7 @@ service cloud.firestore {
       // payment, and expiry fields are exclusively written by the payment API.
       allow update: if request.auth != null && (
         (request.auth.uid == userId
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['emailVerified', 'progress', 'photoURL'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['progress', 'photoURL'])
           && request.resource.data.role == resource.data.role
           && request.resource.data.name == resource.data.name
           && request.resource.data.email == resource.data.email
@@ -132,10 +132,11 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
-    // One-time OTP codes, keyed by uid. Only the owning (just-created) user
-    // can read/write their own pending code.
+    // One-time OTP codes, keyed by uid. Written, checked and deleted only by
+    // genztrader-news-api (Admin SDK bypasses rules) — never readable from the
+    // browser, so a user can't read their own code or mark themselves verified.
     match /otps/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if false;
     }
 
     // Login lockout counters, keyed by normalized email (src/data/auth.js) —
