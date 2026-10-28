@@ -3,6 +3,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import Navbar from './components/Navbar.jsx';
 import LandingHome from './components/LandingHome.jsx';
+import LessonBackdrop from './components/LessonBackdrop.jsx';
 import AccessGrantedModal from './components/AccessGrantedModal.jsx';
 import LessonFeedbackModal from './components/LessonFeedbackModal.jsx';
 import { lessons, getNextLessonId } from './data/lessons.js';
@@ -13,6 +14,7 @@ import { advancedLessons, getNextAdvancedLessonId } from './data/advancedLessons
 import { lessonPages } from './pages/registry.js';
 import favicon from './assets/Fav.png';
 import { auth, db } from './firebase.js';
+import './styles/memberArea.css';
 import {
   fetchUserProfile,
   saveSession,
@@ -53,7 +55,14 @@ const Profile = lazy(() => import('./components/Profile.jsx'));
 const NewsPage = lazy(() => import('./components/NewsPage.jsx'));
 const AITradingPage = lazy(() => import('./components/AITradingPage.jsx'));
 const ContactPage = lazy(() => import('./components/ContactPage.jsx'));
+const AboutPage = lazy(() => import('./components/InfoPages.jsx').then((m) => ({ default: m.AboutPage })));
+const BlogPage = lazy(() => import('./components/InfoPages.jsx').then((m) => ({ default: m.BlogPage })));
+const TermsPage = lazy(() => import('./components/InfoPages.jsx').then((m) => ({ default: m.TermsPage })));
+const PrivacyPage = lazy(() => import('./components/InfoPages.jsx').then((m) => ({ default: m.PrivacyPage })));
 const MemberArea = lazy(() => import('./pages/MemberArea.jsx'));
+
+// Pages that get the animated lesson background.
+const LESSON_SECTIONS = ['categories', 'technical', 'advanced', 'psychology', 'apps', 'backtest'];
 
 function BootScreen() {
   return (
@@ -136,6 +145,9 @@ export default function App() {
     }, 60000);
     return () => stopNewsWatcher();
   }, [user?.uid, user?.role, user?.plan, user?.tier, user?.subscription, user?.membership]);
+
+  // Signals are now produced by the always-on server scanner (genztrader-news-api/trading/scanner.js).
+  // The old browser-based auto-publisher was removed: each open staff tab raised its own duplicate setups.
 
   // Site-wide real-time live trading signal notification stream + local custom event listener
   useEffect(() => {
@@ -716,7 +728,8 @@ export default function App() {
         />
       ) : (
         <Suspense fallback={<BootScreen />}>
-          <div className={`wrap${(section === 'member-preview' || (canAccessAITrading && section === 'ai-trading')) ? ' wrap-terminal' : ''}`}>
+          {LESSON_SECTIONS.includes(section) && <LessonBackdrop />}
+          <div className={`wrap${LESSON_SECTIONS.includes(section) ? ' wrap-lessons' : ''}${(section === 'member-preview' || (canAccessAITrading && section === 'ai-trading')) ? ' wrap-terminal' : ''}${section === 'member-preview' ? ' wrap-member-area' : ''}`}>
           {section === 'categories' && (
             <CategoryHome
               onSelectCategory={selectCategory}
@@ -763,17 +776,26 @@ export default function App() {
             />
           )}
           {section === 'member-preview' && (
-            <MemberArea
-              user={user}
-              doneMap={doneMap}
-              onExit={backToCategories}
-              onViewProfile={() => setSection('profile')}
-              onExploreAI={() => setSection('ai-trading')}
-            />
+            approved ? (
+              <MemberArea
+                user={user}
+                doneMap={doneMap}
+                onExit={backToCategories}
+                onViewProfile={() => setSection('profile')}
+                onExploreAI={() => setSection('ai-trading')}
+                onViewAdmin={() => setAdminViewingSite(false)}
+              />
+            ) : (
+              <div className="member-access-required"><h2>Member Area access required</h2><p>Sign in with an approved member account to open your private member space.</p><button type="button" onClick={() => setAuthView('login')}>Sign in</button></div>
+            )
           )}
           {section === 'contact' && (
             <ContactPage onBack={backToCategories} />
           )}
+          {section === 'about' && <AboutPage onBack={backToCategories} />}
+          {section === 'blog' && <BlogPage onBack={backToCategories} />}
+          {section === 'terms' && <TermsPage onBack={backToCategories} />}
+          {section === 'privacy' && <PrivacyPage onBack={backToCategories} />}
           {approved && hasVisitedNewProduct && (
             <NewProductHome onBack={backToCategories} isActive={section === 'new-product'} />
           )}

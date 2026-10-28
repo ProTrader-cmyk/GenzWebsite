@@ -1,14 +1,12 @@
-import { doc, setDoc, serverTimestamp, collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
 import { db } from '../firebase.js';
 import { fetchLivePrice, formatSpotPrice } from './marketPriceService.js';
-import { getPipApiKey } from './pipAiService.js';
 import { sendTelegramSignal } from './telegramService.js';
-import { run15mMarketReanalysis } from './marketAnalysisService.js';
+import { evaluateMarketTradingConditions, run15mMarketReanalysis } from './marketAnalysisService.js';
 import { calculateStructureScalpTpSl } from './scalpTpSlEngine.js';
 
 const STORAGE_KEY = 'genz_real_pip_signals';
 const DAILY_STATS_KEY = 'genz_pip_daily_stats';
-const GEMINI_MODEL = 'gemini-3.8-flash';
 
 /**
  * Strict institutional signal cadence target: 7 to 10 high-probability setups per day.
@@ -247,6 +245,30 @@ export async function saveSignalToFirestore(signal) {
     if (signal.refCandleLow) firestoreData.refCandleLow = parseNum(signal.refCandleLow);
     if (Array.isArray(signal.confluences)) firestoreData.confluences = signal.confluences;
 
+    // Never publish a second setup at (almost) the same level while one is still active.
+    if (firestoreData.status === 'active') {
+      try {
+        const activeSnap = await getDocs(query(collection(db, 'signals'), where('pair', '==', normPair), where('status', '==', 'active')));
+        const sixHoursAgo = Date.now() - 6 * 60 * 60 * 1000;
+        const tolerance = entry * 0.002; // 0.2% of price (about $8 on gold)
+        const duplicate = activeSnap.docs.some((d) => {
+          if (d.id === id) return false;
+          const e = d.data();
+          const existingEntry = Number(e.entry ?? e.entry_price);
+          const when = Number(e.publishedAt || 0);
+          return String(e.direction || '').toLowerCase() === direction
+            && when > sixHoursAgo
+            && Math.abs(existingEntry - entry) <= tolerance;
+        });
+        if (duplicate) {
+          console.info('[pipLiveSignalService] Skipped duplicate signal: an active setup already exists near this entry.');
+          return null;
+        }
+      } catch (err) {
+        console.warn('[pipLiveSignalService] Duplicate check failed, publishing anyway:', err);
+      }
+    }
+
     await setDoc(docRef, firestoreData, { merge: true });
     return { id, ...firestoreData };
   } catch (err) {
@@ -417,7 +439,7 @@ export function buildVerifiedTradeConfluences({
       return [
         `Liquidity Sweep: 5M liquidity sweep ${isBuy ? `below micro swing low ($${formatSpotPrice(normPair, entryNum - 2.2)})` : `above micro swing high ($${formatSpotPrice(normPair, entryNum + 2.2)})`} with immediate rejection`,
         `Entry Trigger: 1M–5M Market Structure Shift (MSS) & Fair Value Gap (FVG) tap at $${entryStr}`,
-        `Risk Rule: Move Stop Loss to Break-Even at 1:1 RR ($${beStr}) for 0 risk`,
+        `Risk Rule: 2.5 pts SL ($${slUsd} risk at 0.03 lot) | Move Stop Loss to BE at 1:1 RR ($${beStr}) for 0 risk`,
       ];
     }
 
@@ -427,7 +449,7 @@ export function buildVerifiedTradeConfluences({
         : `Liquidity Sweep: Swept Buy-Side Liquidity (BSL) above swing high ($${rHigh}) & rejected into dealing range`,
       `Structure Shift: 5M Market Structure Shift (MSS) displacement body with valid FVG formation`,
       `Entry Model: Consequent Encroachment (50% CE) FVG limit mitigation at $${entryStr}`,
-      `Risk Management: $${slDist.toFixed(2)} SL | 1:2.0 RR target ($${tpStr}) | Move to Break-Even at +0.90R ($${beStr})`,
+      `Risk Management: 10.0 pts SL ($${slUsd} risk at 0.03 lot) | 1:2.0 RR target ($${tpStr} · +$${tpUsd} at 0.03 lot) | Move to Break-Even at +0.90R ($${beStr})`,
     ];
   }
 
@@ -765,7 +787,8 @@ export async function generateRealPipSignal(targetOrOptions = 'XAUUSD', maybePri
   }
 
   if (!spot || isNaN(Number(spot)) || Number(spot) <= 0) {
-    spot = 4171.25;
+    console.warn('[pipLiveSignalService] NO TRADE: Live XAUUSD price is unavailable; refusing to build a signal from a fallback price.');
+    return null;
   }
 
   // 4. Query real live technical analysis from TradingView scanner
@@ -785,213 +808,6 @@ export async function generateRealPipSignal(targetOrOptions = 'XAUUSD', maybePri
 
   const liveSpotStr = formatSpotPrice('XAUUSD', spot);
   const sessionName = getActiveSessionName();
-  const apiKey = getPipApiKey();
-
-  // If Gemini API Key is available, prompt Pip AI directly for live analysis
-  if (apiKey) {
-    try {
-      let basePrompt;
-      if (customScanPromptTemplate) {
-        basePrompt = customScanPromptTemplate
-          .replace(/\{\{pair\}\}/g, 'XAUUSD')
-          .replace(/\{\{spot\}\}/g, liveSpotStr)
-          .replace(/\{\{session\}\}/g, sessionName)
-          .replace(/\{\{style\}\}/g, isScalp ? 'SCALPING (1M-5M)' : 'DAY TRADE (5M CRT)');
-      } else if (!isScalp) {
-        basePrompt = `${ICT_V2_DAY_TRADE_PROMPT}
-
-Current Live Gold (XAUUSD) Spot Price: ${liveSpotStr}.
-Active Trading Session: ${sessionName}.
-${userNotes ? `Trader observations: "${userNotes}".` : ''}
-
-### Action Required:
-Scan the market for this exact ICT Strategy v2.0 setup. If all confirmation conditions align, return ONLY raw JSON matching this structure:
-{
-  "tradeAllowed": true,
-  "pair": "XAUUSD",
-  "direction": "BUY" or "SELL",
-  "timeframe": "5m",
-  "style": "daytrade",
-  "strategy_version": "ICT-XAUUSD-FVG-MSS-v2.0",
-  "model": "ICT v2.0 Killzone Sweep + MSS + FVG",
-  "refCandleHigh": number (exact price),
-  "refCandleLow": number (exact price),
-  "entry": ${Number(spot)},
-  "sl": number (structural stop loss $6.00 to $24.00, default $10.00 distance from entry),
-  "tp": number (strictly locked to 1:2.0 RR, 2.0x SL distance from entry),
-  "beTrigger": number (exact price at +0.90R profit from entry),
-  "rr": "1:2.0",
-  "confidence": number (between 88 and 95),
-  "confluences": [
-    "Killzone Alignment: London/NY Killzone market structure",
-    "Liquidity Sweep: BSL/SSL sweep with clear wick rejection",
-    "Market Structure Shift (MSS): 5M displacement body break with valid FVG formation",
-    "Entry Model: 50% Consequent Encroachment (CE) FVG limit mitigation",
-    "Risk Rule: Structural SL | 1:2.0 RR target | Move to Break-Even at +0.90R"
-  ],
-  "session": "${sessionName}",
-  "reason": "Concise summary of the ICT Strategy v2.0 setup"
-}
-
-If confirmation conditions are NOT met, return ONLY:
-{
-  "tradeAllowed": false,
-  "reason": "NO TRADE: [Explanation of unconfirmed rule]"
-}`;
-      } else {
-        basePrompt = `${PIP_SCALP_GOLD_PROMPT}
-
-Current Live Gold (XAUUSD) Spot Price: ${liveSpotStr}.
-Active Trading Session: ${sessionName}.
-${userNotes ? `Trader observations: "${userNotes}".` : ''}
-
-### Action Required:
-Scan the market for this exact Pip Scalp Strategy v2.0 setup. If all confirmation conditions align, return ONLY raw JSON matching this structure:
-{
-  "tradeAllowed": true,
-  "pair": "XAUUSD",
-  "direction": "BUY" or "SELL",
-  "timeframe": "1m / 5m",
-  "style": "scalping",
-  "strategy_version": "ICT-XAUUSD-SCALP-v2.0",
-  "model": "Pip Scalp M1-M5 Quant Imbalance Model",
-  "entry": ${Number(spot)},
-  "sl": number (strictly $2.50 distance from entry),
-  "tp": number (strictly $4.50 distance from entry, 1:1.8 RR),
-  "beTrigger": number (exact price at +$2.50 profit from entry),
-  "rr": "1:1.8",
-  "confidence": number (between 88 and 96),
-  "confluences": [
-    "M5 Liquidity Sweep: Micro swing SSL/BSL sweep with fast rejection",
-    "M1 Displacement: Immediate MSS body break creating fresh imbalance",
-    "Entry Model: Consequent Encroachment (50% CE) or FVG tap execution",
-    "Risk Rule: Structural SL $2.50 | 1:1.8 RR Target ($4.50) | Move SL to BE at +$2.50"
-  ],
-  "session": "${sessionName}",
-  "reason": "Concise summary of the Pip Scalp M1-M5 setup"
-}
-
-If confirmation conditions are NOT met, return ONLY:
-{
-  "tradeAllowed": false,
-  "reason": "NO TRADE: [Explanation of unconfirmed rule]"
-}`;
-      }
-
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: basePrompt }] }],
-          generationConfig: {
-            temperature: 0.3,
-            maxOutputTokens: 900,
-          },
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        const candidate = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (candidate) {
-          const jsonMatch = candidate.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            const parsed = JSON.parse(jsonMatch[0]);
-
-            // If Gemini explicitly says tradeAllowed=false or reason indicates NO TRADE, respect risk discipline
-            if (parsed.tradeAllowed === false || parsed.tradeAllowed === 'false' || !parsed.direction || String(parsed.reason || '').toUpperCase().includes('NO TRADE')) {
-              console.info(`[pipLiveSignalService] NO TRADE: Setup not confirmed by Gemini: ${parsed.reason || 'Confirmation failed'}`);
-              return null;
-            }
-
-            const decimals = 2;
-            const entryNum = Number(parsed.entry) || Number(spot);
-            const dir = (parsed.direction || cond.direction || 'BUY').toUpperCase();
-            const isBuy = dir === 'BUY';
-
-            let slNum, tpNum, beTrigger;
-            if (!isScalp) {
-              const parsedSl = Number(parsed.sl);
-              let slDist = parsedSl && Math.abs(parsedSl - entryNum) >= 6.0 && Math.abs(parsedSl - entryNum) <= 24.0
-                ? Math.abs(parsedSl - entryNum)
-                : 10.0;
-              let tpDist = slDist * 2.0;
-
-              slNum = Number((isBuy ? entryNum - slDist : entryNum + slDist).toFixed(decimals));
-              tpNum = Number((isBuy ? entryNum + tpDist : entryNum - tpDist).toFixed(decimals));
-              beTrigger = Number((isBuy ? entryNum + slDist * 0.9 : entryNum - slDist * 0.9).toFixed(decimals));
-            } else {
-              // Scalp: $2.50 SL, $4.50 TP (1:1.8 RR), BE at +$2.50
-              slNum = Number((isBuy ? entryNum - 2.50 : entryNum + 2.50).toFixed(decimals));
-              tpNum = Number((isBuy ? entryNum + 4.50 : entryNum - 4.50).toFixed(decimals));
-              beTrigger = Number((isBuy ? entryNum + 2.50 : entryNum - 2.50).toFixed(decimals));
-            }
-
-            const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Phnom_Penh' });
-            const nowMs = Date.now();
-            const signalId = isScalp
-              ? `ICT-XAU-SCALP-LIVE-${nowMs.toString().slice(-6)}`
-              : `ICT-XAU-5M-LIVE-${nowMs.toString().slice(-6)}`;
-
-            const signal = {
-              id: signalId,
-              trade_id: signalId,
-              pair: 'XAUUSD',
-              symbol: 'XAUUSD',
-              name: 'Gold (XAU/USD)',
-              direction: dir,
-              timeframe: isScalp ? '1m / 5m' : '5m',
-              mode: isScalp ? '1M/5M PIP SCALP (QUANT IMBALANCE)' : '5M INTRADAY (ICT v2.0)',
-              style: effectiveStyle,
-              model: isScalp ? 'Pip Scalp M1-M5 Quant Imbalance Model' : 'ICT v2.0 Killzone Sweep + MSS + FVG',
-              strategy_version: isScalp ? 'ICT-XAUUSD-SCALP-v2.0' : 'ICT-XAUUSD-FVG-MSS-v2.0',
-              entry: Number(entryNum.toFixed(decimals)),
-              sl: Number(slNum.toFixed(decimals)),
-              tp: Number(tpNum.toFixed(decimals)),
-              beTrigger,
-              breakEvenTrigger: beTrigger,
-              refCandleHigh: parsed.refCandleHigh || Number((isBuy ? entryNum + 16.5 : entryNum + 4.5).toFixed(2)),
-              refCandleLow: parsed.refCandleLow || Number((isBuy ? entryNum - 4.5 : entryNum - 16.5).toFixed(2)),
-              rr: isScalp ? '1:1.8' : '1:2.0',
-              planned_rr: isScalp ? 1.8 : 2.0,
-              confidence: Number(parsed.confidence) || 92,
-              confluences: buildVerifiedTradeConfluences({
-                pair: 'XAUUSD',
-                direction: dir,
-                entry: Number(entryNum.toFixed(decimals)),
-                sl: Number(slNum.toFixed(decimals)),
-                tp: Number(tpNum.toFixed(decimals)),
-                style: effectiveStyle,
-                timeframe: isScalp ? '1m / 5m' : '5m',
-                refHigh: parsed.refCandleHigh,
-                refLow: parsed.refCandleLow,
-              }),
-              session: parsed.session || sessionName,
-              opened: `Today, ${timeStr} GMT+7`,
-              status: 'active',
-              source: isScalp ? 'PIP AI SCALPER (REAL DATA)' : 'PIP AI LIVE REAL DATA (v2.0)',
-              resultBadge: 'ACTIVE SETUP',
-              badgeClass: 'active',
-              icon: '🥇',
-              generatedAt: nowMs,
-              publishedAt: nowMs,
-              _timeMs: nowMs,
-              lotSize: 0.03,
-              lot: 0.03,
-              isRealData: true,
-              isReal: true,
-              isRealAiGenerated: true,
-            };
-
-            saveStoredPipSignal(signal);
-            return signal;
-          }
-        }
-      }
-    } catch (apiErr) {
-      console.warn('[pipLiveSignalService] Gemini API call error, falling back to real ICT calculation:', apiErr);
-    }
-  }
 
   // Pure algorithmic SMC fallback directly calculated from the confirmed direction and live spot price
   const signal = calculateRealIctSetup('XAUUSD', spot, cond.direction, effectiveStyle, {
@@ -1118,6 +934,65 @@ export async function dispatchLivePipSignal(targetOrOptions = 'XAUUSD', maybePri
   }
 
   return signal;
+}
+
+const AUTO_SCAN_INTERVAL_MS = 5 * 60 * 1000;
+const AUTO_SCAN_LEASE_KEY = 'genz_pip_auto_scan_lease';
+
+/**
+ * Runs live Pip scans for staff while the site is open. A short local lease
+ * prevents multiple tabs in the same browser from running scans together.
+ */
+export function startAutomaticPipSignalScheduler(onSignal) {
+  let stopped = false;
+  let running = false;
+
+  const attemptScan = async () => {
+    if (stopped || running) return;
+
+    const now = Date.now();
+    const stats = getDailyPipStats();
+    if (stats.count >= DAILY_SIGNAL_TARGET.max) return;
+    if (stats.lastDispatchedAt && now - stats.lastDispatchedAt < 30 * 60 * 1000) return;
+
+    const leaseId = `${now}-${Math.random().toString(36).slice(2)}`;
+    try {
+      const lease = JSON.parse(localStorage.getItem(AUTO_SCAN_LEASE_KEY) || 'null');
+      if (lease?.expiresAt > now) return;
+      localStorage.setItem(AUTO_SCAN_LEASE_KEY, JSON.stringify({ id: leaseId, expiresAt: now + AUTO_SCAN_INTERVAL_MS }));
+      const confirmedLease = JSON.parse(localStorage.getItem(AUTO_SCAN_LEASE_KEY) || 'null');
+      if (confirmedLease?.id !== leaseId) return;
+    } catch (err) {
+      console.warn('[Pip Auto-Scanner] Could not acquire browser scan lease:', err);
+      return;
+    }
+
+    running = true;
+    try {
+      // Alternate the first strategy to check; try the other one if it finds no setup.
+      const firstStyle = stats.count % 2 === 0 ? 'daytrade' : 'scalping';
+      const secondStyle = firstStyle === 'daytrade' ? 'scalping' : 'daytrade';
+      let signal = await dispatchLivePipSignal('XAUUSD', null, firstStyle);
+      if (!signal) signal = await dispatchLivePipSignal('XAUUSD', null, secondStyle);
+      if (signal) {
+        console.info('[Pip Auto-Scanner] Published signal:', signal.id);
+        onSignal?.(signal);
+      }
+    } catch (err) {
+      console.warn('[Pip Auto-Scanner] Scan failed:', err);
+    } finally {
+      running = false;
+    }
+  };
+
+  // Scan on startup, then poll every five minutes. Successful signals retain
+  // the dispatch function's 30-minute cooldown and 10-signal daily ceiling.
+  attemptScan();
+  const timer = window.setInterval(attemptScan, AUTO_SCAN_INTERVAL_MS);
+  return () => {
+    stopped = true;
+    window.clearInterval(timer);
+  };
 }
 
 /**

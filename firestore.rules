@@ -186,6 +186,17 @@ service cloud.firestore {
       allow update: if false;
     }
 
+    // LiveKit session metadata. Credentials and participant tokens are only
+    // handled by trusted Cloud Functions; clients can only read approved-room
+    // metadata and cannot directly create or alter stream state.
+    match /liveStreams/{streamId} {
+      allow read: if request.auth != null && (
+        isAdmin() || isDev() ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved'
+      );
+      allow write: if false;
+    }
+
     // VIP Signals stream (src/data/signals.js)
     // Public read so the AI Trading page and members can read published
     // trading signals in real-time; allows admin/dev or validated automated signals
@@ -220,8 +231,8 @@ service cloud.firestore {
       allow create: if isAdmin() || isDev() || (isValidAutomatedSignal() && request.resource.data.status == 'active');
       allow update: if isImmutableSignalCore() && (
         isAdmin() || isDev() || (
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
-          && request.resource.data.status in ['tp', 'sl', 'closed']
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'exit_price', 'exitPrice', 'net_pnl', 'gross_pnl', 'realized_r', 'recalculated_at', 'calculation_method', 'lot', 'lotSize', 'lot_size'])
+          && request.resource.data.status in ['tp', 'sl', 'closed', 'active']
         )
       );
       allow delete: if isAdmin() || isDev();

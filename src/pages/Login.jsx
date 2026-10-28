@@ -74,8 +74,11 @@ export default function Login({
     // Must be set before loginUser() — it's the signInWithEmailAndPassword
     // call inside it that fires App.jsx's onAuthStateChanged listener,
     // which would otherwise race this handler to set `user` first.
+    if (loading) return;
     onAuthStart?.();
+    setLoading(true);
     const result = await loginUser({ email, password }, lang);
+    setLoading(false);
 
     if (!result.ok) {
       onAuthCancel?.();
@@ -225,8 +228,10 @@ export default function Login({
 
               {error && <div className="auth-error">{error}</div>}
 
-              <button type="submit" className="auth-btn" disabled={isLocked}>
-                {isLocked ? t.loginBtnLocked(formatCountdown(lockRemainingMs)) : <>{t.loginBtn} →</>}
+              <button type="submit" className="auth-btn" disabled={isLocked || loading} aria-busy={loading}>
+                {loading ? (
+                  <><span className="auth-btn-spinner" aria-hidden="true" />{t.loginBtnLoading}</>
+                ) : isLocked ? t.loginBtnLocked(formatCountdown(lockRemainingMs)) : <>{t.loginBtn} →</>}
               </button>
             </form>
 
@@ -267,7 +272,7 @@ export default function Login({
               {error && <div className="auth-error">{error}</div>}
 
               <button type="submit" className="auth-btn" disabled={loading}>
-                {loading ? t.resetBtnLoading : t.resetBtn}
+                {loading ? <><span className="auth-btn-spinner" aria-hidden="true" />{t.resetBtnLoading}</> : t.resetBtn}
               </button>
             </form>
 
@@ -347,7 +352,7 @@ export default function Login({
               {error && <div className="auth-error">{error}</div>}
 
               <button type="submit" className="auth-btn" disabled={loading}>
-                {loading ? tr.submitting : tr.submit}
+                {loading ? <><span className="auth-btn-spinner" aria-hidden="true" />{tr.submitting}</> : tr.submit}
               </button>
             </form>
           </>

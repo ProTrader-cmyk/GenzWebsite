@@ -20,7 +20,9 @@ import {
   UserIcon,
 } from './ui/CategoryIcons.jsx';
 import HowPipWorks from './HowPipWorks.jsx';
+import FeatureShowcase from './FeatureShowcase.jsx';
 import { BACKTEST_SIGNALS } from '../data/backtestSignals.js';
+import { calculateTradePnl, STANDARD_LOT_SIZE } from '../services/tradePnlService.js';
 import '../styles/landing.css';
 
 function getActiveTradingSession() {
@@ -51,12 +53,11 @@ export default function LandingHome({
   const beamRef = useRef(null);
   const svgRef = useRef(null);
 
-  const [activeChartTimeframe, setActiveChartTimeframe] = useState('1M');
-
   // Real-time Live Gold Price state
   const [liveGoldPrice, setLiveGoldPrice] = useState(null);
   const [goldChange, setGoldChange] = useState({ pct: '+1.26%', isUp: true });
   const [firestoreSignals, setFirestoreSignals] = useState(BACKTEST_SIGNALS);
+  const [hoveredBarIdx, setHoveredBarIdx] = useState(null);
 
   // Ultra-smooth GPU-composited lerp scroll animation (zero DOM style cascade or repaint)
   useEffect(() => {
@@ -226,24 +227,49 @@ export default function LandingHome({
     firestoreSignals.forEach((sig) => {
       const rawStatus = (sig.status || '').toLowerCase();
       const outcome = String(sig.outcome || '').toUpperCase();
-      const isTp = rawStatus === 'tp' || rawStatus === 'win' || outcome === 'WIN';
-      const isSl = rawStatus === 'sl' || rawStatus === 'loss' || outcome === 'LOSS';
-      const isBe = rawStatus === 'be' || rawStatus === 'breakeven' || outcome === 'BREAKEVEN';
+      let isTp = rawStatus === 'tp' || rawStatus === 'win' || outcome === 'WIN';
+      let isSl = rawStatus === 'sl' || rawStatus === 'loss' || outcome === 'LOSS';
+      let isBe = rawStatus === 'be' || rawStatus === 'breakeven' || outcome === 'BREAKEVEN';
+
+      if (!isTp && !isSl && !isBe && rawStatus === 'closed') {
+        if (typeof sig.net_pnl === 'number') {
+          if (sig.net_pnl > 0) isTp = true;
+          else if (sig.net_pnl < 0) isSl = true;
+          else isBe = true;
+        } else {
+          isTp = true;
+        }
+      }
+
+      const sigLot = Number(sig.lotSize ?? sig.lot ?? sig.lot_size) || STANDARD_LOT_SIZE;
+      let pnl = 0;
+      if (typeof sig.net_pnl === 'number') {
+        pnl = sig.net_pnl;
+      } else {
+        const exit = isTp ? Number(sig.tp || sig.exit_price || sig.exitPrice) : isSl ? Number(sig.sl || sig.exit_price || sig.exitPrice) : Number(sig.entry);
+        if (sig.entry && exit) {
+          const calc = calculateTradePnl({
+            symbol: sig.pair || sig.symbol || 'XAUUSD',
+            direction: sig.direction || sig.type || 'BUY',
+            entryPrice: Number(sig.entry),
+            exitPrice: exit,
+            lotSize: sigLot,
+          });
+          pnl = calc.netPnl;
+        }
+      }
 
       if (isTp) {
         closedCount++;
         winsCount++;
-        const pnl = typeof sig.net_pnl === 'number' ? sig.net_pnl : 84.93;
         realizedPnL += pnl;
       } else if (isSl) {
         closedCount++;
         lossesCount++;
-        const pnl = typeof sig.net_pnl === 'number' ? Math.abs(sig.net_pnl) : 52.59;
-        realizedPnL -= pnl;
+        realizedPnL += pnl < 0 ? pnl : -Math.abs(pnl);
       } else if (isBe) {
         closedCount++;
         breakevenCount++;
-        const pnl = typeof sig.net_pnl === 'number' ? sig.net_pnl : 0;
         realizedPnL += pnl;
       }
     });
@@ -256,7 +282,7 @@ export default function LandingHome({
     const closedSignals = firestoreSignals.filter((s) => {
       const st = (s.status || '').toLowerCase();
       const out = String(s.outcome || '').toUpperCase();
-      return st === 'tp' || st === 'win' || st === 'sl' || st === 'loss' || st === 'be' || out === 'WIN' || out === 'LOSS' || out === 'BREAKEVEN';
+      return st === 'tp' || st === 'win' || st === 'sl' || st === 'loss' || st === 'be' || st === 'closed' || out === 'WIN' || out === 'LOSS' || out === 'BREAKEVEN';
     });
 
     closedSignals.sort((a, b) => {
@@ -265,38 +291,104 @@ export default function LandingHome({
       return tA - tB;
     });
 
+    // Group all closed signals chronologically by day (Asia/Phnom_Penh timezone) and calculate cumulative equity
+    const dailyMap = new Map();
     let runningBal = STARTING_BALANCE;
-    const stepBars = [
-      {
-        label: isKhmer ? 'ដើមទុន' : 'Start',
-        val: STARTING_BALANCE,
-        diff: 0,
-      },
-    ];
 
-    closedSignals.forEach((sig, idx) => {
+    closedSignals.forEach((sig) => {
+      const timeMs = Number(sig._timeMs || sig.publishedAt || sig.createdAt?.toMillis?.() || 0);
+      const dateObj = new Date(timeMs || Date.now());
+      // Consistent YYYY-MM-DD grouping in Asia/Phnom_Penh (GMT+7)
+      const dayKey = dateObj.toLocaleDateString('en-CA', { timeZone: 'Asia/Phnom_Penh' });
+
+      const rawStatus = (sig.status || '').toLowerCase();
+      const outcome = String(sig.outcome || '').toUpperCase();
+      let isTp = rawStatus === 'tp' || rawStatus === 'win' || outcome === 'WIN';
+      let isSl = rawStatus === 'sl' || rawStatus === 'loss' || outcome === 'LOSS';
+      let isBe = rawStatus === 'be' || rawStatus === 'breakeven' || outcome === 'BREAKEVEN';
+
+      if (!isTp && !isSl && !isBe && rawStatus === 'closed') {
+        if (typeof sig.net_pnl === 'number') {
+          if (sig.net_pnl > 0) isTp = true;
+          else if (sig.net_pnl < 0) isSl = true;
+          else isBe = true;
+        } else {
+          isTp = true;
+        }
+      }
+
       let diff = 0;
       if (typeof sig.net_pnl === 'number') {
         diff = sig.net_pnl;
       } else {
-        const rawStatus = (sig.status || '').toLowerCase();
-        if (rawStatus === 'tp' || rawStatus === 'win') diff = 84.93;
-        else if (rawStatus === 'sl' || rawStatus === 'loss') diff = -52.59;
-        else diff = 0;
+        const sigLot = Number(sig.lotSize ?? sig.lot ?? sig.lot_size) || STANDARD_LOT_SIZE;
+        const exit = isTp ? Number(sig.tp || sig.exit_price || sig.exitPrice) : isSl ? Number(sig.sl || sig.exit_price || sig.exitPrice) : Number(sig.entry);
+        if (sig.entry && exit) {
+          const calc = calculateTradePnl({
+            symbol: sig.pair || sig.symbol || 'XAUUSD',
+            direction: sig.direction || sig.type || 'BUY',
+            entryPrice: Number(sig.entry),
+            exitPrice: exit,
+            lotSize: sigLot,
+          });
+          diff = isSl && calc.netPnl > 0 ? -calc.netPnl : calc.netPnl;
+        }
       }
 
       runningBal += diff;
-      stepBars.push({
-        label: isKhmer ? `Signal ${idx + 1}` : `Trade ${idx + 1}`,
-        val: runningBal,
-        diff,
-      });
+
+      if (!dailyMap.has(dayKey)) {
+        const shortDate = dateObj.toLocaleDateString('en-US', {
+          month: 'short',
+          day: '2-digit',
+          timeZone: 'Asia/Phnom_Penh',
+        });
+        const fullDate = dateObj.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+          timeZone: 'Asia/Phnom_Penh',
+        });
+
+        dailyMap.set(dayKey, {
+          dayKey,
+          dateMs: dateObj.getTime(),
+          label: shortDate,
+          fullDate,
+          tradesCount: 0,
+          tpCount: 0,
+          slCount: 0,
+          beCount: 0,
+          dayPnl: 0,
+          val: runningBal,
+        });
+      }
+
+      const dayObj = dailyMap.get(dayKey);
+      dayObj.tradesCount += 1;
+      if (isTp) dayObj.tpCount += 1;
+      else if (isSl) dayObj.slCount += 1;
+      else if (isBe) dayObj.beCount += 1;
+      dayObj.dayPnl += diff;
+      dayObj.val = runningBal; // cumulative balance at the end of this day
     });
 
-    // Keep up to 6 bars (Start + most recent 5 trades) for a clean, non-cramped display
-    let displayBars = stepBars;
-    if (stepBars.length > 6) {
-      displayBars = [stepBars[0], ...stepBars.slice(stepBars.length - 5)];
+    const allDailyBars = Array.from(dailyMap.values());
+    // Put only the last 7 days per user request
+    let displayBars = allDailyBars.slice(-7);
+
+    if (displayBars.length === 0) {
+      displayBars.push({
+        dayKey: 'today',
+        label: isKhmer ? 'ថ្ងៃនេះ' : 'Today',
+        fullDate: isKhmer ? 'ថ្ងៃនេះ' : 'Today',
+        tradesCount: 0,
+        tpCount: 0,
+        slCount: 0,
+        beCount: 0,
+        dayPnl: 0,
+        val: STARTING_BALANCE,
+      });
     }
 
     const allVals = displayBars.map((b) => b.val);
@@ -312,8 +404,14 @@ export default function LandingHome({
       );
       return {
         label: b.label,
+        fullDate: b.fullDate,
         val: b.val,
-        diff: b.diff,
+        diff: b.dayPnl,
+        dayPnl: b.dayPnl,
+        tradesCount: b.tradesCount,
+        tpCount: b.tpCount,
+        slCount: b.slCount,
+        beCount: b.beCount,
         height: `${heightPercent}%`,
         active: isLatest,
       };
@@ -500,16 +598,61 @@ export default function LandingHome({
                 </span>
               </div>
               <div className="lnd-bar-chart">
-                {portfolio.barData.map((b, idx) => (
-                  <div
-                    key={idx}
-                    className={`lnd-bar ${b.active ? 'lnd-bar-active' : ''}`}
-                    style={{ height: b.height }}
-                    title={`${b.label}: $${b.val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                  >
-                    <span>{b.label}</span>
-                  </div>
-                ))}
+                {portfolio.barData.map((b, idx) => {
+                  const isHovered = hoveredBarIdx === idx;
+                  const isLeftAnchor = idx < 2;
+                  const isRightAnchor = idx > portfolio.barData.length - 3;
+                  const anchorClass = isLeftAnchor ? 'tt-left' : isRightAnchor ? 'tt-right' : '';
+
+                  return (
+                    <div
+                      key={b.dayKey || idx}
+                      className={`lnd-bar ${b.active ? 'lnd-bar-active' : ''} ${isHovered ? 'lnd-bar-hovered' : ''}`}
+                      style={{ height: b.height }}
+                      onMouseEnter={() => setHoveredBarIdx(idx)}
+                      onMouseLeave={() => setHoveredBarIdx(null)}
+                      onTouchStart={() => setHoveredBarIdx(idx)}
+                      title={`${b.fullDate || b.label} | Total Trades: ${b.tradesCount} | TP: ${b.tpCount} | SL: ${b.slCount}${b.beCount > 0 ? ` | BE: ${b.beCount}` : ''} | Balance: $${b.val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                    >
+                      {/* Modern Interactive Hover Tooltip: Total Trade, Total TP, Total SL */}
+                      <div className={`lnd-bar-tooltip ${anchorClass}`}>
+                        <div className="lnd-bar-tt-title">{b.fullDate || b.label}</div>
+                        <div className="lnd-bar-tt-bal">
+                          ${b.val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          <span
+                            className={b.dayPnl >= 0 ? 'lnd-up-text' : 'lnd-dn-text'}
+                            style={{ fontSize: '10px', marginLeft: 4 }}
+                          >
+                            ({b.dayPnl >= 0 ? `+$${b.dayPnl.toFixed(2)}` : `-$${Math.abs(b.dayPnl).toFixed(2)}`})
+                          </span>
+                        </div>
+                        <div className="lnd-bar-tt-divider" />
+                        <div className="lnd-bar-tt-stats">
+                          <div className="lnd-bar-tt-row">
+                            <span className="lnd-bar-tt-lbl">{isKhmer ? 'Trade សរុប' : 'Total Trades'}:</span>
+                            <strong className="lnd-bar-tt-val">{b.tradesCount}</strong>
+                          </div>
+                          <div className="lnd-bar-tt-row lnd-up-text">
+                            <span className="lnd-bar-tt-lbl">{isKhmer ? 'ចំណេញ (TP)' : 'Total TP'}:</span>
+                            <strong className="lnd-bar-tt-val">+{b.tpCount}</strong>
+                          </div>
+                          <div className="lnd-bar-tt-row lnd-dn-text">
+                            <span className="lnd-bar-tt-lbl">{isKhmer ? 'កាត់ខាត (SL)' : 'Total SL'}:</span>
+                            <strong className="lnd-bar-tt-val">-{b.slCount}</strong>
+                          </div>
+                          {b.beCount > 0 && (
+                            <div className="lnd-bar-tt-row" style={{ color: '#94a3b8' }}>
+                              <span className="lnd-bar-tt-lbl">{isKhmer ? 'ស្មើដើម (BE)' : 'Break-Even'}:</span>
+                              <strong className="lnd-bar-tt-val">{b.beCount}</strong>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <span className="lnd-bar-label">{b.label}</span>
+                    </div>
+                  );
+                })}
               </div>
               <div className="lnd-card-footer">
                 <span className="lnd-asset-tag">● Starting $10,000 (0.03 Lot)</span>
@@ -601,149 +744,7 @@ export default function LandingHome({
             </p>
           </div>
 
-          <div className="lnd-grid-4">
-            {/* Feature Card 1: Real-time Live Gold Spot */}
-            <div className="lnd-feature-card">
-              <div className="lnd-feat-visual">
-                <div className="lnd-mini-ticker">
-                  <div className="lnd-ticker-row">
-                    <span className="lnd-ticker-sym" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      <CandleChartIcon style={{ width: 14, height: 14, color: 'var(--brand2)' }} />
-                      Gold XAU/USD
-                    </span>
-                    <span className="lnd-ticker-val" style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                      <span className="lnd-live-pulse-dot" style={{ width: 5, height: 5 }} />
-                      ${liveGoldPrice
-                        ? Number(liveGoldPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                        : '4,159.50'}
-                    </span>
-                  </div>
-                  <div className="lnd-spark-line" />
-                </div>
-              </div>
-              <h3 className="lnd-feat-title">
-                {isKhmer ? 'ការវិភាគ AI Fundamental & Macro' : 'AI-Supported Fundamental Analysis'}
-              </h3>
-              <p className="lnd-feat-desc">
-                {isKhmer
-                  ? 'ការវិភាគផលប៉ះពាល់លើមាស (Gold Impact) និង Red-Folder USD Events ជួយឱ្យអ្នកធ្វើការសម្រេចចិត្តប្រកបដោយភាពឆ្លាតវៃ។'
-                  : 'AI-assisted macroeconomic and technical audits — make calculated, data-backed decisions on every red-folder USD catalyst.'}
-              </p>
-            </div>
-
-            {/* Feature Card 2: Real Account Balance & Dual Win Rate (Scalp & Intraday) */}
-            <div className="lnd-feature-card">
-              <div className="lnd-feat-visual">
-                <div className="lnd-mini-stats">
-                  <div className="lnd-stats-top">
-                    <span>{isKhmer ? 'សមតុល្យគណនី (Account)' : 'Account Balance'}</span>
-                    <strong className="lnd-up-text">
-                      ${portfolio.currentBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </strong>
-                  </div>
-                  {/* Strategy 1: Pip Scalp (73.1% Win Rate) */}
-                  <div style={{ marginTop: 8 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, marginBottom: 3 }}>
-                      <span style={{ color: '#10B981' }}>⚡ Pip Scalp (1M-5M)</span>
-                      <span style={{ color: '#10B981', fontFamily: 'monospace' }}>73.1% WR (19W/5L)</span>
-                    </div>
-                    <div className="lnd-progress-multi" title="Pip Scalp: 73.1% Win Rate (19 Wins / 26 Closed)">
-                      <div className="lnd-pbar lnd-pbar-green" style={{ width: '73.1%' }} />
-                      <div className="lnd-pbar" style={{ width: '26.9%', background: 'var(--dn, #ef4444)' }} />
-                    </div>
-                  </div>
-                  {/* Strategy 2: Intraday (60.0% Win Rate) */}
-                  <div style={{ marginTop: 8 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, marginBottom: 3 }}>
-                      <span style={{ color: '#F59E0B' }}>🎯 Intraday (5M ICT)</span>
-                      <span style={{ color: '#F59E0B', fontFamily: 'monospace' }}>60.0% WR (12W/4L)</span>
-                    </div>
-                    <div className="lnd-progress-multi" title="Intraday: 60.0% Win Rate (12 Wins / 20 Closed)">
-                      <div className="lnd-pbar" style={{ width: '60.0%', background: '#F59E0B' }} />
-                      <div className="lnd-pbar" style={{ width: '40.0%', background: 'var(--dn, #ef4444)' }} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <h3 className="lnd-feat-title">
-                {isKhmer ? 'Dual Strategy Track: Scalp & Intraday' : 'Dual Strategy Win-Rate Tracking'}
-              </h3>
-              <p className="lnd-feat-desc">
-                {isKhmer
-                  ? 'ប្រព័ន្ធផ្ទៀងផ្ទាត់ទិន្នន័យជាក់ស្តែងពីរផ្សេងគ្នា៖ Pip Scalp M1-M5 (73.1% Win Rate) និង Intraday 5M ICT (60.0% Win Rate)។'
-                  : 'Independent real-data verification: Pip Scalp M1-M5 (73.1% Win Rate) and Intraday 5M ICT Model (60.0% Win Rate) tracking high-probability execution.'}
-              </p>
-            </div>
-
-            {/* Feature Card 3: Real Position Sizing (0.03 Lot & Exact $30 Risk / +$90 Target) */}
-            <div className="lnd-feature-card">
-              <div className="lnd-feat-visual">
-                <div className="lnd-mini-swap">
-                  <div className="lnd-swap-row">
-                    <span className="lnd-swap-sym">XAU/USD Position</span>
-                    <span className="lnd-badge-sm">Lot {POSITION_LOT_SIZE.toFixed(2)}</span>
-                  </div>
-                  <div className="lnd-swap-metrics">
-                    <div className="lnd-swap-metric">
-                      <span className="lnd-swap-lbl">Risk (10 Pts)</span>
-                      <span className="lnd-dn-text">-$30.00</span>
-                    </div>
-                    <div className="lnd-swap-metric right">
-                      <span className="lnd-swap-lbl">Target (30 Pts)</span>
-                      <span className="lnd-up-text">+$90.00</span>
-                    </div>
-                  </div>
-                  <div className="lnd-swap-rr-bar" title="1:3.0 Risk to Reward Ratio">
-                    <div className="lnd-rr-risk" style={{ width: '25%' }} />
-                    <div className="lnd-rr-reward" style={{ width: '75%' }} />
-                  </div>
-                </div>
-              </div>
-              <h3 className="lnd-feat-title">
-                {isKhmer ? 'ការគណនាហានិភ័យ & Lot Size' : 'Precision Position Sizing & Execution'}
-              </h3>
-              <p className="lnd-feat-desc">
-                {isKhmer
-                  ? 'គ្រប់គ្រងដើមទុនប្រកបដោយវិន័យខ្ពស់ ជាមួយក្បួនគណនា Lot Size កំណត់ Stop Loss និង Take Profit 1:3+ R:R ស្ថាប័នច្បាស់លាស់។'
-                  : 'Track live market moves and execute with disciplined, institutional position sizing rules, precise stop-loss limits, and automated risk calculators.'}
-              </p>
-            </div>
-
-            {/* Feature Card 4: Real Trade Progression Portfolio Growth */}
-            <div className="lnd-feature-card">
-              <div className="lnd-feat-visual">
-                <div className="lnd-mini-portfolio">
-                  <div className="lnd-port-top">
-                    <span>{isKhmer ? 'កំណើនដើមទុន' : 'Portfolio Growth'}</span>
-                    <strong className="lnd-up-text">
-                      {portfolio.netProfit >= 0 ? `+$${portfolio.netProfit.toFixed(2)}` : `-$${Math.abs(portfolio.netProfit).toFixed(2)}`}
-                      <span style={{ fontSize: '11px', marginLeft: 4, fontWeight: 700, opacity: 0.9 }}>
-                        ({portfolio.roiPercent >= 0 ? `+${portfolio.roiPercent.toFixed(1)}%` : `${portfolio.roiPercent.toFixed(1)}%`})
-                      </span>
-                    </strong>
-                  </div>
-                  <div className="lnd-port-chart">
-                    {portfolio.barData.map((b, idx) => (
-                      <span
-                        key={idx}
-                        className={`lnd-port-bar ${b.active ? 'lnd-port-bar-hi' : ''}`}
-                        style={{ height: b.height }}
-                        title={`${b.label}: $${b.val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <h3 className="lnd-feat-title">
-                {isKhmer ? 'ការការពារដើមទុន & Drawdown' : 'Drawdown Protection & Equity Growth'}
-              </h3>
-              <p className="lnd-feat-desc">
-                {isKhmer
-                  ? 'ការពារដើមទុនរបស់អ្នកពីការខាតបង់ធ្ងន់ធ្ងរ តាមរយៈការវិភាគ Drawdown និងយុទ្ធសាស្ត្រដើមទុនរបស់ស្ថាប័នធំៗ។'
-                  : 'Institutional-grade drawdown protection and real-time performance analytics to safeguard and steadily grow your capital.'}
-              </p>
-            </div>
-          </div>
+          <FeatureShowcase isKhmer={isKhmer} liveGoldPrice={liveGoldPrice} portfolio={portfolio} startBalance={STARTING_BALANCE} />
         </div>
       </section>
 
@@ -751,186 +752,6 @@ export default function LandingHome({
           SECTION 2: HOW PIP WORKS (WAKE, SCAN, DEBATE, PUBLISH)
           ========================================================================= */}
       <HowPipWorks isKhmer={isKhmer} />
-
-      {/* =========================================================================
-          SECTION 3: DATA ADVANTAGE TERMINAL SHOWCASE
-          ========================================================================= */}
-      <section className="lnd-section lnd-terminal-section">
-        <div className="lnd-container">
-          <div className="lnd-section-header">
-            <span className="lnd-section-pill">
-              {isKhmer ? 'ភាពច្បាស់លាស់កម្រិតស្ថាប័ន' : 'INSTITUTIONAL PRECISION OVER GUESSWORK'}
-            </span>
-            <h2 className="lnd-section-title">
-              {isKhmer
-                ? 'អ្នកឈ្នះមិនមែនជួញដូរដោយអារម្មណ៍ទេ — ពួកគេជួញដូរផ្អែកលើទិន្នន័យ'
-                : "Winners don't trade smarter — they trade based on data."}
-            </h2>
-            <p className="lnd-section-sub">
-              {isKhmer
-                ? 'ការជួញដូរតាមអារម្មណ៍ និងការទាយ គឺជាវិធីលឿនបំផុតក្នុងការដុតបំផ្លាញដើមទុន។ GenZ Trader ផ្តល់ជូននូវភាពច្បាស់លាស់នៃក្បួនដង្ហើមទីផ្សារ (Smart Money)។'
-                : 'Trading on gut instinct? The fastest way to burn money. GenZ Trader uses institutional algorithmic clarity to show you what actually works and what costs you money.'}
-            </p>
-
-            <button
-              type="button"
-              className="lnd-cta-primary-btn"
-              onClick={onExploreLessons}
-            >
-              <span>{isKhmer ? 'ចូលរៀនមេរៀនឥឡូវនេះ' : 'Start Free Learning'}</span>
-              <span>→</span>
-            </button>
-          </div>
-
-          {/* Full Dark UI Terminal Mockup */}
-          <div className="lnd-terminal-mockup">
-            {/* Terminal Top Nav Bar */}
-            <div className="lnd-term-header">
-              <div className="lnd-term-left">
-                <span className="lnd-term-logo" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  <AdvancedChartIcon style={{ width: 16, height: 16 }} />
-                  GenZ Terminal
-                </span>
-                <span className="lnd-term-tab active">Overview</span>
-                <span className="lnd-term-tab">Live Order Flow</span>
-                <span className="lnd-term-tab">SMC Radar</span>
-              </div>
-              <div className="lnd-term-right">
-                <span className="lnd-term-wallet">Main Account (Live)</span>
-                <span className="lnd-term-status">● Live Feed Active</span>
-              </div>
-            </div>
-
-            {/* Terminal Main Grid */}
-            <div className="lnd-term-body">
-              {/* Left Column: Big Chart & Metric */}
-              <div className="lnd-term-main">
-                <div className="lnd-term-metric-row">
-                  <div>
-                    <span className="lnd-term-metric-label">Account Balance / Equity</span>
-                    <div className="lnd-term-metric-val">
-                      $1,000.00 / <span className="lnd-term-big-num">${portfolio.currentBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                    </div>
-                    <span className="lnd-term-sub-stat lnd-up-text">
-                      ▲ +{portfolio.roiPercent.toFixed(1)}% Realized Return ({portfolio.closedCount} Signals Realized)
-                    </span>
-                  </div>
-
-                  <div className="lnd-term-timeframes">
-                    {['1D', '1W', '1M', '1Y'].map((tf) => (
-                      <button
-                        key={tf}
-                        type="button"
-                        className={`lnd-tf-btn ${activeChartTimeframe === tf ? 'active' : ''}`}
-                        onClick={() => setActiveChartTimeframe(tf)}
-                      >
-                        {tf}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Big Glowing Emerald Area Chart */}
-                <div className="lnd-term-chart-area">
-                  <svg viewBox="0 0 600 220" className="lnd-big-chart-svg" preserveAspectRatio="none">
-                    <defs>
-                      <linearGradient id="termGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#00f2fe" stopOpacity="0.42" />
-                        <stop offset="55%" stopColor="#a855f7" stopOpacity="0.14" />
-                        <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
-                      </linearGradient>
-                      <linearGradient id="termStrokeGrad" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0%" stopColor="#10b981" />
-                        <stop offset="50%" stopColor="#00f2fe" />
-                        <stop offset="100%" stopColor="#c084fc" />
-                      </linearGradient>
-                    </defs>
-                    {/* Grid lines */}
-                    <line x1="0" y1="50" x2="600" y2="50" stroke="var(--faint)" strokeDasharray="4 4" />
-                    <line x1="0" y1="110" x2="600" y2="110" stroke="var(--faint)" strokeDasharray="4 4" />
-                    <line x1="0" y1="170" x2="600" y2="170" stroke="var(--faint)" strokeDasharray="4 4" />
-
-                    {/* Gradient Area */}
-                    <path
-                      d="M 0 180 Q 80 160 140 130 T 260 140 T 380 90 T 480 70 T 600 30 L 600 220 L 0 220 Z"
-                      fill="url(#termGrad)"
-                    />
-                    {/* Glowing Stroke */}
-                    <path
-                      d="M 0 180 Q 80 160 140 130 T 260 140 T 380 90 T 480 70 T 600 30"
-                      fill="none"
-                      stroke="url(#termStrokeGrad)"
-                      strokeWidth="3.5"
-                    />
-                    {/* Peak Point */}
-                    <circle cx="600" cy="30" r="5" fill="#00f2fe" className="lnd-pulse-dot" />
-                  </svg>
-
-                  <div className="lnd-chart-labels">
-                    <span>${STARTING_BALANCE.toFixed(2)} Baseline (0.03 Lot)</span>
-                    <span className="lnd-up-text">▲ +{portfolio.roiPercent.toFixed(1)}% Realized Edge</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Column: Watchlist & Asset Tickers */}
-              <div className="lnd-term-sidebar">
-                <div className="lnd-sidebar-section-title">
-                  <span>Watchlist & Live Flow</span>
-                  <span className="lnd-badge-sm">Live</span>
-                </div>
-
-                <div className="lnd-asset-row">
-                  <div className="lnd-asset-info">
-                    <span className="lnd-asset-sym">Gold (XAU/USD)</span>
-                    <span className="lnd-asset-vol">Comex Bullion</span>
-                  </div>
-                  <div className="lnd-asset-price">
-                    <strong>${liveGoldPrice ? Number(liveGoldPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '4,159.50'}</strong>
-                    <span className={goldChange?.isUp ? 'lnd-up-text' : 'lnd-dn-text'}>{goldChange?.pct || '+1.42%'}</span>
-                  </div>
-                </div>
-
-                <div className="lnd-asset-row">
-                  <div className="lnd-asset-info">
-                    <span className="lnd-asset-sym">Bitcoin (BTC)</span>
-                    <span className="lnd-asset-vol">Spot USD</span>
-                  </div>
-                  <div className="lnd-asset-price">
-                    <strong>$66,897.00</strong>
-                    <span className="lnd-up-text">+2.45%</span>
-                  </div>
-                </div>
-
-                <div className="lnd-asset-row">
-                  <div className="lnd-asset-info">
-                    <span className="lnd-asset-sym">Silver (XAG/USD)</span>
-                    <span className="lnd-asset-vol">Precious Metals</span>
-                  </div>
-                  <div className="lnd-asset-price">
-                    <strong>$60.50</strong>
-                    <span className="lnd-up-text">+3.10%</span>
-                  </div>
-                </div>
-
-                <div className="lnd-term-alert-box">
-                  <div className="lnd-alert-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <SparkleIcon style={{ width: 16, height: 16, color: 'var(--brand2)' }} />
-                  </div>
-                  <div className="lnd-alert-content">
-                    <strong>{isKhmer ? 'សញ្ញាជួញដូរចុងក្រោយ' : 'Latest Verified Signal'}: {latestSig ? `${latestSig.trade_id ? `${latestSig.trade_id} · ` : ''}${latestSig.pair || 'XAU/USD'} ${(latestSig.direction || 'BUY').toUpperCase()}` : 'ICT-XAU-5M-0020 · Gold BUY'}</strong>
-                    <span>
-                      {latestSig
-                        ? `Entry: $${Number(latestSig.entry ?? latestSig.entry_price ?? 4161.25).toFixed(2)} · TP: $${Number(latestSig.tp ?? latestSig.take_profit ?? 4180.13).toFixed(2)} · SL: $${Number(latestSig.sl ?? latestSig.stop_loss ?? 4151.81).toFixed(2)} (${latestSig.resultBadge || '✓ TP HIT'})`
-                        : 'Entry: $4,161.25 · TP: $4,180.13 (✓ TP HIT)'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* =========================================================================
           SECTION 3: EXECUTIVE LEADERSHIP & CORE TEAM (CEO, COO, DEV)
@@ -991,14 +812,14 @@ export default function LandingHome({
 
               <div className="lnd-team-footer">
                 <a
-                  href="https://t.me/Vengsopheagenz?direct"
+                  href="https://t.me/veng_sophea"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="lnd-team-social-btn"
                   title="Contact Veng Sophea"
                 >
                   <TelegramIcon style={{ width: 14, height: 14 }} />
-                  <span>@Vengsopheagenz</span>
+                  <span>@veng_sophea</span>
                 </a>
               </div>
             </div>
@@ -1038,10 +859,16 @@ export default function LandingHome({
               </div>
 
               <div className="lnd-team-footer">
-                <span className="lnd-team-badge-tag lnd-badge-coo">
-                  <span className="lnd-live-pulse-dot" style={{ width: 6, height: 6 }} />
-                  <span>Trading Desk & Operations</span>
-                </span>
+                <a
+                  href="https://t.me/huarrrrr?direct"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="lnd-team-social-btn"
+                  title="Contact Lim Sunhour"
+                >
+                  <TelegramIcon style={{ width: 14, height: 14 }} />
+                  <span>@huarrrrr</span>
+                </a>
               </div>
             </div>
 
@@ -1080,10 +907,16 @@ export default function LandingHome({
               </div>
 
               <div className="lnd-team-footer">
-                <span className="lnd-team-badge-tag lnd-badge-dev">
-                  <span className="lnd-ai-chip-dot lnd-dot-cyan" />
-                  <span>AI & Full-Stack Systems</span>
-                </span>
+                <a
+                  href="https://t.me/visalsen0630?direct"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="lnd-team-social-btn"
+                  title="Contact Sen Visal"
+                >
+                  <TelegramIcon style={{ width: 14, height: 14 }} />
+                  <span>@visalsen0630</span>
+                </a>
               </div>
             </div>
           </div>

@@ -1,408 +1,194 @@
-import { useState, useEffect } from 'react';
-import { formatRelativeTime, PLAN_SIGNAL_ACCESS } from '../../data/mockSignals.js';
-import { subscribeSignals, updateSignalStatus } from '../../data/signals.js';
-import {
-  fetchLivePrice,
-  calcTradeProgress,
-  evaluateSignalOutcome,
-  subscribeLiveTicks,
-  formatSpotPrice,
-} from '../../services/marketPriceService.js';
-import { GoldAssetEmblem, SignalStrengthBars, formatSignalDate, formatLevelPrice, parseDateInput } from '../../components/ui/SignalEmblems.jsx';
-import PairLogo from '../../components/ui/PairLogo.jsx';
+import { useEffect, useMemo, useState } from 'react';
+import { subscribeSignals } from '../../data/signals.js';
 import { BACKTEST_SIGNALS } from '../../data/backtestSignals.js';
-import { usePersistentState } from '../../utils/statePersistence.js';
-import '../../styles/aiTradingPage.css';
+import '../../styles/memberSignalHistory.css';
 
-const STATUS_FILTERS = [
-  { key: 'all', label: 'All Signals' },
-  { key: 'active', label: '⚡ Active Setups' },
-  { key: 'tp', label: '✓ Hit Take Profit' },
-  { key: 'be', label: '✓ Break-Even' },
-  { key: 'sl', label: '✕ Hit Stop Loss' },
-];
+const toMillis = (value) => {
+  if (value?.toMillis) return value.toMillis();
+  if (value?.toDate) return value.toDate().getTime();
+  if (typeof value === 'number') return value < 1e12 ? value * 1000 : value;
+  const parsed = Date.parse(value || '');
+  return Number.isFinite(parsed) ? parsed : 0;
+};
 
-function extractConfluenceTags(signal) {
-  if (Array.isArray(signal.tags) && signal.tags.length > 0) {
-    return signal.tags;
-  }
-
-  const tags = [];
-  const text = `${signal.reason || ''} ${signal.session || ''}`.toLowerCase();
-
-  // 1. Session / Timing tag
-  if (signal.session) {
-    if (signal.session.toLowerCase().includes('london')) tags.push('London KZ');
-    else if (signal.session.toLowerCase().includes('new york') || signal.session.toLowerCase().includes('ny')) tags.push('NY KZ');
-    else if (signal.session.toLowerCase().includes('asian')) tags.push('Asian Session');
-    else tags.push(signal.session.split('(')[0].trim());
-  }
-
-  // 2. Setup model / pattern tags extracted from actual rationale
-  if (text.includes('fvg') || text.includes('fair value gap')) {
-    tags.push('15m FVG');
-  }
-  if (text.includes('sweep') || text.includes('liquidity') || text.includes('raid')) {
-    tags.push('Liquidity Sweep');
-  }
-  if (text.includes('order block') || text.includes(' ob')) {
-    tags.push('Order Block');
-  }
-  if (text.includes('mss') || text.includes('shift') || text.includes('bos') || text.includes('displacement')) {
-    tags.push('MSS Structure');
-  }
-  if (text.includes('ote') || text.includes('61.8') || text.includes('fib')) {
-    tags.push('OTE 61.8%');
-  }
-  if (text.includes('discount')) {
-    tags.push('Discount Zone');
-  } else if (text.includes('premium')) {
-    tags.push('Premium Zone');
-  }
-  if (text.includes('breaker')) {
-    tags.push('Breaker Block');
-  }
-
-  // Fallback defaults if reason was brief
-  if (tags.length === 0) {
-    tags.push('ICT Model', `${signal.direction === 'buy' ? 'Bullish' : 'Bearish'} Bias`);
-  } else if (tags.length === 1) {
-    tags.push('ICT Model');
-  }
-
-  return tags.slice(0, 4);
+function signalDate(signal) {
+  return toMillis(signal.publishedAt || signal.timestamp || signal.createdAt || signal._timeMs);
 }
 
-function SignalCard({ signal, livePrice }) {
-  const [open, setOpen] = useState(false);
-
-  const asset = 'XAUUSD';
-  const isGold = true;
-  const dir = (signal.direction || 'BUY').toUpperCase();
-  const isBuy = dir === 'BUY';
-  const isScalp = signal.style === 'scalping' || signal.mode?.includes('SCALP') || signal.strategy_version?.includes('SCALP');
-  const tf = (signal.timeframe || signal.mode || (isScalp ? '5m' : '15m')).toUpperCase();
-  const cleanTf = (tf.match(/\b(1M|5M|15M|30M|1H|4H|D1)\b/i)?.[0] || (isScalp ? '5M' : '15M')).toUpperCase();
-  const timeframeTag = isScalp ? `SCALP (${cleanTf})` : `INTRADAY (${cleanTf})`;
-  const assetSubtitle = signal.trade_id
-    ? `${signal.trade_id} · Gold · ${cleanTf.toLowerCase()}`
-    : `Gold · ${cleanTf.toLowerCase()}`;
-
-  const entryNum = parseFloat(signal.entry) || 0;
-  const slNum = parseFloat(signal.sl) || 0;
-  const tpNum = parseFloat(signal.tp) || 0;
-
-  const isWin = signal.status === 'tp';
-  const isLoss = signal.status === 'sl';
-  const isBe = signal.status === 'be' || signal.status === 'breakeven';
-  const isActive = signal.status === 'active';
-  const conf = signal.confidence || (isBuy ? 88 : 84);
-
-  return (
-    <div className={`ait-sig-card ${isBuy ? 'buy-card' : 'sell-card'}`} style={{ margin: '0 auto 16px' }}>
-      {/* Top Row: Asset Icon & Title + Inline Action Badges + Timeframe Tag */}
-      <div className="ait-card-top-row">
-        <div className="ait-card-asset-info">
-          <div className="ait-card-asset-icon">
-            {isGold ? <GoldAssetEmblem size={42} /> : <PairLogo pair={asset} />}
-          </div>
-          <div className="ait-card-asset-titles">
-            <div className="ait-card-symbol-badge-line">
-              <h4 className="ait-card-symbol-title">{asset}</h4>
-              <span className={`ait-dir-pill ${isBuy ? 'buy' : 'sell'}`}>
-                <span className="ait-dir-dot">●</span>
-                <span>{dir}</span>
-              </span>
-              <span className={`ait-desk-pill ${isBuy ? 'buy' : 'sell'}`}>DESK</span>
-              {(!isWin && !isLoss && !isBe && signal.status === 'active') ? (
-                <span className="ait-active-setup-pill">
-                  <span className="ait-pulse-dot" /> ACTIVE SETUP
-                </span>
-              ) : isWin ? (
-                <span className="ait-outcome-pill tp">✓ TP HIT</span>
-              ) : isBe ? (
-                <span className="ait-outcome-pill be">✓ BREAK-EVEN</span>
-              ) : isLoss ? (
-                <span className="ait-outcome-pill sl">✕ STOPPED OUT</span>
-              ) : null}
-            </div>
-            <span className="ait-card-symbol-sub">{assetSubtitle}</span>
-          </div>
-        </div>
-        <div className="ait-card-timeframe-tag">{timeframeTag}</div>
-      </div>
-
-      {/* Price Levels: Entry, Target, Stop */}
-      <div className="ait-card-levels-vertical ait-mono">
-        <div className="ait-level-row">
-          <span className="ait-level-key">Entry</span>
-          <span className="ait-level-val entry">{formatLevelPrice(entryNum, asset)}</span>
-        </div>
-        <div className="ait-level-row">
-          <span className="ait-level-key">Target</span>
-          <span className="ait-level-val target">{formatLevelPrice(tpNum, asset)}</span>
-        </div>
-        <div className="ait-level-row">
-          <span className="ait-level-key">Stop</span>
-          <span className="ait-level-val stop">{formatLevelPrice(slNum, asset)}</span>
-        </div>
-      </div>
-
-      {/* Setup Conviction Pill with Chevron Dropdown */}
-      <div className="ait-card-setup-toggle-wrapper">
-        <button
-          type="button"
-          className={`ait-card-setup-pill ${open ? 'open' : ''}`}
-          onClick={() => setOpen((o) => !o)}
-          title="Click to view setup confluences & thesis"
-        >
-          <span className="ait-setup-dot">●</span>
-          <span className="ait-setup-text">High conviction setup</span>
-          <span className={`ait-setup-chevron ${open ? 'rotated' : ''}`}>⌄</span>
-        </button>
-      </div>
-
-      {/* Expandable Confluences Drawer */}
-      {open && (
-        <div className="ait-card-expanded-drawer">
-          <div className="ait-drawer-head">
-            <span className="ait-drawer-title">Setup Rationale</span>
-            <span className="ait-drawer-model">{signal.session || 'London KZ'}</span>
-          </div>
-          <div className="ait-drawer-items">
-            <div className="ait-drawer-item">
-              <span className="ait-drawer-tag">Rationale</span>
-              <span className="ait-drawer-desc">{signal.reason || 'Institutional SMC setup with liquidity raid and displacement confirmation.'}</span>
-            </div>
-            <div className="ait-drawer-item highlight">
-              <span className="ait-drawer-tag">Rule</span>
-              <span className="ait-drawer-desc">When price hits 1:1 R:R, move Stop Loss to BE. Strict 0.03 Lot size execution.</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Horizontal Divider */}
-      <div className="ait-card-hr" />
-
-      {/* Meta Section: Confidence, Opened, Closed */}
-      {(() => {
-        const openedTimeVal = signal.publishedAt || signal.timestamp || signal.createdAt || Date.now();
-        const openedTimeStr = formatSignalDate(openedTimeVal);
-
-        let closedTimeVal = null;
-        if (isWin || isLoss || signal.closedAt || signal.updatedAt) {
-          closedTimeVal = signal.closedAt || signal.updatedAt;
-        } else {
-          const openedDate = parseDateInput(openedTimeVal) || new Date();
-          const tfStr = String(tf || '15m').toLowerCase();
-          let durationMins = 30;
-          if (tfStr.includes('1m')) durationMins = 5;
-          else if (tfStr.includes('5m')) durationMins = 15;
-          else if (tfStr.includes('15m')) durationMins = 30;
-          else if (tfStr.includes('30m')) durationMins = 60;
-          else if (tfStr.includes('1h')) durationMins = 120;
-          else if (tfStr.includes('4h')) durationMins = 240;
-          closedTimeVal = new Date(openedDate.getTime() + durationMins * 60000);
-        }
-        const closedTimeStr = formatSignalDate(closedTimeVal);
-
-        return (
-          <div className="ait-card-meta-list">
-            <div className="ait-meta-row">
-              <span className="ait-meta-key">Confidence</span>
-              <div className="ait-meta-val confidence">
-                <SignalStrengthBars activeCount={Math.min(4, Math.max(2, Math.round((conf / 100) * 4)))} />
-                <span className="ait-confidence-pct">{conf}%</span>
-              </div>
-            </div>
-
-            <div className="ait-meta-row">
-              <span className="ait-meta-key">Opened</span>
-              <span className="ait-meta-val date ait-mono">{openedTimeStr}</span>
-            </div>
-
-            <div className="ait-meta-row">
-              <span className="ait-meta-key">Closed</span>
-              <span className="ait-meta-val date ait-mono">{closedTimeStr}</span>
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* Bottom Tags & Status Note */}
-      <div className="ait-card-footer-tags">
-        <div className="ait-tags-chips-row">
-          <span className="ait-tag-chip default">Trending</span>
-          <span className="ait-tag-chip outline">Auto (AI picks best)</span>
-        </div>
-
-        <div className="ait-status-note-banner">
-          <span>
-            {isWin
-              ? 'Target reached — trade won'
-              : isLoss
-              ? 'Stopped out at risk limit'
-              : 'Active setup — tracking market liquidity'}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
+function instrumentOf(signal) {
+  return String(signal.pair || signal.symbol || signal.instrument || '—').replace('/', '').toUpperCase();
 }
 
-export default function MemberSignals({ plan = 'elite' }) {
-  const [signals, setSignals] = useState(BACKTEST_SIGNALS);
-  const [loading, setLoading] = useState(false);
-  const [statusFilter, setStatusFilter] = usePersistentState('gzt_memsig_statusFilter', 'all');
-  const [toast, setToast] = useState(null);
-  const [livePrices, setLivePrices] = useState({});
+function strategyOf(signal) {
+  const text = `${signal.style || ''} ${signal.mode || ''} ${signal.strategy || ''} ${signal.strategy_version || ''}`.toLowerCase();
+  if (text.includes('scalp')) return 'Scalp';
+  if (text.includes('intraday') || text.includes('daytrade') || text.includes('day trade')) return 'Intraday';
+  return signal.isBacktest ? 'Backtest' : 'Analysis';
+}
 
-  useEffect(() => {
-    const unsub = subscribeSignals((list) => {
-      if (Array.isArray(list) && list.length > 0) {
-        const filtered = list.filter((s) => s.id?.startsWith('ICT-XAU-') || s.isRealData || s.isBacktest || s.strategy_version?.includes('ICT-XAUUSD'));
-        setSignals(filtered.length > 0 ? filtered : BACKTEST_SIGNALS);
-      } else {
-        setSignals(BACKTEST_SIGNALS);
-      }
-      setLoading(false);
-    });
-    return () => unsub();
-  }, []);
+function statusOf(signal) {
+  const value = String(signal.status || '').toLowerCase();
+  if (['active', 'open', 'live'].includes(value)) return 'Active';
+  if (['waiting', 'pending', 'wait'].includes(value)) return 'Waiting';
+  if (['cancelled', 'canceled'].includes(value)) return 'Cancelled';
+  if (['expired'].includes(value)) return 'Expired';
+  if (['tp', 'sl', 'be', 'breakeven', 'win', 'loss', 'completed', 'closed'].includes(value)) return 'Completed';
+  return 'Waiting';
+}
 
-  useEffect(() => {
-    let cancelled = false;
-    const activePairs = ['XAUUSD'];
+function price(value) {
+  if (value === null || value === undefined || value === '') return '—';
+  const number = Number(String(value).replace(/,/g, ''));
+  return Number.isFinite(number) ? number.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 5 }) : String(value);
+}
 
-    // 1. Initial snapshot fetch
-    async function loadSnapshot() {
-      const nextPrices = {};
-      for (const p of activePairs) {
-        const price = await fetchLivePrice(p);
-        if (price) nextPrices[p] = price;
-      }
-      if (cancelled) return;
-      setLivePrices((prev) => ({ ...prev, ...nextPrices }));
+function timeframeOf(signal) {
+  const timeframe = signal.timeframe || signal.time_frame || signal.interval || (strategyOf(signal) === 'Scalp' ? '1m / 5m' : '15m');
+  return String(timeframe).replace(/\s+/g, ' ').toUpperCase();
+}
+
+function targetsOf(signal) {
+  const first = signal.tp1 ?? signal.tp_1 ?? signal.takeProfit1 ?? signal.tp ?? signal.take_profit ?? signal.target;
+  return [first, signal.tp2 ?? signal.tp_2 ?? signal.takeProfit2, signal.tp3 ?? signal.tp_3 ?? signal.takeProfit3];
+}
+
+function rrOf(signal) {
+  const value = signal.rr || signal.riskReward || signal.planned_rr;
+  if (typeof value === 'string' && value.includes(':')) return value;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? `1:${parsed.toFixed(1)}` : '—';
+}
+
+function SignalDetails({ signal, onClose, onCopy, copied }) {
+  const targets = targetsOf(signal);
+  const status = statusOf(signal);
+  const date = signalDate(signal);
+  return <div className="mh-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <section className="mh-detail" role="dialog" aria-modal="true" aria-labelledby="mh-detail-title">
+      <header><div><span className="mh-eyebrow">SIGNAL DETAILS</span><h2 id="mh-detail-title">{instrumentOf(signal)} · {signal.direction?.toUpperCase() || '—'}</h2></div><button type="button" aria-label="Close details" onClick={onClose}>×</button></header>
+      <div className="mh-detail-meta"><span className={`mh-status ${status.toLowerCase()}`}>{status}</span><span>{signal.isBacktest ? 'Historical record' : 'Live signal'}</span><span>{strategyOf(signal)} · {timeframeOf(signal)}</span><span>{date ? new Date(date).toLocaleString() : 'Date unavailable'}</span></div>
+      <div className="mh-detail-levels"><div><small>Entry</small><b>{price(signal.entry ?? signal.entry_price ?? signal.entryPrice)}</b></div><div><small>Stop loss</small><b className="mh-down">{price(signal.sl ?? signal.stop_loss ?? signal.stopLoss)}</b></div>{targets.map((target, index) => <div key={index}><small>TP{index + 1}</small><b className="mh-up">{price(target)}</b></div>)}<div><small>Risk : Reward</small><b>{rrOf(signal)}</b></div><div><small>Break-even</small><b>{price(signal.beTrigger ?? signal.breakEvenTrigger)}</b></div></div>
+      <div className="mh-detail-reason"><small>Analysis</small><p>{signal.reason || signal.analysis || signal.confluences?.join(' · ') || 'No additional analysis was saved with this signal.'}</p></div>
+      <footer className="mh-detail-footer"><span>{signal.isBacktest ? 'Historical signal record' : 'Live member signal'}</span><button type="button" className="mh-view" onClick={() => onCopy(signal)}>{copied ? 'Copied' : 'Copy trade plan'}</button></footer>
+    </section>
+  </div>;
+}
+
+export default function MemberSignals() {
+  const [liveSignals, setLiveSignals] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [instrument, setInstrument] = useState('all');
+  const [strategy, setStrategy] = useState('all');
+  const [status, setStatus] = useState('all');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState(null);
+  const [copiedSignalId, setCopiedSignalId] = useState('');
+
+  useEffect(() => subscribeSignals((items) => {
+    setLiveSignals(Array.isArray(items) ? items : []);
+    setLoading(false);
+  }), []);
+
+  const allSignals = useMemo(() => {
+    const keyed = new Map();
+    for (const signal of [...BACKTEST_SIGNALS, ...liveSignals]) {
+      const source = signal.isBacktest ? 'backtest' : 'live';
+      const key = `${source}:${signal.id || signal.trade_id || `${instrumentOf(signal)}:${signalDate(signal)}`}`;
+      keyed.set(key, { ...signal, id: signal.id || signal.trade_id || key });
     }
-    loadSnapshot();
+    return [...keyed.values()].sort((a, b) => signalDate(b) - signalDate(a));
+  }, [liveSignals]);
 
-    // 2. Direct real-time WebSocket tick stream from TradingView OANDA feed (matches chart candle 1:1)
-    const unsubTicks = subscribeLiveTicks(activePairs, (incoming) => {
-      if (cancelled) return;
-      setLivePrices((prev) => ({ ...prev, ...incoming }));
+  const instruments = useMemo(() => [...new Set(allSignals.map(instrumentOf))].filter((item) => item !== '—').sort(), [allSignals]);
+  const filtered = useMemo(() => allSignals.filter((signal) => {
+    const time = signalDate(signal);
+    const afterFrom = !fromDate || (time && time >= new Date(`${fromDate}T00:00:00`).getTime());
+    const beforeTo = !toDate || (time && time <= new Date(`${toDate}T23:59:59.999`).getTime());
+    return (instrument === 'all' || instrumentOf(signal) === instrument)
+      && (strategy === 'all' || strategyOf(signal).toLowerCase() === strategy)
+      && (status === 'all' || statusOf(signal).toLowerCase() === status)
+      && (!search.trim() || `${instrumentOf(signal)} ${signal.direction || ''} ${signal.reason || ''} ${Array.isArray(signal.confluences) ? signal.confluences.join(' ') : signal.confluences || ''}`.toLowerCase().includes(search.trim().toLowerCase()))
+      && afterFrom && beforeTo;
+  }), [allSignals, instrument, strategy, status, fromDate, toDate, search]);
 
-      // Instant TP / SL outcome evaluation on every single live tick (strictly non-baseline active setups)
-      const activeList = signals.filter((s) => s.status === 'active' && !s.isHistoricalBaseline);
-      for (const s of activeList) {
-        const pair = s.pair || 'XAUUSD';
-        const currentPrice = incoming[pair];
-        if (!currentPrice) continue;
-        const outcome = evaluateSignalOutcome(s, currentPrice);
-        if (outcome === 'tp' || outcome === 'sl') {
-          updateSignalStatus(s.id, outcome).catch(() => {});
-        }
-      }
-    });
-
-    // 3. Fallback poll every 8 seconds if WebSocket misses a symbol
-    const interval = setInterval(loadSnapshot, 8000);
-
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-      unsubTicks();
-    };
-  }, [signals]);
-
-  const sorted = signals
-    .filter((s) => /XAU|GOLD/i.test(s.pair || ''))
-    .sort((a, b) => {
-      const aActive = String(a.status || 'active').toLowerCase() === 'active';
-      const bActive = String(b.status || 'active').toLowerCase() === 'active';
-      if (aActive && !bActive) return -1;
-      if (!aActive && bActive) return 1;
-
-      const aTime = a.publishedAt || a.timestamp || a.createdAt || 0;
-      const bTime = b.publishedAt || b.timestamp || b.createdAt || 0;
-      if (aTime && bTime) return bTime - aTime;
-      return (a.minutesAgo ?? 0) - (b.minutesAgo ?? 0);
-    });
-  const filtered = sorted.filter((s) => statusFilter === 'all' || s.status === statusFilter);
-  const visibilityPercent = Math.round((PLAN_SIGNAL_ACCESS[plan] ?? 1) * 100);
-
-  function handleSignalCopy(pair) {
-    setToast(`Copied ${pair} setup to clipboard! Ready to paste into MetaTrader.`);
-    setTimeout(() => setToast(null), 3000);
+  function resetFilters() {
+    setInstrument('all'); setStrategy('all'); setStatus('all'); setFromDate(''); setToDate(''); setSearch('');
   }
 
-  return (
-    <div className="terminal-signals-page">
-      {/* TOAST NOTIFICATION */}
-      {toast && (
-        <div className="toast-notification">
-          <span>✓ {toast}</span>
-        </div>
-      )}
+  async function copyTradePlan(signal) {
+    const targets = targetsOf(signal);
+    const text = [
+      `${instrumentOf(signal)} ${String(signal.direction || '').toUpperCase()} - ${strategyOf(signal)} - ${timeframeOf(signal)}`,
+      `Status: ${statusOf(signal)}`,
+      `Entry: ${price(signal.entry ?? signal.entry_price ?? signal.entryPrice)}`,
+      `Stop loss: ${price(signal.sl ?? signal.stop_loss ?? signal.stopLoss)}`,
+      ...targets.map((target, index) => target ? `TP${index + 1}: ${price(target)}` : null).filter(Boolean),
+      `Risk : Reward: ${rrOf(signal)}`,
+      signal.reason || signal.analysis || '',
+    ].filter(Boolean).join('\n');
 
-      {/* FILTERS */}
-      <div className="terminal-filter-row">
-        <div className="terminal-chips">
-          {STATUS_FILTERS.map((f) => (
-            <button
-              key={f.key}
-              type="button"
-              className={`terminal-filter-chip${statusFilter === f.key ? ' active' : ''}`}
-              onClick={() => setStatusFilter(f.key)}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          {livePrices['XAUUSD'] && (
-            <div className="tracker-pulse-badge" style={{ padding: '3px 10px' }}>
-              <span className="pulse-dot" /> SPOT GOLD: ${formatSpotPrice('XAUUSD', livePrices['XAUUSD'])}
-            </div>
-          )}
-          <div className="signals-count-tag">
-            Showing <strong>{filtered.length}</strong> verified signals
-          </div>
-        </div>
-      </div>
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const input = document.createElement('textarea');
+        input.value = text;
+        input.style.position = 'fixed';
+        input.style.opacity = '0';
+        document.body.appendChild(input);
+        input.select();
+        const copied = document.execCommand('copy');
+        input.remove();
+        if (!copied) throw new Error('Clipboard copy is unavailable.');
+      }
+      setCopiedSignalId(signal.id);
+      window.setTimeout(() => setCopiedSignalId(''), 1800);
+    } catch (err) {
+      console.warn('[MemberSignals] Could not copy signal:', err);
+    }
+  }
 
-      {/* SIGNALS LIST */}
-      <div className="terminal-signal-feed">
-        {visibilityPercent < 100 && !loading && (
-          <div style={{ gridColumn: '1 / -1', color: 'var(--mute)', fontSize: 12, textAlign: 'right' }}>
-            {plan === 'starter' ? 'Starter' : 'Pro'} members see {visibilityPercent}% of signals published each day.
-          </div>
-        )}
-        {loading ? (
-          <div className="admin-empty" style={{ gridColumn: '1 / -1', padding: '60px 20px', textAlign: 'center' }}>
-            <div style={{ fontSize: '26px', marginBottom: '8px' }}>📡</div>
-            <div style={{ fontWeight: 600, color: 'var(--text)' }}>Connecting to Live Signal Desk...</div>
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="admin-empty" style={{ gridColumn: '1 / -1', padding: '60px 20px', textAlign: 'center', background: 'var(--bg1)', border: '1px solid var(--faint)', borderRadius: '16px' }}>
-            <div style={{ fontSize: '32px', marginBottom: '12px' }}>⚡</div>
-            <div style={{ fontWeight: 700, fontSize: '16px', color: 'var(--text)', marginBottom: '8px' }}>
-              No Active Signals Right Now
-            </div>
-            <div style={{ fontSize: '13px', color: 'var(--mute)', maxWidth: '440px', margin: '0 auto', lineHeight: '1.6' }}>
-              Live institutional setups will appear here in real time as soon as they are published from the Desk during London & New York Killzones.
-            </div>
-          </div>
-        ) : (
-          filtered.map((signal) => (
-            <SignalCard
-              key={signal.id}
-              signal={signal}
-              livePrice={livePrices[signal.pair || 'XAUUSD']}
-            />
-          ))
-        )}
-      </div>
+  function exportFilteredCsv() {
+    const columns = ['Date', 'Instrument', 'Strategy', 'Timeframe', 'Direction', 'Status', 'Entry', 'Stop Loss', 'TP1', 'TP2', 'TP3', 'Risk Reward', 'Analysis'];
+    const escapeCell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+    const rows = filtered.map((signal) => {
+      const targets = targetsOf(signal);
+      const date = signalDate(signal);
+      return [date ? new Date(date).toISOString() : '', instrumentOf(signal), strategyOf(signal), timeframeOf(signal),
+        signal.direction || '', statusOf(signal), signal.entry ?? signal.entry_price ?? signal.entryPrice,
+        signal.sl ?? signal.stop_loss ?? signal.stopLoss, ...targets, rrOf(signal), signal.reason || signal.analysis || ''];
+    });
+    const csv = `\uFEFF${[columns, ...rows].map((row) => row.map(escapeCell).join(',')).join('\r\n')}`;
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `genz-signal-history-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  return <section className="mh-page" aria-labelledby="mh-title">
+    {selected && <SignalDetails signal={selected} onClose={() => setSelected(null)} onCopy={copyTradePlan} copied={copiedSignalId === selected.id} />}
+    <div className="mh-heading"><div><span className="mh-eyebrow">YOUR RECORD</span><h1 id="mh-title">Signal History</h1><p>Review live signals and historical signal records.</p></div><div className="mh-heading-actions"><div className="mh-total"><b>{filtered.length}</b><span>records</span></div><button type="button" className="mh-export" onClick={exportFilteredCsv} disabled={!filtered.length}>Export CSV</button></div></div>
+    <div className="mh-filters">
+      <label className="mh-search"><span>Search signals</span><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Pair, direction, or setup" /></label>
+      <label><span>Instrument</span><select value={instrument} onChange={(event) => setInstrument(event.target.value)}><option value="all">All Instruments</option>{instruments.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+      <label><span>Strategy</span><select value={strategy} onChange={(event) => setStrategy(event.target.value)}><option value="all">All Strategies</option><option value="scalp">Scalp</option><option value="intraday">Intraday</option><option value="analysis">Other / Analysis</option></select></label>
+      <label><span>Status</span><select value={status} onChange={(event) => setStatus(event.target.value)}><option value="all">All Statuses</option><option value="waiting">Waiting</option><option value="active">Active</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option><option value="expired">Expired</option></select></label>
+      <label className="mh-date"><span>From</span><input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} /></label>
+      <label className="mh-date"><span>To</span><input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} /></label>
+      <button className="mh-reset" type="button" onClick={resetFilters}>↺ <span>Reset</span></button>
     </div>
-  );
+    <div className="mh-table-wrap"><table className="mh-table"><thead><tr><th>Date</th><th>Instrument</th><th>Strategy</th><th>Timeframe</th><th>Direction</th><th>Status</th><th>Entry</th><th>SL</th><th>TP1</th><th>TP2</th><th>TP3</th><th>R:R</th><th>Actions</th></tr></thead>
+      <tbody>{filtered.map((signal) => { const targets = targetsOf(signal); const date = signalDate(signal); const state = statusOf(signal); return <tr key={`${signal.isBacktest ? 'history' : 'live'}-${signal.id}`}>
+        <td className="mh-date-cell">{date ? <>{new Date(date).toLocaleDateString([], { month: 'short', day: 'numeric', year: '2-digit' })}<small>{new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small></> : '—'}</td>
+        <td className="mh-instrument">{instrumentOf(signal)}</td><td>{strategyOf(signal)}{signal.isBacktest && <small className="mh-row-sub">Historical</small>}</td><td>{timeframeOf(signal)}</td><td><span className={`mh-direction ${(signal.direction || '').toLowerCase()}`}>{signal.direction?.toUpperCase() || '—'}</span></td><td><span className={`mh-status ${state.toLowerCase()}`}>{state}</span></td><td>{price(signal.entry ?? signal.entry_price ?? signal.entryPrice)}</td><td className="mh-down">{price(signal.sl ?? signal.stop_loss ?? signal.stopLoss)}</td>{targets.map((target, index) => <td className={target ? 'mh-up' : 'mh-muted'} key={index}>{price(target)}</td>)}<td>{rrOf(signal)}</td><td><div className="mh-row-actions"><button className="mh-view" type="button" onClick={() => setSelected(signal)}>View</button><button className="mh-copy" type="button" onClick={() => copyTradePlan(signal)}>{copiedSignalId === signal.id ? 'Copied' : 'Copy'}</button></div></td>
+      </tr>; })}
+      {!filtered.length && <tr><td colSpan="13" className="mh-empty">{loading ? 'Loading live records and historical signals…' : 'No records match these filters.'}</td></tr>}</tbody>
+    </table></div>
+    <div className="mh-mobile-list">{filtered.map((signal) => { const date = signalDate(signal); const state = statusOf(signal); const targets = targetsOf(signal); return <button type="button" className="mh-mobile-card" key={`mobile-${signal.isBacktest ? 'bt' : 'live'}-${signal.id}`} onClick={() => setSelected(signal)}><span className="mh-mobile-top"><b>{instrumentOf(signal)}</b><span className={`mh-status ${state.toLowerCase()}`}>{state}</span></span><span className="mh-mobile-meta">{strategyOf(signal)} · {timeframeOf(signal)} · {date ? new Date(date).toLocaleDateString() : 'Date unavailable'}</span><span className="mh-mobile-levels"><span>Entry <b>{price(signal.entry ?? signal.entry_price)}</b></span><span>SL <b className="mh-down">{price(signal.sl ?? signal.stop_loss)}</b></span><span>TP1 <b className="mh-up">{price(targets[0])}</b></span></span><span className={`mh-direction ${(signal.direction || '').toLowerCase()}`}>{signal.direction?.toUpperCase() || '—'}</span></button>; })}{!filtered.length && <div className="mh-empty">{loading ? 'Loading signal records…' : 'No records match these filters.'}</div>}</div>
+    <footer className="mh-footnote">Historical outcomes are kept separate from live signals and are not inferred from current prices.</footer>
+  </section>;
 }

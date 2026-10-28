@@ -128,12 +128,13 @@ export async function publishSignal(signalData = {}) {
 }
 
 /**
- * Updates a signal's status ('active' | 'tp' | 'sl').
+ * Updates a signal's status ('active' | 'tp' | 'sl' | 'be' | 'closed') and optional calculated results.
  */
-export async function updateSignalStatus(signalId, status) {
+export async function updateSignalStatus(signalId, status, extraFields = {}) {
   const ref = doc(db, SIGNALS_COLLECTION, signalId);
   await updateDoc(ref, {
     status,
+    ...extraFields,
     updatedAt: serverTimestamp(),
   });
 }

@@ -1,0 +1,82 @@
+/* About / Blog / Terms / Privacy pages — uses the site theme tokens so dark and light both work. */
+.info-page { max-width: 860px; margin: 0 auto; padding-bottom: 8px; }
+.info-hero { padding: 16px 0 28px; }
+.info-eyebrow { font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); font-weight: 700; margin-bottom: 10px; }
+.info-title { font-size: clamp(26px, 4vw, 38px); line-height: 1.25; letter-spacing: -0.015em; margin: 0 0 14px; color: var(--text); }
+.info-intro { font-size: 16px; line-height: 1.8; color: var(--mute); margin: 0; max-width: 720px; }
+
+.info-body { display: flex; flex-direction: column; gap: 8px; }
+.info-block { padding: 22px 0; border-top: 1px solid var(--faint); }
+.info-block h2 { font-size: 19px; margin: 0 0 12px; color: var(--text); }
+.info-block p, .info-body.legal > p, .info-body.legal p { font-size: 15px; line-height: 1.85; color: var(--mute); margin: 0 0 12px; }
+.info-block ul { margin: 0 0 4px; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
+.info-block li { font-size: 15px; line-height: 1.75; color: var(--mute); }
+.info-block li::marker { color: var(--gold); }
+.info-note { font-size: 13px; padding: 12px 14px; border-radius: 12px; background: var(--bg2); border: 1px solid var(--faint); color: var(--mute); }
+
+.info-cta { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-top: 20px; padding: 22px 24px; border-radius: 16px; background: var(--bg1); border: 1px solid var(--brandline); }
+.info-cta h3 { margin: 0 0 4px; font-size: 18px; color: var(--text); }
+.info-cta p { margin: 0; font-size: 14px; color: var(--mute); }
+.info-cta-btn { padding: 12px 20px; border-radius: 12px; background: var(--brand); color: #000; font-weight: 700; font-size: 14px; text-decoration: none; transition: transform .15s, filter .15s; }
+.info-cta-btn:hover { transform: translateY(-2px); filter: brightness(1.08); }
+
+.blog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
+.blog-card { text-align: left; font-family: inherit; cursor: pointer; display: flex; flex-direction: column; gap: 10px; padding: 22px; border-radius: 16px; background: var(--bg1); border: 1px solid var(--faint); color: var(--text); transition: transform .18s, border-color .18s; }
+.blog-card:hover { transform: translateY(-3px); border-color: var(--brandline); }
+.blog-card:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.blog-tag { align-self: flex-start; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 10px; border-radius: 999px; color: var(--brand2); background: var(--brandd); border: 1px solid var(--brandline); }
+.blog-card h3 { margin: 0; font-size: 18px; line-height: 1.4; }
+.blog-card p { margin: 0; font-size: 14px; line-height: 1.7; color: var(--mute); }
+.blog-meta { margin-top: auto; font-size: 12px; color: var(--mute); }
+
+@media (max-width: 640px) {
+  .info-cta { padding: 18px; }
+  .info-cta-btn { width: 100%; text-align: center; }
+}
+
+/* Contact page: modern glass team cards */
+#v-contact { max-width: 1040px; margin: 0 auto; }
+.contact-hero { position: relative; text-align: center; padding: 28px 0 40px; isolation: isolate; }
+.contact-hero-glow { position: absolute; inset: -40px 0 auto; height: 260px; z-index: -1; pointer-events: none;
+  background: radial-gradient(40% 60% at 28% 40%, rgba(245,185,74,.22), transparent 70%), radial-gradient(40% 60% at 72% 30%, rgba(167,139,250,.22), transparent 70%), radial-gradient(35% 55% at 50% 70%, rgba(45,212,191,.18), transparent 70%);
+  filter: blur(18px); }
+.contact-eyebrow { display: inline-block; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; color: var(--text); padding: 6px 14px; border-radius: 999px; background: var(--bg1); border: 1px solid var(--faint); margin-bottom: 18px; }
+.contact-title { font-size: clamp(30px, 5vw, 52px); line-height: 1.2; letter-spacing: -0.02em; margin: 0 0 14px; color: var(--text); }
+.contact-title span { background: linear-gradient(90deg, #F5B94A, #2DD4BF 55%, #A78BFA); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.contact-sub { margin: 0 auto; max-width: 520px; font-size: 16px; line-height: 1.75; color: var(--mute); }
+
+.team-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 0 0 32px; }
+.team-card { --mx: 50%; --my: 0px; position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; padding: 32px 22px 22px; border-radius: 22px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--bg1) 92%, transparent), color-mix(in srgb, var(--bg2) 88%, transparent));
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 20px 40px -24px rgba(0,0,0,.55);
+  transition: transform .25s ease, box-shadow .25s ease; overflow: hidden;
+  animation: teamIn .6s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--i) * 90ms); }
+/* gradient hairline border */
+.team-card::before { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 70%, transparent), transparent 45%, color-mix(in srgb, var(--accent) 25%, transparent));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+/* cursor spotlight */
+.team-card::after { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .25s;
+  background: radial-gradient(260px circle at var(--mx) var(--my), color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%); }
+.team-card:hover { transform: translateY(-6px); box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 28px 50px -22px color-mix(in srgb, var(--accent) 45%, #000); }
+.team-card:hover::after { opacity: 1; }
+
+.team-avatar { position: relative; width: 84px; height: 84px; border-radius: 50%; display: grid; place-items: center; margin-bottom: 6px; box-sizing: border-box;
+  background: conic-gradient(from 210deg, var(--accent), color-mix(in srgb, var(--accent) 25%, transparent), var(--accent)); padding: 3px; }
+.team-avatar span { width: 100%; height: 100%; border-radius: 50%; display: grid; place-items: center; font-size: 26px; font-weight: 800; letter-spacing: .02em; color: var(--accent); background: var(--bg1); }
+.team-avatar-tg { position: absolute; right: -2px; bottom: -2px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: #229ED9; color: #fff; border: 3px solid var(--bg1); box-sizing: border-box; }
+.team-avatar-tg svg { width: 13px; height: 13px; }
+.team-name { margin: 0; font-size: 20px; letter-spacing: -0.01em; color: var(--text); }
+.team-chip { font-size: 12.5px; font-weight: 600; padding: 5px 12px; border-radius: 999px; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); }
+.team-btn { margin-top: 14px; width: 100%; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 13px 16px; border-radius: 14px; text-decoration: none; font-size: 13.5px; font-weight: 600; color: var(--text);
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg1)); border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent); transition: background .2s, border-color .2s; }
+.team-btn b { font-weight: 800; color: var(--accent); }
+.team-btn svg { flex: none; transition: transform .2s; color: var(--accent); }
+.team-btn:hover { background: color-mix(in srgb, var(--accent) 20%, var(--bg1)); border-color: var(--accent); }
+.team-btn:hover svg { transform: translateX(4px); }
+.team-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+@keyframes teamIn { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .team-card { animation: none; transition: none; } .team-btn svg { transition: none; } }
+@media (max-width: 860px) { .team-grid { grid-template-columns: 1fr; max-width: 420px; margin-left: auto; margin-right: auto; } }

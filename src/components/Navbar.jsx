@@ -39,6 +39,8 @@ export default function Navbar({
     if (fn) fn();
   }
 
+  if (activeSection === 'member-preview') return null;
+
   const paymentLabel = t.aiTrading;
 
   return (

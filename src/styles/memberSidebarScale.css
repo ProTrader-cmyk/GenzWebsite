@@ -1,0 +1,18 @@
+.member-terminal-shell .terminal-sidebar{width:340px!important;padding:0 20px!important}
+.member-terminal-shell .member-brand{height:90px!important;min-height:90px!important;flex:0 0 90px!important;box-sizing:border-box!important;gap:15px!important;padding:0 9px!important}
+.member-terminal-shell .member-brand img{width:62px!important;height:62px!important}
+.member-terminal-shell .member-brand b{font-size:21px!important}
+.member-terminal-shell .member-brand small{font-size:13px!important}
+.member-terminal-shell .member-nav-caption{padding:24px 13px 12px!important;font-size:13px!important;letter-spacing:.14em}
+.member-terminal-shell .terminal-nav-list{gap:9px!important}
+.member-terminal-shell .terminal-nav-btn,.member-terminal-shell .member-main-link{min-height:60px!important;gap:15px!important;padding:13px 15px!important;border-radius:9px!important;font-size:17px!important}
+.member-terminal-shell .terminal-nav-btn .nav-icon,.member-terminal-shell .member-main-link .nav-icon{width:24px!important;height:24px!important}
+.member-terminal-shell .terminal-nav-btn .nav-badge{padding:5px 8px!important;font-size:11px!important}
+.member-terminal-shell .terminal-user-badge-card{gap:9px!important;padding:12px 6px!important}
+.member-terminal-shell .terminal-user-badge-card .terminal-avatar{width:36px!important;height:36px!important;font-size:14px!important}
+.member-terminal-shell .terminal-user-name{font-size:12px!important}
+.member-terminal-shell .terminal-plan-tag{font-size:9px!important}
+.member-terminal-shell .terminal-sidebar-bottom{padding:10px 0 12px!important}
+.member-terminal-shell .terminal-exit-btn{min-height:46px!important;font-size:13px!important}
+@media(max-width:960px){.member-terminal-shell .terminal-sidebar{width:340px!important;max-width:88vw!important;padding:20px!important}}
+@media(max-width:560px){.member-terminal-shell .terminal-sidebar{width:min(340px,92vw)!important}}

@@ -50,6 +50,7 @@ import {
 } from '../services/telegramService.js';
 import GoldChart from '../components/GoldChart.jsx';
 import ThemeToggle from '../components/ThemeToggle.jsx';
+import { calculateTradePnl } from '../services/tradePnlService.js';
 
 const TABS = [
   { key: 'all', label: 'All' },
@@ -537,7 +538,28 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
   async function handleUpdateSignalStatus(id, newStatus) {
     setUpdatingSignalId(id);
     try {
-      await updateSignalStatus(id, newStatus);
+      const targetSig = signals.find((s) => s.id === id);
+      const extraFields = {};
+      if (targetSig && (newStatus === 'tp' || newStatus === 'sl' || newStatus === 'be')) {
+        const exitPrice = newStatus === 'tp' ? Number(targetSig.tp) : newStatus === 'sl' ? Number(targetSig.sl) : Number(targetSig.entry);
+        const pnlCalc = calculateTradePnl({
+          symbol: targetSig.pair || 'XAUUSD',
+          direction: targetSig.direction || 'BUY',
+          entryPrice: Number(targetSig.entry || targetSig.entry_price),
+          exitPrice,
+          lotSize: Number(targetSig.lotSize ?? targetSig.lot ?? targetSig.lot_size) || 0.03,
+        });
+        extraFields.exit_price = exitPrice;
+        extraFields.exitPrice = exitPrice;
+        extraFields.gross_pnl = pnlCalc.grossPnl;
+        extraFields.net_pnl = pnlCalc.netPnl;
+        extraFields.realized_r = pnlCalc.realizedR;
+        extraFields.lot = pnlCalc.lotSize;
+        extraFields.lotSize = pnlCalc.lotSize;
+        extraFields.recalculated_at = new Date().toISOString();
+        extraFields.calculation_method = 'tradePnlService:0.03lot';
+      }
+      await updateSignalStatus(id, newStatus, extraFields);
     } catch (err) {
       console.error('Error updating signal status:', err);
       setSignalError('Failed to update signal status.');
@@ -580,8 +602,27 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
 
           const outcome = evaluateSignalOutcome(s, currentPrice, previousPrices[s.pair || 'XAUUSD']);
           if (outcome === 'tp' || outcome === 'sl') {
-            await updateSignalStatus(s.id, outcome);
             const isTp = outcome === 'tp';
+            const exitPrice = isTp ? Number(s.tp || currentPrice) : Number(s.sl || currentPrice);
+            const pnlCalc = calculateTradePnl({
+              symbol: s.pair || 'XAUUSD',
+              direction: s.direction || 'BUY',
+              entryPrice: Number(s.entry || s.entry_price),
+              exitPrice,
+              lotSize: Number(s.lotSize ?? s.lot ?? s.lot_size) || 0.03,
+            });
+
+            await updateSignalStatus(s.id, outcome, {
+              exit_price: exitPrice,
+              exitPrice: exitPrice,
+              gross_pnl: pnlCalc.grossPnl,
+              net_pnl: pnlCalc.netPnl,
+              realized_r: pnlCalc.realizedR,
+              lot: pnlCalc.lotSize,
+              lotSize: pnlCalc.lotSize,
+              recalculated_at: new Date().toISOString(),
+              calculation_method: 'tradePnlService:0.03lot',
+            });
             setSignalSuccess(
               `${isTp ? '🎯 [AUTO-TRIGGER]' : '❌ [AUTO-TRIGGER]'} ${s.pair} touched ${isTp ? 'Take Profit' : 'Stop Loss'} at $${currentPrice}! Signal status updated live on AI Trading terminal.`
             );
@@ -610,10 +651,30 @@ export default function AdminDashboard({ admin, onLogout, onViewSite }) {
           if (!currentPrice) continue;
           const outcome = evaluateSignalOutcome(s, currentPrice, previousPrices[s.pair || 'XAUUSD']);
           if (outcome === 'tp' || outcome === 'sl') {
-            updateSignalStatus(s.id, outcome);
             const isTp = outcome === 'tp';
+            const exitPrice = isTp ? Number(s.tp || currentPrice) : Number(s.sl || currentPrice);
+            const pnlCalc = calculateTradePnl({
+              symbol: s.pair || 'XAUUSD',
+              direction: s.direction || 'BUY',
+              entryPrice: Number(s.entry || s.entry_price),
+              exitPrice,
+              lotSize: Number(s.lotSize ?? s.lot ?? s.lot_size) || 0.03,
+            });
+
+            updateSignalStatus(s.id, outcome, {
+              exit_price: exitPrice,
+              exitPrice: exitPrice,
+              gross_pnl: pnlCalc.grossPnl,
+              net_pnl: pnlCalc.netPnl,
+              realized_r: pnlCalc.realizedR,
+              lot: pnlCalc.lotSize,
+              lotSize: pnlCalc.lotSize,
+              recalculated_at: new Date().toISOString(),
+              calculation_method: 'tradePnlService:0.03lot',
+            });
+            const isTpMsg = outcome === 'tp';
             setSignalSuccess(
-              `${isTp ? '🎯 [AUTO-TRIGGER]' : '❌ [AUTO-TRIGGER]'} ${s.pair} touched ${isTp ? 'Take Profit' : 'Stop Loss'} at $${currentPrice}! Signal status updated live on AI Trading terminal.`
+              `${isTpMsg ? '🎯 [AUTO-TRIGGER]' : '❌ [AUTO-TRIGGER]'} ${s.pair} touched ${isTpMsg ? 'Take Profit' : 'Stop Loss'} at $${currentPrice}! Signal status updated live on AI Trading terminal.`
             );
           }
         }

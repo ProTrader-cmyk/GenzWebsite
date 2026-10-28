@@ -1,0 +1,28 @@
+.member-terminal-shell .member-room-status.is-live{color:#55e6bd}
+.member-terminal-shell .member-room-status.is-live i{background:#24d3a5;box-shadow:0 0 12px #24d3a5}
+.member-terminal-shell .member-livekit-host-form{display:grid;gap:10px;margin:4px 0 18px;padding:18px;border:1px solid #1b4567;border-radius:9px;background:#081c30}
+.member-terminal-shell .member-livekit-host-form>label{font-size:15px;font-weight:700;color:#eaf4ff}
+.member-terminal-shell .member-livekit-host-form>div{display:flex;gap:10px}
+.member-terminal-shell .member-livekit-host-form input{min-width:0;flex:1;padding:11px 13px;border:1px solid #234b6d;border-radius:6px;background:#061426;color:#e8f2ff;font:inherit}
+.member-terminal-shell .member-livekit-host-form button,.member-terminal-shell .member-livekit-stream-title button{padding:10px 16px;border:1px solid #2588e3;border-radius:6px;background:#1266bd;color:#fff;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.member-terminal-shell .member-livekit-host-form button:disabled{opacity:.55;cursor:wait}
+.member-terminal-shell .member-livekit-host-form small{color:#89a4bf;font-size:12px}
+.member-terminal-shell .member-livekit-stream-title{display:flex;min-height:52px;align-items:center;gap:12px;padding:8px 12px;border-bottom:1px solid #173d5d;background:#07182a}
+.member-terminal-shell .member-livekit-stream-title>strong{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#edf5ff;font-size:14px}
+.member-terminal-shell .member-livekit-live-pill{padding:5px 8px;border-radius:5px;background:#c72d43;color:#fff;font-size:10px;font-weight:800;letter-spacing:.04em}
+.member-terminal-shell .member-livekit-stream-title button{padding:7px 12px;background:#321b28;border-color:#8b3849;color:#ffcad2}
+.member-terminal-shell .member-livekit-stage-wrap{padding:10px;background:#030b14}
+.member-terminal-shell .member-livekit-stage{display:grid;min-height:280px;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));align-content:center;gap:10px}
+.member-terminal-shell .member-livekit-tile{position:relative;display:grid;min-height:250px;overflow:hidden;place-items:center;border:1px solid #1b3953;border-radius:7px;background:#07182a}
+.member-terminal-shell .member-livekit-tile video{width:100%;height:100%;min-height:250px;object-fit:cover;background:#020812}
+.member-terminal-shell .member-livekit-avatar{display:grid;width:70px;height:70px;place-items:center;border:1px solid #34709b;border-radius:50%;background:#103455;color:#d6edff;font-size:28px;font-weight:700}
+.member-terminal-shell .member-livekit-name{position:absolute;bottom:10px;left:10px;padding:5px 8px;border-radius:5px;background:#020812c9;color:white;font-size:12px}
+.member-terminal-shell .member-livekit-tile audio{display:none}
+.member-terminal-shell .member-livekit-waiting{display:flex;min-height:280px;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:#e7f2ff;text-align:center}
+.member-terminal-shell .member-livekit-waiting small{color:#8da8c2}
+.member-terminal-shell .member-livekit-controls{display:flex;min-height:46px;align-items:center;justify-content:space-between;gap:10px;color:#93abc4;font-size:12px}
+.member-terminal-shell .member-livekit-controls>div{display:flex;flex-wrap:wrap;gap:8px}
+.member-terminal-shell .member-livekit-controls button{padding:7px 10px;border:1px solid #275172;border-radius:5px;background:#0a2138;color:#e2efff;font:inherit;font-size:11px;cursor:pointer}
+.member-terminal-shell .member-livekit-controls button.member-livekit-end{border-color:#81404b;background:#351c27;color:#ffc6cf}
+.member-terminal-shell .member-livekit-error{margin:8px 0;padding:10px 12px;border:1px solid #74414c;border-radius:6px;background:#2b1720;color:#ffc4cf;font-size:13px}
+@media(max-width:560px){.member-terminal-shell .member-livekit-host-form>div{flex-direction:column}.member-terminal-shell .member-livekit-stage{grid-template-columns:1fr}.member-terminal-shell .member-livekit-tile{min-height:220px}.member-terminal-shell .member-livekit-tile video{min-height:220px}.member-terminal-shell .member-livekit-controls{align-items:flex-start;flex-direction:column;padding-top:8px}}

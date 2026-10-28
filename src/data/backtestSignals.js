@@ -43,19 +43,19 @@ export function buildSignalsFromBacktest(trades = backtestArtifact.trades || [],
 
     const plannedRr = t.planned_rr || (defaultStyle === 'scalping' ? 1.8 : 2.0);
     const realizedR = typeof t.realized_r === 'number' ? t.realized_r : isWin ? plannedRr : isLoss ? -1.0 : 0.0;
-    const netPnl = typeof t.net_pnl === 'number' ? t.net_pnl : (isWin ? (defaultStyle === 'scalping' ? 42.50 : 95) : isLoss ? (defaultStyle === 'scalping' ? -23.50 : -50) : (defaultStyle === 'scalping' ? -2.90 : 0));
+    const netPnl = typeof t.net_pnl === 'number' ? t.net_pnl : (isWin ? (defaultStyle === 'scalping' ? 12.75 : 36.19) : isLoss ? (defaultStyle === 'scalping' ? -8.25 : -19.45) : 0.0);
 
     const isScalp = defaultStyle === 'scalping' || (t.strategy_version && t.strategy_version.includes('SCALP'));
     const confluences = isScalp
       ? [
           `M5 Liquidity Sweep: ${t.sweep_type || 'M5 Asia/Session Low SSL Sweep'}`,
           `M1 Displacement: MSS Confirmed + ${t.fvg_zone || 'M1 CE 50% FVG Imbalance Tap'}`,
-          `Risk Precision: Structural SL $2.50 | 1:1.8 RR Target ($4.50) | BE at +1.0R ($2.50) · Realized ${realizedR >= 0 ? '+' : ''}${realizedR.toFixed(2)}R ($${netPnl >= 0 ? '+' : ''}${netPnl.toFixed(2)})`,
+          `Risk Precision: 2.5 pts SL ($7.50 risk at 0.03 lot) | 1:1.8 RR Target ($13.50 at 0.03 lot) | BE at +1.0R ($2.50) · Realized ${realizedR >= 0 ? '+' : ''}${realizedR.toFixed(2)}R ($${netPnl >= 0 ? '+' : ''}${netPnl.toFixed(2)})`,
         ]
       : [
           `Liquidity Sweep: ${t.sweep_type || 'Confirmed Swing SSL/BSL Liquidity Sweep'}`,
           `Entry Trigger: Consequent Encroachment (50% CE) FVG ${t.fvg_zone || 'Midpoint'} + Displacement MSS`,
-          `Risk Management: Protected by ${isBe ? 'Break-Even stop triggered at +0.90R' : t.exit_reason === 'TIME_LIMIT_EXIT' ? '180-min max hold time exit' : '0.5% risk stop'} · Realized ${realizedR >= 0 ? '+' : ''}${realizedR.toFixed(2)}R ($${netPnl >= 0 ? '+' : ''}${netPnl.toFixed(2)})`,
+          `Risk Management: Protected by ${isBe ? 'Break-Even stop triggered at +0.90R' : t.exit_reason === 'TIME_LIMIT_EXIT' ? '180-min max hold time exit' : '10.0 pts SL ($30.00 risk at 0.03 lot)'} · Realized ${realizedR >= 0 ? '+' : ''}${realizedR.toFixed(2)}R ($${netPnl >= 0 ? '+' : ''}${netPnl.toFixed(2)})`,
         ];
 
     return {
@@ -127,7 +127,7 @@ export const INTRADAY_SIGNALS = buildSignalsFromBacktest(backtestArtifact.trades
 export const SCALP_SIGNALS = buildSignalsFromBacktest(scalpArtifact.trades, 'scalping');
 
 /**
- * Verified Intraday Performance Stats (60.0% Win Rate)
+ * Verified Intraday Performance Stats (60.0% Win Rate, Fixed 0.03 Lot)
  */
 export const INTRADAY_STRATEGY_STATS = {
   strategyId: 'intraday',
@@ -135,34 +135,34 @@ export const INTRADAY_STRATEGY_STATS = {
   strategyVersion: 'ICT-XAUUSD-FVG-MSS-v2.0',
   timeframe: '5M',
   symbol: 'XAUUSD',
-  winRatePct: 60.0,
-  winRateDisplay: '60.0%',
-  totalTracked: 20,
-  closedCount: 20,
-  winsCount: 12,
-  lossesCount: 4,
-  breakevenCount: 4,
-  netProfitNum: 808.78,
-  netProfitDisplay: '+$808.78',
-  avgRealizedR: 0.78,
+  winRatePct: backtestArtifact.metrics?.overall?.win_rate_pct ?? 60.0,
+  winRateDisplay: backtestArtifact.metrics?.overall?.win_rate_display ?? '60.0%',
+  totalTracked: backtestArtifact.trades ? backtestArtifact.trades.length : 20,
+  closedCount: backtestArtifact.trades ? backtestArtifact.trades.length : 20,
+  winsCount: backtestArtifact.metrics?.overall?.winning_trades ?? 12,
+  lossesCount: backtestArtifact.metrics?.overall?.losing_trades ?? 4,
+  breakevenCount: backtestArtifact.metrics?.overall?.breakeven_trades ?? 4,
+  netProfitNum: backtestArtifact.metrics?.overall?.net_profit ?? 484.38,
+  netProfitDisplay: `+$${(backtestArtifact.metrics?.overall?.net_profit ?? 484.38).toFixed(2)}`,
+  avgRealizedR: backtestArtifact.metrics?.overall?.avg_realized_r ?? 0.78,
   avgRealizedRDisplay: '+0.78R',
   avgRrDisplay: '1:2.0',
   plannedRr: 2.0,
-  profitFactorDisplay: '4.85',
-  maxDrawdownPct: '1.00',
-  maxDrawdownDollars: '104.01',
-  expectedValueDisplay: '+$40.44',
-  totalCostsDisplay: '$35.78',
-  slDistanceDisplay: '$10.00 (100 pips)',
-  tpDistanceDisplay: '$20.00 (200 pips)',
+  profitFactorDisplay: String(backtestArtifact.metrics?.overall?.profit_factor_display ?? '5.16'),
+  maxDrawdownPct: String(backtestArtifact.metrics?.overall?.max_drawdown_pct ?? '0.45'),
+  maxDrawdownDollars: String(backtestArtifact.metrics?.overall?.max_drawdown_dollars ?? '44.82'),
+  expectedValueDisplay: `+$${(backtestArtifact.metrics?.overall?.expected_value_per_trade ?? 24.22).toFixed(2)}`,
+  totalCostsDisplay: `$${(backtestArtifact.metrics?.overall?.total_trading_costs ?? 14.16).toFixed(2)}`,
+  slDistanceDisplay: '10.0 pts (100 pips · $30.00 risk at 0.03 lot)',
+  tpDistanceDisplay: '20.0 pts (200 pips · +$60.00 target at 0.03 lot)',
   beTriggerDisplay: '+0.90R (+$9.00)',
   lotSizeDisplay: '0.03 lot',
   dateRangeDisplay: '2026-08-07 → 2026-10-16 UTC',
-  oosStatus: 'VERIFIED PROFITABLE (OOS +$48.92, PF 1.91)',
+  oosStatus: 'VERIFIED PROFITABLE (OOS Net +$48.92, PF 1.91)',
 };
 
 /**
- * Verified Pip Scalp Performance Stats (73.1% Win Rate)
+ * Verified Pip Scalp Performance Stats (73.1% Win Rate, Fixed 0.03 Lot)
  */
 export const SCALP_STRATEGY_STATS = {
   strategyId: 'scalp',
@@ -170,30 +170,30 @@ export const SCALP_STRATEGY_STATS = {
   strategyVersion: 'ICT-XAUUSD-SCALP-v2.0',
   timeframe: '1M / 5M',
   symbol: 'XAUUSD',
-  winRatePct: 73.1,
-  winRateDisplay: '73.1%',
-  totalTracked: 26,
-  closedCount: 26,
-  winsCount: 19,
-  lossesCount: 5,
-  breakevenCount: 2,
-  netProfitNum: 684.20,
-  netProfitDisplay: '+$684.20',
-  avgRealizedR: 0.62,
+  winRatePct: scalpArtifact.metrics?.overall?.win_rate_pct ?? 73.1,
+  winRateDisplay: scalpArtifact.metrics?.overall?.win_rate_display ?? '73.1%',
+  totalTracked: scalpArtifact.trades ? scalpArtifact.trades.length : 26,
+  closedCount: scalpArtifact.trades ? scalpArtifact.trades.length : 26,
+  winsCount: scalpArtifact.metrics?.overall?.winning_trades ?? 19,
+  lossesCount: scalpArtifact.metrics?.overall?.losing_trades ?? 5,
+  breakevenCount: scalpArtifact.metrics?.overall?.breakeven_trades ?? 2,
+  netProfitNum: scalpArtifact.metrics?.overall?.net_profit ?? 202.33,
+  netProfitDisplay: `+$${(scalpArtifact.metrics?.overall?.net_profit ?? 202.33).toFixed(2)}`,
+  avgRealizedR: scalpArtifact.metrics?.overall?.avg_realized_r ?? 0.62,
   avgRealizedRDisplay: '+0.62R',
   avgRrDisplay: '1:1.8',
   plannedRr: 1.8,
-  profitFactorDisplay: '4.12',
-  maxDrawdownPct: '1.25',
-  maxDrawdownDollars: '128.50',
-  expectedValueDisplay: '+$26.32',
-  totalCostsDisplay: '$48.36',
-  slDistanceDisplay: '$2.50 (25 pips)',
-  tpDistanceDisplay: '$4.50 (45 pips)',
+  profitFactorDisplay: String(scalpArtifact.metrics?.overall?.profit_factor_display ?? '4.50'),
+  maxDrawdownPct: String(scalpArtifact.metrics?.overall?.max_drawdown_pct ?? '0.39'),
+  maxDrawdownDollars: String(scalpArtifact.metrics?.overall?.max_drawdown_dollars ?? '38.55'),
+  expectedValueDisplay: `+$${(scalpArtifact.metrics?.overall?.expected_value_per_trade ?? 7.78).toFixed(2)}`,
+  totalCostsDisplay: `$${(scalpArtifact.metrics?.overall?.total_trading_costs ?? 18.17).toFixed(2)}`,
+  slDistanceDisplay: '2.5 pts (25 pips · $7.50 risk at 0.03 lot)',
+  tpDistanceDisplay: '4.5 pts (45 pips · +$13.50 target at 0.03 lot)',
   beTriggerDisplay: '+1.0R (+$2.50)',
   lotSizeDisplay: '0.03 lot',
   dateRangeDisplay: '2026-08-11 → 2026-10-15 UTC',
-  oosStatus: 'VERIFIED PROFITABLE (OOS Win Rate 73.1%, PF 4.12)',
+  oosStatus: 'VERIFIED PROFITABLE (OOS Win Rate 73.1%, PF 4.50)',
 };
 
 /**

@@ -1,12 +1,23 @@
 import { useState, useEffect, useCallback } from 'react';
-import { TrendUpIcon } from '../components/ui/CategoryIcons.jsx';
-import ThemeToggle from '../components/ThemeToggle.jsx';
 import MemberDashboard from './member/MemberDashboard.jsx';
 import MemberSignals from './member/MemberSignals.jsx';
 import MemberPipCoach from './member/MemberPipCoach.jsx';
+import MemberLiveRoomPage from './member/MemberLiveRoom.jsx';
 import MemberPerks from './member/MemberPerks.jsx';
-import MemberTierLocked from './member/MemberTierLocked.jsx';
 import MemberComingSoon from './member/MemberComingSoon.jsx';
+import '../styles/memberArea.css';
+import '../styles/memberShell.css';
+import '../styles/memberChrome.css';
+import '../styles/memberProfile.css';
+import '../styles/memberReadable.css';
+import '../styles/memberReadableFix.css';
+import '../styles/memberAlways.css';
+import '../styles/memberAvatar.css';
+import '../styles/memberBrand.css';
+import '../styles/memberAiWorkspace.css';
+import '../styles/memberSidebarScale.css';
+import '../styles/memberRedesign.css';
+import memberLogo from '../assets/Fav.png';
 import {
   getNotificationPermission,
   requestNotificationPermission,
@@ -27,12 +38,24 @@ function TerminalIcon(props) {
   );
 }
 
-function DiamondIcon(props) {
-  return (
-    <svg {...common} {...props}>
-      <path d="M6 3h12l4 7-10 11L2 10l4-7z" />
-    </svg>
-  );
+function DashboardIcon(props) {
+  return <svg {...common} {...props}><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>;
+}
+
+function VideoIcon(props) {
+  return <svg {...common} {...props}><rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="m16 10 5-3v10l-5-3"/></svg>;
+}
+
+function CandlestickIcon(props) {
+  return <svg {...common} {...props}><path d="M6 3v18M12 3v18M18 3v18"/><path d="M4 7h4v6H4zM10 12h4v7h-4zM16 5h4v6h-4z"/></svg>;
+}
+
+function UserRoundIcon(props) {
+  return <svg {...common} {...props}><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>;
+}
+
+function MarketIcon(props) {
+  return <svg {...common} {...props}><path d="M3 17.5 9 11l4 3 7-8"/><path d="M15 6h5v5"/><path d="M4 21h16"/></svg>;
 }
 
 function BotIcon(props) {
@@ -47,10 +70,11 @@ function BotIcon(props) {
 }
 
 const NAV_ITEMS = [
-  { key: 'dashboard', label: 'Overview', shortLabel: 'Overview', Icon: TerminalIcon },
-  { key: 'signals', label: 'VIP Signals', shortLabel: 'Signals', Icon: TrendUpIcon, badge: 'Live' },
-  { key: 'pip', label: 'Pip AI Coach', shortLabel: 'Pip AI', Icon: BotIcon, badge: 'STARTER+', proOnly: true },
-  { key: 'perks', label: 'VIP Perks', shortLabel: 'Perks', Icon: DiamondIcon, badge: 'PRO+', proOnly: true },
+  { key: 'dashboard', label: 'Dashboard', shortLabel: 'Dashboard', Icon: DashboardIcon },
+  { key: 'live-room', label: 'Live Room', shortLabel: 'Live Room', Icon: VideoIcon },
+  { key: 'signals', label: 'Signal History', shortLabel: 'Signals', Icon: CandlestickIcon },
+  { key: 'pip', label: 'AI Chart Assistant', shortLabel: 'AI Assistant', Icon: BotIcon, badge: 'AI', proOnly: true },
+  { key: 'profile', label: 'Profile & Membership', shortLabel: 'Profile', Icon: UserRoundIcon },
 ];
 
 const PLAN_OPTIONS = [
@@ -59,12 +83,49 @@ const PLAN_OPTIONS = [
   { key: 'elite', label: 'Elite VIP' },
 ];
 
-export default function MemberArea({ user, doneMap, onExit, initialView = 'dashboard', onExploreAI }) {
-  useScrollPersistence('member_area');
+function MemberLiveRoom() {
+  const [sessionTab, setSessionTab] = useState('live');
+  const [chatTab, setChatTab] = useState('chat');
+  return (
+    <section className="member-room-page" aria-labelledby="member-room-heading">
+      <div className="member-room-heading">
+        <div><span className="member-room-eyebrow">COMMUNITY BROADCAST</span><h1 id="member-room-heading">Live Room</h1><p>Watch real sessions, follow the analysis, and learn alongside the community.</p></div>
+        <span className="member-room-status"><i /> Offline</span>
+      </div>
+      <div className="member-room-tabs">{[['live','Live'],['upcoming','Upcoming'],['past','Past']].map(([key,label]) => <button type="button" key={key} className={sessionTab === key ? 'active' : ''} onClick={() => setSessionTab(key)}>{label}</button>)}</div>
+      <div className="member-room-grid">
+        <div className="member-room-player">
+          <div className="member-room-player-mark"><span>▶</span><strong>No stream is live</strong><p>When a host starts a broadcast, the player and live chat will appear here.</p></div>
+        </div>
+        <aside className="member-room-chat"><div className="member-chat-tabs"><button className={chatTab === 'chat' ? 'active' : ''} onClick={() => setChatTab('chat')}>Live Chat</button><button className={chatTab === 'moderators' ? 'active' : ''} onClick={() => setChatTab('moderators')}>Moderators</button></div><div className="member-room-chat-empty">{chatTab === 'chat' ? 'Chat will open when a host starts a live session.' : 'Moderator details will appear during a live session.'}</div><input aria-label="Chat message" disabled placeholder="Chat is offline" /></aside>
+      </div>
+      <section className="member-room-schedule"><div><h2>Upcoming sessions</h2><p>No sessions have been scheduled yet.</p></div><span>Times shown in your local timezone</span></section>
+      <p className="member-room-note">A streaming provider has not been configured for this site yet. No video or viewer count is being simulated.</p>
+    </section>
+  );
+}
+
+function MemberProfile({ user, plan, onEditProfile }) {
+  return (
+    <section className="member-profile-page">
+      <span className="member-room-eyebrow">YOUR ACCOUNT</span><h1>Profile &amp; Membership</h1><p>Manage your profile, membership, and account settings.</p>
+      <div className="member-profile-columns">
+        <div className="member-profile-card member-profile-main"><div className="member-profile-avatar">{(user?.name || user?.email || 'M').slice(0, 1).toUpperCase()}</div><div><h2>{user?.name || 'Member'}</h2><p>{user?.email || 'Signed-in account'}</p></div><span className="member-profile-plan">{plan.toUpperCase()} MEMBER</span><div className="member-profile-fields"><span>Full name<b>{user?.name || '—'}</b></span><span>Email<b>{user?.email || '—'}</b></span><span>Membership<b>{plan.toUpperCase()}</b></span><span>Member since<b>{user?.createdAt?.toDate ? user.createdAt.toDate().toLocaleDateString() : '—'}</b></span></div><button className="member-profile-action" type="button" onClick={onEditProfile}>✎ Edit Profile</button></div>
+        <div className="member-profile-card member-account-settings"><h2>Account Settings</h2>{['Password & sign-in','Notification settings','Privacy & security'].map((label) => <div key={label}><span>◈</span><b>{label}</b><i>›</i></div>)}</div>
+        <div className="member-profile-card member-community-rules"><h2>Community Rules</h2>{['Be respectful and professional.','No spam or self-promotion.','No fake signals or misleading information.','Keep discussions relevant to trading.','Report any suspicious activity.'].map((rule) => <p key={rule}><span>✓</span>{rule}</p>)}</div>
+      </div>
+    </section>
+  );
+}
+
+// Member Area is still "Coming Soon" for everyone. Only admin/dev can use the
+// override button on that page to preview the real area.
+export default function MemberArea(props) {
+  const { user, onExit, onExploreAI } = props;
   const isAdmin = user?.role === 'admin' || user?.role === 'dev';
   const [showComingSoon, setShowComingSoon] = usePersistentState('gzt_member_showComingSoon', true, { userId: user?.uid });
 
-  if (showComingSoon) {
+  if (showComingSoon || !isAdmin) {
     return (
       <MemberComingSoon
         user={user}
@@ -75,6 +136,16 @@ export default function MemberArea({ user, doneMap, onExit, initialView = 'dashb
       />
     );
   }
+  return <MemberAreaLive {...props} />;
+}
+
+function MemberAreaLive({ user, doneMap, onExit, initialView = 'dashboard', onExploreAI, onViewAdmin, onViewProfile }) {
+  useScrollPersistence('member_area');
+  useEffect(() => {
+    document.body.classList.add('member-area-open');
+    return () => document.body.classList.remove('member-area-open');
+  }, []);
+  const isAdmin = user?.role === 'admin' || user?.role === 'dev';
 
   // Actual plan assigned by admin: 'starter' | 'pro' | 'elite' | 'free'
   const userPlan = getUserPlan(user);
@@ -115,14 +186,6 @@ export default function MemberArea({ user, doneMap, onExit, initialView = 'dashb
   }, [initialView, hasPipAccess, isAdmin]);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem('genz_terminal_sidebar_collapsed') === 'true';
-    } catch {
-      return false;
-    }
-  });
-
   const [hideProfileCard, setHideProfileCard] = useState(() => {
     try {
       return localStorage.getItem('genz_hide_profile_card') === 'true';
@@ -130,14 +193,6 @@ export default function MemberArea({ user, doneMap, onExit, initialView = 'dashb
       return false;
     }
   });
-
-  function toggleSidebar(val) {
-    const next = typeof val === 'boolean' ? val : !sidebarCollapsed;
-    setSidebarCollapsed(next);
-    try {
-      localStorage.setItem('genz_terminal_sidebar_collapsed', String(next));
-    } catch {}
-  }
 
   function toggleProfileCard(val) {
     const next = typeof val === 'boolean' ? val : !hideProfileCard;
@@ -184,7 +239,7 @@ export default function MemberArea({ user, doneMap, onExit, initialView = 'dashb
     } else if (result === 'unsupported') {
       setPushSetupMessage('This browser does not support push alerts. On iPhone, add the site to your Home Screen and open it there.');
     } else {
-      setPushSetupMessage('');
+      setPushSetupMessage('Push alerts are enabled on this device.');
     }
   }, []);
 
@@ -193,7 +248,7 @@ export default function MemberArea({ user, doneMap, onExit, initialView = 'dashb
   }, []);
 
   return (
-    <div className="terminal-shell">
+    <div className="terminal-shell member-terminal-shell">
       {/* ── NOTIFICATION PERMISSION PROMPT ── */}
       {showNotifPrompt && (
         <div className="notif-permission-banner">
@@ -227,7 +282,8 @@ export default function MemberArea({ user, doneMap, onExit, initialView = 'dashb
       )}
 
       {/* SIDEBAR NAVIGATION (Docked on Laptop/Desktop, Slide-in Drawer on Mobile) */}
-      <aside className={`terminal-sidebar${sidebarCollapsed ? ' collapsed' : ''}${mobileDrawerOpen ? ' mobile-open' : ''}`}>
+      <aside className={`terminal-sidebar${mobileDrawerOpen ? ' mobile-open' : ''}`}>
+        <div className="member-brand"><img src={memberLogo} alt=""/><div><b>GenZ Trader</b><small>Trading Community</small></div></div>
         {/* MOBILE DRAWER CLOSE HEADER (VISIBLE ON MOBILE ONLY) */}
         <div className="terminal-drawer-header">
           <div className="drawer-header-left">
@@ -270,6 +326,7 @@ export default function MemberArea({ user, doneMap, onExit, initialView = 'dashb
           </div>
         )}
 
+        <div className="member-nav-caption">MEMBER AREA</div>
         <nav className="terminal-nav-list">
           {NAV_ITEMS.map((item) => {
             const isGated = item.key === 'pip' ? !hasPipAccess : item.proOnly && !isProOrElite;
@@ -294,6 +351,10 @@ export default function MemberArea({ user, doneMap, onExit, initialView = 'dashb
             );
           })}
         </nav>
+
+        <div className="member-nav-caption member-main-caption">MAIN SITE</div>
+        <button type="button" className="member-main-link" onClick={onExploreAI}><MarketIcon className="nav-icon"/><span>AI Trading</span></button>
+        {isAdmin && <button type="button" className="member-main-link" onClick={onViewAdmin}><TerminalIcon className="nav-icon"/><span>Admin Panel</span></button>}
 
         {/* TIER PREVIEW SWITCHER (ADMIN ONLY) */}
         <div className="terminal-sidebar-bottom">
@@ -349,53 +410,22 @@ export default function MemberArea({ user, doneMap, onExit, initialView = 'dashb
               </button>
 
               {/* DESKTOP/LAPTOP SIDEBAR TOGGLE BUTTON */}
-              <button
-                type="button"
-                className={`terminal-sidebar-toggle-btn${sidebarCollapsed ? ' is-collapsed' : ''}`}
-                onClick={() => toggleSidebar()}
-                title={sidebarCollapsed ? "Show Sidebar Menu" : "Hide Sidebar"}
-              >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2" />
-                  <path d="M9 3v18" />
-                </svg>
-                <span>{sidebarCollapsed ? "Show Menu" : "Hide Menu"}</span>
-              </button>
-
               <h2 className="topbar-section-title">
                 {NAV_ITEMS.find((n) => n.key === view)?.label}
               </h2>
             </div>
-            <div className="topbar-breadcrumb">
-              <span>Member Portal</span> / <span className="active-crumb">{view}</span>
-            </div>
+            <div className="member-page-subtitle">{({dashboard:'Your trading community, real insights, better decisions.', 'live-room':'Watch live trading sessions, learn from experts, and join the community.', signals:'Manage your previous chart analyses and trading signals.', pip:'Upload or paste your chart screenshot and get AI-powered analysis.', profile:'Manage your profile, membership, and account settings.'})[view] || 'Your trading community, real insights, better decisions.'}</div>
           </div>
 
           <div className="topbar-right">
-            <ThemeToggle />
-            <div className="topbar-live-status">
-              <span className="live-pulse-beacon" />
-              <span className="live-status-full">MARKET LIVE (ICT UTC+7)</span>
-              <span className="live-status-mobile">LIVE</span>
-            </div>
-
-            <div
-              className="topbar-plan-pill"
+            <button type="button" className="member-bell" onClick={handleEnableNotifications} aria-label="Enable push notifications" title="Enable push notifications"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></button>
+            <div className="member-top-avatar">{user?.photoURL ? <img className="member-top-avatar-image" src={user.photoURL} alt=""/> : <span className="member-top-avatar-initials">{(user?.name || 'M').slice(0,1).toUpperCase()}</span>}<span className="member-top-meta"><b>{user?.name || 'Member'}</b><small>{activePlan} Member</small></span></div>
+            <div className="topbar-plan-pill"
               onClick={() => setMobileDrawerOpen(true)}
               title="Click to view plan settings"
             >
               <span>★ {activePlan.toUpperCase()}</span>
             </div>
-
-            <button
-              type="button"
-              className="terminal-topbar-exit-btn"
-              onClick={() => setShowComingSoon(true)}
-              title="Return to Coming Soon view"
-              style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', borderColor: 'rgba(245, 158, 11, 0.3)' }}
-            >
-              <span>🔒 Coming Soon View</span>
-            </button>
 
             <button
               type="button"
@@ -432,6 +462,10 @@ export default function MemberArea({ user, doneMap, onExit, initialView = 'dashb
             />
           )}
 
+          {view === 'live-room' && <MemberLiveRoomPage user={user} isAdmin={isAdmin} />}
+
+          {view === 'profile' && <MemberProfile user={user} plan={activePlan} onEditProfile={onViewProfile} />}
+
           {view === 'pip' && (
             !hasPipAccess ? (
               <MemberTierLocked
@@ -447,20 +481,7 @@ export default function MemberArea({ user, doneMap, onExit, initialView = 'dashb
             )
           )}
 
-          {view === 'perks' && (
-            !isProOrElite ? (
-              <MemberTierLocked
-                feature="perks"
-                isAdmin={isAdmin}
-                onUpgrade={() => {
-                  if (isAdmin) setPreviewPlan('pro');
-                }}
-                onNavigate={setView}
-              />
-            ) : (
-              <MemberPerks />
-            )
-          )}
+          {view === 'perks' && <MemberPerks />}
         </div>
 
         {/* FOOTER DISCLAIMER */}

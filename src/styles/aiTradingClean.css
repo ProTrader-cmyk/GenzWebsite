@@ -1,0 +1,277 @@
+/* Clean & friendly layer for the AI Trading page.
+   Loaded after aiTradingPage.css; only adjusts spacing, readability and noise, not the brand colours. */
+
+/* ---- Rhythm & readability ---- */
+.ait-page-root .ait-section { padding: 56px 0; }
+.ait-page-root .ait-sec-head { margin-bottom: 32px; }
+.ait-page-root .ait-sec-title { line-height: 1.3; letter-spacing: -0.01em; }
+.ait-page-root .ait-sec-sub { font-size: 15px; line-height: 1.75; max-width: 640px; margin-left: auto; margin-right: auto; }
+.ait-page-root .ait-hero-title { line-height: 1.25; }
+.ait-page-root .ait-hero-sub { line-height: 1.75; max-width: 620px; margin-left: auto; margin-right: auto; }
+
+/* ---- Signal cards: show the 5 things that matter ---- */
+.ait-page-root .ait-signals-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)) !important;
+  gap: 20px !important;
+}
+.ait-page-root .ait-sig-card {
+  max-width: none !important;
+  border-radius: 18px !important;
+  padding: 20px !important;
+}
+.ait-page-root .ait-sig-card:hover { transform: translateY(-3px) !important; }
+
+/* position size, "Trending / Auto" chips and the filler status line are secondary noise */
+.ait-page-root .ait-card-levels-vertical > .ait-level-row:first-child,
+.ait-page-root .ait-card-footer-tags,
+.ait-page-root .ait-status-note-banner { display: none !important; }
+
+.ait-page-root .ait-card-levels-vertical { gap: 0 !important; margin-bottom: 14px !important; }
+.ait-page-root .ait-card-levels-vertical .ait-level-row {
+  padding: 11px 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+}
+.ait-page-root .ait-card-levels-vertical .ait-level-row:last-child { border-bottom: 0; }
+.ait-page-root .ait-level-key { font-size: 13px; }
+.ait-page-root .ait-level-val { font-size: 17px; }
+.ait-page-root .ait-card-meta-list { gap: 8px; }
+.ait-page-root .ait-meta-key { font-size: 12.5px; }
+
+/* ---- Pagination & filters breathe a little ---- */
+.ait-page-root .ait-signals-pagination-bar { margin-top: 28px; }
+.ait-page-root .ait-style-filter-row { gap: 12px; }
+
+/* ---- Keyboard & motion friendliness ---- */
+.ait-page-root button:focus-visible,
+.ait-page-root a:focus-visible {
+  outline: 2px solid #38BDF8;
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ait-page-root *, .ait-page-root *::before, .ait-page-root *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---- Phones ---- */
+@media (max-width: 640px) {
+  .ait-page-root .ait-section { padding: 40px 0; }
+  .ait-page-root .ait-signals-grid { grid-template-columns: 1fr !important; gap: 14px !important; }
+  .ait-page-root .ait-sig-card { padding: 16px !important; }
+  .ait-page-root .ait-sec-title { font-size: 24px; }
+}
+
+/* ===== Pass 2: calmer cards, readable chart setup box ===== */
+
+/* Signal card header: symbol + direction + status only (no internal ids / "DESK" tag) */
+.ait-page-root .ait-card-symbol-sub,
+.ait-page-root .ait-desk-pill { display: none !important; }
+.ait-page-root .ait-card-symbol-title { font-size: 20px; }
+.ait-page-root .ait-card-top-row { margin-bottom: 14px; }
+.ait-page-root .ait-card-setup-toggle-wrapper { margin: 4px 0 14px; }
+.ait-page-root .ait-card-hr { opacity: 0.5; }
+
+/* Chart "Auto setup" box: bigger, easier numbers */
+.ait-page-root .pip-auto-setup-card { width: 300px; padding: 14px 16px; font-size: 12px; }
+.ait-page-root .pip-auto-setup-title { font-size: 12px; }
+.ait-page-root .pip-setup-matrix { gap: 6px; }
+.ait-page-root .pip-setup-matrix-row { padding: 7px 10px; border-radius: 8px; }
+.ait-page-root .pip-setup-matrix-lbl { font-size: 11px; }
+.ait-page-root .pip-setup-matrix-val { font-size: 14px; }
+.ait-page-root .pip-setup-matrix-dist { font-size: 11px; }
+
+/* Marketing blocks don't need to dominate the page */
+.ait-page-root #ait-features.ait-section { padding: 40px 0; }
+.ait-page-root .ait-faq-item, .ait-page-root .ait-faq-q { font-size: 14.5px; }
+
+/* =====================================================================
+   Pass 3: one calm, professional visual system for the whole page.
+   Surfaces / borders / text follow the site theme tokens (dark + light).
+   ===================================================================== */
+.ait-page-root {
+  --ait-surface: var(--bg1);
+  --ait-surface-2: var(--bg2);
+  --ait-border: color-mix(in srgb, var(--mute) 28%, transparent);
+  --ait-accent: #38BDF8;
+  --ait-buy: #22C55E;
+  --ait-sell: #F87171;
+  --ait-radius: 16px;
+}
+
+/* --- Layout: one readable column, consistent gutters --- */
+.ait-page-root .ait-container { max-width: 1180px; padding-left: 24px; padding-right: 24px; }
+.ait-page-root .ait-ambient-glow { opacity: 0.25; }
+
+/* --- Hero: simple, confident, less neon --- */
+.ait-page-root .ait-hero { padding-top: 28px; padding-bottom: 40px; text-align: center; }
+.ait-page-root .ait-neural-status-row { justify-content: center; gap: 8px; margin-bottom: 22px; }
+.ait-page-root .ait-neural-chip,
+.ait-page-root .ait-pre-badge {
+  background: var(--ait-surface); border: 1px solid var(--ait-border); border-radius: 999px;
+  font-size: 12px; padding: 6px 12px; box-shadow: none;
+}
+/* lot size / R:R chip is jargon on a landing hero */
+.ait-page-root .ait-neural-status-row .ait-neural-chip:nth-of-type(2) { display: none; }
+.ait-page-root .ait-hero-title { font-size: clamp(30px, 4.6vw, 50px); line-height: 1.2; letter-spacing: -0.02em; text-shadow: none; margin-bottom: 14px; }
+.ait-page-root .ait-title-gradient {
+  background: none; -webkit-text-fill-color: var(--ait-accent); color: var(--ait-accent); filter: none;
+}
+.ait-page-root .ait-hero-sub { font-size: 16px; color: var(--mute); }
+.ait-page-root .ait-cta-group { gap: 12px; margin-top: 24px; justify-content: center; }
+.ait-page-root .ait-primary-cta, .ait-page-root .ait-secondary-cta,
+.ait-page-root .ait-btn-gold-action, .ait-page-root .ait-btn-outline { border-radius: 12px; }
+.ait-page-root .ait-primary-cta { box-shadow: 0 6px 20px -8px rgba(56, 189, 248, 0.55); }
+
+/* --- Workstation frame --- */
+.ait-page-root.ait-page-root .ait-terminal-fullwidth-wrapper { max-width: 1480px; margin-bottom: 64px; }
+.ait-page-root .ait-terminal-fullwidth-wrapper > div,
+.ait-page-root .ait-terminal-fullwidth-wrapper .ait-workstation-blur-layer { border-radius: var(--ait-radius); }
+
+/* --- Section headings --- */
+.ait-page-root .ait-sec-pill { font-size: 11px; padding: 4px 12px; letter-spacing: 0.08em; }
+.ait-page-root .ait-sec-title { font-size: clamp(24px, 3.2vw, 34px); }
+
+/* --- Signals header: headline left, record card right, with air between --- */
+.ait-page-root .ait-sig-hero-split { gap: 32px; align-items: flex-start; margin-bottom: 28px; }
+.ait-page-root .ait-sig-main-title { font-size: clamp(26px, 3.4vw, 38px); line-height: 1.25; letter-spacing: -0.01em; }
+.ait-page-root .ait-sig-main-desc { font-size: 15px; line-height: 1.75; color: var(--mute); max-width: 560px; }
+.ait-page-root .ait-scorecard-wrapper-col {
+  background: var(--ait-surface); border: 1px solid var(--ait-border); border-radius: var(--ait-radius);
+  padding: 18px; box-shadow: none;
+}
+
+/* --- Filters: quiet pills --- */
+.ait-page-root .ait-style-pill { border-radius: 12px; }
+.ait-page-root .ait-signals-filter-wrapper { margin-bottom: 24px; }
+
+/* --- Cards: flat, calm, consistent --- */
+.ait-page-root .ait-sig-card {
+  background: var(--ait-surface) !important;
+  border: 1px solid var(--ait-border) !important;
+  border-radius: var(--ait-radius) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25) !important;
+}
+.ait-page-root .ait-sig-card:hover { border-color: color-mix(in srgb, var(--ait-accent) 45%, transparent) !important; box-shadow: 0 10px 28px -14px rgba(0, 0, 0, 0.6) !important; }
+.ait-page-root .ait-sig-card.buy-card { border-top: 3px solid var(--ait-buy) !important; }
+.ait-page-root .ait-sig-card.sell-card { border-top: 3px solid var(--ait-sell) !important; }
+.ait-page-root .ait-dir-pill { border-radius: 8px; font-size: 12px; font-weight: 800; padding: 4px 10px; }
+.ait-page-root .ait-level-val.target { color: var(--ait-buy); text-shadow: none; }
+.ait-page-root .ait-level-val.stop { color: var(--ait-sell); text-shadow: none; }
+.ait-page-root .ait-level-val.entry { color: var(--text); }
+.ait-page-root .ait-level-val.rr { color: var(--ait-accent); }
+.ait-page-root .ait-sig-card .ait-level-val[style] { color: var(--text) !important; }
+
+/* --- Pagination --- */
+.ait-page-root .ait-signals-pagination-bar {
+  background: var(--ait-surface); border: 1px solid var(--ait-border); border-radius: 12px; padding: 12px 16px;
+}
+.ait-page-root .ait-page-btn { border-radius: 8px; }
+
+/* --- FAQ: tidy accordion --- */
+.ait-page-root .ait-faq-accordion-box { max-width: 820px; margin: 56px auto 0; }
+.ait-page-root .ait-faq-acc-title { font-size: 20px; margin-bottom: 16px; text-align: center; }
+.ait-page-root .ait-acc-item {
+  background: var(--ait-surface); border: 1px solid var(--ait-border); border-radius: 12px; margin-bottom: 10px; overflow: hidden;
+}
+.ait-page-root .ait-acc-trigger { padding: 16px 18px; font-size: 15px; }
+.ait-page-root .ait-acc-body { padding: 0 18px 16px; line-height: 1.7; color: var(--mute); }
+
+/* --- "How it works" now sits under the live signals --- */
+.ait-page-root #ait-features.ait-section { border-top: 1px solid var(--ait-border); margin-top: 56px; padding-top: 56px; }
+
+@media (max-width: 900px) {
+  .ait-page-root .ait-sig-hero-split { flex-direction: column; gap: 20px; }
+  .ait-page-root .ait-container { padding-left: 16px; padding-right: 16px; }
+}
+
+/* ===== "AI is live" layer on the chart-only view ===== */
+.ait-ai-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 20; overflow: hidden; }
+.ait-ai-pill {
+  position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+  min-width: 300px; max-width: min(520px, 86%);
+  padding: 9px 16px 11px; border-radius: 14px;
+  background: rgba(8, 12, 20, 0.78); border: 1px solid rgba(56, 189, 248, 0.35);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 8px 28px -10px rgba(0, 0, 0, 0.7), 0 0 20px -6px rgba(56, 189, 248, 0.35);
+  color: #E2E8F0; text-align: center; font-size: 12px;
+}
+.ait-ai-pill-row { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 11.5px; letter-spacing: 0.03em; }
+.ait-ai-pill-row strong { color: #38BDF8; letter-spacing: 0.1em; }
+.ait-ai-sep { opacity: 0.4; }
+.ait-ai-next { color: #94A3B8; font-variant-numeric: tabular-nums; }
+.ait-ai-dot { width: 8px; height: 8px; border-radius: 50%; background: #22C55E; box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6); animation: aitAiPing 1.8s ease-out infinite; }
+.ait-ai-reading { margin-top: 6px; font-size: 13px; font-weight: 600; color: #F8FAFC; animation: aitAiFade 0.5s ease both; min-height: 18px; }
+.ait-ai-bar { margin-top: 8px; height: 2px; border-radius: 2px; background: rgba(148, 163, 184, 0.2); overflow: hidden; }
+.ait-ai-bar span { display: block; height: 100%; background: linear-gradient(90deg, #38BDF8, #22C55E); transition: width 1s linear; }
+
+.ait-ai-sweep {
+  position: absolute; top: 0; bottom: 0; width: 140px; left: -160px;
+  background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.09), rgba(56, 189, 248, 0.2) 50%, rgba(56, 189, 248, 0.09), transparent);
+  animation: aitAiSweep 9s linear infinite;
+}
+.ait-ai-corner { position: absolute; width: 18px; height: 18px; border: 0 solid rgba(56, 189, 248, 0.6); }
+.ait-ai-corner.tl { top: 8px; left: 8px; border-top-width: 2px; border-left-width: 2px; border-top-left-radius: 6px; }
+.ait-ai-corner.tr { top: 8px; right: 8px; border-top-width: 2px; border-right-width: 2px; border-top-right-radius: 6px; }
+.ait-ai-corner.bl { bottom: 8px; left: 8px; border-bottom-width: 2px; border-left-width: 2px; border-bottom-left-radius: 6px; }
+.ait-ai-corner.br { bottom: 8px; right: 8px; border-bottom-width: 2px; border-right-width: 2px; border-bottom-right-radius: 6px; }
+
+@keyframes aitAiSweep { 0% { left: -160px; } 100% { left: 100%; } }
+@keyframes aitAiPing { 0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.55); } 70%, 100% { box-shadow: 0 0 0 9px rgba(34, 197, 94, 0); } }
+@keyframes aitAiFade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@media (max-width: 640px) { .ait-ai-pill { min-width: 0; width: 88%; } }
+
+/* Same footer spacing as every other page */
+.wrap:has(.ait-page-root):has(.site-footer) { padding-bottom: 0 !important; }
+.ait-page-root { padding-bottom: 0; }
+
+
+/* ===== AI Chart: live candles with the setup drawn on them ===== */
+.ait-ai-chart { position: absolute; inset: 0; z-index: 15; background: #0b1220; }
+:root[data-theme='light'] .ait-ai-chart { background: #ffffff; }
+.ait-ai-chart-canvas { position: absolute; inset: 0; }
+.ait-ai-zones { position: absolute; left: 0; top: 0; pointer-events: none; overflow: hidden; }
+.ait-ai-zone { position: absolute; left: 0; right: 0; }
+.ait-ai-zone.tp { background: linear-gradient(180deg, rgba(34,197,94,.16), rgba(34,197,94,.07)); border-top: 1px solid rgba(34,197,94,.35); border-bottom: 1px solid rgba(34,197,94,.2); }
+.ait-ai-zone.sl { background: linear-gradient(180deg, rgba(248,113,113,.07), rgba(248,113,113,.16)); border-top: 1px solid rgba(248,113,113,.2); border-bottom: 1px solid rgba(248,113,113,.35); }
+.ait-ai-zlabel { position: absolute; right: 10px; transform: translateY(calc(-100% - 3px)); padding: 3px 9px; border-radius: 6px; font: 700 10.5px/1.3 'JetBrains Mono', ui-monospace, monospace; letter-spacing: .04em; white-space: nowrap; backdrop-filter: blur(6px); }
+.ait-ai-zlabel.tp { color: #22C55E; background: rgba(8,28,18,.78); border: 1px solid rgba(34,197,94,.45); }
+.ait-ai-zlabel.sl { color: #F87171; background: rgba(36,12,12,.78); border: 1px solid rgba(248,113,113,.45); transform: translateY(3px); }
+.ait-ai-zlabel.entry { color: #38BDF8; background: rgba(8,22,36,.82); border: 1px solid rgba(56,189,248,.5); }
+:root[data-theme='light'] .ait-ai-zlabel.tp { background: rgba(240,253,244,.92); }
+:root[data-theme='light'] .ait-ai-zlabel.sl { background: rgba(254,242,242,.92); }
+:root[data-theme='light'] .ait-ai-zlabel.entry { background: rgba(240,249,255,.92); }
+
+.ait-ai-live { position: absolute; left: 0; right: 0; height: 0; border-top: 1px dashed rgba(56,189,248,.6); display: none; }
+.ait-ai-live i { position: absolute; right: -4px; top: -5px; width: 9px; height: 9px; border-radius: 50%; background: #38BDF8; animation: aitAiPing 1.8s ease-out infinite; box-shadow: 0 0 0 0 rgba(56,189,248,.6); }
+.ait-ai-live span { position: absolute; right: 14px; top: -12px; padding: 3px 9px; border-radius: 999px; font: 800 11px/1.3 'JetBrains Mono', ui-monospace, monospace; background: rgba(8,22,36,.88); color: #38BDF8; border: 1px solid rgba(56,189,248,.5); white-space: nowrap; }
+.ait-ai-live[data-pnl='up'] span { color: #22C55E; border-color: rgba(34,197,94,.55); }
+.ait-ai-live[data-pnl='down'] span { color: #F87171; border-color: rgba(248,113,113,.55); }
+:root[data-theme='light'] .ait-ai-live span { background: rgba(255,255,255,.95); }
+
+.ait-ai-chart-msg { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 10px 16px; border-radius: 12px; font-size: 13px; color: #94A3B8; background: rgba(8,12,20,.8); border: 1px solid rgba(148,163,184,.25); }
+.ait-ai-chart-msg.err { color: #F87171; }
+.ait-ai-chart-hint { position: absolute; left: 50%; bottom: 44px; transform: translateX(-50%); max-width: 80%; text-align: center; padding: 8px 14px; border-radius: 10px; font-size: 12px; color: #94A3B8; background: rgba(8,12,20,.72); border: 1px dashed rgba(148,163,184,.3); }
+
+.ait-engine-toggle { position: absolute; top: 12px; right: 86px; z-index: 30; display: flex; gap: 2px; padding: 3px; border-radius: 10px; background: rgba(8,12,20,.82); border: 1px solid rgba(148,163,184,.25); backdrop-filter: blur(8px); }
+.ait-engine-toggle button { border: 0; cursor: pointer; font: 700 11.5px/1 inherit; padding: 7px 12px; border-radius: 7px; color: #94A3B8; background: transparent; }
+.ait-engine-toggle button.active { color: #04121e; background: #38BDF8; }
+.ait-engine-note { position: absolute; top: 52px; right: 86px; z-index: 30; max-width: 320px; font-size: 11px; padding: 6px 10px; border-radius: 8px; color: #F59E0B; background: rgba(8,12,20,.85); border: 1px solid rgba(245,158,11,.4); }
+
+/* ===== Light mode: text that was hardcoded white / near-white ===== */
+:root[data-theme='light'] .ait-card-symbol-title,
+:root[data-theme='light'] .ait-confidence-pct,
+:root[data-theme='light'] .ait-meta-val,
+:root[data-theme='light'] .ait-meta-val.date,
+:root[data-theme='light'] .ait-drawer-desc { color: #0F172A !important; }
+:root[data-theme='light'] .ait-card-timeframe-tag { color: #475569; background: #F1F5F9; border-color: #E2E8F0; }
+:root[data-theme='light'] .ait-level-val.entry { color: #0F172A; }
+
+/* Record card tabs (Pip Scalp / Intraday): dark pill background made the labels unreadable */
+:root[data-theme='light'] .ait-scorecard-toggle-group { background: var(--bg2); border-color: var(--faint); }
+:root[data-theme='light'] .ait-scorecard-tab-btn { color: #475569; }
+:root[data-theme='light'] .ait-scorecard-tab-btn:hover { color: #0F172A; }
+:root[data-theme='light'] .ait-scorecard-tab-btn.scalp.active { color: #047857; background: rgba(16, 185, 129, 0.14); border-color: rgba(16, 185, 129, 0.45); }
+:root[data-theme='light'] .ait-scorecard-tab-btn.intra.active { color: #B45309; background: rgba(245, 158, 11, 0.16); border-color: rgba(245, 158, 11, 0.5); }

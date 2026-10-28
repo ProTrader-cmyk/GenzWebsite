@@ -11162,11 +11162,11 @@
 .ait-sw-stepper-container {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   background: rgba(8, 14, 26, 0.95);
   border: 1px solid rgba(0, 242, 254, 0.18);
   border-radius: 12px;
-  padding: 14px 16px;
+  padding: 10px 12px;
   position: relative;
   overflow: hidden;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
@@ -11385,8 +11385,8 @@
 /* 4 Nodes Row */
 .ait-sw-nodes-row {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
   width: 100%;
   position: relative;
   z-index: 2;
@@ -11394,25 +11394,28 @@
 
 .ait-sw-node {
   position: relative;
+  min-width: 0;
 }
 
 .ait-sw-node-capsule {
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: rgba(11, 18, 32, 0.96);
+  gap: 6px;
+  background: #09101d;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  padding: 8px 10px;
+  border-radius: 8px;
+  padding: 5px 8px;
+  min-width: 0;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   overflow: hidden;
+  z-index: 2;
 }
 
 .ait-sw-node-icon-box {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
@@ -11434,18 +11437,18 @@
 .ait-sw-node-top {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
 }
 
 .ait-sw-node-num {
-  font-size: 9.5px;
+  font-size: 8.5px;
   font-weight: 900;
   color: #64748B;
   font-family: 'JetBrains Mono', monospace;
 }
 
 .ait-sw-node-title {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
   color: #CBD5E1;
   white-space: nowrap;
@@ -11454,7 +11457,7 @@
 }
 
 .ait-sw-node-sub {
-  font-size: 9px;
+  font-size: 8.5px;
   color: #64748B;
   white-space: nowrap;
   overflow: hidden;
@@ -11467,12 +11470,12 @@
   position: absolute;
   top: -3px;
   right: -3px;
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: #10B981;
   color: #FFFFFF;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 900;
   display: flex;
   align-items: center;
@@ -11484,12 +11487,12 @@
   position: absolute;
   top: -3px;
   right: -3px;
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: #EF4444;
   color: #FFFFFF;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 900;
   display: flex;
   align-items: center;
@@ -11501,12 +11504,12 @@
   position: absolute;
   top: -3px;
   right: -3px;
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: #F59E0B;
   color: #000000;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 900;
   display: flex;
   align-items: center;
@@ -11527,11 +11530,11 @@
   50% { transform: scale(1.1); opacity: 0.3; }
 }
 
-/* Node States */
+/* Node States (Opaque backgrounds hide the rail line shining behind text) */
 .ait-sw-node.is-active .ait-sw-node-capsule {
-  background: rgba(0, 242, 254, 0.08);
+  background: #081726;
   border-color: rgba(0, 242, 254, 0.55);
-  box-shadow: 0 0 14px rgba(0, 242, 254, 0.35);
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.25);
 }
 
 .ait-sw-node.is-active .ait-sw-node-icon-box {
@@ -11549,7 +11552,7 @@
 }
 
 .ait-sw-node.is-done .ait-sw-node-capsule {
-  background: rgba(16, 185, 129, 0.06);
+  background: #081a17;
   border-color: rgba(16, 185, 129, 0.35);
 }
 
@@ -11564,7 +11567,7 @@
 }
 
 .ait-sw-node.is-error .ait-sw-node-capsule {
-  background: rgba(239, 68, 68, 0.08);
+  background: #190c12;
   border-color: rgba(239, 68, 68, 0.55);
 }
 
@@ -11579,7 +11582,7 @@
 }
 
 .ait-sw-node.is-no-signal .ait-sw-node-capsule {
-  background: rgba(245, 158, 11, 0.06);
+  background: #19140c;
   border-color: rgba(245, 158, 11, 0.35);
 }
 
@@ -11596,9 +11599,9 @@
   gap: 8px;
   background: rgba(4, 8, 16, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 8px;
-  padding: 7px 12px;
-  font-size: 11px;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 10.5px;
 }
 
 .ait-sw-tel-icon {
@@ -11630,9 +11633,9 @@
 
 .ait-sw-tel-message {
   color: #94A3B8;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.35;
   flex: 1;
 }
 
@@ -11641,9 +11644,10 @@
 }
 
 /* Responsive adjustments */
-@media (max-width: 900px) {
+@media (max-width: 620px) {
   .ait-sw-nodes-row {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
   }
   .ait-sw-rail-line-bg,
   .ait-sw-rail-line-fill {
@@ -11651,12 +11655,12 @@
   }
 }
 
-@media (max-width: 580px) {
+@media (max-width: 420px) {
   .ait-sw-nodes-row {
     grid-template-columns: 1fr;
   }
   .ait-sw-node-capsule {
-    padding: 6px 8px;
+    padding: 5px 8px;
   }
   .ait-sw-node-sub {
     display: none;
@@ -11748,3 +11752,49 @@
 }
 
 
+
+/* ===== AI Trade Desk (flow: pair > data > analysis > signal > confirm > positions > history) ===== */
+.ait-desk { max-width: 1400px; margin: 24px auto 0; padding: 0 16px; box-sizing: border-box; color: var(--text); }
+.ait-desk-steps { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; padding: 0; margin: 0 0 16px; font-size: 12px; color: var(--mute); }
+.ait-desk-steps li { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid var(--faint); border-radius: 20px; background: var(--bg1); }
+.ait-desk-steps li span { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--bg3); font-size: 11px; }
+.ait-desk-steps li.done { color: var(--text); border-color: var(--brandline); }
+.ait-desk-steps li.done span { background: var(--brand); color: #000; }
+.ait-desk-steps li.current { color: var(--brand); border-color: var(--brand); }
+.ait-desk-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-bottom: 16px; }
+.ait-desk-card { background: var(--bg1); border: 1px solid var(--faint); border-radius: 16px; padding: 18px; margin-bottom: 16px; overflow-x: auto; }
+.ait-desk-grid .ait-desk-card { margin-bottom: 0; }
+.ait-desk-card h3 { margin: 0 0 12px; font-size: 14px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--mute); }
+.ait-desk .mute { color: var(--mute); }
+.ait-desk .small { font-size: 12px; }
+.ait-desk-price { display: flex; flex-wrap: wrap; gap: 16px; font-size: 18px; font-weight: 700; margin-bottom: 12px; }
+.ait-desk-price .mute { font-size: 13px; font-weight: 500; align-self: center; }
+.ait-desk-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.ait-desk-table th { text-align: left; color: var(--mute); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--faint); }
+.ait-desk-table td { padding: 7px 8px; border-bottom: 1px solid var(--faint); text-transform: capitalize; }
+.ait-desk .up, .ait-desk .buy, .ait-desk .win { color: var(--up); }
+.ait-desk .down, .ait-desk .sell, .ait-desk .loss, .ait-desk .rejected, .ait-desk .failed { color: var(--dn); }
+.ait-desk .sideways, .ait-desk .breakeven, .ait-desk .unknown { color: var(--warn); }
+.ait-desk-skel { padding: 18px 0; color: var(--mute); font-size: 13px; animation: aitDeskPulse 1.2s ease-in-out infinite; }
+@keyframes aitDeskPulse { 50% { opacity: 0.45; } }
+.ait-desk-error { padding: 10px 12px; border-radius: 10px; font-size: 12.5px; background: var(--dnd); color: var(--dn); border: 1px solid rgba(var(--dn-rgb), 0.35); margin: 8px 0; }
+.ait-desk-error button { margin-left: 8px; background: none; border: 1px solid currentColor; color: inherit; border-radius: 8px; padding: 2px 10px; cursor: pointer; }
+.ait-desk-banner { padding: 10px 12px; border-radius: 10px; font-size: 12.5px; margin: 8px 0 12px; }
+.ait-desk-banner.warn { background: var(--warnd); color: var(--warn); border: 1px solid rgba(224, 177, 85, 0.35); }
+.ait-desk-banner.ok { background: var(--upd); color: var(--up); border: 1px solid rgba(var(--up-rgb), 0.35); }
+.ait-desk-hold { padding: 12px; border: 1px dashed var(--warn); border-radius: 12px; background: var(--warnd); }
+.ait-desk-hold strong { color: var(--warn); }
+.ait-desk-hold p { margin: 6px 0 0; font-size: 13px; }
+.ait-desk-signal-head { display: flex; flex-wrap: wrap; gap: 14px; align-items: baseline; margin-bottom: 10px; font-size: 13px; }
+.ait-desk-signal-head .dir { font-size: 22px; }
+.ait-desk-signal.buy .dir { color: var(--up); }
+.ait-desk-signal.sell .dir { color: var(--dn); }
+.ait-desk-levels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; font-size: 16px; font-weight: 700; }
+.ait-desk-levels span { display: block; font-size: 11px; font-weight: 500; color: var(--mute); }
+.ait-desk-signal .reason { font-size: 13px; line-height: 1.5; margin: 6px 0; }
+.ait-desk-confirm { width: 100%; justify-content: center; margin-top: 8px; }
+.ait-desk-confirm:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+.ait-desk-analyze { margin-top: 12px; }
+.ait-desk-analyze:disabled { opacity: 0.55; cursor: not-allowed; }
+.ait-desk-risk { display: flex; flex-wrap: wrap; gap: 18px; font-size: 12.5px; margin: 0 0 12px; color: var(--mute); }
+.ait-desk-empty { padding: 28px; text-align: center; border: 1px dashed var(--faint); border-radius: 16px; color: var(--mute); }

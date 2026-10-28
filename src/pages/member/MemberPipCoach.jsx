@@ -1,5 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { askPipCoach } from '../../services/pipAiService.js';
+import mt4Logo from '../../assets/platforms/mt4-icon.png';
+import mt5Logo from '../../assets/platforms/mt5-icon.png';
+import tradingViewLogo from '../../assets/platforms/tradingview.svg';
+import exnessLogo from '../../assets/platforms/exness.svg';
 
 function createInitialMessages() {
   const createdAt = Date.now();
@@ -92,6 +96,7 @@ export default function MemberPipCoach({ user }) {
   const [messages, setMessages] = useState(createInitialMessages);
   const [clockNow, setClockNow] = useState(Date.now);
   const [showHistory, setShowHistory] = useState(false);
+  const [analysisTab, setAnalysisTab] = useState('analysis');
 
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -229,7 +234,7 @@ export default function MemberPipCoach({ user }) {
     setMessages(updatedWithUser);
     saveMessageToSession(updatedWithUser, text);
 
-    if (!userText) setInput('');
+    setInput('');
     setAttachedImage(null);
     setIsTyping(true);
 
@@ -280,6 +285,58 @@ export default function MemberPipCoach({ user }) {
 
   const currentSession = sessions.find((s) => s.id === activeSessionId);
   const activeTitle = currentSession?.title || 'New Conversation';
+  const latestAnalysis = [...messages].reverse().find((message) => message.sender === 'bot' && message.id !== messages[0]?.id);
+
+  return (
+    <div className="member-ai-workspace" onPaste={handlePaste}>
+      <section className="member-ai-column member-ai-upload-column">
+        <div className="member-ai-upload-card">
+          <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={handleImageUpload} hidden />
+          <button className="member-ai-dropzone" type="button" onClick={() => fileInputRef.current?.click()}>
+            {attachedImage ? <img className="member-ai-preview" src={attachedImage} alt="Chart selected for analysis" /> : <>
+              <span className="member-ai-image-icon"><CameraIcon /></span>
+              <strong>Drop your chart image here</strong>
+              <span>or click to upload</span>
+              <small>Supports: PNG, JPG, JPEG, WebP (Max 10MB)</small>
+            </>}
+          </button>
+          <div className="member-ai-upload-actions">
+            <button type="button" onClick={async () => {
+              try { const items = await navigator.clipboard.read(); const match = items.map((item) => ({ item, type: item.types.find((type) => type.startsWith('image/')) })).find(({ type }) => type); if (!match) return; const blob = await match.item.getType(match.type); const reader = new FileReader(); reader.onload = () => setAttachedImage(reader.result); reader.readAsDataURL(blob); } catch { fileInputRef.current?.click(); }
+            }}>◎ &nbsp; Paste from clipboard (Ctrl+V)</button>
+            <button type="button" onClick={() => fileInputRef.current?.click()}><CameraIcon /> &nbsp; Upload File</button>
+          </div>
+          {attachedImage && <button type="button" className="member-ai-remove-image" onClick={() => setAttachedImage(null)}>Remove image</button>}
+        </div>
+        <div className="member-ai-platforms">
+          <h3>Supported platforms</h3>
+          <div className="member-ai-platform-grid">
+            {[[mt4Logo,'MT4'],[mt5Logo,'MT5'],[tradingViewLogo,'TradingView'],[exnessLogo,'Exness']].map(([logo, name]) => <div className={`member-ai-platform member-ai-platform-${name.toLowerCase()}`} key={name}><span className="member-ai-platform-mark"><img src={logo} alt={`${name} logo`} /></span><small>{name}</small></div>)}
+            <div className="member-ai-platform member-ai-platform-other" aria-label="Other chart platforms"><svg viewBox="0 0 32 32" role="img" aria-label="More platforms"><rect x="4" y="4" width="10" height="10" rx="2"/><rect x="18" y="4" width="10" height="10" rx="2"/><rect x="4" y="18" width="10" height="10" rx="2"/><rect x="18" y="18" width="10" height="10" rx="2"/></svg><small>Others</small></div>
+          </div>
+        </div>
+      </section>
+
+      <section className="member-ai-column member-ai-results-column">
+        <div className="member-ai-analysis-card">
+          <div className="member-ai-tabs">
+            <button className={analysisTab === 'analysis' ? 'active' : ''} onClick={() => setAnalysisTab('analysis')} type="button">Your Analysis</button>
+            <button className={analysisTab === 'saved' ? 'active' : ''} onClick={() => setAnalysisTab('saved')} type="button">Saved Analyses</button>
+          </div>
+          {analysisTab === 'analysis' ? <>
+            <textarea value={input} onChange={(event) => setInput(event.target.value)} placeholder="Add your question or context (optional)...\n\nExamples:\n• What do you think about this setup?\n• Where are the best entry points?\n• Is there a good time to buy or sell?" />
+            {latestAnalysis ? <div className="member-ai-analysis-output">{latestAnalysis.text}</div> : <div className="member-ai-empty-analysis"><span>▤</span><strong>No analysis yet</strong><small>Upload a chart or paste an image to get started<br />with AI analysis.</small></div>}
+            <button className="member-ai-analyze" type="button" disabled={!attachedImage || isTyping} onClick={() => handleSend(`Please analyze the uploaded chart and provide direction, entry, stop loss, take profit, timeframe, and key confluence.${input.trim() ? ` Context: ${input.trim()}` : ''}`)}>{isTyping ? 'Analyzing chart…' : '✧  Analyze Chart'}</button>
+          </> : <div className="member-ai-saved-list">{sessions.length ? sessions.map((session) => <button type="button" key={session.id} onClick={() => { selectSession(session); setAnalysisTab('analysis'); }}><span>▧</span><span><b>{session.title || 'Chart analysis'}</b><small>{formatSessionDate(session.updatedAt || session.createdAt)}</small></span><span>›</span></button>) : <div className="member-ai-empty-analysis"><strong>No saved analyses yet</strong><small>Your completed chart analyses will appear here.</small></div>}</div>}
+        </div>
+        <div className="member-ai-recent-card">
+          <header><strong>Recent Analyses</strong><button type="button" onClick={() => setAnalysisTab('saved')}>View All →</button></header>
+          {sessions.slice(0, 3).length ? sessions.slice(0, 3).map((session, index) => <button className="member-ai-recent-row" type="button" key={session.id} onClick={() => { selectSession(session); setAnalysisTab('analysis'); }}><span className={`member-ai-recent-icon tone-${index}`}>▧</span><span><b>{session.title || 'Chart analysis'}</b><small>{formatSessionDate(session.updatedAt || session.createdAt)}</small></span><span className="member-ai-saved-tag">Saved</span><span>›</span></button>) : <p className="member-ai-no-recent">Your completed chart analyses will appear here.</p>}
+        </div>
+      </section>
+      {imageQuota && <small className="member-ai-quota">Chart analysis requests: {imageQuota.unlimited ? 'Unlimited' : `${imageQuota.remaining} of ${imageQuota.limit} remaining`}</small>}
+    </div>
+  );
 
   return (
     <div className="pip-terminal-wrapper" onPaste={handlePaste}>

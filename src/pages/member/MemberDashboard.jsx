@@ -1,395 +1,109 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { subscribeSignals } from '../../data/signals.js';
-import { getSessionStatus } from '../../data/marketSessions.js';
 import { fetchLivePrice, formatSpotPrice, subscribeGoldMarketSnapshot } from '../../services/marketPriceService.js';
-import { TelegramIcon } from '../../components/ui/CategoryIcons.jsx';
+import '../../styles/memberDashboard.css';
+import '../../styles/memberCalendar.css';
+import '../../styles/memberActiveSignals.css';
 
-const TELEGRAM_VIP_URL = 'https://t.me/Vengsopheagenz?direct';
 const NEWS_API_URL = (import.meta.env.VITE_NEWS_API_URL || 'https://genzapi-production.up.railway.app').replace(/\/$/, '');
 
 function greeting() {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 18) return 'Good afternoon';
-  return 'Good evening';
+  return hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
 }
 
-function firstName(user) {
-  const source = (user?.name || user?.email || 'Trader').trim();
-  return source.split(/\s+/)[0];
+function formatActivityTime(signal) {
+  const raw = signal.updatedAt || signal.closedAt || signal.createdAt || signal.timestamp;
+  const date = raw?.toDate ? raw.toDate() : new Date(raw || NaN);
+  if (Number.isNaN(date.getTime())) return 'Recently';
+  return date.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+function displayPrice(value) {
+  if (value === null || value === undefined || value === '') return '—';
+  const parsed = Number(String(value).replace(/,/g, ''));
+  return Number.isFinite(parsed) ? parsed.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 5 }) : String(value);
 }
 
 export default function MemberDashboard({ user, onNavigate }) {
   const [signals, setSignals] = useState([]);
   const [now, setNow] = useState(() => new Date());
-  const [goldSnapshot, setGoldSnapshot] = useState({ price: null, change: null, changePercent: null, status: 'loading' });
-  const [upcomingUsdNews, setUpcomingUsdNews] = useState({ status: 'loading', events: [] });
+  const [gold, setGold] = useState({ price: null, changePercent: null, status: 'loading' });
+  const [calendar, setCalendar] = useState({ status: 'loading', events: [] });
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 60_000);
     return () => window.clearInterval(timer);
   }, []);
 
-  const sessions = getSessionStatus(now);
+  useEffect(() => subscribeSignals(setSignals), []);
 
   useEffect(() => {
-    let cancelled = false;
+    let active = true;
     const unsubscribe = subscribeGoldMarketSnapshot((snapshot) => {
-      setGoldSnapshot((current) => ({ ...current, ...snapshot, status: 'live' }));
+      if (active) setGold((current) => ({ ...current, ...snapshot, status: 'live' }));
     });
-    fetchLivePrice('XAUUSD')
-      .then((price) => {
-        if (!cancelled && price) {
-          setGoldSnapshot((current) => current.price ? current : { ...current, price, status: 'delayed' });
-        } else if (!cancelled && !price) {
-          setGoldSnapshot((current) => current.price ? current : { ...current, status: 'error' });
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setGoldSnapshot((current) => current.price ? current : { ...current, status: 'error' });
-      });
-    return () => {
-      cancelled = true;
-      unsubscribe();
-    };
+    fetchLivePrice('XAUUSD').then((price) => {
+      if (active && price) setGold((current) => current.price ? current : { ...current, price, status: 'delayed' });
+      else if (active && !price) setGold((current) => current.price ? current : { ...current, status: 'error' });
+    }).catch(() => {
+      if (active) setGold((current) => current.price ? current : { ...current, status: 'error' });
+    });
+    return () => { active = false; unsubscribe(); };
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    fetch(`${NEWS_API_URL}/api/calendar?lang=en`)
-      .then((response) => {
-        if (!response.ok) throw new Error(`Calendar API returned ${response.status}`);
-        return response.json();
-      })
-      .then((data) => {
-        if (cancelled) return;
-        const currentTime = Date.now();
-        const events = (data.events || [])
-          .filter((event) => event.currency === 'USD' && event.impact === 'high' && new Date(event.time).getTime() >= currentTime)
-          .sort((a, b) => new Date(a.time) - new Date(b.time));
-        setUpcomingUsdNews({ status: events.length ? 'loaded' : 'empty', events });
-      })
-      .catch(() => {
-        if (!cancelled) setUpcomingUsdNews({ status: 'error', events: [] });
-      });
-    return () => { cancelled = true; };
+    let active = true;
+    fetch(`${NEWS_API_URL}/api/calendar?lang=en`).then((response) => {
+      if (!response.ok) throw new Error(`Calendar API returned ${response.status}`);
+      return response.json();
+    }).then((data) => {
+      if (!active) return;
+      const events = (data.events || []).filter((event) => event.currency === 'USD' && event.impact === 'high' && new Date(event.time).getTime() >= Date.now()).sort((a, b) => new Date(a.time) - new Date(b.time));
+      setCalendar({ status: 'loaded', events });
+    }).catch(() => { if (active) setCalendar({ status: 'error', events: [] }); });
+    return () => { active = false; };
   }, []);
 
-  useEffect(() => {
-    const unsub = subscribeSignals((list) => {
-      setSignals(list);
-    });
-    return () => unsub();
-  }, []);
-
-  const goldSignals = signals.filter((s) => /XAU|GOLD/i.test(s.pair || ''));
-  const activeSignals = goldSignals.filter((s) => s.status === 'active');
-  const tpSignals = goldSignals.filter((s) => s.status === 'tp' || s.status === 'win');
-  const slSignals = goldSignals.filter((s) => s.status === 'sl' || s.status === 'loss');
-  const closedSignals = goldSignals.filter((s) => s.status === 'tp' || s.status === 'sl' || s.status === 'win' || s.status === 'loss');
-
-  // 1. Pip Scalp Metrics (1M-5M Imbalance Model)
-  const scalpSignals = goldSignals.filter((s) => s.style === 'scalping' || s.mode?.includes('SCALP') || s.strategy_version?.includes('SCALP'));
-  const scalpClosed = scalpSignals.filter((s) => s.status === 'tp' || s.status === 'sl' || s.status === 'win' || s.status === 'loss');
-  const scalpWins = scalpSignals.filter((s) => s.status === 'tp' || s.status === 'win');
-  const scalpLosses = scalpSignals.filter((s) => s.status === 'sl' || s.status === 'loss');
-  const scalpWinRateNum = scalpClosed.length > 0 ? (scalpWins.length / scalpClosed.length) * 100 : 73.1;
-  const scalpWinRateDisplay = `${scalpWinRateNum.toFixed(1)}%`;
-
-  // 2. Intraday Metrics (5M ICT Killzone Model)
-  const intraSignals = goldSignals.filter((s) => !(s.style === 'scalping' || s.mode?.includes('SCALP') || s.strategy_version?.includes('SCALP')));
-  const intraClosed = intraSignals.filter((s) => s.status === 'tp' || s.status === 'sl' || s.status === 'win' || s.status === 'loss');
-  const intraWins = intraSignals.filter((s) => s.status === 'tp' || s.status === 'win');
-  const intraLosses = intraSignals.filter((s) => s.status === 'sl' || s.status === 'loss');
-  const intraWinRateNum = intraClosed.length > 0 ? (intraWins.length / intraClosed.length) * 100 : 60.0;
-  const intraWinRateDisplay = `${intraWinRateNum.toFixed(1)}%`;
-
-  // Standard Target R:R (Scalp 1:1.8 / Intra 1:2.0)
-  const avgRrDisplay = '1:1.8 / 1:2.0';
-
-  // Dynamic Profit Factor calculation: Gross Wins (in R) / Gross Losses (in R, each SL = 1.0R)
-  const grossProfitR = tpSignals.reduce((acc, s) => acc + (parseFloat(s.rr?.replace('1:', '')) || (s.style === 'scalping' ? 1.8 : 2.0)), 0);
-  const grossLossR = slSignals.length * 1.0;
-  let profitFactorDisplay = '4.12';
-  if (grossLossR > 0 && grossProfitR > 0) {
-    profitFactorDisplay = (grossProfitR / grossLossR).toFixed(2);
-  } else if (grossLossR === 0 && grossProfitR > 0) {
-    profitFactorDisplay = grossProfitR.toFixed(2);
-  }
-
-  const nextUsdEvents = upcomingUsdNews.events
-    .filter((event) => new Date(event.time).getTime() >= now.getTime())
-    .slice(0, 3);
+  const goldSignals = signals.filter((signal) => /XAU|GOLD/i.test(signal.pair || ''));
+  const activeSignals = goldSignals.filter((signal) => signal.status === 'active');
+  const activeRecentSignals = [...activeSignals].sort((a, b) => {
+    const time = (signal) => { const value = signal.updatedAt || signal.closedAt || signal.createdAt || signal.timestamp; return value?.toMillis ? value.toMillis() : new Date(value || 0).getTime(); };
+    return time(b) - time(a);
+  }).slice(0, 4);
+  const upcoming = calendar.events.filter((event) => new Date(event.time).getTime() >= now.getTime()).slice(0, 3);
+  const name = (user?.name || user?.email || 'Trader').trim().split(/\s+/)[0];
 
   return (
-    <div className="terminal-dashboard-page">
-      {/* HERO EXECUTIVE BAR */}
-      <div className="terminal-hero-card">
-        <div className="terminal-hero-left">
-          <div className="vip-badge-row">
-            <span className="vip-crown-badge">👑 ELITE VIP ACCESS</span>
-            <span className="vip-status-online">
-              <span className="pulse-dot" /> LIVE TRADING DESK
-            </span>
-          </div>
-          <h1 className="terminal-greeting">
-            {greeting()}, {firstName(user)}
-          </h1>
-          <p className="terminal-sub">
-            Live Gold trade setups with entry, target, and stop loss. Times in GMT+7.
-          </p>
-
-          <div className="terminal-sessions-strip">
-            <span className="sessions-strip-label">Global Sessions:</span>
-            {sessions.map((s) => (
-              <div key={s.key} className={`terminal-session-pill${s.open ? ' open' : ''}`}>
-                <span className="session-indicator" />
-                <span className="session-name">{s.label}</span>
-                <span className="session-state">{s.open ? 'OPEN' : 'CLOSED'}</span>
-              </div>
-            ))}
-          </div>
+    <div className="member-overview">
+      <section className="member-welcome-card">
+        <div className="member-welcome-copy">
+          <span className="member-eyebrow">YOUR TRADING COMMUNITY</span>
+          <h1>{greeting()}, {name} <span aria-hidden="true">👋</span></h1>
+          <p>Catch up on your community, market updates, and latest signals.</p>
+          <div className="member-welcome-links"><button onClick={() => onNavigate('live-room')}>Explore the Live Room <span>↗</span></button><span>Member access <b>● Active</b></span></div>
         </div>
+        <div className="member-welcome-art" aria-hidden="true"><svg viewBox="0 0 330 160" role="presentation"><path d="M8 130 42 105 68 116 103 72 135 91 173 48 204 65 244 22 274 42 316 8"/><path d="M8 145h315M8 110h315M8 75h315M8 40h315"/><g><path d="M43 80v44m-8-30h16m24-5v43m-8-22h16m24-63v55m-8-34h16m24 6v46m-8-24h16m24-62v45m-8-28h16m24-18v56m-8-35h16m24-39v44m-8-25h16m24-39v53m-8-30h16"/></g></svg></div>
+      </section>
 
-        <div className="terminal-hero-right">
-          <div className="telegram-vip-card">
-            <div className="telegram-card-icon">
-              <TelegramIcon width={24} height={24} />
-            </div>
-            <div>
-              <div className="tg-card-title">VIP Telegram</div>
-              <div className="tg-card-sub">Instant alerts & commentary</div>
-            </div>
-            <a
-              href={TELEGRAM_VIP_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="tg-join-btn"
-            >
-              Open Telegram
-            </a>
-            <button type="button" className="tg-join-btn" onClick={() => onNavigate('pip')}>
-              Ask Pip AI
-            </button>
+      <div className="member-overview-grid">
+        <section className="member-overview-panel member-overview-stats">
+          <div className="member-panel-heading"><div><h2>Member Overview</h2><p>Your latest platform activity</p></div><span className="member-subtle-badge">LIVE DATA</span></div>
+          <div className="member-stat-grid">
+            <article className="member-stat-card"><span className="member-stat-icon blue">↗</span><div><span>Total signals</span><strong>{goldSignals.length}</strong><small>Gold setups published</small></div></article>
+            <article className="member-stat-card"><span className="member-stat-icon green">◉</span><div><span>Active signals</span><strong>{activeSignals.length}</strong><small>{activeSignals.length ? 'Currently active' : 'No active setups'}</small></div></article>
+            <article className="member-stat-card"><span className="member-stat-icon violet">◎</span><div><span>Closed signals</span><strong>{goldSignals.filter((signal) => ['tp', 'sl', 'win', 'loss'].includes(signal.status)).length}</strong><small>Outcomes recorded</small></div></article>
           </div>
-        </div>
-      </div>
+          <div className="member-market-strip"><span className="member-market-symbol">XAU</span><div><b>Gold market</b><small>{gold.status === 'live' ? 'Live quote' : gold.status === 'delayed' ? 'Spot quote' : gold.status === 'error' ? 'Quote unavailable' : 'Connecting to quote'}</small></div><strong>{gold.price ? `$${formatSpotPrice('XAUUSD', gold.price)}` : '—'}</strong>{typeof gold.changePercent === 'number' && <em className={gold.changePercent >= 0 ? 'positive' : 'negative'}>{gold.changePercent >= 0 ? '+' : ''}{gold.changePercent.toFixed(2)}%</em>}</div>
+        </section>
 
-      {/* METRIC STRIP (DYNAMICALLY CALCULATED FROM REAL SIGNALS) */}
-      <div className="terminal-metric-grid">
-        {/* 1. Pip Scalp Performance Metric Box */}
-        <div className="metric-box">
-          <div className="metric-header">
-            <span className="metric-label">⚡ SCALP WIN RATE (1M-5M)</span>
-            <span className="metric-tag up">
-              {scalpClosed.length === 0 ? 'Verified 73.1%' : `${scalpWins.length}W - ${scalpLosses.length}L`}
-            </span>
-          </div>
-          <div className="metric-num" style={{ color: '#10B981' }}>{scalpWinRateDisplay}</div>
-          <div className="metric-foot">
-            {scalpClosed.length === 0
-              ? 'Pip Scalp Model · 1:1.8 Target'
-              : `${scalpWins.length} wins / ${scalpClosed.length} closed`}
-          </div>
-        </div>
+        <section className="member-overview-panel member-announcement-panel"><div className="member-panel-heading"><div><h2>Latest Announcement</h2><p>News and updates from your team</p></div><span className="member-panel-icon">♢</span></div><div className="member-empty-announcement"><span>✦</span><b>No new announcements</b><p>Updates from your team will show here.</p></div></section>
 
-        {/* 2. Intraday Performance Metric Box */}
-        <div className="metric-box">
-          <div className="metric-header">
-            <span className="metric-label">🎯 INTRADAY WIN RATE (5M)</span>
-            <span className="metric-tag warn">
-              {intraClosed.length === 0 ? 'Verified 60.0%' : `${intraWins.length}W - ${intraLosses.length}L`}
-            </span>
-          </div>
-          <div className="metric-num" style={{ color: '#F59E0B' }}>{intraWinRateDisplay}</div>
-          <div className="metric-foot">
-            {intraClosed.length === 0
-              ? 'ICT Killzone Model · 1:2.0 Target'
-              : `${intraWins.length} wins / ${intraClosed.length} closed`}
-          </div>
-        </div>
+        <section className="member-overview-panel member-streams-panel"><div className="member-panel-heading"><div><h2>Upcoming Live Streams</h2><p>Learn alongside the trading community</p></div><button className="member-text-action" onClick={() => onNavigate('live-room')}>Open Live Room <span>→</span></button></div><div className="member-empty-stream"><span className="member-video-icon">▷</span><div><b>No sessions scheduled</b><p>Upcoming streams will appear here when they’re announced.</p></div><button onClick={() => onNavigate('live-room')}>View room</button></div></section>
 
-        <div className="metric-box">
-          <div className="metric-header">
-            <span className="metric-label">AVG RISK : REWARD</span>
-            <span className="metric-tag brand">1:2 Setup</span>
-          </div>
-          <div className="metric-num">{avgRrDisplay}</div>
-          <div className="metric-foot">1:2 R:R standard</div>
-        </div>
+        <section className="member-overview-panel member-activity-panel"><div className="member-panel-heading"><div><h2>Active Signals</h2><p>Current setups with entry, stop loss, and take profit</p></div><button className="member-text-action" onClick={() => onNavigate('signals')}>View history <span>→</span></button></div>{activeRecentSignals.length ? <div className="member-activity-list">{activeRecentSignals.map((signal) => { const direction = String(signal.direction || '').toLowerCase(); const isBuy = direction === 'buy'; const directionClass = isBuy ? 'buy' : direction === 'sell' ? 'sell' : ''; const entry = signal.entry ?? signal.entry_price ?? signal.entryPrice; const stop = signal.sl ?? signal.stop_loss ?? signal.stopLoss; const target = signal.tp1 ?? signal.tp ?? signal.take_profit ?? signal.takeProfit ?? signal.target; const timeframe = signal.timeframe || signal.time_frame || signal.interval || (String(signal.style || '').toLowerCase().includes('scalp') ? '5m' : '15m'); return <article className="member-active-signal-row" key={signal.id}><div className={`member-activity-dot ${directionClass}`}>{isBuy ? '↑' : direction === 'sell' ? '↓' : '•'}</div><div className="member-active-signal-info"><div className="member-active-signal-head"><b>{signal.pair || 'XAUUSD'}</b><span className={`member-signal-tag ${directionClass || 'neutral'}`}>{direction ? direction.toUpperCase() : '—'}</span><span className="member-signal-active-label">ACTIVE</span></div><small>{timeframe} · {signal.style || signal.strategy || 'Trading setup'} · {formatActivityTime(signal)}</small><div className="member-active-signal-levels"><span>ENTRY <b>{displayPrice(entry)}</b></span><span>SL <b className="negative">{displayPrice(stop)}</b></span><span>TP <b className="positive">{displayPrice(target)}</b></span></div></div></article>; })}</div> : <div className="member-activity-empty">There are no active signals right now. New setups will appear here when published.</div>}</section>
 
-        <div className="metric-box">
-          <div className="metric-header">
-            <span className="metric-label">ACTIVE SIGNALS</span>
-            <span className={`metric-tag ${activeSignals.length > 0 ? 'warn' : 'brand'}`}>
-              {activeSignals.length > 0 ? 'Live' : 'Standby'}
-            </span>
-          </div>
-          <div className="metric-num">{activeSignals.length}</div>
-          <div className="metric-foot">
-            {activeSignals.length > 0
-              ? 'Live Gold setups'
-              : 'Waiting for next setup'}
-          </div>
-        </div>
-
-        <div className="metric-box">
-          <div className="metric-header">
-            <span className="metric-label">PROFIT FACTOR</span>
-            <span className={`metric-tag ${grossLossR > 0 && grossProfitR === 0 ? 'dn' : parseFloat(profitFactorDisplay) >= 1.5 ? 'up' : 'brand'}`}>
-              {grossLossR > 0 && grossProfitR === 0
-                ? `-${grossLossR.toFixed(1)}R`
-                : parseFloat(profitFactorDisplay) >= 1.5
-                ? 'Profitable'
-                : 'Live Sync'}
-            </span>
-          </div>
-          <div className="metric-num">{profitFactorDisplay}</div>
-          <div className="metric-foot">
-            {totalClosed > 0
-              ? `${tpSignals.length} TP • ${slSignals.length} SL (-${grossLossR.toFixed(1)}R)`
-              : 'Profit to loss ratio'}
-          </div>
-        </div>
-      </div>
-
-      {/* MAIN 2-COLUMN SECTION */}
-      <div className="terminal-columns-grid">
-        {/* LEFT COLUMN: ACTIVE & RECENT TRADES */}
-        <div className="terminal-panel">
-          <div className="panel-header">
-            <div>
-              <div className="panel-title">Gold Signals</div>
-              <div className="panel-sub">Active entries, targets, and stops</div>
-            </div>
-            <button
-              type="button"
-              className="panel-action-link"
-              onClick={() => onNavigate('signals')}
-            >
-              Full Signals Terminal →
-            </button>
-          </div>
-
-          <div className="panel-signals-list">
-            {activeSignals.length === 0 ? (
-              <div style={{ padding: '36px 16px', textAlign: 'center', color: 'var(--mute)', fontSize: '13px' }}>
-                <div style={{ fontSize: '24px', marginBottom: '8px' }}>⚡</div>
-                <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>No Active Signals Right Now</div>
-                <div>New gold setups appear here when they are published.</div>
-              </div>
-            ) : (
-              <>
-                {/* ACTIVE LIVE TRADES */}
-                {activeSignals.map((s) => (
-                  <div key={s.id} className="radar-signal-card active">
-                    <div className="radar-card-top">
-                      <div className="radar-tag-row">
-                        <span className={`signal-dir-tag ${s.direction}`}>
-                          {s.direction === 'buy' ? '▲ BUY' : '▼ SELL'}
-                        </span>
-                        <span className="radar-pair">{s.pair}</span>
-                        <span className="radar-target-rr">1:2 R:R</span>
-                      </div>
-                      <span className="radar-live-tag">LIVE NOW</span>
-                    </div>
-
-                    <div className="radar-levels-row">
-                      <div>
-                        <span className="r-label">ENTRY</span>
-                        <span className="r-val">{s.entry}</span>
-                      </div>
-                      <div>
-                        <span className="r-label">SL</span>
-                        <span className="r-val sl">{s.sl}</span>
-                      </div>
-                      <div>
-                        <span className="r-label">TP</span>
-                        <span className="r-val tp">{s.tp}</span>
-                      </div>
-                    </div>
-
-                    {s.reason && <p className="radar-reason">{s.reason}</p>}
-                  </div>
-                ))}
-
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* RIGHT COLUMN: LIVE GOLD PRICE & UPCOMING USD NEWS */}
-        <div className="terminal-column-stack">
-          <div className="terminal-panel gold-snapshot-panel">
-            <div className="panel-header">
-              <div>
-                <div className="panel-title">Gold Market Snapshot</div>
-                <div className="panel-sub">XAU/USD spot price and daily move</div>
-              </div>
-              <span className={`gold-snapshot-status ${goldSnapshot.status}`}>
-                {goldSnapshot.status === 'live' ? 'LIVE' : goldSnapshot.status === 'delayed' ? 'SPOT' : goldSnapshot.status === 'error' ? 'OFFLINE' : 'WAITING'}
-              </span>
-            </div>
-            {goldSnapshot.price ? (
-              <div className="gold-snapshot-content">
-                <div className="gold-snapshot-price">${formatSpotPrice('XAUUSD', goldSnapshot.price)}</div>
-                {typeof goldSnapshot.changePercent === 'number' ? (
-                  <div className={`gold-snapshot-change ${goldSnapshot.changePercent >= 0 ? 'up' : 'down'}`}>
-                    {typeof goldSnapshot.change === 'number' ? `${goldSnapshot.change >= 0 ? '+' : ''}${goldSnapshot.change.toFixed(2)} ` : ''}
-                    ({goldSnapshot.changePercent >= 0 ? '+' : ''}{goldSnapshot.changePercent.toFixed(2)}%) today
-                  </div>
-                ) : (
-                  <div className="gold-snapshot-change muted">Daily move is waiting for the live quote.</div>
-                )}
-                <div className="gold-snapshot-updated">
-                  {goldSnapshot.status === 'live' ? 'Live quote · OANDA / TradingView' : 'Spot price · live feed reconnecting'}
-                </div>
-              </div>
-            ) : (
-              <div className="dashboard-empty-state">
-                {goldSnapshot.status === 'error' ? 'Gold price is temporarily unavailable.' : 'Connecting to the live Gold quote...'}
-              </div>
-            )}
-          </div>
-
-          <div className="terminal-panel usd-news-panel">
-            <div className="panel-header">
-              <div>
-                <div className="panel-title">Gold Market Drivers</div>
-                <div className="panel-sub">High impact events · Cambodia time (GMT+7)</div>
-              </div>
-              <span className="usd-news-badge">USD</span>
-            </div>
-            {upcomingUsdNews.status === 'loading' ? (
-              <div className="dashboard-empty-state">Loading the economic calendar...</div>
-            ) : nextUsdEvents.length ? (
-              <div className="usd-news-list">
-                {nextUsdEvents.map((event) => (
-                  <div className="usd-news-event" key={event.key}>
-                    <span className="usd-news-impact">HIGH</span>
-                    <div className="usd-news-event-main">
-                      <div className="usd-news-event-title">{event.event}</div>
-                      <div className="usd-news-event-time">
-                        {new Intl.DateTimeFormat('en-GB', {
-                          timeZone: 'Asia/Phnom_Penh', weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true,
-                        }).format(new Date(event.time))}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="dashboard-empty-state">
-                {upcomingUsdNews.status !== 'error'
-                  ? 'No upcoming high impact USD events in the calendar.'
-                  : 'The economic calendar is temporarily unavailable.'}
-              </div>
-            )}
-            <button type="button" className="panel-action-link usd-news-signals" onClick={() => onNavigate('signals')}>
-              Check live signals {'>'}
-            </button>
-          </div>
-        </div>
+        <section className="member-overview-panel member-calendar-panel"><div className="member-panel-heading"><div><h2>Market Calendar</h2><p>Upcoming high-impact USD events · Phnom Penh</p></div><span className="member-calendar-chip">USD</span></div>{calendar.status === 'loading' ? <div className="member-calendar-empty">Loading economic calendar…</div> : calendar.status === 'error' ? <div className="member-calendar-empty">The economic calendar is temporarily unavailable.</div> : upcoming.length ? <div className="member-calendar-list">{upcoming.map((event) => <article key={event.key}><span className="member-impact-dot"/><div><b>{event.event}</b><small>{new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Phnom_Penh', weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }).format(new Date(event.time))}</small></div><span>HIGH</span></article>)}</div> : <div className="member-calendar-empty">No upcoming high-impact USD events.</div>}</section>
       </div>
     </div>
   );

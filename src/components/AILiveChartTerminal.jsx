@@ -8,6 +8,8 @@ import { fetchLivePrice, formatSpotPrice, subscribeLiveTicks, fetchLiveExtremePr
 import { run15mMarketReanalysis, get15mCandleTimeRemaining } from '../services/marketAnalysisService.js';
 import { getMarketHoursStatus } from '../services/marketHoursService.js';
 import MarketAnalysisPanel from './MarketAnalysisPanel.jsx';
+import AiChartOverlay from './AiChartOverlay.jsx';
+import AiLiveChart from './AiLiveChart.jsx';
 import { BACKTEST_SIGNALS } from '../data/backtestSignals.js';
 import { usePersistentState } from '../utils/statePersistence.js';
 
@@ -16,8 +18,10 @@ const TV_LOCALE = 'en';
 export const SUPPORTED_PAIRS = ['XAUUSD'];
 
 const SYMBOLS = [
-  { id: 'gold', symbol: 'OANDA:XAUUSD', label: 'XAU/USD (Gold)', name: 'Gold', pair: 'XAUUSD', pipScale: 0.1, defaultPrice: 4171.25 },
+  { id: 'gold', symbol: 'OANDA:XAUUSD', label: 'XAU/USD (Gold)', name: 'Gold', pair: 'XAUUSD', pipScale: 0.1, defaultPrice: null },
 ];
+
+const LOCKED_TIMEFRAME = '15';
 
 const TIMEFRAMES = [
   { id: '1', label: '1m' },
@@ -76,21 +80,6 @@ function playAiBeep(type = 'scan', isMuted = false) {
   }
 }
 
-let tvScriptPromise = null;
-function loadTradingViewScript() {
-  if (window.TradingView) return Promise.resolve();
-  if (!tvScriptPromise) {
-    tvScriptPromise = new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = 'https://s3.tradingview.com/tv.js';
-      script.onload = resolve;
-      script.onerror = reject;
-      document.head.appendChild(script);
-    });
-  }
-  return tvScriptPromise;
-}
-
 // Strict Helper: In-Chart Auto Setup is EXCLUSIVELY for Intra Trade / Day Trade (Never for Scalp)
 export function isIntraTradeSignal(sig) {
   if (!sig) return false;
@@ -145,19 +134,14 @@ export default function AILiveChartTerminal({
   const [symbolId, setSymbolId] = useState('gold');
   const activeSymbolIdRef = useRef(symbolId);
   activeSymbolIdRef.current = symbolId;
-  const [timeframe, setTimeframe] = usePersistentState('gzt_term_timeframe', '15');
-
-  // When user logs in, ensure the chart timeframe defaults to 15m
-  const prevUserUidRef = useRef(user?.uid || null);
+  // The AI scans and signals on closed M15 candles, so the chart is pinned to 15m.
+  const timeframe = LOCKED_TIMEFRAME;
   useEffect(() => {
-    if (user?.uid && user.uid !== prevUserUidRef.current) {
-      setTimeframe('15');
-      try {
-        localStorage.setItem('gzt_term_timeframe', JSON.stringify('15'));
-      } catch {}
-    }
-    prevUserUidRef.current = user?.uid || null;
-  }, [user?.uid, setTimeframe]);
+    try { localStorage.removeItem('gzt_term_timeframe'); } catch {}
+  }, []);
+  // Chart-only view can show our own AI chart (entry / SL / TP drawn on live candles) or TradingView.
+  const [chartEngine, setChartEngine] = usePersistentState('gzt_term_engine', 'ai');
+  const [aiChartNote, setAiChartNote] = useState(null);
   const [selectedModel, setSelectedModel] = usePersistentState('gzt_term_selectedModel', 'smc');
   const [isMuted, setIsMuted] = usePersistentState('gzt_term_isMuted', false);
   const [tvFullscreen, setTvFullscreen] = useState(false);
@@ -703,111 +687,97 @@ export default function AILiveChartTerminal({
     };
   }, [currentAsset.pair, currentAsset.pipScale, symbolId, currentAsset.defaultPrice]);
 
-  // Helper to safely instantiate TradingView widget without duplication
-  const initTradingViewWidget = useCallback(() => {
+  // Mount TradingView's documented Advanced Chart embed. Its legacy tv.js constructor
+  // does not provide a reliable resolution API for this embed.
+  const initTradingViewWidget = useCallback((retryCount = 0) => {
     const el = document.getElementById(tvContainerId);
     if (!el) return;
-    try {
-      el.innerHTML = '';
-      if (window.TradingView && window.TradingView.widget) {
-        const isLight = theme === 'light';
-        tvWidgetRef.current = new window.TradingView.widget({
-          autosize: true,
-          symbol: currentAsset.symbol,
-          interval: timeframe,
-          timezone: 'Asia/Bangkok', // GMT+7 Cambodia Time
-          theme: isLight ? 'light' : 'dark',
-          style: '1',
-          locale: TV_LOCALE,
-          toolbar_bg: isLight ? '#FFFFFF' : '#000000',
-          enable_publishing: false,
-          allow_symbol_change: true,
-          hide_side_toolbar: false,
-          withdateranges: true,
-          details: true,
-          hotlist: true,
-          calendar: true,
-          container_id: tvContainerId,
-          overrides: isLight ? {
-            'paneProperties.background': '#FFFFFF',
-            'paneProperties.backgroundType': 'solid',
-            'paneProperties.vertGridProperties.color': 'rgba(0, 0, 0, 0.05)',
-            'paneProperties.horzGridProperties.color': 'rgba(0, 0, 0, 0.05)',
-            'mainSeriesProperties.style': 1,
-            'mainSeriesProperties.candleStyle.upColor': '#16A34A',
-            'mainSeriesProperties.candleStyle.downColor': '#DC2626',
-            'mainSeriesProperties.candleStyle.drawWick': true,
-            'mainSeriesProperties.candleStyle.drawBorder': true,
-            'mainSeriesProperties.candleStyle.borderColor': '#16A34A',
-            'mainSeriesProperties.candleStyle.borderUpColor': '#16A34A',
-            'mainSeriesProperties.candleStyle.borderDownColor': '#DC2626',
-            'mainSeriesProperties.candleStyle.wickColor': '#64748B',
-            'mainSeriesProperties.candleStyle.wickUpColor': '#16A34A',
-            'mainSeriesProperties.candleStyle.wickDownColor': '#DC2626',
-            'mainSeriesProperties.showCountdown': true,
-            'paneProperties.legendProperties.showSeriesTitle': true,
-            'scalesProperties.showSeriesLastValue': true,
-            'scalesProperties.backgroundColor': '#FFFFFF',
-            'scalesProperties.textColor': '#334155',
-            'scalesProperties.lineColor': 'rgba(0, 0, 0, 0.1)',
-          } : {
-            'paneProperties.background': '#000000',
-            'paneProperties.backgroundType': 'solid',
-            'paneProperties.vertGridProperties.color': 'rgba(255, 255, 255, 0.04)',
-            'paneProperties.horzGridProperties.color': 'rgba(255, 255, 255, 0.04)',
-            'mainSeriesProperties.style': 1,
-            'mainSeriesProperties.candleStyle.upColor': '#FFFFFF',
-            'mainSeriesProperties.candleStyle.downColor': '#000000',
-            'mainSeriesProperties.candleStyle.drawWick': true,
-            'mainSeriesProperties.candleStyle.drawBorder': true,
-            'mainSeriesProperties.candleStyle.borderColor': '#FFFFFF',
-            'mainSeriesProperties.candleStyle.borderUpColor': '#FFFFFF',
-            'mainSeriesProperties.candleStyle.borderDownColor': '#FFFFFF',
-            'mainSeriesProperties.candleStyle.wickColor': '#FFFFFF',
-            'mainSeriesProperties.candleStyle.wickUpColor': '#FFFFFF',
-            'mainSeriesProperties.candleStyle.wickDownColor': '#FFFFFF',
-            'mainSeriesProperties.showCountdown': true,
-            'paneProperties.legendProperties.showSeriesTitle': true,
-            'scalesProperties.showSeriesLastValue': true,
-            'scalesProperties.backgroundColor': '#000000',
-            'scalesProperties.textColor': '#94A3B8',
-            'scalesProperties.lineColor': 'rgba(255, 255, 255, 0.1)',
-          },
-        });
-        addLog('WIDGET', `TradingView terminal initialized for ${currentAsset.symbol} [${timeframe}m].`);
+
+    el.innerHTML = '';
+    const isLight = theme === 'light';
+    const widgetContainer = document.createElement('div');
+    widgetContainer.className = 'tradingview-widget-container';
+    widgetContainer.style.width = '100%';
+    widgetContainer.style.height = '100%';
+
+    const widgetBody = document.createElement('div');
+    widgetBody.className = 'tradingview-widget-container__widget';
+    widgetBody.style.width = '100%';
+    widgetBody.style.height = 'calc(100% - 24px)';
+    widgetContainer.appendChild(widgetBody);
+
+    const attribution = document.createElement('a');
+    attribution.href = `https://www.tradingview.com/symbols/${currentAsset.symbol.replace(':', '-')}/`;
+    attribution.target = '_blank';
+    attribution.rel = 'noopener nofollow';
+    attribution.textContent = `${currentAsset.symbol} chart by TradingView`;
+    attribution.style.cssText = 'display:block;height:24px;line-height:24px;text-align:center;font:11px Arial,sans-serif;color:#8a8d98;text-decoration:none;';
+    widgetContainer.appendChild(attribution);
+
+    const script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.async = true;
+    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
+    script.textContent = JSON.stringify({
+      allow_symbol_change: true,
+      calendar: false,
+      details: true,
+      hide_side_toolbar: false,
+      hide_top_toolbar: false,
+      hide_legend: false,
+      hide_volume: false,
+      hotlist: true,
+      interval: timeframe,
+      locale: TV_LOCALE,
+      save_image: false,
+      style: '1',
+      symbol: currentAsset.symbol,
+      theme: isLight ? 'light' : 'dark',
+      timezone: 'Asia/Bangkok',
+      backgroundColor: isLight ? '#FFFFFF' : '#000000',
+      gridColor: isLight ? 'rgba(0, 0, 0, 0.05)' : 'rgba(255, 255, 255, 0.04)',
+      withdateranges: true,
+      studies: [],
+      autosize: true,
+    });
+    script.onerror = (err) => {
+      console.warn('TradingView embed script failed to load:', err);
+      if (retryCount < 1 && el.contains(widgetContainer)) {
+        setTimeout(() => {
+          if (el.contains(widgetContainer)) initTradingViewWidget(retryCount + 1);
+        }, 1500);
       }
-    } catch (err) {
-      console.warn('TradingView initialization error:', err);
-    }
+    };
+    widgetContainer.appendChild(script);
+    el.appendChild(widgetContainer);
+    tvWidgetRef.current = widgetContainer;
+    addLog('WIDGET', `TradingView terminal initialized for ${currentAsset.symbol} [${timeframe}].`);
   }, [theme, currentAsset.symbol, timeframe, tvContainerId]);
 
-  // 3. Initialize TradingView Advanced Chart Widget
+  const reconnectTradingView = useCallback(() => {
+    initTradingViewWidget();
+  }, [initTradingViewWidget]);
+
+  // Recover the chart after a temporary network outage without resetting it
+  // during ordinary tab switches or focus changes.
+  useEffect(() => {
+    const handleOnline = () => {
+      setTimeout(() => reconnectTradingView(), 1000);
+    };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, [reconnectTradingView]);
+
+  // Mount a fresh official embed whenever the selected timeframe or appearance changes.
   useEffect(() => {
     if (!tvContainerRef.current) return undefined;
-    let cancelled = false;
-
-    loadTradingViewScript().then(() => {
-      if (cancelled || !tvContainerRef.current) return;
-      initTradingViewWidget();
-    }).catch((err) => {
-      console.warn('TradingView script load error:', err);
-    });
-
+    initTradingViewWidget();
     return () => {
-      cancelled = true;
-      try {
-        if (tvWidgetRef.current) {
-          const el = document.getElementById(tvContainerId);
-          if (el && el.parentNode && typeof tvWidgetRef.current.remove === 'function') {
-            tvWidgetRef.current.remove();
-          }
-        }
-      } catch {
-        // Suppress TradingView DOM cleanup errors
-      }
+      const el = document.getElementById(tvContainerId);
+      if (el) el.innerHTML = '';
       tvWidgetRef.current = null;
     };
-  }, [initTradingViewWidget]);
+  }, [initTradingViewWidget, tvContainerId]);
 
   // View switcher that triggers resize recalibration and ensures chart iframe stays valid
   const handleSwitchWorkstationView = (nextView) => {
@@ -895,11 +865,9 @@ export default function AILiveChartTerminal({
                   key={tf.id}
                   type="button"
                   className={`ait-chart-timeframe-pill ${tf.id === timeframe ? 'active' : ''}`}
-                  onClick={() => {
-                    setTimeframe(tf.id);
-                    addLog('TF', `Timeframe adjusted to ${tf.label}`);
-                    playAiBeep('scan', isMuted);
-                  }}
+                  disabled={tf.id !== LOCKED_TIMEFRAME}
+                  title={tf.id !== LOCKED_TIMEFRAME ? 'The AI trades on the 15m chart' : undefined}
+                  style={tf.id !== LOCKED_TIMEFRAME ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}
                 >
                   {tf.label}
                 </button>
@@ -910,6 +878,16 @@ export default function AILiveChartTerminal({
 
         {/* Right: MSOB HUD Switch + View Toggle + Live Quote Ticker + Audio & Fullscreen */}
         <div className="ait-chart-right-controls">
+          <button
+            type="button"
+            className="ait-chart-icon-btn"
+            onClick={reconnectTradingView}
+            title={isKhmer ? 'ភ្ជាប់ TradingView ឡើងវិញ' : 'Reconnect TradingView chart'}
+            aria-label="Reconnect TradingView chart"
+          >
+            ↻ Chart
+          </button>
+
           <button
             type="button"
             className={`ait-chart-engine-btn ${msobActive ? 'active' : ''}`}
@@ -1329,6 +1307,35 @@ export default function AILiveChartTerminal({
               className="ait-tradingview-container"
               style={{ width: '100%', height: '100%' }}
             />
+
+            {/* AI chart: live candles with entry / stop-loss / take-profit drawn on them */}
+            {workstationView === 'chart' && chartEngine === 'ai' && !aiChartNote && (
+              <AiLiveChart
+                pair={currentAsset.pair}
+                isLight={theme === 'light'}
+                setup={autoSetupActive ? currentActiveSetup : null}
+                onUnavailable={(msg) => setAiChartNote(msg)}
+              />
+            )}
+            {workstationView === 'chart' && (
+              <div className="ait-engine-toggle">
+                <button type="button" className={chartEngine === 'ai' && !aiChartNote ? 'active' : ''} onClick={() => { setAiChartNote(null); setChartEngine('ai'); }}>AI Chart</button>
+                <button type="button" className={chartEngine === 'tv' || aiChartNote ? 'active' : ''} onClick={() => setChartEngine('tv')}>TradingView</button>
+              </div>
+            )}
+            {workstationView === 'chart' && aiChartNote && chartEngine === 'ai' && (
+              <div className="ait-engine-note">AI chart unavailable ({aiChartNote}). Showing TradingView.</div>
+            )}
+
+            {/* "AI is live" layer — chart-only view */}
+            {workstationView === 'chart' && (
+              <AiChartOverlay
+                pair={currentAsset.pair}
+                analysis={marketAnalysis}
+                countdown={candleCountdown}
+                setup={autoSetupActive ? currentActiveSetup : null}
+              />
+            )}
           </div>
 
         {/* Right Column: Institutional Market Analysis & Intelligence Terminal (Permanently mounted to preserve state) */}

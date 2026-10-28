@@ -1,10 +1,10 @@
 import React from 'react';
 import { SCAN_STEPS, MODE_CONFIGS, normalizeMode } from '../services/scanWorkflowService.js';
 
-// Clean vector icons for each step
+// Clean vector icons for each step (Compact fintech size)
 function IconMarketData(props) {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
       <circle cx="12" cy="12" r="3" fill="currentColor" fillOpacity="0.3" />
       <path d="M12 3v3m0 12v3M3 12h3m12 0h3" />
       <path d="m5.6 5.6 2.1 2.1m8.6 8.6 2.1 2.1m0-12.8-2.1 2.1M7.7 16.3l-2.1 2.1" opacity="0.6" />
@@ -14,7 +14,7 @@ function IconMarketData(props) {
 
 function IconTechAnalysis(props) {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
       <circle cx="12" cy="12" r="9" />
       <circle cx="12" cy="12" r="4" strokeDasharray="3 3" opacity="0.7" />
       <line x1="12" y1="2" x2="12" y2="22" />
@@ -26,7 +26,7 @@ function IconTechAnalysis(props) {
 
 function IconAiValidation(props) {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
       <path d="m9 12 2 2 4-4" />
     </svg>
@@ -35,7 +35,7 @@ function IconAiValidation(props) {
 
 function IconFinalDecision(props) {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
       <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z" fill="currentColor" fillOpacity="0.25" />
     </svg>
   );

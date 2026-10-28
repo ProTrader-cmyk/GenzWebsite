@@ -48,6 +48,11 @@ import {
   generateAiSignal,
 } from '../src/data/signals.js';
 
+import {
+  formatSignalDate,
+  parseDateInput,
+} from '../src/utils/signalDateFormatter.js';
+
 describe('AI Trading Page & Signal Engine Test Suite', () => {
   // --------------------------------------------------------------------------
   // Requirement 1: Limit Trading Pairs to Three (Gold, Silver, Bitcoin)
@@ -1000,24 +1005,24 @@ describe('AI Trading Page & Signal Engine Test Suite', () => {
     it('should maintain distinct, verified performance metrics for Scalp vs Intraday', async () => {
       const { INTRADAY_STRATEGY_STATS, SCALP_STRATEGY_STATS, INTRADAY_SIGNALS, SCALP_SIGNALS, BACKTEST_SIGNALS } = await import('../src/data/backtestSignals.js');
       
-      // Scalp Strategy v2.0
+      // Scalp Strategy v2.0 (Strict 0.03 Lot standardized)
       assert.equal(SCALP_STRATEGY_STATS.winRateDisplay, '73.1%');
       assert.equal(SCALP_STRATEGY_STATS.totalTracked, 26);
       assert.equal(SCALP_STRATEGY_STATS.winsCount, 19);
       assert.equal(SCALP_STRATEGY_STATS.lossesCount, 5);
       assert.equal(SCALP_STRATEGY_STATS.breakevenCount, 2);
-      assert.equal(SCALP_STRATEGY_STATS.netProfitDisplay, '+$684.20');
+      assert.equal(SCALP_STRATEGY_STATS.netProfitDisplay, '+$202.33');
       assert.equal(SCALP_STRATEGY_STATS.avgRrDisplay, '1:1.8');
       assert.equal(SCALP_STRATEGY_STATS.symbol, 'XAUUSD');
       assert.equal(SCALP_SIGNALS.length, 26);
 
-      // Intraday Strategy v2.0
+      // Intraday Strategy v2.0 (Strict 0.03 Lot standardized)
       assert.equal(INTRADAY_STRATEGY_STATS.winRateDisplay, '60.0%');
       assert.equal(INTRADAY_STRATEGY_STATS.totalTracked, 20);
       assert.equal(INTRADAY_STRATEGY_STATS.winsCount, 12);
       assert.equal(INTRADAY_STRATEGY_STATS.lossesCount, 4);
       assert.equal(INTRADAY_STRATEGY_STATS.breakevenCount, 4);
-      assert.equal(INTRADAY_STRATEGY_STATS.netProfitDisplay, '+$808.78');
+      assert.equal(INTRADAY_STRATEGY_STATS.netProfitDisplay, '+$484.38');
       assert.equal(INTRADAY_STRATEGY_STATS.avgRrDisplay, '1:2.0');
       assert.equal(INTRADAY_STRATEGY_STATS.symbol, 'XAUUSD');
       assert.equal(INTRADAY_SIGNALS.length, 20);
@@ -1292,20 +1297,20 @@ describe('AI Trading Page & Signal Engine Test Suite', () => {
     });
 
     it('2. Verifies performance scorecard increments on new trade and increases profit on win', () => {
-      // Base Scalp Stats
+      // Base Scalp Stats (0.03 lot)
       const baseClosed = 26;
       const baseWins = 19;
-      const baseProfit = 684.20;
+      const baseProfit = 202.33;
 
-      // Newly added live trade that hit TP
+      // Newly added live trade that hit TP (0.03 lot)
       const newLiveTrade = {
         id: 'ICT-XAU-SCALP-LIVE-123456',
         pair: 'XAUUSD',
         style: 'scalping',
         status: 'tp',
         outcome: 'WIN',
-        net_pnl: 42.50,
-        realized_r: 1.8,
+        net_pnl: 18.12,
+        realized_r: 2.0,
         isHistoricalBaseline: false,
       };
 
@@ -1321,7 +1326,7 @@ describe('AI Trading Page & Signal Engine Test Suite', () => {
 
       assert.equal(closedCount, 27, 'Closed trades must increment from 26 to 27 on new trade');
       assert.equal(winsCount, 20, 'Wins count must increment from 19 to 20');
-      assert.equal(netProfit, 726.70, 'Net profit must increase by +$42.50');
+      assert.equal(netProfit.toFixed(2), '220.45', 'Net profit must increase by +$18.12');
       const winRatePct = (winsCount / closedCount) * 100;
       assert.equal(winRatePct.toFixed(1), '74.1', 'Win rate must update to 74.1%');
     });
@@ -1329,7 +1334,7 @@ describe('AI Trading Page & Signal Engine Test Suite', () => {
     it('3. Verifies performance scorecard decreases profit on stop loss hit', () => {
       const baseClosed = 20;
       const baseLosses = 4;
-      const baseProfit = 808.78;
+      const baseProfit = 484.38;
 
       const stopLossTrade = {
         id: 'ICT-XAU-5M-LIVE-789012',
@@ -1337,7 +1342,7 @@ describe('AI Trading Page & Signal Engine Test Suite', () => {
         style: 'daytrade',
         status: 'sl',
         outcome: 'LOSS',
-        net_pnl: -52.59,
+        net_pnl: -30.00,
         realized_r: -1.0,
         isHistoricalBaseline: false,
       };
@@ -1354,7 +1359,7 @@ describe('AI Trading Page & Signal Engine Test Suite', () => {
 
       assert.equal(closedCount, 21, 'Closed trades must increment from 20 to 21');
       assert.equal(lossesCount, 5, 'Losses count must increment from 4 to 5');
-      assert.equal(netProfit.toFixed(2), '756.19', 'Net profit must decrease by -$52.59 on loss');
+      assert.equal(netProfit.toFixed(2), '454.38', 'Net profit must decrease by -$30.00 on loss');
     });
 
     it('4. Verifies chart timeframe enforces 15tf on login', () => {
@@ -1368,6 +1373,117 @@ describe('AI Trading Page & Signal Engine Test Suite', () => {
       mockLocalStorage.setItem('gzt_term_timeframe', JSON.stringify('15'));
       const restored = JSON.parse(mockLocalStorage.getItem('gzt_term_timeframe'));
       assert.equal(restored, '15', 'Timeframe in storage must be strictly 15tf on login');
+    });
+  });
+
+  describe('19. Portfolio Balance Daily Bar Chart (Last 7 Days) Aggregation and Hover Stats', () => {
+    it('1. should aggregate trades per day instead of per trade and limit to last 7 days', () => {
+      const STARTING_BALANCE = 10000;
+      // Sample mock trades across 10 distinct days
+      const mockSignals = [
+        { publishedAt: Date.parse('2026-10-01T10:00:00Z'), status: 'tp', net_pnl: 85 },
+        { publishedAt: Date.parse('2026-10-01T15:00:00Z'), status: 'sl', net_pnl: -50 },
+        { publishedAt: Date.parse('2026-10-02T10:00:00Z'), status: 'tp', net_pnl: 85 },
+        { publishedAt: Date.parse('2026-10-03T10:00:00Z'), status: 'tp', net_pnl: 85 },
+        { publishedAt: Date.parse('2026-10-04T10:00:00Z'), status: 'sl', net_pnl: -50 },
+        { publishedAt: Date.parse('2026-10-05T10:00:00Z'), status: 'tp', net_pnl: 85 },
+        { publishedAt: Date.parse('2026-10-06T10:00:00Z'), status: 'tp', net_pnl: 85 },
+        { publishedAt: Date.parse('2026-10-07T10:00:00Z'), status: 'tp', net_pnl: 85 },
+        { publishedAt: Date.parse('2026-10-08T10:00:00Z'), status: 'sl', net_pnl: -50 },
+        { publishedAt: Date.parse('2026-10-09T10:00:00Z'), status: 'tp', net_pnl: 85 },
+        { publishedAt: Date.parse('2026-10-10T10:00:00Z'), status: 'tp', net_pnl: 85 },
+        { publishedAt: Date.parse('2026-10-10T14:00:00Z'), status: 'sl', net_pnl: -50 },
+      ];
+
+      const dailyMap = new Map();
+      let runningBal = STARTING_BALANCE;
+
+      mockSignals.forEach((sig) => {
+        const d = new Date(sig.publishedAt);
+        const dayKey = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Phnom_Penh' });
+        const isTp = sig.status === 'tp';
+        const isSl = sig.status === 'sl';
+        const diff = sig.net_pnl;
+        runningBal += diff;
+
+        if (!dailyMap.has(dayKey)) {
+          dailyMap.set(dayKey, {
+            dayKey,
+            tradesCount: 0,
+            tpCount: 0,
+            slCount: 0,
+            val: runningBal,
+          });
+        }
+
+        const dObj = dailyMap.get(dayKey);
+        dObj.tradesCount += 1;
+        if (isTp) dObj.tpCount += 1;
+        if (isSl) dObj.slCount += 1;
+        dObj.val = runningBal;
+      });
+
+      const allBars = Array.from(dailyMap.values());
+      assert.equal(allBars.length, 10, 'Should have 10 distinct daily aggregated records');
+
+      const last7Days = allBars.slice(-7);
+      assert.equal(last7Days.length, 7, 'Should strictly limit to last 7 days');
+
+      // The 10th day had 2 trades (1 TP, 1 SL)
+      const lastDay = last7Days[last7Days.length - 1];
+      assert.equal(lastDay.tradesCount, 2, 'Last day must aggregate multiple trades into 1 day bar');
+      assert.equal(lastDay.tpCount, 1, 'Last day must count 1 TP');
+      assert.equal(lastDay.slCount, 1, 'Last day must count 1 SL');
+      assert.equal(lastDay.val, runningBal, 'Last day running balance must match final portfolio equity');
+    });
+
+    it('2. should verify hover stats contain total trade, total tp and sl', () => {
+      const mockDay = {
+        label: 'Oct 15',
+        fullDate: 'Oct 15, 2026',
+        val: 11492.98,
+        dayPnl: 101.98,
+        tradesCount: 3,
+        tpCount: 2,
+        slCount: 1,
+        beCount: 0,
+      };
+
+      const titleAttr = `${mockDay.fullDate || mockDay.label} | Total Trades: ${mockDay.tradesCount} | TP: ${mockDay.tpCount} | SL: ${mockDay.slCount} | Balance: $${mockDay.val.toFixed(2)}`;
+      assert.ok(titleAttr.includes('Total Trades: 3'));
+      assert.ok(titleAttr.includes('TP: 2'));
+      assert.ok(titleAttr.includes('SL: 1'));
+      assert.ok(mockDay.tradesCount === mockDay.tpCount + mockDay.slCount + mockDay.beCount);
+    });
+  });
+
+  describe('20. Cambodia Time Formatting for Opened and Closed Signals', () => {
+    it('1. should format timestamps into Cambodia Time (GMT+7)', () => {
+      // 10:55 UTC is 17:55 in Cambodia (UTC+7)
+      const openedUtcMs = Date.parse('2026-10-19T10:55:00Z');
+      const openedCambodiaStr = formatSignalDate(openedUtcMs);
+      assert.equal(openedCambodiaStr, 'Oct 19, 2026 · 17:55 GMT+7');
+
+      // 17:00 UTC is 00:00 next day in Cambodia (UTC+7)
+      const closedUtcMs = Date.parse('2026-10-19T17:00:00Z');
+      const closedCambodiaStr = formatSignalDate(closedUtcMs);
+      assert.equal(closedCambodiaStr, 'Oct 20, 2026 · 00:00 GMT+7');
+    });
+
+    it('2. should convert legacy UTC strings into Cambodia Time (GMT+7)', () => {
+      // Direct string from user screenshot: "Oct 19, 2026 · 10:55 UTC"
+      const convertedOpened = formatSignalDate('Oct 19, 2026 · 10:55 UTC');
+      assert.equal(convertedOpened, 'Oct 19, 2026 · 17:55 GMT+7');
+
+      // Direct string from user screenshot: "Oct 19, 2026 · 17:00 UTC"
+      const convertedClosed = formatSignalDate('Oct 19, 2026 · 17:00 UTC');
+      assert.equal(convertedClosed, 'Oct 20, 2026 · 00:00 GMT+7');
+    });
+
+    it('3. should preserve existing valid Cambodia Time (GMT+7) strings intact', () => {
+      const alreadyCambodia = 'Oct 19, 2026 · 17:55 GMT+7';
+      const result = formatSignalDate(alreadyCambodia);
+      assert.equal(result, alreadyCambodia);
     });
   });
 });

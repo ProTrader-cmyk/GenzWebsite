@@ -24,20 +24,6 @@ import { usePersistentState } from '../utils/statePersistence.js';
 
 const NEWS_API_URL = (import.meta.env.VITE_NEWS_API_URL || 'https://genzapi-production.up.railway.app').replace(/\/$/, '');
 
-const CALENDAR_EVENTS = [
-  { time: '19:30 UTC+7', ccy: 'USD', title: 'FOMC Meeting – High Impact', imp: 'HIGH', f: '—', p: '—' },
-  { time: '19:30 UTC+7', ccy: 'USD', title: 'Core CPI (MoM) (Consumer Price Index)', imp: 'HIGH', f: '0.2%', p: '0.3%' },
-  { time: '19:30 UTC+7', ccy: 'USD', title: 'Initial Jobless Claims (Weekly)', imp: 'MED', f: '215K', p: '218K' },
-  { time: '21:00 UTC+7', ccy: 'USD', title: 'Fed Chair Powell Speaks on Policy', imp: 'HIGH', f: '—', p: '—' },
-];
-
-const NEWS_ITEMS = [
-  { time: '14m ago', source: 'REUTERS', title: 'Gold consolidates near key institutional resistance as traders await upcoming FOMC policy catalyst.' },
-  { time: '42m ago', source: 'BLOOMBERG', title: 'US Dollar Index (DXY) holds steady ahead of critical Federal Reserve commentary and inflation print.' },
-  { time: '1h ago', source: 'FOREXLIVE', title: 'XAU/USD buyers defend 4,147.10 intraday support zone following Asian session liquidity sweep.' },
-  { time: '2h ago', source: 'WSJ', title: 'Institutional order flow shows strong higher-timeframe demand supporting precious metals complex.' },
-];
-
 // --- MODERN FINTECH VECTOR ICONS (REPLACING EMOJIS & GENERIC UNICODE) ---
 function IconTrendUp(props) {
   return (
@@ -568,6 +554,11 @@ function buildDefaultSignal(pair, price, style = 'scalp', direction = 'BUY', mar
       ? 'Silver Institutional FVG Expansion Model'
       : 'Bitcoin Order Flow Swing Model';
 
+  const slPipsIntra = Math.round(slDist * 10);
+  const tpPipsIntra = Math.round(tp1Dist * 10);
+  const slUsdIntra = (slDist * 3).toFixed(2);
+  const tpUsdIntra = (tp1Dist * 3).toFixed(2);
+
   return {
     ok: true,
     id: `sig-daytrade-${normPair.toLowerCase()}-${Date.now()}`,
@@ -598,23 +589,31 @@ function buildDefaultSignal(pair, price, style = 'scalp', direction = 'BUY', mar
     netRrNumeric: 1.92,
     levelExplanations: {
       entry: `${dirStr} execution at live spot ($${entryVal.toFixed(decimals)}) aligned with 15M/1H multi-timeframe structure.`,
-      sl: `Placed −${slPts} points · −${slPct}% ${isBuy ? 'below' : 'above'} 15M/1H invalidation swing ($${slVal.toFixed(decimals)}).`,
-      tp: `Targets next 1H institutional liquidity pool (+${tpPts} points · +${tpPct}%) for 1:2.0 R:R.`,
+      sl: isGold
+        ? `Placed −${slPts} points (${slPipsIntra} pips · $${slUsdIntra} risk at 0.03 lot) ${isBuy ? 'below' : 'above'} 15M/1H invalidation swing ($${slVal.toFixed(decimals)}).`
+        : `Placed −${slPts} points · −${slPct}% ${isBuy ? 'below' : 'above'} 15M/1H invalidation swing ($${slVal.toFixed(decimals)}).`,
+      tp: isGold
+        ? `Targets next 1H institutional liquidity pool (+${tpPts} points · ${tpPipsIntra} pips · +$${tpUsdIntra} target at 0.03 lot) for 1:2.0 R:R.`
+        : `Targets next 1H institutional liquidity pool (+${tpPts} points · +${tpPct}%) for 1:2.0 R:R.`,
     },
     pipsGain,
     session: 'Active Institutional Overlap',
     status: 'active',
     confluences: [
       `${normPair} ${isBuy ? 'demand' : 'supply'} liquidity swept with 15M/1H confirmation`,
-      `Stop Loss strictly locked at $${slDist.toFixed(decimals)} distance beyond structural swing`,
-      `Take Profit secured at 1:2.0 Risk-to-Reward ratio ($${tp1Dist.toFixed(decimals)} target)`,
+      isGold
+        ? `Stop Loss locked at 10.0 pts (${slPipsIntra} pips · $${slUsdIntra} risk at 0.03 lot) beyond structural swing`
+        : `Stop Loss strictly locked at ${slDist.toFixed(decimals)} distance beyond structural swing`,
+      isGold
+        ? `Take Profit secured at 1:2.0 Risk-to-Reward ratio (20.0 pts · ${tpPipsIntra} pips · +$${tpUsdIntra} target at 0.03 lot)`
+        : `Take Profit secured at 1:2.0 Risk-to-Reward ratio (${tp1Dist.toFixed(decimals)} target)`,
     ],
     time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Phnom_Penh' }),
   };
 }
 
 export default function MarketAnalysisPanel({
-  currentAsset = { id: 'gold', symbol: 'OANDA:XAUUSD', label: 'Gold Spot / U.S. Dollar', pair: 'XAUUSD', pipScale: 0.1, defaultPrice: 4169.735 },
+  currentAsset = { id: 'gold', symbol: 'OANDA:XAUUSD', label: 'Gold Spot / U.S. Dollar', pair: 'XAUUSD', pipScale: 0.1, defaultPrice: null },
   livePrice,
   timeframe = '15m',
   activeSession = { name: 'Asian Session', status: 'Active', color: '#10B981' },
@@ -763,17 +762,17 @@ export default function MarketAnalysisPanel({
   const decimals = isForex ? 5 : isJpy ? 3 : isCrypto ? 2 : 2;
   const priceDecimals = isGold ? 3 : decimals;
 
-  const rawPrice = Number(livePrice) || Number(marketAnalysis?.price) || currentAsset.defaultPrice || 4169.735;
+  const rawPrice = Number(livePrice) || Number(marketAnalysis?.price) || 0;
   const p = useMemo(() => {
-    if (isCrypto && rawPrice < 10000) return currentAsset.defaultPrice || 81632.50;
-    if (pair.includes('US30') && rawPrice < 10000) return currentAsset.defaultPrice || 51830.0;
-    if (isGold && (rawPrice < 1000 || rawPrice > 10000)) return currentAsset.defaultPrice || 4171.25;
-    if (isForex && rawPrice > 10) return currentAsset.defaultPrice || 1.1225;
-    if (isJpy && (rawPrice < 50 || rawPrice > 300)) return currentAsset.defaultPrice || 149.20;
+    if (isCrypto && rawPrice < 10000) return rawPrice;
+    if (pair.includes('US30') && rawPrice < 10000) return rawPrice;
+    if (isGold && (rawPrice < 1000 || rawPrice > 10000)) return rawPrice;
+    if (isForex && rawPrice > 10) return rawPrice;
+    if (isJpy && (rawPrice < 50 || rawPrice > 300)) return rawPrice;
     return rawPrice;
   }, [rawPrice, isCrypto, pair, isGold, isForex, isJpy, currentAsset.defaultPrice]);
-  const calendarList = liveCalendarEvents || CALENDAR_EVENTS;
-  const newsList = liveNewsItems || NEWS_ITEMS;
+  const calendarList = liveCalendarEvents || [];
+  const newsList = liveNewsItems || [];
 
   // Dynamic Institutional Key Levels & Structure derived from live market state
   const intel = useMemo(() => {

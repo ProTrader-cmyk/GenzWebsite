@@ -166,8 +166,8 @@ export default function Signup({ onNeedVerification, onSwitchToLogin, onBackToHo
 
           {error && <div className="auth-error">{error}</div>}
 
-          <button type="submit" className="auth-btn" disabled={loading}>
-            {loading ? t.signupBtnLoading : <>{t.signupBtn} →</>}
+          <button type="submit" className="auth-btn" disabled={loading} aria-busy={loading}>
+            {loading ? <><span className="auth-btn-spinner" aria-hidden="true" />{t.signupBtnLoading}</> : <>{t.signupBtn} →</>}
           </button>
         </form>
 
