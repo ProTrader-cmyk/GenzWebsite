@@ -97,7 +97,7 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 .pending-banner{position:sticky;top:80px;z-index:98;background:var(--brandd);border-bottom:1px solid var(--brandline);color:var(--brand2);font-size:13px;text-align:center;padding:10px 20px;line-height:1.5;transition:transform .25s ease,opacity .25s ease;}
 .pending-banner-hidden{transform:translateY(-100%);opacity:0;}
 
-@media(max-width:860px){
+@media(max-width:1180px){
   .nav{height:auto;}
   .nav-in{height:64px;padding:0 16px;gap:10px;}
   .nav-links{display:none;}
@@ -118,6 +118,15 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;ba
   .nav-mobile-link:hover,.nav-mobile-link.active{color:var(--brand2);}
   .nav-mobile-logout{color:var(--dn);}
   .profile-menu-mobile-details{padding:14px 4px 16px;border-bottom:1px solid var(--faint);margin-bottom:4px;}
+}
+@media(max-width:420px){
+  .nav-in{padding:0 12px;gap:8px;}
+  .logo-icon{width:34px;height:34px;}
+  .logo-name{font-size:14px;white-space:nowrap;}
+  .lang-select{padding:4px 6px;font-size:11px;}
+}
+@media(max-width:340px){
+  .logo-name{display:none;}
 }
 
 /* ===== AUTH ===== */
